@@ -254,9 +254,10 @@
         // Inicializar clientes
         (function(){ if(EMAILJS_PUBLIC_KEY !== "PON_TU_KEY_AQUI") emailjs.init(EMAILJS_PUBLIC_KEY); })();
         
-        let supabase = null;
+        // Renombramos la variable para evitar conflicto con la librería global 'supabase'
+        let supabaseClient = null;
         if (SUPABASE_URL !== "PON_TU_SUPABASE_URL_AQUI") {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         }
 
         // EMOJI HELPER
@@ -307,7 +308,7 @@
             if(!email || !pass) return;
 
             // MODO NUBE (SUPABASE)
-            if (supabase) {
+            if (supabaseClient) {
                 const btn = DOM.auth.form.querySelector('button');
                 const oldText = btn.innerHTML;
                 btn.textContent = "Conectando...";
@@ -315,7 +316,7 @@
 
                 try {
                     // Intenta buscar usuario
-                    let { data: users, error } = await supabase
+                    let { data: users, error } = await supabaseClient
                         .from('profiles')
                         .select('*')
                         .eq('email', email)
@@ -342,7 +343,7 @@
                             expenses: [] 
                         };
                         
-                        const { error: insertError } = await supabase
+                        const { error: insertError } = await supabaseClient
                             .from('profiles')
                             .insert([ newUser ]);
                         
@@ -399,8 +400,8 @@
             currentUser.expenses = state.expenses;
             
             // GUARDAR EN SUPABASE
-            if (supabase) {
-                await supabase
+            if (supabaseClient) {
+                await supabaseClient
                     .from('profiles')
                     .update({ 
                         budget: state.budget, 
