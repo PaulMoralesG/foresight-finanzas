@@ -892,6 +892,35 @@
         function formatMoney(amount) {
             return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(amount);
         }
+
+        // RESTAURAR SESIÓN AL CARGAR LA PÁGINA
+        async function restoreSession() {
+            if (supabaseClient) {
+                try {
+                    // Verificar si hay una sesión activa en Supabase
+                    const { data: { session } } = await supabaseClient.auth.getSession();
+                    
+                    if (session && session.user) {
+                        // Hay una sesión activa, cargar el perfil del usuario
+                        const email = session.user.email;
+                        await loadProfileFromSupabase(email);
+                        console.log("Sesión restaurada automáticamente para:", email);
+                    } else {
+                        // No hay sesión activa, mostrar pantalla de login
+                        console.log("No hay sesión activa");
+                    }
+                } catch (error) {
+                    console.error("Error al restaurar sesión:", error);
+                }
+            }
+        }
+
+        // Ejecutar cuando el DOM esté listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', restoreSession);
+        } else {
+            restoreSession();
+        }
     </script>
 </body>
 </html>
