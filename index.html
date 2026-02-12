@@ -462,7 +462,7 @@
                         } else if (signUpData.user) {
                             await createInitialProfile(email);
                             await loadProfileFromSupabase(email);
-                            alert('¡Cuenta creada y protegida!');
+                            // Login silencioso exitoso
                         }
                     }
                 } catch (err) {
