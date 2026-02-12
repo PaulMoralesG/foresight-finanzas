@@ -187,25 +187,56 @@
     <!-- MODALES (Overlays) -->
     <!-- ======================= -->
 
+
     <!-- New Expense Modal -->
     <div id="expense-modal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center invisible opacity-0 transition-all duration-300">
         <div onclick="toggleModal(false)" class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"></div>
-        <form id="expense-form" class="bg-white w-full max-w-sm sm:rounded-3xl rounded-t-3xl p-8 shadow-2xl relative z-10 transform translate-y-full sm:translate-y-0 transition-transform duration-300" id="modal-panel">
+        <form id="expense-form" class="bg-white w-full max-w-md sm:rounded-3xl rounded-t-3xl p-6 shadow-2xl relative z-10 transform translate-y-full sm:translate-y-0 transition-transform duration-300 overflow-y-auto max-h-[90vh]" id="modal-panel">
             <div class="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-6 sm:hidden"></div>
             
-            <h3 class="text-2xl font-black text-gray-900 mb-6">¿Cuánto gastaste?</h3>
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-black text-gray-900">Nuevo Gasto</h3>
+                <button type="button" onclick="toggleModal(false)" class="text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center font-bold">✕</button>
+            </div>
 
+            <!-- Cantidad -->
             <div class="mb-6 relative">
                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xl">$</span>
-                <input type="number" id="amount" required step="0.01" min="0.01" class="w-full bg-gray-50 rounded-2xl py-4 pl-10 pr-4 text-3xl font-black text-gray-900 outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder-gray-300" placeholder="0">
+                <input type="number" id="amount" required step="0.01" min="0.01" class="w-full bg-gray-50 rounded-2xl py-4 pl-10 pr-4 text-4xl font-black text-gray-900 outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder-gray-300 text-center" placeholder="0">
             </div>
 
-            <div class="mb-8">
-                <input type="text" id="concept" required class="w-full bg-gray-50 rounded-2xl px-5 py-4 font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder-gray-400" placeholder="¿En qué? (ej: Tacos 🌮)">
+            <!-- Categoría Grid -->
+            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Categoría</label>
+            <div class="grid grid-cols-4 gap-3 mb-6" id="category-grid">
+                <!-- Se inyectan con JS -->
+            </div>
+            <input type="hidden" id="selected-category" value="Otros">
+
+            <!-- Detalles -->
+            <div class="space-y-4 mb-8">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Nota</label>
+                    <input type="text" id="concept" class="w-full bg-gray-50 rounded-xl px-4 py-3 font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder-gray-400" placeholder="¿En qué lo gastaste?">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Fecha</label>
+                        <input type="date" id="date" required class="w-full bg-gray-50 rounded-xl px-4 py-3 font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Método</label>
+                        <select id="method" class="w-full bg-gray-50 rounded-xl px-4 py-3 font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none">
+                            <option value="Efectivo">💵 Efectivo</option>
+                            <option value="Tarjeta">💳 Tarjeta</option>
+                            <option value="Transferencia">🏦 Transfer</option>
+                        </select>
+                    </div>
+                </div>
             </div>
 
-            <button type="submit" class="w-full bg-black text-white font-extrabold py-4 rounded-2xl shadow-xl active:scale-95 transition-transform">
-                Guardar Gasto
+            <button type="submit" class="w-full bg-black text-white font-extrabold py-4 rounded-2xl shadow-xl active:scale-95 transition-transform text-lg">
+                Guardar
             </button>
         </form>
     </div>
@@ -260,17 +291,24 @@
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         }
 
-        // EMOJI HELPER
-        function getIconForCategory(text) {
-            text = text.toLowerCase();
-            if(text.includes('comida') || text.includes('food') || text.includes('restaurante') || text.includes('tacos') || text.includes('pizza')) return '🍔';
-            if(text.includes('uber') || text.includes('taxi') || text.includes('gasolina') || text.includes('bus')) return '🚖';
-            if(text.includes('fiesta') || text.includes('cerveza') || text.includes('bar')) return '🍺';
-            if(text.includes('cine') || text.includes('netflix') || text.includes('juego')) return '🎮';
-            if(text.includes('libro') || text.includes('curso') || text.includes('uni')) return '📚';
-            if(text.includes('ropa') || text.includes('zapatos')) return '👕';
-            if(text.includes('súper') || text.includes('super')) return '🛒';
-            return '💸'; // Default
+        // EMOJI HELPER & CONSTANTS
+        const CATEGORIES = [
+            { id: 'comida', label: 'Comida', icon: '🍔', color: 'bg-orange-100 text-orange-600' },
+            { id: 'transporte', label: 'Transp.', icon: '🚖', color: 'bg-blue-100 text-blue-600' },
+            { id: 'ocio', label: 'Ocio', icon: '🎉', color: 'bg-purple-100 text-purple-600' },
+            { id: 'super', label: 'Súper', icon: '🛒', color: 'bg-green-100 text-green-600' },
+            { id: 'ropa', label: 'Ropa', icon: '👕', color: 'bg-pink-100 text-pink-600' },
+            { id: 'casa', label: 'Casa', icon: '🏠', color: 'bg-teal-100 text-teal-600' },
+            { id: 'salud', label: 'Salud', icon: '💊', color: 'bg-red-100 text-red-600' },
+            { id: 'educacion', label: 'Educ.', icon: '📚', color: 'bg-yellow-100 text-yellow-600' },
+            { id: 'servicios', label: 'Servic.', icon: '💡', color: 'bg-gray-100 text-gray-600' },
+            { id: 'suscrip', label: 'Subs', icon: '📺', color: 'bg-indigo-100 text-indigo-600' },
+            { id: 'viajes', label: 'Viajes', icon: '✈️', color: 'bg-cyan-100 text-cyan-600' },
+            { id: 'otros', label: 'Otros', icon: '💸', color: 'bg-gray-100 text-gray-600' },
+        ];
+
+        function getCategoryById(id) {
+            return CATEGORIES.find(c => c.id === id) || CATEGORIES[CATEGORIES.length - 1];
         }
 
         // STATE
@@ -297,8 +335,43 @@
             statusText: document.getElementById('status-text'),
             statusIcon: document.getElementById('status-icon'),
             btnEmail: document.getElementById('btn-email-report'),
-            userDisplay: document.getElementById('user-display')
+            userDisplay: document.getElementById('user-display'),
+            // New Form elements
+            categoryGrid: document.getElementById('category-grid'),
+            selectedCategoryInput: document.getElementById('selected-category'),
+            dateInput: document.getElementById('date')
         };
+
+        // --- INIT CATEGORY GRID ---
+        function initCategoryGrid() {
+            DOM.categoryGrid ? DOM.categoryGrid.innerHTML = '' : null;
+            if(!DOM.categoryGrid) return;
+            
+            CATEGORIES.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                // Usar clases condicionales se maneja en el click
+                btn.className = `flex flex-col items-center justify-center p-2 rounded-xl border-2 border-transparent transition-all ${cat.id === 'otros' ? 'bg-gray-100 ring-2 ring-black' : 'bg-gray-50 hover:bg-gray-100'}`;
+                btn.innerHTML = `<span class="text-2xl mb-1">${cat.icon}</span><span class="text-[10px] font-bold text-gray-500 uppercase">${cat.label}</span>`;
+                
+                btn.onclick = () => selectCategory(cat.id, btn);
+                DOM.categoryGrid.appendChild(btn);
+            });
+            // Select default
+            selectCategory('comida', DOM.categoryGrid.firstChild); 
+        }
+
+        function selectCategory(id, btnElement) {
+            DOM.selectedCategoryInput.value = id;
+            // Reset visual state
+            Array.from(DOM.categoryGrid.children).forEach(b => {
+                b.className = 'flex flex-col items-center justify-center p-2 rounded-xl border-2 border-transparent bg-gray-50 hover:bg-gray-100 text-gray-400 transition-all opacity-60 grayscale';
+            });
+            // Highlight selected
+            const cat = getCategoryById(id);
+            btnElement.className = `flex flex-col items-center justify-center p-2 rounded-xl border-2 border-black bg-white shadow-md transition-all transform scale-105`;
+            btnElement.innerHTML = `<span class="text-2xl mb-1">${cat.icon}</span><span class="text-[10px] font-bold text-gray-900 uppercase">${cat.label}</span>`;
+        }
 
         // --- AUTH ---
         DOM.auth.form.addEventListener('submit', async (e) => {
@@ -386,6 +459,8 @@
             DOM.views.app.classList.remove('hidden-view');
             DOM.userDisplay.textContent = currentUser.email.split('@')[0];
             DOM.budgetInput.value = state.budget || '';
+            
+            initCategoryGrid(); // Load categories
             updateUI();
         }
 
@@ -479,18 +554,27 @@
             } else {
                 DOM.emptyState.style.display = 'none';
                 [...items].reverse().forEach(exp => {
-                    const icon = getIconForCategory(exp.concept);
+                    // Compatibilidad hacia atras: si exp.category existe usalo, si no, usa "otros"
+                    // Si exp.concept existe y no category, intenta adivinar? No, mejor default.
+                    const catId = exp.category || 'otros';
+                    const catData = getCategoryById(catId);
+                    
                     const li = document.createElement('li');
-                    li.className = 'buddy-card p-4 flex justify-between items-center slide-up';
+                    li.className = 'buddy-card p-4 flex justify-between items-center slide-up group cursor-default hover:bg-gray-50 transition-colors';
                     li.innerHTML = `
                         <div class="flex items-center gap-4">
-                            <div class="icon-squircle bg-gray-50 text-2xl">${icon}</div>
+                            <div class="icon-squircle text-2xl ${catData.color ?? 'bg-gray-100'}">${catData.icon}</div>
                             <div>
-                                <p class="font-bold text-gray-800 leading-tight">${exp.concept}</p>
-                                <p class="text-xs font-bold text-gray-400 mt-1">${new Date(exp.date).toLocaleDateString()}</p>
+                                <p class="font-bold text-gray-800 leading-tight">${catData.label}</p>
+                                <p class="text-xs font-bold text-gray-400 mt-0.5 whitespace-nowrap overflow-hidden max-w-[120px] text-ellipsis">
+                                    ${exp.concept || 'Sin descripción'} • ${exp.method || 'Efectivo'}
+                                </p>
                             </div>
                         </div>
-                        <span class="font-extrabold text-gray-900 text-lg">-${formatMoney(exp.amount)}</span>
+                        <div class="text-right">
+                             <span class="font-extrabold text-gray-900 text-lg block">-${formatMoney(exp.amount)}</span>
+                             <span class="text-[10px] font-bold text-gray-400 opacity-60">${new Date(exp.date).toLocaleDateString()}</span>
+                        </div>
                     `;
                     DOM.movementsList.appendChild(li);
                 });
@@ -507,19 +591,45 @@
             e.preventDefault();
             const concept = document.getElementById('concept').value;
             const amount = parseFloat(document.getElementById('amount').value);
-            if (concept && amount > 0) {
-                state.expenses.push({ id: Date.now(), concept, amount, date: new Date().toISOString() });
+            const category = document.getElementById('selected-category').value;
+            const dateVal = document.getElementById('date').value;
+            const method = document.getElementById('method').value;
+
+            if (amount > 0) {
+                // Determine Date: use picker value, or fallback to NOW with current time
+                let finalDate = new Date();
+                if(dateVal) {
+                    // Create date from input string (YYYY-MM-DD) interpreting as local time
+                    const [y, m, d] = dateVal.split('-').map(Number);
+                    finalDate = new Date(y, m-1, d, 12, 0, 0); // Noon to avoid timezone shifts
+                }
+
+                state.expenses.push({ 
+                    id: Date.now(), 
+                    concept: concept || 'Gasto', 
+                    amount, 
+                    category,
+                    method,
+                    date: finalDate.toISOString() 
+                });
+                
                 saveData();
                 toggleModal(false);
                 e.target.reset();
+                // Reset Grid Visuals handled by init or manual reset if needed, mostly fine.
+                // Reset Date to today for next time
+                DOM.dateInput.valueAsDate = new Date();
             }
         });
 
         // MODAL TOGGLES
         function toggleModal(show) {
             const modal = DOM.modal;
-            const panel = document.getElementById('expense-form');
+            const panel = document.getElementById('modal-panel');
             if(show) {
+                // Set default date to today when opening
+                if(DOM.dateInput) DOM.dateInput.valueAsDate = new Date();
+                
                 modal.classList.remove('invisible', 'opacity-0');
                 if(window.innerWidth < 640) panel.classList.remove('translate-y-full'); 
                 else panel.classList.remove('scale-95');
