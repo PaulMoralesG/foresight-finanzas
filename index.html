@@ -898,19 +898,30 @@
             if (supabaseClient) {
                 try {
                     // Verificar si hay una sesión activa en Supabase
-                    const { data: { session } } = await supabaseClient.auth.getSession();
+                    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+                    
+                    if (sessionError) {
+                        console.error("Error al obtener sesión:", sessionError);
+                        return;
+                    }
                     
                     if (session && session.user) {
                         // Hay una sesión activa, cargar el perfil del usuario
                         const email = session.user.email;
-                        await loadProfileFromSupabase(email);
-                        console.log("Sesión restaurada automáticamente para:", email);
+                        try {
+                            await loadProfileFromSupabase(email);
+                            console.log("Sesión restaurada automáticamente para:", email);
+                        } catch (profileError) {
+                            console.error("Error al cargar perfil del usuario:", profileError);
+                            // Si falla cargar el perfil, cerrar sesión y mostrar login
+                            await supabaseClient.auth.signOut();
+                        }
                     } else {
                         // No hay sesión activa, mostrar pantalla de login
                         console.log("No hay sesión activa");
                     }
                 } catch (error) {
-                    console.error("Error al restaurar sesión:", error);
+                    console.error("Error inesperado al restaurar sesión. Por favor, inicia sesión nuevamente.", error);
                 }
             }
         }
