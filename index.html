@@ -287,19 +287,19 @@
         const EMAILJS_SERVICE_ID = "service_xfvaqua";
         const EMAILJS_TEMPLATE_ID = "template_hiw0fpp"; 
 
-        // CONFIGURACIÓN SUPABASE
-        // 1. Crea cuenta en supabase.com
-        // 2. Nuevo Proyecto -> Settings -> API
+        // CONFIGURACIÓN SERVICES
         const SUPABASE_URL = "https://sphmdtlvxbypckhavhgb.supabase.co"; 
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwaG1kdGx2eGJ5cGNraGF2aGdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5MTA3MTEsImV4cCI6MjA4NjQ4NjcxMX0.kBqqJpwtPL-W8YEGU9wdA3HvwBsL2-G4ZIv051StvrE";
         
-        // Inicializar clientes
-        (function(){ if(EMAILJS_PUBLIC_KEY !== "PON_TU_KEY_AQUI") emailjs.init(EMAILJS_PUBLIC_KEY); })();
+        // Inicializar EmailJS
+        emailjs.init(EMAILJS_PUBLIC_KEY);
         
-        // Renombramos la variable para evitar conflicto con la librería global 'supabase'
+        // Inicializar Supabase
         let supabaseClient = null;
-        if (SUPABASE_URL !== "PON_TU_SUPABASE_URL_AQUI") {
+        if (window.supabase) {
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } else {
+            console.error("Error crítico: SDK de Supabase no cargado.");
         }
 
         // EMOJI HELPER & CONSTANTS
