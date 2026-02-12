@@ -443,18 +443,28 @@
                 btn.disabled = true;
 
                 try {
+                    // CACHE: Verificar si ya sabemos que este email existe para evitar hitting rate limits de registro
+                    const userExistsCache = localStorage.getItem(`supa_user_exists_${email}`);
+
                     // 1. Intentar Login Oficial
                     const { error: signInError } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
 
                     if (!signInError) {
+                        localStorage.setItem(`supa_user_exists_${email}`, 'true'); // Marcar como existente
                         await loadProfileFromSupabase(email);
                     } else {
-                        // 2. Si falla, intentar Registro (Implicit flow)
+                        // Si ya sabemos que existe, NO intentamos registrar de nuevo (evita bloqueo por Rate Limit)
+                        if (userExistsCache === 'true') {
+                             throw new Error("Invalid login credentials");
+                        }
+
+                        // 2. Si falla y no sabemos si existe, intentar Registro (Implicit flow)
                         console.log("Login fallido, probando registro...");
                         const { data: signUpData, error: signUpError } = await supabaseClient.auth.signUp({ email, password: pass });
 
                         if (signUpError) {
                             if (signUpError.message.includes("already registered") || signUpError.message.includes("User already registered")) {
+                                localStorage.setItem(`supa_user_exists_${email}`, 'true'); // Recordar para la proxima
                                 alert("Contraseña incorrecta.");
                             } else {
                                 throw signUpError;
@@ -467,7 +477,11 @@
                     }
                 } catch (err) {
                     console.error("Error Auth:", err);
-                    alert("Error: " + err.message);
+                    if (err.message && err.message.includes("rate limit")) {
+                        alert("⏳ Demasiados intentos. Por seguridad, el sistema te ha bloqueado unos minutos. Intenta más tarde.");
+                    } else {
+                         alert("Aviso: " + (err.message === "Invalid login credentials" ? "Contraseña incorrecta" : err.message));
+                    }
                 } finally {
                     btn.innerHTML = oldText;
                     btn.disabled = false;
