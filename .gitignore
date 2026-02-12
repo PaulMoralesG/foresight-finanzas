@@ -1,0 +1,28 @@
+# Development
+.DS_Store
+*.log
+npm-debug.log*
+.vscode/
+.idea/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+/tmp/
+*.tmp
+*.swp
+*~
+
+# Build artifacts (if any)
+dist/
+build/
+*.min.js
+*.min.css
+
+# Dependencies (if added later)
+node_modules/
+package-lock.json
+yarn.lock
