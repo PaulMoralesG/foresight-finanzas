@@ -195,9 +195,20 @@
             <div class="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-6 sm:hidden"></div>
             
             <div class="flex justify-between items-center mb-6">
-                <h3 class="text-2xl font-black text-gray-900">Nuevo Gasto</h3>
-                <button type="button" onclick="toggleModal(false)" class="text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center font-bold">✕</button>
+                <!-- TABS TIPO -->
+                <div class="flex bg-gray-100 p-1 rounded-xl">
+                    <button type="button" onclick="setTransactionType('expense')" id="btn-type-expense" class="px-4 py-2 rounded-lg text-sm font-extrabold shadow-sm bg-white text-black transition-all">Gasto</button>
+                    <button type="button" onclick="setTransactionType('income')" id="btn-type-income" class="px-4 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-700 transition-all">Ingreso</button>
+                </div>
+                <!-- Botón Eliminar (Hidden by default) -->
+                <div class="flex items-center gap-2">
+                    <button type="button" id="btn-delete" onclick="deleteTransaction()" class="hidden text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"><i class="fa-solid fa-trash"></i></button>
+                    <button type="button" onclick="toggleModal(false)" class="text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center font-bold">✕</button>
+                </div>
             </div>
+            
+            <input type="hidden" id="transaction-type" value="expense">
+            <input type="hidden" id="editing-id" value="">
 
             <!-- Cantidad -->
             <div class="mb-6 relative">
@@ -339,8 +350,32 @@
             // New Form elements
             categoryGrid: document.getElementById('category-grid'),
             selectedCategoryInput: document.getElementById('selected-category'),
-            dateInput: document.getElementById('date')
+            dateInput: document.getElementById('date'),
+            typeInput: document.getElementById('transaction-type'),
+            btnTypeExpense: document.getElementById('btn-type-expense'),
+            btnTypeIncome: document.getElementById('btn-type-income'),
+            editingIdInput: document.getElementById('editing-id'),
+            btnDelete: document.getElementById('btn-delete'),
+            amountInput: document.getElementById('amount'),
+            conceptInput: document.getElementById('concept'),
+            methodInput: document.getElementById('method')
         };
+
+        // --- TYPE SWITCHER ---
+        function setTransactionType(type) {
+            DOM.typeInput.value = type;
+            if(type === 'expense') {
+                DOM.btnTypeExpense.className = "px-4 py-2 rounded-lg text-sm font-extrabold shadow-sm bg-white text-black transition-all";
+                DOM.btnTypeIncome.className = "px-4 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-700 transition-all";
+                // Show categories
+                DOM.categoryGrid ? DOM.categoryGrid.style.display = 'grid' : null;
+            } else {
+                DOM.btnTypeIncome.className = "px-4 py-2 rounded-lg text-sm font-extrabold shadow-sm bg-green-100 text-green-700 transition-all";
+                DOM.btnTypeExpense.className = "px-4 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-700 transition-all";
+                // Hide categories for simplified income view (optional, keeping visible is fine too)
+                // DOM.categoryGrid ? DOM.categoryGrid.style.display = 'none' : null; 
+            }
+        }
 
         // --- INIT CATEGORY GRID ---
         function initCategoryGrid() {
@@ -374,60 +409,65 @@
         }
 
         // --- AUTH ---
+        // Helpers para manejar Perfiles y Auth de forma segura
+        async function loadProfileFromSupabase(email) {
+            const { data, error } = await supabaseClient
+                .from('profiles')
+                .select('*')
+                .eq('email', email)
+                .single();
+
+            if (error) throw error;
+            login({ ...data, password: '' });
+        }
+
+        async function createInitialProfile(email) {
+            // Verifica si ya existe data (migración de usuarios viejos)
+            const { data } = await supabaseClient.from('profiles').select('email').eq('email', email).maybeSingle();
+            if (!data) {
+                await supabaseClient.from('profiles').insert([{ email, budget: 0, expenses: [] }]);
+            }
+        }
+
         DOM.auth.form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = DOM.auth.email.value.trim();
             const pass = DOM.auth.pass.value.trim();
             if(!email || !pass) return;
 
-            // MODO NUBE (SUPABASE)
+            // MODO NUBE (SUPABASE) - LÓGICA SEGURA
             if (supabaseClient) {
                 const btn = DOM.auth.form.querySelector('button');
                 const oldText = btn.innerHTML;
-                btn.textContent = "Conectando...";
+                btn.textContent = "Verificando...";
                 btn.disabled = true;
 
                 try {
-                    // Intenta buscar usuario
-                    let { data: users, error } = await supabaseClient
-                        .from('profiles')
-                        .select('*')
-                        .eq('email', email)
-                        .limit(1);
+                    // 1. Intentar Login Oficial
+                    const { error: signInError } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
 
-                    if (error) throw error;
-
-                    if (users && users.length > 0) {
-                        // Usuario existe, validar pass
-                        const user = users[0];
-                        if (user.password === pass) {
-                            // Parsear datos JSON
-                            const expensesData = user.expenses || [];
-                            login({ ...user, expenses: expensesData });
-                        } else {
-                            alert('Contraseña incorrecta');
-                        }
+                    if (!signInError) {
+                        await loadProfileFromSupabase(email);
                     } else {
-                        // Usuario no existe, crear nuevo
-                        const newUser = { 
-                            email, 
-                            password: pass, 
-                            budget: 0, 
-                            expenses: [] 
-                        };
-                        
-                        const { error: insertError } = await supabaseClient
-                            .from('profiles')
-                            .insert([ newUser ]);
-                        
-                        if (insertError) throw insertError;
-                        
-                        login(newUser);
-                        alert('¡Cuenta creada en la nube!');
+                        // 2. Si falla, intentar Registro (Implicit flow)
+                        console.log("Login fallido, probando registro...");
+                        const { data: signUpData, error: signUpError } = await supabaseClient.auth.signUp({ email, password: pass });
+
+                        if (signUpError) {
+                            if (signUpError.message.includes("already registered") || signUpError.message.includes("User already registered")) {
+                                alert("Contraseña incorrecta.");
+                            } else {
+                                throw signUpError;
+                            }
+                        } else if (signUpData.user) {
+                            await createInitialProfile(email);
+                            await loadProfileFromSupabase(email);
+                            alert('¡Cuenta creada y protegida!');
+                        }
                     }
                 } catch (err) {
-                    console.error("Error Supabase:", err);
-                    alert("Error conexión: " + err.message);
+                    console.error("Error Auth:", err);
+                    alert("Error: " + err.message);
                 } finally {
                     btn.innerHTML = oldText;
                     btn.disabled = false;
@@ -470,24 +510,38 @@
         }
 
         async function saveData() {
-            if (!currentUser) return;
+            if (!currentUser) return false;
+            
+            // Sincronizar estado local con objeto de usuario
             currentUser.budget = state.budget;
             currentUser.expenses = state.expenses;
             
-            // GUARDAR EN SUPABASE
-            if (supabaseClient) {
-                await supabaseClient
-                    .from('profiles')
-                    .update({ 
-                        budget: state.budget, 
-                        expenses: state.expenses // Supabase convierte array a JSON automáticamente
-                    })
-                    .eq('email', currentUser.email);
-            } else {
-                // GUARDAR LOCAL
-                localStorage.setItem(`foresight_user_${currentUser.email}`, JSON.stringify(currentUser));
+            try {
+                // GUARDAR EN SUPABASE
+                if (supabaseClient) {
+                    const { error } = await supabaseClient
+                        .from('profiles')
+                        .update({ 
+                            budget: state.budget, 
+                            expenses: state.expenses 
+                        })
+                        .eq('email', currentUser.email);
+                    
+                    if (error) throw error;
+                } else {
+                    // GUARDAR LOCAL
+                    localStorage.setItem(`foresight_user_${currentUser.email}`, JSON.stringify(currentUser));
+                    // Simular pequeño delay para UX
+                    await new Promise(r => setTimeout(r, 500));
+                }
+                
+                updateUI();
+                return true; // Éxito
+            } catch (err) {
+                console.error("Error al guardar:", err);
+                alert("Error al sincronizar con la nube. Revisa tu conexión.");
+                return false; // Fallo
             }
-            updateUI();
         }
 
         // --- CORE LOGIC ---
@@ -509,10 +563,20 @@
         }
 
         function updateUI() {
-            const monthlyExpenses = getMonthlyData();
-            const totalSpent = monthlyExpenses.reduce((sum, item) => sum + item.amount, 0);
+            const monthlyData = getMonthlyData();
+            
+            // Separar Gastos e Ingresos
+            // (Si no tiene 'type', asumimos que es gasto por compatibilidad con datos viejos)
+            const incomeItems = monthlyData.filter(i => i.type === 'income');
+            const expenseItems = monthlyData.filter(i => i.type === 'expense' || !i.type);
+
+            const totalIncome = incomeItems.reduce((sum, item) => sum + item.amount, 0);
+            const totalSpent = expenseItems.reduce((sum, item) => sum + item.amount, 0);
+            
             const projection = calculateProjection(totalSpent);
-            const available = state.budget - totalSpent; 
+            
+            // Fórmula: Disponible = (Presupuesto Base + Ingresos Extra) - Gastado
+            const available = (state.budget + totalIncome) - totalSpent; 
 
             // 1. Available Hero
             DOM.availableDisplay.textContent = formatMoney(available);
@@ -521,9 +585,9 @@
             if(available < 0) DOM.availableDisplay.classList.replace('text-gray-900', 'text-red-500');
             else DOM.availableDisplay.classList.replace('text-red-500', 'text-gray-900');
 
-            // 2. Status Card
-            const budget = state.budget || 1; // Avoid div by zero
-            const statusRatio = projection / budget;
+            // 2. Status Card (Basado solo en si te pasaste de tu capacidad total)
+            const totalCapacity = state.budget + totalIncome;
+            const statusRatio = totalCapacity > 0 ? (totalSpent / totalCapacity) : 1;
 
             if (statusRatio > 1) {
                 setCardStatus('Peligro', '', 'border-red-500', 'bg-red-50', 'text-red-700');
@@ -533,8 +597,8 @@
                 setCardStatus('Sano', '🥑', 'border-green-400', 'bg-green-50', 'text-green-700');
             }
 
-            // 3. List
-            renderList(monthlyExpenses);
+            // 3. List (Pasamos todo junto para mostrar cronológico)
+            renderList(monthlyData);
         }
 
         function setCardStatus(text, icon, borderClass, bgClass, textClass) {
@@ -554,25 +618,37 @@
             } else {
                 DOM.emptyState.style.display = 'none';
                 [...items].reverse().forEach(exp => {
-                    // Compatibilidad hacia atras: si exp.category existe usalo, si no, usa "otros"
-                    // Si exp.concept existe y no category, intenta adivinar? No, mejor default.
-                    const catId = exp.category || 'otros';
-                    const catData = getCategoryById(catId);
+                    // Logic para Tipo
+                    const isIncome = exp.type === 'income';
                     
+                    // Categoría
+                    const catId = exp.category || (isIncome ? 'otros' : 'otros');
+                    // Podríamos tener icono especial para ingresos genéricos si no hay categoría
+                    let catData = getCategoryById(catId);
+                    
+                    if(isIncome && catId === 'otros') {
+                        catData = { label: 'Ingreso', icon: '💰', color: 'bg-green-100 text-green-700' };
+                    }
+
                     const li = document.createElement('li');
-                    li.className = 'buddy-card p-4 flex justify-between items-center slide-up group cursor-default hover:bg-gray-50 transition-colors';
+                    li.className = 'buddy-card p-4 flex justify-between items-center slide-up group cursor-pointer hover:bg-gray-50 transition-colors active:scale-95';
+                    li.onclick = () => editTransaction(exp.id); // Click to Edit
+                    
+                    const amountClass = isIncome ? 'text-green-600' : 'text-gray-900';
+                    const sign = isIncome ? '+' : '-';
+
                     li.innerHTML = `
                         <div class="flex items-center gap-4">
                             <div class="icon-squircle text-2xl ${catData.color ?? 'bg-gray-100'}">${catData.icon}</div>
                             <div>
                                 <p class="font-bold text-gray-800 leading-tight">${catData.label}</p>
                                 <p class="text-xs font-bold text-gray-400 mt-0.5 whitespace-nowrap overflow-hidden max-w-[120px] text-ellipsis">
-                                    ${exp.concept || 'Sin descripción'} • ${exp.method || 'Efectivo'}
+                                    ${exp.concept || (isIncome ? 'Ingreso Extra' : 'Sin desc.')} • ${exp.method || 'Efectivo'}
                                 </p>
                             </div>
                         </div>
                         <div class="text-right">
-                             <span class="font-extrabold text-gray-900 text-lg block">-${formatMoney(exp.amount)}</span>
+                             <span class="font-extrabold ${amountClass} text-lg block">${sign}${formatMoney(exp.amount)}</span>
                              <span class="text-[10px] font-bold text-gray-400 opacity-60">${new Date(exp.date).toLocaleDateString()}</span>
                         </div>
                     `;
@@ -581,45 +657,150 @@
             }
         }
 
+        // --- EDIT & DELETE LOGIC ---
+        function editTransaction(id) {
+            const item = state.expenses.find(i => i.id === id);
+            if(!item) return;
+
+            // Pre-fill form
+            DOM.editingIdInput.value = item.id;
+            DOM.amountInput.value = item.amount;
+            DOM.conceptInput.value = item.concept;
+            DOM.methodInput.value = item.method || 'Efectivo';
+            
+            // Handle Date (ISO to YYYY-MM-DD)
+            try {
+                const dateObj = new Date(item.date);
+                const isoDate = dateObj.toISOString().split('T')[0];
+                DOM.dateInput.value = isoDate;
+            } catch(e) { DOM.dateInput.valueAsDate = new Date(); }
+
+            // Handle Type & Category
+            setTransactionType(item.type || 'expense');
+            selectCategory(item.category || 'otros', DOM.categoryGrid.querySelector('button') || document.createElement('button')); // Visual reset mostly
+            
+            // Re-select proper category button visual
+            setTimeout(() => {
+                const catId = item.category || 'otros';
+                // Find button by icon content or just logic index... simplest is re-init grid highlighting
+                // For now, rely on selectCategory logic updating the input value
+                DOM.selectedCategoryInput.value = catId;
+                // Update visuals manually for accuracy
+                Array.from(DOM.categoryGrid.children).forEach((btn, idx) => {
+                   const catData = CATEGORIES[idx];
+                   if(catData.id === catId) selectCategory(catId, btn);
+                });
+            }, 50);
+
+            // Show Delete Button
+            DOM.btnDelete.classList.remove('hidden');
+
+            toggleModal(true);
+        }
+
+        function deleteTransaction() {
+            const id = parseInt(DOM.editingIdInput.value);
+            if(!id) return;
+
+            if(confirm("¿Seguro que quieres eliminar esta transacción irreversiblemente?")) {
+                runAsyncAction(DOM.btnDelete, async () => {
+                    const originalList = [...state.expenses];
+                    // Actualizar estado local
+                    state.expenses = state.expenses.filter(i => i.id !== id);
+                    
+                    // Sincronizar
+                    const success = await saveData();
+                    
+                    if(success) {
+                        toggleModal(false);
+                    } else {
+                        // Revertir si falló
+                        state.expenses = originalList;
+                    }
+                }, "Eliminando...");
+            }
+        }
+
+        // Helper para botones con estado de carga
+        async function runAsyncAction(btnElement, asyncFn, loadingText = "Procesando...") {
+            const originalText = btnElement.innerHTML; // Guardar icono/texto original
+            // Si es input/button
+            if(btnElement.tagName === 'INPUT') btnElement.value = loadingText;
+            else btnElement.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> ${loadingText}`; // Spinner FontAwesome
+            
+            btnElement.disabled = true;
+            
+            try {
+                await asyncFn();
+            } finally {
+                // Restaurar botón
+                if(btnElement.tagName === 'INPUT') btnElement.value = originalText;
+                else btnElement.innerHTML = originalText;
+                btnElement.disabled = false;
+            }
+        }
+
         // --- ACTIONS ---
-        DOM.budgetInput.addEventListener('change', (e) => {
+        DOM.budgetInput.addEventListener('change', async (e) => {
             state.budget = parseFloat(e.target.value) || 0;
-            saveData();
+            // Indicador visual simple para el presupuesto
+            e.target.classList.add('bg-blue-100');
+            await saveData();
+            e.target.classList.remove('bg-blue-100');
         });
 
-        document.getElementById('expense-form').addEventListener('submit', (e) => {
+        document.getElementById('expense-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const concept = document.getElementById('concept').value;
-            const amount = parseFloat(document.getElementById('amount').value);
-            const category = document.getElementById('selected-category').value;
-            const dateVal = document.getElementById('date').value;
-            const method = document.getElementById('method').value;
+            const btnSubmit = e.target.querySelector('button[type="submit"]');
+            
+            await runAsyncAction(btnSubmit, async () => {
+                const concept = document.getElementById('concept').value;
+                const amount = parseFloat(document.getElementById('amount').value);
+                const category = document.getElementById('selected-category').value;
+                const dateVal = document.getElementById('date').value;
+                const method = document.getElementById('method').value;
+                const type = document.getElementById('transaction-type').value; 
+                const editingId = DOM.editingIdInput.value ? parseInt(DOM.editingIdInput.value) : null;
 
-            if (amount > 0) {
-                // Determine Date: use picker value, or fallback to NOW with current time
-                let finalDate = new Date();
-                if(dateVal) {
-                    // Create date from input string (YYYY-MM-DD) interpreting as local time
-                    const [y, m, d] = dateVal.split('-').map(Number);
-                    finalDate = new Date(y, m-1, d, 12, 0, 0); // Noon to avoid timezone shifts
+                if (amount > 0) {
+                    let finalDate = new Date();
+                    if(dateVal) {
+                        const [y, m, d] = dateVal.split('-').map(Number);
+                        finalDate = new Date(y, m-1, d, 12, 0, 0); 
+                    }
+
+                    const transactionData = { 
+                        id: editingId || Date.now(), 
+                        concept: concept || (type === 'income' ? 'Ingreso' : 'Gasto'), 
+                        amount, 
+                        category,
+                        method,
+                        type,
+                        date: finalDate.toISOString() 
+                    };
+
+                    const originalList = [...state.expenses]; // Backup
+
+                    if (editingId) {
+                        const index = state.expenses.findIndex(i => i.id === editingId);
+                        if(index !== -1) state.expenses[index] = transactionData;
+                    } else {
+                        state.expenses.push(transactionData);
+                    }
+                    
+                    const success = await saveData();
+                    
+                    if (success) {
+                        toggleModal(false);
+                        e.target.reset();
+                        setTransactionType('expense');
+                        if(DOM.dateInput) DOM.dateInput.valueAsDate = new Date();
+                    } else {
+                        // Revertir cambios si falló la nube
+                        state.expenses = originalList;
+                    }
                 }
-
-                state.expenses.push({ 
-                    id: Date.now(), 
-                    concept: concept || 'Gasto', 
-                    amount, 
-                    category,
-                    method,
-                    date: finalDate.toISOString() 
-                });
-                
-                saveData();
-                toggleModal(false);
-                e.target.reset();
-                // Reset Grid Visuals handled by init or manual reset if needed, mostly fine.
-                // Reset Date to today for next time
-                DOM.dateInput.valueAsDate = new Date();
-            }
+            }, "Guardando...");
         });
 
         // MODAL TOGGLES
@@ -627,8 +808,12 @@
             const modal = DOM.modal;
             const panel = document.getElementById('modal-panel');
             if(show) {
-                // Set default date to today when opening
-                if(DOM.dateInput) DOM.dateInput.valueAsDate = new Date();
+                // If opening NOT for edit (no ID pre-filled in previous steps), reset ID
+                // But wait, editTransaction calls toggleModal(true) AFTER setting ID
+                // So here we only reset if we are opening "fresh"
+                // Check if we are being called from the "+" button (HTML onclick)
+                // We'll handle cleanup in the 'else' (close) or external caller
+                // Better: The + button onclick should clear editingId
                 
                 modal.classList.remove('invisible', 'opacity-0');
                 if(window.innerWidth < 640) panel.classList.remove('translate-y-full'); 
@@ -638,6 +823,17 @@
                 modal.classList.add('invisible', 'opacity-0');
                 if(window.innerWidth < 640) panel.classList.add('translate-y-full');
                 else panel.classList.add('scale-95');
+                
+                // CLEANUP AFTER CLOSE
+                setTimeout(() => {
+                    DOM.editingIdInput.value = '';
+                    document.getElementById('expense-form').reset();
+                    DOM.btnDelete.classList.add('hidden'); // Hide delete button
+                    setTransactionType('expense');
+                    DOM.dateInput.valueAsDate = new Date();
+                    // Select default category visually
+                    selectCategory('comida', DOM.categoryGrid.firstChild);
+                }, 300);
             }
         }
 
