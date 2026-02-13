@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Loop de seguridad para asegurar que Supabase arranque incluso si el script tarda
     const authCheckInterval = setInterval(() => {
-        if (Auth.supabaseClient) {
+        if (Auth.supabaseClient || Auth.isDemoMode) {
             clearInterval(authCheckInterval);
             setupAuthObserver();
         } else {
@@ -77,7 +77,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 3. Setup Internal Listeners
     setupEventListeners();
+    
+    // 4. Mostrar ayuda para profesores/evaluadores
+    setTimeout(() => {
+        showWelcomeMessage();
+    }, 2000);
 });
+
+function showWelcomeMessage() {
+    // Solo mostrar en modo demo (GitHub Pages)
+    if (window.location.hostname === 'paulmoralesg.github.io' || window.location.hostname === 'localhost') {
+        const isDemo = window.location.hostname === 'paulmoralesg.github.io';
+        if (isDemo) {
+            showNotification("👋 Demo universitario activo. Crea tu cuenta para evaluar la funcionalidad.", 'success');
+        }
+    }
+}
 
 function setupAuthObserver() {
     if(!Auth.supabaseClient) {
@@ -178,30 +193,58 @@ function setupEventListeners() {
             try {
                 if (isLoginMode) {
                     console.log("🔓 Modo LOGIN activado. Llamando a signIn...");
-                    const { error } = await Auth.signIn(email, pass);
+                    const { data, error } = await Auth.signIn(email, pass);
                     console.log("📡 Respuesta signIn - Error:", error);
-                    if (error) throw error;
-                    console.log("✅ Login exitoso. Cargando perfil...");
-                    const profile = await Auth.loadProfileFromSupabase(email);
-                    console.log("📦 Perfil recibido:", profile);
-                    if(profile) {
-                        console.log("🎯 Llamando a loginSuccess...");
-                        loginSuccess({ ...profile, password: '' });
+                    console.log("📡 Respuesta signIn - Data:", data);
+                    
+                    if (error) {
+                        console.error("❌ Error en signIn:", error.message);
+                        throw error;
+                    }
+                    
+                    if (data && data.user) {
+                        console.log("✅ Login exitoso. Cargando perfil...");
+                        const profile = await Auth.loadProfileFromSupabase(email);
+                        console.log("📦 Perfil recibido:", profile);
+                        if(profile) {
+                            console.log("🎯 Llamando a loginSuccess...");
+                            loginSuccess({ ...profile, password: '' });
+                        } else {
+                            console.error("❌ Perfil es null/undefined");
+                            showNotification("Error cargando perfil de usuario.", 'error');
+                        }
                     } else {
-                        console.error("❌ Perfil es null/undefined");
+                        console.error("❌ No se recibió data.user");
+                        showNotification("Error en respuesta del servidor.", 'error');
                     }
                 } else {
+                    console.log("📝 Modo REGISTRO activado. Llamando a signUp...");
                     const { data, error } = await Auth.signUp(email, pass);
-                    if (error) throw error;
+                    console.log("📡 Respuesta signUp - Error:", error);
+                    console.log("📡 Respuesta signUp - Data:", data);
                     
+                    if (error) {
+                        console.error("❌ Error en signUp:", error.message);
+                        throw error;
+                    }
+
                     if (data.user && !data.session) {
-                         showNotification("Revisa tu correo para confirmar.", 'success');
-                         return; 
+                        showNotification("✅ Cuenta creada. Revisa tu correo para confirmar.", 'success');
+                        // Cambiar a modo login automáticamente
+                        isLoginMode = true;
+                        auth.submitBtn.textContent = "Iniciar Sesión";
+                        auth.toggleBtn.innerHTML = '¿No tienes cuenta? <span class="text-blue-600">Regístrate aquí</span>';
+                        return;
                     }
                     if (data.user) {
-                       await Auth.createInitialProfile(email);
-                       const profile = await Auth.loadProfileFromSupabase(email);
-                       loginSuccess({ ...profile, password: '' });
+                        console.log("✅ Registro exitoso. Creando perfil inicial...");
+                        await Auth.createInitialProfile(email);
+                        const profile = await Auth.loadProfileFromSupabase(email);
+                        console.log("📦 Perfil inicial creado:", profile);
+                        if (profile) {
+                            showNotification("✅ Cuenta creada exitosamente.", 'success');
+                            loginSuccess({ ...profile, password: '' });
+                        }
                     }
                 }
             } catch (err) {
@@ -349,17 +392,31 @@ function loginSuccess(userData) {
 }
 
 function handleAuthError(err, authDOM) {
-    let msg = err.message;
-    if (msg.includes("security purposes")) msg = "Espera unos segundos.";
-    else if (msg.includes("Invalid login")) {
-        msg = "Credenciales incorrectas.";
+    console.error("🚨 Error de autenticación:", err);
+    
+    let msg = err.message || "Error desconocido";
+    
+    // Mensajes más claros para usuarios finales
+    if (msg.includes("security purposes") || msg.includes("rate limit")) {
+        msg = "⏰ Demasiados intentos. Espera 1 minuto e intenta nuevamente.";
+    } else if (msg.includes("Invalid login") || msg.includes("Invalid credentials")) {
+        msg = "❌ Correo o contraseña incorrectos. Verifica tus datos.";
         if(authDOM.resendBtn) authDOM.resendBtn.classList.remove('hidden-view');
-    }
-    else if (msg.includes("already registered")) msg = "Correo ya registrado.";
-    else if (msg.includes("rate limit")) msg = "Demasiados intentos.";
-    else if (msg.includes("Email not confirmed")) {
-        msg = "Correo no confirmado.";
+    } else if (msg.includes("already registered") || msg.includes("User already exists")) {
+        msg = "📧 Este correo ya tiene una cuenta. Intenta iniciar sesión.";
+    } else if (msg.includes("Email not confirmed")) {
+        msg = "📬 Debes confirmar tu correo antes de acceder. Revisa tu bandeja de entrada.";
         if(authDOM.resendBtn) authDOM.resendBtn.classList.remove('hidden-view');
+    } else if (msg.includes("User not found")) {
+        msg = "👤 No existe una cuenta con este correo. ¿Quieres registrarte?";
+    } else if (msg.includes("Password")) {
+        msg = "🔒 La contraseña debe tener al menos 6 caracteres.";
+    } else if (msg.includes("network") || msg.includes("fetch")) {
+        msg = "🌐 Error de conexión. Verifica tu internet e intenta nuevamente.";
+    } else if (msg.includes("Offline mode")) {
+        msg = "💻 Estás en modo demo. Crea una cuenta local para continuar.";
     }
+    
+    console.log("📢 Mensaje mostrado al usuario:", msg);
     showNotification(msg, 'error');
 }

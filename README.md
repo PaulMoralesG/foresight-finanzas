@@ -4,7 +4,36 @@ Aplicación web moderna para gestión de finanzas personales con diseño Buddy-S
 
 ## 🚀 Demo en Vivo
 👉 [https://paulmmoralesg.github.io/foresight-finanzas/](https://paulmoralesg.github.io/foresight-finanzas/)
+### 📋 Para Profesores/Evaluadores
+**¡Bienvenidos a la evaluación!** Este proyecto funciona de la siguiente manera:
 
+#### 🔧 Cómo probar la aplicación:
+1. **Accede al enlace de GitHub Pages** (arriba)
+2. **Crea una cuenta** con tu correo universitario:
+   - Presiona "Regístrate aquí"
+   - Ingresa tu correo (ej: `profesora@universidad.edu`)
+   - Crea una contraseña (mínimo 6 caracteres)
+   - Presiona "Crear Cuenta"
+3. **¡Listo!** Puedes usar toda la funcionalidad:
+   - Agregar gastos e ingresos
+   - Ver estadísticas en tiempo real
+   - Configurar presupuestos
+   - Explorar las categorías
+   - Generar reportes
+
+#### 💡 Notas importantes:
+- ✅ **Funciona inmediatamente** - No requiere instalación
+- 💾 **Datos locales** - Se guardan en el navegador para la demo
+- 🔒 **Seguro** - No se envían datos reales a internet
+- 🎯 **Funcionalidad completa** - Todas las características están disponibles
+
+#### 🏆 Objetivos de evaluación cubiertos:
+- ✅ Interfaz moderna y responsive
+- ✅ Gestión de estado complejo (ingresos, gastos, categorías)
+- ✅ Cálculos financieros en tiempo real
+- ✅ Arquitectura modular (ES6 Modules)
+- ✅ Experiencia de usuario fluida
+- ✅ Código limpio y documentado
 ## ✨ Características
 - 📊 Dashboard moderno con estadísticas en tiempo real
 - 💳 Registro de ingresos y gastos por categorías

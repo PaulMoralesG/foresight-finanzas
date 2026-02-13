@@ -9,6 +9,7 @@ let SUPABASE_KEY = null;
 // NOTA: Usamos window.supabase cargado desde el CDN en index.html
 // Esto es más robusto contra inyecciones de extensiones (MetaMask, etc.)
 export let supabaseClient = null;
+export let isDemoMode = false;
 
 export async function initSupabase() {
     // Cargar configuración dinámica
@@ -22,12 +23,15 @@ export async function initSupabase() {
         try {
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             console.log("✅ Supabase cliente creado (Global UMD).");
+            isDemoMode = false;
         } catch (e) {
             console.error("❌ Error creando cliente Supabase:", e);
         }
     } else if (SUPABASE_URL === "https://demo.supabase.co") {
         console.log("🎭 Modo DEMO activado - funcionalidad limitada a interfaz");
+        console.log("📚 Perfecto para demostraciones universitarias");
         supabaseClient = null; // En modo demo no tenemos cliente real
+        isDemoMode = true;
     } else {
         console.warn("⚠️ window.supabase no encontrado aún. Reintentando en breve...");
         // Reintento simple por si el script tarda en cargar
@@ -76,7 +80,25 @@ export async function loadProfileFromSupabase(email) {
 }
 
 export async function createInitialProfile(email) {
-    if(!supabaseClient) return;
+    if(!supabaseClient) {
+        // Modo local/demo - crear perfil en localStorage
+        console.log("🎭 Modo DEMO: Creando perfil inicial local");
+        const userKey = `foresight_user_${email}`;
+        const existing = localStorage.getItem(userKey);
+        
+        if (!existing) {
+            const newProfile = { 
+                email, 
+                budget: 0, 
+                expenses: [], 
+                password: 'demo-managed',
+                created_at: new Date().toISOString()
+            };
+            localStorage.setItem(userKey, JSON.stringify(newProfile));
+            console.log("✅ Perfil demo creado para:", email);
+        }
+        return;
+    }
     
     const { data } = await supabaseClient.from('profiles').select('email').eq('email', email).maybeSingle();
     if (!data) {
@@ -119,16 +141,41 @@ export async function signIn(email, password) {
 export async function signUp(email, password) {
     if(!supabaseClient) {
         // Modo local/demo - crear usuario en localStorage
-        console.log("🎭 Modo DEMO: Creando usuario local");
+        console.log("🎭 Modo DEMO: Creando usuario local para:", email);
         const userKey = `foresight_user_${email}`;
         const stored = localStorage.getItem(userKey);
         
         if (stored) {
+            console.warn("⚠️ Usuario ya existe en localStorage");
             return { error: { message: "User already exists" } };
         } else {
-            const newUser = { email, password, budget: 0, expenses: [] };
+            const newUser = { 
+                email, 
+                password, 
+                budget: 1000, // Presupuesto inicial para demo
+                expenses: [
+                    // Algunos datos de ejemplo para que se vea mejor
+                    {
+                        id: Date.now(),
+                        concept: "Café bienvenida",
+                        amount: 5.50,
+                        category: "comida",
+                        method: "Efectivo",
+                        type: "expense",
+                        date: new Date().toISOString()
+                    }
+                ],
+                created_at: new Date().toISOString()
+            };
             localStorage.setItem(userKey, JSON.stringify(newUser));
-            return { data: { user: { email }, session: { user: { email } } }, error: null };
+            console.log("✅ Usuario demo creado exitosamente");
+            return { 
+                data: { 
+                    user: { email }, 
+                    session: { user: { email } } 
+                }, 
+                error: null 
+            };
         }
     }
     
