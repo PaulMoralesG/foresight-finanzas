@@ -111,103 +111,127 @@
     </section>
 
     <!-- ======================= -->
-    <!-- VISTA 2: APP PRINCIPAL -->
+    <!-- VISTA 2: APP PRINCIPAL (MODERN DASHBOARD) -->
     <!-- ======================= -->
-    <section id="app-view" class="hidden-view pb-32">
+    <section id="app-view" class="hidden-view pb-32 bg-gray-50 min-h-screen">
         
-        <!-- Top Bar Compacted -->
-        <div class="px-5 pt-8 pb-3 flex justify-between items-center bg-white sticky top-0 z-20 shadow-sm border-b border-gray-100">
-            <div class="flex items-center gap-2">
-                <div class="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs">👤</div>
-                <span class="font-bold text-gray-500 text-xs" id="user-display">Usuario</span>
+        <!-- Header: User & Actions -->
+        <div class="px-6 pt-10 pb-4 flex justify-between items-center bg-white/80 backdrop-blur-md sticky top-0 z-30">
+            <div class="flex flex-col">
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Hola,</span>
+                <span class="font-black text-xl text-gray-800 leading-none" id="user-display">Usuario</span>
             </div>
-            <div class="flex gap-2">
-                <button onclick="toggleSummary(true)" class="w-7 h-7 rounded-full bg-gray-50 text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition flex items-center justify-center"><i class="fa-solid fa-chart-pie text-xs"></i></button>
-                <button onclick="logout()" class="w-7 h-7 rounded-full bg-gray-50 text-gray-400 hover:text-red-500 hover:bg-red-50 transition flex items-center justify-center"><i class="fa-solid fa-power-off text-xs"></i></button>
+            <div class="flex gap-3">
+                <button onclick="toggleSummary(true)" class="w-10 h-10 rounded-full bg-white shadow-sm border border-gray-100 text-gray-400 hover:text-blue-600 hover:border-blue-200 transition flex items-center justify-center active:scale-95"><i class="fa-solid fa-chart-pie"></i></button>
+                <button onclick="logout()" class="w-10 h-10 rounded-full bg-white shadow-sm border border-gray-100 text-gray-400 hover:text-red-500 hover:border-red-200 transition flex items-center justify-center active:scale-95"><i class="fa-solid fa-power-off"></i></button>
             </div>
         </div>
 
         <!-- MAIN SCROLLABLE -->
-        <main class="px-4 pt-4 max-w-md mx-auto">
+        <main class="px-5 max-w-md mx-auto space-y-6">
             
-            <!-- Month Navigator -->
-            <div class="flex items-center justify-between mb-4 bg-white p-2 rounded-2xl shadow-sm slide-up">
-                <button onclick="changeMonth(-1)" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 active:scale-95 transition"><i class="fa-solid fa-chevron-left"></i></button>
-                <div class="text-center">
-                    <h2 id="month-display" class="text-base font-black text-gray-900 leading-none capitalize">---</h2>
-                    <p id="transaction-count" class="text-[9px] font-bold text-gray-400 mt-1 uppercase tracking-wide">0 Reg.</p>
-                </div>
-                <button onclick="changeMonth(1)" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 active:scale-95 transition"><i class="fa-solid fa-chevron-right"></i></button>
-            </div>
-
-            <!-- Stats Row (Image Style) -->
-            <div class="grid grid-cols-3 gap-2 mb-4 text-center slide-up" style="animation-delay: 0.05s;">
-                <!-- Ingresos -->
-                <div onclick="filterTransactions('income')" class="bg-white p-3 rounded-2xl shadow-sm border-b-4 border-green-400 cursor-pointer active:scale-95 transition hover:bg-green-50">
-                    <p class="text-green-600 font-black text-base truncate" id="dash-income">$0</p>
-                    <p class="text-[8px] sm:text-[9px] font-bold text-gray-400 uppercase tracking-wide">Ingresos</p>
-                </div>
-                <!-- Gastos -->
-                <div onclick="filterTransactions('expense')" class="bg-white p-3 rounded-2xl shadow-sm border-b-4 border-red-400 cursor-pointer active:scale-95 transition hover:bg-red-50">
-                    <p class="text-red-600 font-black text-base truncate" id="dash-expense">$0</p>
-                    <p class="text-[8px] sm:text-[9px] font-bold text-gray-400 uppercase tracking-wide">Gastos</p>
-                </div>
-                <!-- Saldo (Restante) -->
-                <div class="bg-white p-3 rounded-2xl shadow-sm border-b-4 border-blue-400">
-                    <p class="text-gray-900 font-black text-base truncate" id="available-display">$0</p>
-                    <p class="text-[8px] sm:text-[9px] font-bold text-gray-400 uppercase tracking-wide">Saldo</p>
-                </div>
-            </div>
-
-            <!-- Budget Pill (Repositioned) -->
-            <div class="flex justify-center mb-6 slide-up" style="animation-delay: 0.1s;">
-                <div class="bg-gray-100 pl-3 pr-1 py-0.5 rounded-full flex items-center gap-2">
-                    <span class="text-[10px] font-bold text-gray-500">Presupuesto Mensual</span>
-                    <input type="number" id="budget-input" class="bg-white px-2 py-0.5 rounded-full text-[10px] font-bold w-16 text-center outline-none focus:ring-1 focus:ring-blue-500" placeholder="$0">
-                </div>
-            </div>
-
-            <!-- Dashboard / Status & Email Compacted -->
-            <div class="grid grid-cols-2 gap-2 mb-4 slide-up" style="animation-delay: 0.1s;">
-                <!-- Status Card -->
-                <div id="status-card" class="buddy-card px-3 py-2 flex items-center justify-between bg-white border-l-2 border-gray-200 shadow-sm">
-                    <div>
-                        <p class="text-[9px] uppercase font-bold text-gray-400 leading-none mb-1">Salud</p>
-                        <p class="text-sm font-black text-gray-800 leading-none" id="status-text">Neutral</p>
+            <!-- Month Navigator (Capsule Style) -->
+            <div class="flex justify-center slide-up">
+                <div class="flex items-center bg-white rounded-full p-1 pl-2 pr-2 shadow-sm border border-gray-100">
+                    <button onclick="changeMonth(-1)" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+                    <div class="px-4 text-center min-w-[120px]">
+                        <p id="month-display" class="text-sm font-black text-gray-800 capitalize leading-none">---</p>
+                        <p id="transaction-count" class="text-[9px] font-bold text-gray-400 mt-0.5 uppercase">0 Reg.</p>
                     </div>
-                    <div class="text-lg w-6 h-6 flex items-center justify-center rounded-full bg-gray-100" id="status-icon">😐</div>
+                    <button onclick="changeMonth(1)" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+                </div>
+            </div>
+
+            <!-- HERO CARD (Modern Wallet Style) -->
+            <div class="relative w-full h-48 rounded-[32px] p-6 text-white shadow-xl shadow-blue-500/20 overflow-hidden slide-up" style="background: linear-gradient(135deg, #2563eb, #1e40af);">
+                <!-- Decorative Circles -->
+                <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl"></div>
+                <div class="absolute bottom-0 left-0 w-24 h-24 bg-black/10 rounded-full -ml-5 -mb-5 blur-xl"></div>
+                
+                <div class="relative z-10 flex flex-col justify-between h-full">
+                    <div>
+                        <p class="text-blue-200 text-xs font-bold uppercase tracking-widest mb-1">Saldo Disponible</p>
+                        <h2 class="text-4xl font-extrabold tracking-tight" id="available-display">$0</h2>
+                    </div>
+
+                    <!-- Progress Bar for Budget -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-end text-xs font-bold text-blue-100">
+                            <span>Gastado este mes</span>
+                            <span id="spent-percent">0%</span>
+                        </div>
+                        <div class="w-full h-2 bg-black/20 rounded-full overflow-hidden">
+                            <div id="budget-bar" class="h-full bg-white rounded-full transition-all duration-1000 ease-out" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STATS ROW (Floating Pills) -->
+            <div class="grid grid-cols-2 gap-4 slide-up" style="animation-delay: 0.1s;">
+                <!-- Income Pill -->
+                <div onclick="filterTransactions('income')" class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-3 cursor-pointer hover:border-green-200 transition group">
+                    <div class="w-10 h-10 rounded-2xl bg-green-50 text-green-500 flex items-center justify-center text-lg group-hover:scale-110 transition"><i class="fa-solid fa-arrow-down"></i></div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Ingresos</p>
+                        <p class="text-lg font-black text-gray-800 leading-tight" id="dash-income">$0</p>
+                    </div>
+                </div>
+                <!-- Expense Pill -->
+                <div onclick="filterTransactions('expense')" class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-3 cursor-pointer hover:border-red-200 transition group">
+                    <div class="w-10 h-10 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center text-lg group-hover:scale-110 transition"><i class="fa-solid fa-arrow-up"></i></div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Gastos</p>
+                        <p class="text-lg font-black text-gray-800 leading-tight" id="dash-expense">$0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions & Status -->
+            <div class="grid grid-cols-[1.5fr,1fr] gap-3 slide-up" style="animation-delay: 0.15s;">
+                <!-- Budget Setting -->
+                <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 text-xs"><i class="fa-solid fa-bullseye"></i></div>
+                        <div>
+                            <p class="text-[9px] font-bold text-gray-400 uppercase">Meta / Presupuesto</p>
+                            <input type="number" id="budget-input" class="text-sm font-black text-gray-800 w-24 outline-none placeholder-gray-300" placeholder="Definir...">
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Email Button -->
-                <button onclick="sendAlertEmail(true)" id="btn-email-report" class="buddy-card px-3 py-2 flex items-center justify-between hover:bg-blue-50 border border-transparent hover:border-blue-200 group text-left w-full shadow-sm transition">
-                    <div>
-                        <p class="text-[9px] uppercase font-bold text-gray-400 leading-none mb-1">Reporte</p>
-                        <p class="text-sm font-black text-blue-600 group-hover:text-blue-700 leading-none">Enviar</p>
+                <!-- Report Button -->
+                <button onclick="sendAlertEmail(true)" id="btn-email-report" class="bg-black text-white p-3 rounded-2xl shadow-lg shadow-gray-200 flex items-center justify-center gap-2 hover:bg-gray-800 active:scale-95 transition">
+                    <i class="fa-solid fa-paper-plane text-xs"></i>
+                    <div class="text-left leading-none">
+                        <p class="text-[8px] font-bold text-gray-400 uppercase opacity-50">Reporte</p>
+                        <p class="text-xs font-bold">Enviar</p>
                     </div>
-                    <div class="text-blue-500 text-xs w-6 h-6 flex items-center justify-center rounded-full bg-blue-100 group-hover:scale-110 transition"><i class="fa-solid fa-paper-plane"></i></div>
                 </button>
             </div>
 
-            <!-- Transactions Title -->
-            <div class="flex justify-between items-center mb-2 px-1 slide-up" style="animation-delay: 0.2s;">
-                <h3 id="transactions-title" class="font-extrabold text-base text-gray-900">Transacciones</h3>
-                <button onclick="filterTransactions('all')" id="transactions-subtitle" class="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md">Este Mes</button>
-            </div>
+            <!-- Transactions List -->
+            <div class="pt-2">
+                <div class="flex justify-between items-end mb-4 px-1 slide-up" style="animation-delay: 0.2s;">
+                    <h3 id="transactions-title" class="font-black text-lg text-gray-800">Movimientos</h3>
+                    <button onclick="filterTransactions('all')" id="transactions-subtitle" class="text-[10px] font-bold text-gray-400 bg-white border border-gray-100 px-3 py-1 rounded-full shadow-sm">Ver Todo</button>
+                </div>
 
-            <!-- List -->
-            <ul id="movements-list" class="space-y-3 pb-8 slide-up" style="animation-delay: 0.3s;">
-                <li id="empty-state" class="text-center py-12 opacity-50">
-                    <div class="text-4xl mb-2">😴</div>
-                    <p class="text-sm font-bold text-gray-400">Nada por aquí aún</p>
-                </li>
-                <!-- Items injected via JS -->
-            </ul>
+                <ul id="movements-list" class="space-y-3 pb-8 slide-up" style="animation-delay: 0.25s;">
+                    <li id="empty-state" class="text-center py-12 opacity-40">
+                        <div class="text-5xl mb-4 grayscale">👻</div>
+                        <p class="text-sm font-bold text-gray-400">Sin movimientos aún</p>
+                        <p class="text-xs text-gray-300 mt-1">Usa el botón + para empezar</p>
+                    </li>
+                    <!-- Items injected via JS -->
+                </ul>
+            </div>
 
         </main>
 
         <!-- Fixed Bottom Elements -->
-        <div class="fixed bottom-0 w-full left-0 p-6 pointer-events-none flex justify-center bg-gradient-to-t from-gray-100/90 to-transparent z-10 pt-20">
-            <button onclick="openAddModal()" class="fab-gradient pointer-events-auto text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl shadow-2xl hover:scale-110 transition-transform active:scale-95">
+        <div class="fixed bottom-0 w-full left-0 p-6 pointer-events-none flex justify-center bg-gradient-to-t from-gray-100 via-gray-50/90 to-transparent z-20 pt-24">
+            <button onclick="openAddModal()" class="fab-gradient pointer-events-auto text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl shadow-2xl shadow-blue-500/40 hover:scale-110 transition-transform active:scale-95">
                 <i class="fa-solid fa-plus"></i>
             </button>
         </div>
@@ -425,6 +449,8 @@
             availableDisplay: document.getElementById('available-display'),
             dashIncome: document.getElementById('dash-income'),
             dashExpense: document.getElementById('dash-expense'),
+            budgetBar: document.getElementById('budget-bar'),
+            spentPercent: document.getElementById('spent-percent'),
             
             // Month Nav Elements
             monthDisplay: document.getElementById('month-display'),
@@ -445,9 +471,9 @@
                 savingsStatus: document.getElementById('savings-status'),
                 savingsMsg: document.getElementById('savings-message')
             },
-            statusCard: document.getElementById('status-card'),
-            statusText: document.getElementById('status-text'),
-            statusIcon: document.getElementById('status-icon'),
+            // statusCard: removed
+            // statusText: removed
+            // statusIcon: removed
             btnEmail: document.getElementById('btn-email-report'),
             userDisplay: document.getElementById('user-display'),
             // New Form elements
@@ -802,7 +828,6 @@
             DOM.countDisplay.textContent = `${monthlyData.length} Reg.`;
 
             // Separar Gastos e Ingresos
-            // (Si no tiene 'type', asumimos que es gasto por compatibilidad con datos viejos)
             const incomeItems = monthlyData.filter(i => i.type === 'income');
             const expenseItems = monthlyData.filter(i => i.type === 'expense' || !i.type);
 
@@ -810,8 +835,6 @@
             const totalSpent = expenseItems.reduce((sum, item) => sum + item.amount, 0);
             
             // Fórmula: Saldo = (Presupuesto + Ingresos) - Gastado
-            // Si es un mes pasado, ¿el presupuesto cuenta? Asumimos que el presupuesto es fijo o global por ahora. 
-            // V1: Presupuesto es global (state.budget).
             const available = (state.budget + totalIncome) - totalSpent; 
 
             // 1. Available/Saldo Hero
@@ -821,20 +844,29 @@
             DOM.dashIncome.textContent = formatMoney(totalIncome);
             DOM.dashExpense.textContent = formatMoney(totalSpent);
             
-            // Color logic for available text
-            if(available < 0) DOM.availableDisplay.classList.replace('text-gray-900', 'text-red-500');
-            else DOM.availableDisplay.classList.replace('text-red-500', 'text-gray-900');
-
-            // 2. Status Card (Basado solo en si te pasaste de tu capacidad total)
+            // 2. Budget Bar Logic
             const totalCapacity = state.budget + totalIncome;
-            const statusRatio = totalCapacity > 0 ? (totalSpent / totalCapacity) : 1;
+            let percent = 0;
+            
+            if (totalCapacity > 0) {
+                percent = Math.min((totalSpent / totalCapacity) * 100, 100);
+            } else if (totalSpent > 0) {
+                // Si no hay presupuesto ni ingresos pero hay gastos -> 100%
+                percent = 100;
+            }
 
-            if (statusRatio > 1) {
-                setCardStatus('Peligro', '', 'border-red-500', 'bg-red-50', 'text-red-700');
-            } else if (statusRatio > 0.85) {
-                setCardStatus('Cuidado', '👀', 'border-yellow-400', 'bg-yellow-50', 'text-yellow-700');
+            // Update Bar visual
+            DOM.spentPercent.textContent = `${Math.round(percent)}%`;
+            DOM.budgetBar.style.width = `${percent}%`;
+            
+            // Colores Dinámicos de la Barra
+            DOM.budgetBar.className = 'h-full rounded-full transition-all duration-1000 ease-out';
+            if(percent > 100) {
+                 DOM.budgetBar.classList.add('bg-red-500'); // Over budget
+            } else if (percent > 85) {
+                DOM.budgetBar.classList.add('bg-yellow-400'); // Warning
             } else {
-                setCardStatus('Sano', '🥑', 'border-green-400', 'bg-green-50', 'text-green-700');
+                DOM.budgetBar.classList.add('bg-white'); // Healthy
             }
 
             // 3. List
