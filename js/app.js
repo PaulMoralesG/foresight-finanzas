@@ -8,38 +8,10 @@ import { getEmailJSConfig } from './config-loader.js';
 // 🚀 GLOBAL FUNCTIONS (accesibles desde HTML)
 // ======================================
 
-// Funciones globales de navegación
-window.showLoginView = function() {
-    showView('login-view');
-    updateBrowserHistory('login');
-};
-
-window.showView = showView;
-window.goToLanding = function() {
-    showView('landing-view');
-    updateBrowserHistory('landing');
-};
-
-// Manejar historial del navegador
-function updateBrowserHistory(page) {
-    const url = new URL(window.location);
-    url.searchParams.set('page', page);
-    window.history.pushState({ page }, '', url);
-}
-
-// Escuchar eventos de navegación del browser
-window.addEventListener('popstate', function(event) {
-    if (event.state && event.state.page) {
-        showView(event.state.page + '-view');
-    } else {
-        // Regresar al landing por defecto
-        showView('landing-view');
-    }
-});
-
+// Funciones para modal y UI
 function showView(viewId) {
     // Ocultar todas las vistas
-    const views = ['landing-view', 'login-view', 'app-view'];
+    const views = ['login-view', 'app-view'];
     views.forEach(id => {
         const view = document.getElementById(id);
         if (view) view.classList.add('hidden-view');
@@ -109,21 +81,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log("📍 window.supabase existe:", !!window.supabase);
     await Auth.initSupabase();
     console.log("📊 supabaseClient después de init:", !!Auth.supabaseClient);
-    
-    // Configurar historial inicial del browser
-    const urlParams = new URLSearchParams(window.location.search);
-    const page = urlParams.get('page');
-    if (page && page !== 'landing') {
-        // Si hay una página específica pero no es landing, verificar autenticación
-        const currentSession = Auth.supabaseClient?.auth?.getSession();
-        if (!currentSession?.session) {
-            // Sin sesión - forzar landing
-            if (window.goToLanding) window.goToLanding();
-        }
-    } else {
-        // Mostrar landing por defecto y configurar historial
-        updateBrowserHistory('landing');
-    }
+
         }
     } else {
         // Mostrar landing por defecto y configurar historial
@@ -433,7 +391,6 @@ function loginSuccess(userData) {
     // Verificamos si los elementos existen antes de actuar
     if(UI.DOM.views.login && UI.DOM.views.app) {
         showView('app-view');
-        updateBrowserHistory('app');
         console.log("✅ Vistas actualizadas.");
     } else {
         console.error("❌ Error CRÍTICO: No se encontraron los elementos HTML de las vistas.");

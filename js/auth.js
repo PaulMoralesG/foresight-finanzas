@@ -125,11 +125,9 @@ export async function logout() {
     }
     setCurrentUser(null);
     
-    // Regresar al landing en lugar de recargar
-    if (window.goToLanding) {
-        window.goToLanding();
-    } else if (window.showView) {
-        window.showView('landing-view');
+    // Regresar al login
+    if (window.showView) {
+        window.showView('login-view');
     } else {
         window.location.reload();
     }
