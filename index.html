@@ -409,7 +409,7 @@
         }
 
         // EMOJI HELPER & CONSTANTS
-        const CATEGORIES = [
+        const EXPENSE_CATEGORIES = [
             { id: 'comida', label: 'Comida', icon: '🍔', color: 'bg-orange-100 text-orange-600' },
             { id: 'transporte', label: 'Transp.', icon: '🚖', color: 'bg-blue-100 text-blue-600' },
             { id: 'ocio', label: 'Ocio', icon: '🎉', color: 'bg-purple-100 text-purple-600' },
@@ -424,8 +424,18 @@
             { id: 'otros', label: 'Otros', icon: '💸', color: 'bg-gray-100 text-gray-600' },
         ];
 
+        const INCOME_CATEGORIES = [
+            { id: 'sueldo', label: 'Sueldo', icon: '💰', color: 'bg-green-100 text-green-600' },
+            { id: 'negocio', label: 'Negocio', icon: '👔', color: 'bg-blue-100 text-blue-600' },
+            { id: 'venta', label: 'Venta', icon: '🏷️', color: 'bg-purple-100 text-purple-600' },
+            { id: 'regalo', label: 'Regalo', icon: '🎁', color: 'bg-pink-100 text-pink-600' },
+            { id: 'inversion', label: 'Inversión', icon: '📈', color: 'bg-yellow-100 text-yellow-600' },
+            { id: 'otros_ingreso', label: 'Otros', icon: '➕', color: 'bg-gray-100 text-gray-600' },
+        ];
+
         function getCategoryById(id) {
-            return CATEGORIES.find(c => c.id === id) || CATEGORIES[CATEGORIES.length - 1];
+            const allCats = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES];
+            return allCats.find(c => c.id === id) || EXPENSE_CATEGORIES[EXPENSE_CATEGORIES.length - 1];
         }
 
         // STATE
@@ -493,40 +503,49 @@
         // --- TYPE SWITCHER ---
         function setTransactionType(type) {
             DOM.typeInput.value = type;
+            DOM.categoryGrid.style.display = 'grid'; // Asegurar que siempre se ve
+            
             if(type === 'expense') {
                 DOM.btnTypeExpense.className = "px-4 py-2 rounded-lg text-sm font-extrabold shadow-sm bg-white text-black transition-all";
                 DOM.btnTypeIncome.className = "px-4 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-700 transition-all";
-                // Show categories
-                DOM.categoryGrid ? DOM.categoryGrid.style.display = 'grid' : null;
-                // Update placeholder
+                // Render Expense Categories
+                initCategoryGrid(EXPENSE_CATEGORIES);
                 DOM.conceptInput.placeholder = "¿En qué lo gastaste?";
             } else {
                 DOM.btnTypeIncome.className = "px-4 py-2 rounded-lg text-sm font-extrabold shadow-sm bg-green-100 text-green-700 transition-all";
                 DOM.btnTypeExpense.className = "px-4 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-700 transition-all";
-                // Hide categories for simplified income view (optional, keeping visible is fine too)
-                // DOM.categoryGrid ? DOM.categoryGrid.style.display = 'none' : null; 
-                // Update placeholder
+                // Render Income Categories
+                initCategoryGrid(INCOME_CATEGORIES);
                 DOM.conceptInput.placeholder = "¿De dónde provino este dinero?";
             }
         }
 
         // --- INIT CATEGORY GRID ---
-        function initCategoryGrid() {
+        function initCategoryGrid(categoriesToRender = EXPENSE_CATEGORIES) {
             DOM.categoryGrid ? DOM.categoryGrid.innerHTML = '' : null;
             if(!DOM.categoryGrid) return;
             
-            CATEGORIES.forEach(cat => {
+            categoriesToRender.forEach((cat, index) => {
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 // Usar clases condicionales se maneja en el click
-                btn.className = `flex flex-col items-center justify-center p-1 rounded-xl border-2 border-transparent transition-all ${cat.id === 'otros' ? 'bg-gray-100 ring-2 ring-black' : 'bg-gray-50 hover:bg-gray-100'}`;
-                btn.innerHTML = `<span class="text-xl mb-0.5">${cat.icon}</span><span class="text-[9px] font-bold text-gray-500 uppercase">${cat.label}</span>`;
+                const isDefault = index === 0;
+                btn.className = `flex flex-col items-center justify-center p-1 rounded-xl border-2 border-transparent transition-all ${isDefault ? 'bg-white shadow-md border-gray-200 transform scale-105' : 'bg-gray-50 hover:bg-gray-100'}`;
+                
+                // Si es el primero, marcarlo visualmente como seleccionado al inicio
+                if (isDefault) {
+                     // Solo visual, el selectCategory abajo hará el trabajo lógico
+                }
+
+                btn.innerHTML = `<span class="text-xl mb-0.5">${cat.icon}</span><span class="text-[9px] font-bold ${isDefault ? 'text-gray-900' : 'text-gray-500'} uppercase">${cat.label}</span>`;
                 
                 btn.onclick = () => selectCategory(cat.id, btn);
                 DOM.categoryGrid.appendChild(btn);
             });
-            // Select default
-            selectCategory('comida', DOM.categoryGrid.firstChild); 
+            // Select default (first one)
+            if(categoriesToRender.length > 0) {
+                 selectCategory(categoriesToRender[0].id, DOM.categoryGrid.firstChild);
+            }
         }
 
         function selectCategory(id, btnElement) {
@@ -1023,21 +1042,24 @@
             } catch(e) { DOM.dateInput.valueAsDate = new Date(); }
 
             // Handle Type & Category
-            setTransactionType(item.type || 'expense');
-            selectCategory(item.category || 'otros', DOM.categoryGrid.querySelector('button') || document.createElement('button')); // Visual reset mostly
+            const type = item.type || 'expense';
+            setTransactionType(type);
             
-            // Re-select proper category button visual
-            setTimeout(() => {
-                const catId = item.category || 'otros';
-                // Find button by icon content or just logic index... simplest is re-init grid highlighting
-                // For now, rely on selectCategory logic updating the input value
-                DOM.selectedCategoryInput.value = catId;
-                // Update visuals manually for accuracy
-                Array.from(DOM.categoryGrid.children).forEach((btn, idx) => {
-                   const catData = CATEGORIES[idx];
-                   if(catData.id === catId) selectCategory(catId, btn);
-                });
-            }, 50);
+            // Restore Category Selection
+            const catId = item.category || (type === 'income' ? 'otros_ingreso' : 'otros');
+            const targetList = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+            const catIndex = targetList.findIndex(c => c.id === catId);
+            
+            if (catIndex >= 0 && DOM.categoryGrid.children[catIndex]) {
+                selectCategory(catId, DOM.categoryGrid.children[catIndex]);
+            } else if (DOM.categoryGrid.children.length > 0) {
+                 // Fallback to first
+                 selectCategory(targetList[0].id, DOM.categoryGrid.children[0]);
+            }
+
+            DOM.btnDelete.classList.remove('hidden'); // Show delete button
+            toggleModal(true);
+        }
 
             // Show Delete Button
             DOM.btnDelete.classList.remove('hidden');
