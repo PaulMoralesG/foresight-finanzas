@@ -1228,8 +1228,12 @@
         async function sendAlertEmail(manual) {
             if (!currentUser || !currentUser.email) return;
             const monthly = getMonthlyData();
-            const total = monthly.reduce((s, i) => s + i.amount, 0);
-            const projection = calculateProjection(total);
+            
+            // Fix: Filter only expenses for email report
+            const expensesOnly = monthly.filter(i => i.type === 'expense' || !i.type);
+            const totalSpent = expensesOnly.reduce((s, i) => s + i.amount, 0);
+            
+            const projection = calculateProjection(totalSpent);
             const status = (projection > state.budget) ? "CRÍTICO" : "Estable";
 
             const btn = DOM.btnEmail;
@@ -1242,10 +1246,10 @@
                 await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
                     to_email: currentUser.email,
                     user_name: currentUser.email.split('@')[0],
-                    total_spent: formatMoney(total),
+                    total_spent: formatMoney(totalSpent),
                     budget_limit: formatMoney(state.budget),
                     financial_status: status,
-                    projected_balance: formatMoney(state.budget - total) // Balance real disponible
+                    projected_balance: formatMoney(state.budget - totalSpent) // Balance real disponible
                 });
                 showNotification('¡Enviado! 🚀', 'success');
             } catch (error) {
