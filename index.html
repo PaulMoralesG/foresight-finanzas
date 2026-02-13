@@ -1229,12 +1229,39 @@
             if (!currentUser || !currentUser.email) return;
             const monthly = getMonthlyData();
             
-            // Fix: Filter only expenses for email report
+            // 1. Calcular Gastos e Ingresos
             const expensesOnly = monthly.filter(i => i.type === 'expense' || !i.type);
+            const incomeOnly = monthly.filter(i => i.type === 'income');
+
             const totalSpent = expensesOnly.reduce((s, i) => s + i.amount, 0);
+            const totalIncome = incomeOnly.reduce((s, i) => s + i.amount, 0);
             
+            // 2. Definir "Límite" Inteligente
+            // Si hay presupuesto definido, úsalo. Si es 0, usa el Total de Ingresos como límite.
+            let limit = state.budget;
+            let limitSource = "Presupuesto";
+            
+            if (limit <= 0 && totalIncome > 0) {
+                limit = totalIncome;
+                limitSource = "Ingresos (Auto)";
+            }
+
+            // 3. Calcular Proyección a Fin de Mes
             const projection = calculateProjection(totalSpent);
-            const status = (projection > state.budget) ? "CRÍTICO" : "Estable";
+            
+            // 4. Determinar Estado
+            let status = "Neutro";
+            if (limit > 0) {
+                if (totalSpent > limit) status = "🛑 Límite Excedido";
+                else if (projection > limit) status = "⚠️ Cuidado (Proyección Alta)";
+                else status = "✅ Saludable";
+            } else {
+                status = "ℹ️ Solo Registro";
+            }
+
+            // Cálculo de Sobrante Proyectado (Proyección Real)
+            // ¿Cuánto me sobrará a fin de mes si sigo así? = Límite - Proyección
+            const projectedLeftover = limit > 0 ? (limit - projection) : 0;
 
             const btn = DOM.btnEmail;
             const label = btn.querySelector('p:nth-child(2)');
@@ -1247,9 +1274,11 @@
                     to_email: currentUser.email,
                     user_name: currentUser.email.split('@')[0],
                     total_spent: formatMoney(totalSpent),
-                    budget_limit: formatMoney(state.budget),
+                    // Enviamos el límite efectivo (sea presupuesto o ingresos)
+                    budget_limit: formatMoney(limit), 
                     financial_status: status,
-                    projected_balance: formatMoney(state.budget - totalSpent) // Balance real disponible
+                    // Enviamos el sobrante proyectado real
+                    projected_balance: formatMoney(projectedLeftover) 
                 });
                 showNotification('¡Enviado! 🚀', 'success');
             } catch (error) {
