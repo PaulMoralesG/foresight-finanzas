@@ -891,6 +891,22 @@
                         catData = { label: 'Ingreso', icon: '💰', color: 'bg-green-100 text-green-700' };
                     }
 
+
+                    // Si es Ingreso y no hay categoría definida, mostrar 'Ingreso' como label base,
+                    // PERO si hay concepto, queremos ver el concepto como título principal
+                    
+                    let mainTitle = catData.label;
+                    let subTitle = `${exp.concept || (isIncome ? 'Ingreso Extra' : 'Sin descripción')}`;
+                    
+                    // Mejor UX: Si hay un concepto escrito por el usuario, mostrarlo como título principal
+                    if (exp.concept && exp.concept.length > 0) {
+                        mainTitle = exp.concept;
+                        subTitle = catData.label; // La categoría pasa a ser subtítulo
+                    }
+                    
+                    // Si es ingreso genérico (cat 'otros') y tiene concepto, el icono ya es 💰
+                    // Si no tiene concepto, mainTitle será "Ingreso" o "Comida" etc.
+
                     const li = document.createElement('li');
                     li.className = 'buddy-card p-4 flex justify-between items-center slide-up group cursor-pointer hover:bg-gray-50 transition-colors active:scale-95';
                     li.onclick = () => editTransaction(exp.id); // Click to Edit
@@ -901,14 +917,14 @@
                     li.innerHTML = `
                         <div class="flex items-center gap-4">
                             <div class="icon-squircle text-2xl ${catData.color ?? 'bg-gray-100'}">${catData.icon}</div>
-                            <div>
-                                <p class="font-bold text-gray-800 leading-tight">${catData.label}</p>
-                                <p class="text-xs font-bold text-gray-400 mt-0.5 whitespace-nowrap overflow-hidden max-w-[120px] text-ellipsis">
-                                    ${exp.concept || (isIncome ? 'Ingreso Extra' : 'Sin desc.')} • ${exp.method || 'Efectivo'}
+                            <div class="min-w-0 flex-1">
+                                <p class="font-bold text-gray-800 leading-tight truncate pr-2">${mainTitle}</p>
+                                <p class="text-xs font-bold text-gray-400 mt-0.5 truncate">
+                                    ${subTitle} • ${exp.method || 'Efectivo'}
                                 </p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-3 shrink-0">
                              <div class="text-right">
                                  <span class="font-extrabold ${amountClass} text-lg block">${sign}${formatMoney(exp.amount)}</span>
                                  <span class="text-[10px] font-bold text-gray-400 opacity-60">${new Date(exp.date).toLocaleDateString()}</span>
