@@ -7,13 +7,27 @@ let configCache = null;
 export async function loadConfig() {
     if (configCache) return configCache;
     
+    // Detectar si estamos en GitHub Pages
+    const isGitHubPages = window.location.hostname.includes('github.io');
+    
     try {
-        // Intenta cargar config.js (desarrollo local)
-        configCache = await import('./config.js');
-        console.log("📦 Configuración local cargada");
+        if (isGitHubPages) {
+            // GitHub Pages: usar config.prod.js directamente
+            console.log("📦 Usando configuración de producción (GitHub Pages)");
+            configCache = await import('./config.prod.js');
+        } else {
+            // Local: intentar config.js, fallar a config.prod.js
+            try {
+                configCache = await import('./config.js');
+                console.log("📦 Configuración local cargada");
+            } catch {
+                configCache = await import('./config.prod.js');
+                console.log("📦 Usando config.prod.js como fallback");
+            }
+        }
     } catch (e) {
-        // Si falla, usa config.prod.js (GitHub Pages)
-        console.log("📦 Usando configuración de producción (GitHub Pages)");
+        console.error("Error cargando configuración:", e);
+        // Último recurso: config.prod.js
         configCache = await import('./config.prod.js');
     }
     
