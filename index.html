@@ -577,7 +577,8 @@
                    try {
                        const { error } = await supabaseClient.auth.resend({
                            type: 'signup',
-                           email: email
+                           email: email,
+                           options: { emailRedirectTo: window.location.origin }
                        });
                        if(error) throw error;
                        showNotification("Correo reenviado. Revisa tu bandeja de entrada.", 'success');
@@ -617,7 +618,11 @@
                         await loadProfileFromSupabase(email);
                     } else {
                         // REGISTRO EXACTO
-                        const { data, error } = await supabaseClient.auth.signUp({ email, password: pass });
+                        const { data, error } = await supabaseClient.auth.signUp({ 
+                            email, 
+                            password: pass,
+                            options: { emailRedirectTo: window.location.origin }
+                        });
                         if (error) throw error;
                         
                         if (data.user && !data.session) {
