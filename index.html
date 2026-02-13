@@ -91,9 +91,9 @@
             <h1 class="text-3xl font-extrabold text-center mb-2 text-gray-900">Hola, amigo.</h1>
             <p class="text-center text-gray-400 font-semibold mb-10">Vamos a cuidar tu dinero.</p>
 
-            <form id="auth-form" class="space-y-4">
-                <input type="email" id="auth-email" required class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-gray-700 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Correo electrónico">
-                <input type="password" id="auth-password" required class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-gray-700 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Contraseña">
+            <form id="auth-form" class="space-y-4" autocomplete="off">
+                <input type="email" id="auth-email" required class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-gray-700 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Correo electrónico" autocomplete="email">
+                <input type="password" id="auth-password" required class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-gray-700 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Contraseña" autocomplete="new-password">
                 
                 <button type="submit" id="btn-auth-submit" class="w-full py-4 mt-4 bg-gray-900 text-white font-extrabold rounded-2xl shadow-lg hover:bg-black transition-transform active:scale-95">
                     Iniciar Sesión
