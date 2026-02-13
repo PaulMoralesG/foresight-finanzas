@@ -518,18 +518,29 @@
         // --- AUTH ---
         // Helpers para manejar Perfiles y Auth de forma segura
         async function loadProfileFromSupabase(email) {
-            const { data, error } = await supabaseClient
+            let { data, error } = await supabaseClient
                 .from('profiles')
                 .select('*')
                 .eq('email', email)
-                .maybeSingle(); // Usamos maybeSingle para evitar el error de "Cannot coerce..."
+                .maybeSingle();
 
             if (error) throw error;
+            
+            // Auto-reparación: Si el usuario existe en Auth pero no en la tabla profiles
             if (!data) {
-                // Si no hay datos, puede ser que el perfil no se haya creado aun
-                throw new Error("Perfil no encontrado. Si te acabas de registrar, intenta iniciar sesión nuevamente.");
+                console.log("Perfil no encontrado en base de datos. Creando perfil inicial...");
+                await createInitialProfile(email);
+                
+                // Intentar leer de nuevo
+                const retry = await supabaseClient.from('profiles').select('*').eq('email', email).maybeSingle();
+                data = retry.data;
+                
+                if (!data) {
+                    throw new Error("Perfil no encontrado incluso después de intentar crearlo. Contacta a soporte.");
+                }
             }
-            login({ ...data, password: '' });
+            
+            login({ ...data, password: '' }); // Login exitoso
         }
 
         async function createInitialProfile(email) {
