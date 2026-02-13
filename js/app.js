@@ -46,32 +46,74 @@ import { EMAILJS_PUBLIC_KEY } from './config.js';
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("🚀 App iniciando...");
+    
     // 0. Init EmailJS
-    if(window.emailjs) window.emailjs.init(EMAILJS_PUBLIC_KEY);
+    try {
+        if(window.emailjs) {
+            window.emailjs.init(EMAILJS_PUBLIC_KEY);
+            console.log("✅ EmailJS inicializado");
+        } else {
+            console.warn("⚠️ EmailJS no disponible");
+        }
+    } catch(e) { console.error("EmailJS Error:", e); }
 
     // 1. Init Supabase
+    console.log("🔧 Intentando inicializar Supabase...");
+    console.log("📍 window.supabase existe:", !!window.supabase);
     Auth.initSupabase();
+    console.log("📊 supabaseClient después de init:", !!Auth.supabaseClient);
 
-    // 2. Setup Auth Listeners
-    if(Auth.supabaseClient) {
-        Auth.supabaseClient.auth.onAuthStateChange(async (event, session) => {
-            if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-                if (session && session.user && !AppState.currentUser) {
-                    try {
-                        console.log("Sesión recuperada:", session.user.email);
-                        const profile = await Auth.loadProfileFromSupabase(session.user.email);
-                        if(profile) loginSuccess({ ...profile, password: '' }); 
-                    } catch(e) { console.error(e); }
-                }
-            } else if (event === 'SIGNED_OUT') {
-                // Handled by logout reload
-            }
-        });
-    }
+    // Loop de seguridad para asegurar que Supabase arranque incluso si el script tarda
+    const authCheckInterval = setInterval(() => {
+        if (Auth.supabaseClient) {
+            clearInterval(authCheckInterval);
+            setupAuthObserver();
+        } else {
+            // Reintentar init si sigue null
+            Auth.initSupabase();
+        }
+    }, 500);
 
     // 3. Setup Internal Listeners
     setupEventListeners();
 });
+
+function setupAuthObserver() {
+    if(!Auth.supabaseClient) {
+        console.warn("⚠️ setupAuthObserver llamado pero supabaseClient es null");
+        return;
+    }
+    
+    console.log("📡 ========== CONFIGURANDO AUTH OBSERVER ==========");
+    console.log("✅ Conectando observadores de autenticación...");
+    Auth.supabaseClient.auth.onAuthStateChange(async (event, session) => {
+        console.log("🔔 ========== AUTH STATE CHANGE EVENT ==========");
+        console.log("🔔 Event tipo:", event);
+        console.log("🔔 Session existe:", !!session);
+        console.log("🔔 User en session:", session?.user?.email);
+        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+             if (session && session.user) {
+                if (!AppState.currentUser) {
+                    try {
+                        console.log("👤 Usuario detectado:", session.user.email);
+                        const profile = await Auth.loadProfileFromSupabase(session.user.email);
+                        if(profile) {
+                            loginSuccess({ ...profile, password: '' }); 
+                        } else {
+                            console.error("❌ Perfil no devuelto por loadProfileFromSupabase");
+                            showNotification("Error cargando perfil.", 'error');
+                        }
+                    } catch(e) { console.error("❌ Error cargando perfil:", e); }
+                } else {
+                    console.log("ℹ️ Usuario ya estaba en estado local.");
+                }
+             }
+        } else if (event === 'SIGNED_OUT') {
+             console.log("👋 Sesión cerrada.");
+        }
+    });
+}
 
 function setupEventListeners() {
     const { auth, budgetInput } = UI.DOM;
@@ -111,13 +153,21 @@ function setupEventListeners() {
     // Auth Submit
     auth.form.addEventListener('submit', async (e) => {
         e.preventDefault();
+        console.log("🔐 Form submit interceptado");
         const email = auth.email.value.trim();
         const pass = auth.pass.value.trim();
+        console.log("📧 Email:", email);
+        console.log("🔑 Password length:", pass.length);
 
-        if(!email || !pass) return showNotification("Completa todos los campos", 'error');
+        if(!email || !pass) {
+            console.warn("⚠️ Campos vacíos detectados");
+            return showNotification("Completa todos los campos", 'error');
+        }
 
         // MODO NUBE
+        console.log("☁️ Supabase Client existe:", !!Auth.supabaseClient);
         if (Auth.supabaseClient) {
+            console.log("✅ Procesando con Supabase...");
             if(auth.resendBtn) auth.resendBtn.classList.add('hidden-view');
             
             const btn = auth.submitBtn;
@@ -127,10 +177,19 @@ function setupEventListeners() {
 
             try {
                 if (isLoginMode) {
+                    console.log("🔓 Modo LOGIN activado. Llamando a signIn...");
                     const { error } = await Auth.signIn(email, pass);
+                    console.log("📡 Respuesta signIn - Error:", error);
                     if (error) throw error;
+                    console.log("✅ Login exitoso. Cargando perfil...");
                     const profile = await Auth.loadProfileFromSupabase(email);
-                    if(profile) loginSuccess({ ...profile, password: '' });
+                    console.log("📦 Perfil recibido:", profile);
+                    if(profile) {
+                        console.log("🎯 Llamando a loginSuccess...");
+                        loginSuccess({ ...profile, password: '' });
+                    } else {
+                        console.error("❌ Perfil es null/undefined");
+                    }
                 } else {
                     const { data, error } = await Auth.signUp(email, pass);
                     if (error) throw error;
@@ -252,19 +311,41 @@ function setupEventListeners() {
 }
 
 function loginSuccess(userData) {
+    console.log("🎉 ========== LOGIN SUCCESS EJECUTADO ==========");
+    console.log("📦 userData recibido:", userData);
+    console.log("📧 Email:", userData.email);
+    console.log("💰 Budget:", userData.budget);
+    console.log("📊 Expenses count:", userData.expenses?.length || 0);
+    console.log("Cambiando de vista...");
+
     setCurrentUser(userData);
     setState({ 
         budget: userData.budget, 
         expenses: userData.expenses || [] 
     });
     
-    UI.DOM.views.login.classList.add('hidden-view');
-    UI.DOM.views.app.classList.remove('hidden-view');
-    UI.DOM.userDisplay.textContent = userData.email.split('@')[0];
-    UI.DOM.budgetInput.value = userData.budget || '';
+    // Verificamos si los elementos existen antes de actuar
+    if(UI.DOM.views.login && UI.DOM.views.app) {
+        UI.DOM.views.login.classList.add('hidden-view');
+        UI.DOM.views.app.classList.remove('hidden-view');
+        console.log("✅ Vistas actualizadas.");
+    } else {
+        console.error("❌ Error CRÍTICO: No se encontraron los elementos HTML de las vistas.");
+        return;
+    }
+
+    if(UI.DOM.userDisplay) {
+        UI.DOM.userDisplay.textContent = userData.email.split('@')[0];
+    }
     
+    if(UI.DOM.budgetInput) {
+        UI.DOM.budgetInput.value = userData.budget || '';
+    }
+    
+    console.log("Inicializando UI...");
     UI.initCategoryGrid();
     UI.updateUI();
+    console.log("🚀 Aplicación lista.");
 }
 
 function handleAuthError(err, authDOM) {

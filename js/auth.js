@@ -2,13 +2,28 @@ import { SUPABASE_URL, SUPABASE_KEY } from './config.js';
 import { AppState, setCurrentUser, setState } from './state.js';
 import { showNotification } from './utils.js';
 
+// NOTA: Usamos window.supabase cargado desde el CDN en index.html
+// Esto es más robusto contra inyecciones de extensiones (MetaMask, etc.)
 export let supabaseClient = null;
 
 export function initSupabase() {
-    if(window.supabase) {
-        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    if (window.supabase) {
+        try {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            console.log("✅ Supabase cliente creado (Global UMD).");
+        } catch (e) {
+            console.error("❌ Error creando cliente Supabase:", e);
+        }
     } else {
-        console.error("Supabase SDK not loaded");
+        console.warn("⚠️ window.supabase no encontrado aún. Reintentando en breve...");
+        // Reintento simple por si el script tarda en cargar
+        setTimeout(() => {
+            if(window.supabase && !supabaseClient) {
+                initSupabase();
+                // Forzar recarga de listeners si es necesario
+                console.log("🔄 Inicialización diferida ejecutada.");
+            }
+        }, 1000);
     }
     return supabaseClient;
 }
@@ -58,7 +73,10 @@ export async function createInitialProfile(email) {
 
 export async function signIn(email, password) {
     if(!supabaseClient) throw new Error("Offline mode");
-    return await supabaseClient.auth.signInWithPassword({ email, password });
+    console.log("🔑 Intentando login con:", email);
+    const result = await supabaseClient.auth.signInWithPassword({ email, password });
+    console.log("📬 Resultado Login:", result);
+    return result;
 }
 
 export async function signUp(email, password) {

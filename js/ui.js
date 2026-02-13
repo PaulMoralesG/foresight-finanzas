@@ -5,8 +5,14 @@ import { saveData, logout } from './auth.js';
 
 // DOM ELEMENTS GETTER
 export const DOM = {
-    get views() { return { login: document.getElementById('login-view'), app: document.getElementById('app-view') }; },
+    get views() { 
+        return { 
+            login: document.getElementById('login-view'), 
+            app: document.getElementById('app-view') 
+        }; 
+    },
     get auth() { 
+        // ... (rest of auth)
         return { 
             form: document.getElementById('auth-form'), 
             email: document.getElementById('auth-email'), 
@@ -16,6 +22,7 @@ export const DOM = {
             resendBtn: document.getElementById('btn-resend-verify')
         };
     },
+    get userDisplay() { return document.getElementById('user-display'); },
     get availableDisplay() { return document.getElementById('available-display'); },
     get dashIncome() { return document.getElementById('dash-income'); },
     get dashExpense() { return document.getElementById('dash-expense'); },
@@ -27,6 +34,8 @@ export const DOM = {
     get movementsList() { return document.getElementById('movements-list'); },
     get emptyState() { return document.getElementById('empty-state'); },
     get modal() { return document.getElementById('expense-modal'); },
+
+    // Summary Object with children
     get summary() {
         return {
             modal: document.getElementById('summary-modal'),
@@ -39,19 +48,23 @@ export const DOM = {
             savingsMsg: document.getElementById('savings-message')
         };
     },
-    get btnEmail() { return document.getElementById('btn-email-report'); },
-    get userDisplay() { return document.getElementById('user-display'); },
-    get categoryGrid() { return document.getElementById('category-grid'); },
-    get selectedCategoryInput() { return document.getElementById('selected-category'); },
-    get dateInput() { return document.getElementById('date'); },
+    
+    // Inputs del Modal
     get typeInput() { return document.getElementById('transaction-type'); },
-    get btnTypeExpense() { return document.getElementById('btn-type-expense'); },
-    get btnTypeIncome() { return document.getElementById('btn-type-income'); },
-    get editingIdInput() { return document.getElementById('editing-id'); },
-    get btnDelete() { return document.getElementById('btn-delete'); },
     get amountInput() { return document.getElementById('amount'); },
     get conceptInput() { return document.getElementById('concept'); },
-    get methodInput() { return document.getElementById('method'); }
+    get dateInput() { return document.getElementById('date'); },
+    get methodInput() { return document.getElementById('method'); },
+    get categoryGrid() { return document.getElementById('category-grid'); },
+    
+    // Botones especiales
+    get btnTypeExpense() { return document.getElementById('btn-type-expense'); },
+    get btnTypeIncome() { return document.getElementById('btn-type-income'); },
+    get btnDelete() { return document.getElementById('btn-delete'); },
+    
+    // Inputs ocultos/estado
+    get selectedCategoryInput() { return document.getElementById('selected-category'); },
+    get editingIdInput() { return document.getElementById('editing-id'); }
 };
 
 // CORE LOGIC
