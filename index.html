@@ -222,7 +222,7 @@
     <!-- New Expense Modal -->
     <div id="expense-modal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center invisible opacity-0 transition-all duration-300">
         <div onclick="toggleModal(false)" class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"></div>
-        <form id="expense-form" class="bg-white w-full max-w-md sm:rounded-3xl rounded-t-3xl p-5 shadow-2xl relative z-10 transform translate-y-full sm:translate-y-0 transition-transform duration-300 overflow-y-auto max-h-[90vh]" id="modal-panel">
+        <form id="expense-form" class="bg-white w-full max-w-md sm:rounded-3xl rounded-t-3xl p-5 pb-12 shadow-2xl relative z-10 transform translate-y-full sm:translate-y-0 transition-transform duration-300 overflow-y-auto max-h-[85vh] sm:max-h-[90vh]" id="modal-panel">
             <div class="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-4 sm:hidden"></div>
             
             <div class="flex justify-between items-center mb-4">
@@ -1107,9 +1107,12 @@
                 // Better: The + button onclick should clear editingId
                 
                 modal.classList.remove('invisible', 'opacity-0');
-                if(window.innerWidth < 640) panel.classList.remove('translate-y-full'); 
-                else panel.classList.remove('scale-95');
-                setTimeout(()=>document.getElementById('amount').focus(), 100);
+                if(window.innerWidth < 640) {
+                     panel.classList.remove('translate-y-full');
+                } else { 
+                    panel.classList.remove('scale-95');
+                    setTimeout(()=>document.getElementById('amount').focus(), 100);
+                }
             } else {
                 modal.classList.add('invisible', 'opacity-0');
                 if(window.innerWidth < 640) panel.classList.add('translate-y-full');
