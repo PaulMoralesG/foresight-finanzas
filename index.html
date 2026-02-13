@@ -222,7 +222,7 @@
     <!-- New Expense Modal -->
     <div id="expense-modal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center invisible opacity-0 transition-all duration-300">
         <div onclick="toggleModal(false)" class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"></div>
-        <form id="expense-form" class="bg-white w-full max-w-md sm:rounded-3xl rounded-t-3xl p-5 pb-12 shadow-2xl relative z-10 transform translate-y-full sm:translate-y-0 transition-transform duration-300 overflow-y-auto max-h-[85vh] sm:max-h-[90vh]" id="modal-panel">
+        <form id="expense-form" class="bg-white w-full max-w-md sm:rounded-3xl rounded-t-3xl p-5 pb-12 shadow-2xl relative z-10 transform translate-y-full sm:translate-y-0 transition-transform duration-300 overflow-y-auto max-h-[85vh] sm:max-h-[90vh]">
             <div class="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-4 sm:hidden"></div>
             
             <div class="flex justify-between items-center mb-4">
@@ -1097,7 +1097,7 @@
         // MODAL TOGGLES
         function toggleModal(show) {
             const modal = DOM.modal;
-            const panel = document.getElementById('modal-panel');
+            const panel = document.getElementById('expense-form');
             if(show) {
                 // If opening NOT for edit (no ID pre-filled in previous steps), reset ID
                 // But wait, editTransaction calls toggleModal(true) AFTER setting ID
