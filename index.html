@@ -472,11 +472,15 @@
                 DOM.btnTypeIncome.className = "px-4 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-700 transition-all";
                 // Show categories
                 DOM.categoryGrid ? DOM.categoryGrid.style.display = 'grid' : null;
+                // Update placeholder
+                DOM.conceptInput.placeholder = "¿En qué lo gastaste?";
             } else {
                 DOM.btnTypeIncome.className = "px-4 py-2 rounded-lg text-sm font-extrabold shadow-sm bg-green-100 text-green-700 transition-all";
                 DOM.btnTypeExpense.className = "px-4 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-700 transition-all";
                 // Hide categories for simplified income view (optional, keeping visible is fine too)
                 // DOM.categoryGrid ? DOM.categoryGrid.style.display = 'none' : null; 
+                // Update placeholder
+                DOM.conceptInput.placeholder = "¿De dónde provino este dinero?";
             }
         }
 
