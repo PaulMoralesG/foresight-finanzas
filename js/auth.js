@@ -124,7 +124,15 @@ export async function logout() {
         await supabaseClient.auth.signOut();
     }
     setCurrentUser(null);
-    window.location.reload(); 
+    
+    // Regresar al landing en lugar de recargar
+    if (window.goToLanding) {
+        window.goToLanding();
+    } else if (window.showView) {
+        window.showView('landing-view');
+    } else {
+        window.location.reload();
+    }
 }
 
 export async function saveData() {

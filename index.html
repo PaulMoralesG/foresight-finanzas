@@ -170,9 +170,17 @@
         
         <!-- Header: User & Actions -->
         <div class="px-6 pt-10 pb-4 flex justify-between items-center bg-white/80 backdrop-blur-md sticky top-0 z-30">
-            <div class="flex flex-col">
-                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Hola,</span>
-                <span class="font-black text-xl text-gray-800 leading-none" id="user-display">Usuario</span>
+            <div class="flex items-center gap-3">
+                <!-- Botón de regreso al landing -->
+                <button onclick="goToLanding()" class="flex items-center text-gray-400 hover:text-blue-600 hover:scale-105 transition-all" title="Volver al inicio">
+                    <i class="fa-solid fa-house text-lg"></i>
+                </button>
+                
+                <!-- Usuario -->
+                <div class="flex flex-col">
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Hola,</span>
+                    <span class="font-black text-xl text-gray-800 leading-none" id="user-display">Usuario</span>
+                </div>
             </div>
             <div class="flex gap-3">
                 <button onclick="window.toggleSummary(true)" class="w-10 h-10 rounded-full bg-white shadow-sm border border-gray-100 text-gray-400 hover:text-blue-600 hover:border-blue-200 transition flex items-center justify-center active:scale-95"><i class="fa-solid fa-chart-pie"></i></button>

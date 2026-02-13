@@ -8,12 +8,34 @@ import { getEmailJSConfig } from './config-loader.js';
 // 🚀 GLOBAL FUNCTIONS (accesibles desde HTML)
 // ======================================
 
-// Función global para navegar vistas
+// Funciones globales de navegación
 window.showLoginView = function() {
     showView('login-view');
+    updateBrowserHistory('login');
 };
 
 window.showView = showView;
+window.goToLanding = function() {
+    showView('landing-view');
+    updateBrowserHistory('landing');
+};
+
+// Manejar historial del navegador
+function updateBrowserHistory(page) {
+    const url = new URL(window.location);
+    url.searchParams.set('page', page);
+    window.history.pushState({ page }, '', url);
+}
+
+// Escuchar eventos de navegación del browser
+window.addEventListener('popstate', function(event) {
+    if (event.state && event.state.page) {
+        showView(event.state.page + '-view');
+    } else {
+        // Regresar al landing por defecto
+        showView('landing-view');
+    }
+});
 
 function showView(viewId) {
     // Ocultar todas las vistas
@@ -87,7 +109,39 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log("📍 window.supabase existe:", !!window.supabase);
     await Auth.initSupabase();
     console.log("📊 supabaseClient después de init:", !!Auth.supabaseClient);
-
+    
+    // Configurar historial inicial del browser
+    const urlParams = new URLSearchParams(window.location.search);
+    const page = urlParams.get('page');
+    if (page && page !== 'landing') {
+        // Si hay una página específica pero no es landing, verificar autenticación
+        const currentSession = Auth.supabaseClient?.auth?.getSession();
+        if (!currentSession?.session) {
+            // Sin sesión - forzar landing
+            if (window.goToLanding) window.goToLanding();
+        }
+    } else {
+        // Mostrar landing por defecto y configurar historial
+        updateBrowserHistory('landing');
+    }
+        }
+    } else {
+        // Mostrar landing por defecto y configurar historial
+        updateBrowserHistory('landing');
+    }    // Configurar historial inicial
+    const urlParams = new URLSearchParams(window.location.search);
+    const page = urlParams.get('page');
+    if (page && page !== 'landing') {
+        // Si hay una página específica pero no es landing, verificar autenticación
+        const currentSession = Auth.supabaseClient?.auth?.getSession();
+        if (!currentSession?.data?.session) {
+            // Sin sesión - forzar landing
+            window.goToLanding();
+        }
+    } else {
+        // Mostrar landing por defecto
+        updateBrowserHistory('landing');
+    }
     // Loop de seguridad para asegurar que Supabase arranque incluso si el script tarda
     const authCheckInterval = setInterval(() => {
         if (Auth.supabaseClient) {
@@ -379,6 +433,7 @@ function loginSuccess(userData) {
     // Verificamos si los elementos existen antes de actuar
     if(UI.DOM.views.login && UI.DOM.views.app) {
         showView('app-view');
+        updateBrowserHistory('app');
         console.log("✅ Vistas actualizadas.");
     } else {
         console.error("❌ Error CRÍTICO: No se encontraron los elementos HTML de las vistas.");
