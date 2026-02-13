@@ -1183,19 +1183,46 @@
             const totalSpent = expensesOnly.reduce((s, i) => s + i.amount, 0);
             const totalIncome = incomeOnly.reduce((s, i) => s + i.amount, 0);
 
-            const day = Math.max(1, new Date().getDate());
-            // Proyección de gasto basada en ritmo actual
-            const projectionSpent = (totalSpent / day) * 30;
+            // LOGICA MEJORADA DE FECHAS
+            const now = new Date();
+            const viewingMonth = currentViewDate.getMonth();
+            const viewingYear = currentViewDate.getFullYear();
+            const isCurrentMonth = (now.getMonth() === viewingMonth) && (now.getFullYear() === viewingYear);
             
-            // Proyección de ahorro: (Presupuesto + Ingresos) - Gasto Proyectado
-            const totalCapacity = state.budget + totalIncome;
+            // Días totales del mes visualizado
+            const daysInMonth = new Date(viewingYear, viewingMonth + 1, 0).getDate();
+            
+            // Día para dividir (si es mes actual, usamos el día de hoy, si es pasado, usamos total días)
+            let dayDivisor = isCurrentMonth ? Math.max(1, now.getDate()) : daysInMonth;
+            
+            // Promedio Diario
+            const dailyAvg = totalSpent / dayDivisor;
+
+            // Proyección de Gasto Final
+            // Si es mes pasado, la proyección ES el gasto real. Si es actual, proyectamos linearmente.
+            const projectionSpent = isCurrentMonth ? (dailyAvg * daysInMonth) : totalSpent;
+            
+            // Capacidad Financiera (Prioriza Presupuesto Fijo, si es 0 usa Ingresos Reales)
+            // Si el usuario puso presupuesto $0, asumimos que su límite son sus ingresos.
+            const totalCapacity = state.budget > 0 ? state.budget : totalIncome;
+            
+            // Ahorro Proyectado: Lo que tengo (o puedo gastar) MENOS lo que voy a terminar gastando
             const projectedSavings = totalCapacity - projectionSpent;
 
             if(show) {
                 DOM.summary.total.textContent = formatMoney(totalSpent);
-                DOM.summary.daily.textContent = formatMoney(totalSpent/day);
+                DOM.summary.daily.textContent = formatMoney(dailyAvg);
                 DOM.summary.proj.textContent = formatMoney(projectionSpent); 
 
+                // Ajustar etiquetas si es mes pasado
+                const labelProj = document.querySelector("#summary-panel p:nth-of-type(3)"); // Selector aprox para "PROYECCIÓN FIN MES"
+                if(labelProj) {
+                    // Buscar el elemento span o p hermano anterior que contiene el texto del título
+                    // Estructura actual: div > p (titulo) > p (monto)
+                    // No tenemos IDs específicos para los títulos, asumimos por orden o inyectamos lógica simple
+                    // Mejor: Dejamos el texto genérico "PROYECCIÓN / FINAL" si se desea, o lo cambiamos dinámicamente
+                }
+                
                 // --- LOGICA AHORROS ---
                 DOM.summary.savings.textContent = formatMoney(projectedSavings);
 
@@ -1205,14 +1232,18 @@
                     
                     DOM.summary.savingsStatus.textContent = "Superávit";
                     DOM.summary.savingsStatus.className = "text-xs font-bold text-green-700 bg-green-200 px-2 py-1 rounded-full";
-                    DOM.summary.savingsMsg.textContent = "¡Excelente! A este ritmo, esto es lo que ahorrarás.";
+                    DOM.summary.savingsMsg.textContent = isCurrentMonth 
+                        ? "¡Bien! A este ritmo te sobrará dinero." 
+                        : "Cerraste el mes con saldo positivo.";
                 } else {
                     DOM.summary.savings.classList.remove('text-green-800');
                     DOM.summary.savings.classList.add('text-red-800');
 
                     DOM.summary.savingsStatus.textContent = "Déficit";
                     DOM.summary.savingsStatus.className = "text-xs font-bold text-red-700 bg-red-200 px-2 py-1 rounded-full";
-                    DOM.summary.savingsMsg.textContent = "Atención: Tu ritmo de gastos supera tus ingresos.";
+                    DOM.summary.savingsMsg.textContent = isCurrentMonth 
+                        ? "Cuidado: Vas camino a gastar más de lo que tienes." 
+                        : "Gastaste más de lo disponible este mes.";
                 }
                 // ---------------------
 
