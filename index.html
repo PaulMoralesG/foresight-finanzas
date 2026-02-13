@@ -547,9 +547,11 @@
             // Verifica si ya existe data (migración de usuarios viejos)
             const { data } = await supabaseClient.from('profiles').select('email').eq('email', email).maybeSingle();
             if (!data) {
+                // Fix: Include a dummy password because the DB table has a NOT NULL constraint on 'password'
+                // even though we don't use it (Auth handles it).
                 const { error: insertError } = await supabaseClient
                     .from('profiles')
-                    .insert([{ email, budget: 0, expenses: [] }]);
+                    .insert([{ email, budget: 0, expenses: [], password: 'auth-managed' }]);
                 
                 if (insertError) {
                     console.error("Error creando perfil:", insertError);
