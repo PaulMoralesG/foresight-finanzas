@@ -95,9 +95,14 @@
                 <input type="email" id="auth-email" required class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-gray-700 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Correo electrónico">
                 <input type="password" id="auth-password" required class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-gray-700 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Contraseña">
                 
-                <button type="submit" class="w-full py-4 mt-4 bg-gray-900 text-white font-extrabold rounded-2xl shadow-lg hover:bg-black transition-transform active:scale-95">
-                    Empezar
+                <button type="submit" id="btn-auth-submit" class="w-full py-4 mt-4 bg-gray-900 text-white font-extrabold rounded-2xl shadow-lg hover:bg-black transition-transform active:scale-95">
+                    Iniciar Sesión
                 </button>
+                <div class="text-center mt-4">
+                    <button type="button" id="btn-auth-toggle" class="text-sm font-bold text-gray-400 hover:text-blue-500 transition-colors">
+                        ¿No tienes cuenta? <span class="text-blue-600">Regístrate aquí</span>
+                    </button>
+                </div>
             </form>
         </div>
     </section>
@@ -355,6 +360,23 @@
         let supabaseClient = null;
         if (window.supabase) {
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+            // Escuchar cambios de sesión (Persistencia)
+            supabaseClient.auth.onAuthStateChange((event, session) => {
+                if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+                    if (session && session.user) {
+                        // Solo cargar si no estamos ya logueados para evitar recargas innecesarias
+                        if (!currentUser) {
+                           console.log("Sesión recuperada:", session.user.email);
+                           loadProfileFromSupabase(session.user.email);
+                        }
+                    }
+                } else if (event === 'SIGNED_OUT') {
+                    // logout() ya maneja la recarga, pero por seguridad:
+                    if(currentUser) window.location.reload();
+                }
+            });
+
         } else {
             console.error("Error crítico: SDK de Supabase no cargado.");
         }
@@ -387,7 +409,13 @@
         
         const DOM = {
             views: { login: document.getElementById('login-view'), app: document.getElementById('app-view') },
-            auth: { form: document.getElementById('auth-form'), email: document.getElementById('auth-email'), pass: document.getElementById('auth-password') },
+            auth: { 
+                form: document.getElementById('auth-form'), 
+                email: document.getElementById('auth-email'), 
+                pass: document.getElementById('auth-password'),
+                submitBtn: document.getElementById('btn-auth-submit'),
+                toggleBtn: document.getElementById('btn-auth-toggle')
+            },
             
             // Stats Displays
             availableDisplay: document.getElementById('available-display'),
@@ -486,9 +514,13 @@
                 .from('profiles')
                 .select('*')
                 .eq('email', email)
-                .single();
+                .maybeSingle(); // Usamos maybeSingle para evitar el error de "Cannot coerce..."
 
             if (error) throw error;
+            if (!data) {
+                // Si no hay datos, puede ser que el perfil no se haya creado aun
+                throw new Error("Perfil no encontrado. Si te acabas de registrar, intenta iniciar sesión nuevamente.");
+            }
             login({ ...data, password: '' });
         }
 
@@ -496,49 +528,78 @@
             // Verifica si ya existe data (migración de usuarios viejos)
             const { data } = await supabaseClient.from('profiles').select('email').eq('email', email).maybeSingle();
             if (!data) {
-                await supabaseClient.from('profiles').insert([{ email, budget: 0, expenses: [] }]);
+                const { error: insertError } = await supabaseClient
+                    .from('profiles')
+                    .insert([{ email, budget: 0, expenses: [] }]);
+                
+                if (insertError) {
+                    console.error("Error creando perfil:", insertError);
+                    throw new Error("No se pudo crear el perfil de usuario: " + insertError.message);
+                }
             }
+        }
+
+        // AUTH LOGIC
+        let isLoginMode = true;
+
+        if (DOM.auth.toggleBtn) {
+            DOM.auth.toggleBtn.addEventListener('click', () => {
+                isLoginMode = !isLoginMode;
+                if (isLoginMode) {
+                   DOM.auth.submitBtn.textContent = "Iniciar Sesión";
+                   DOM.auth.toggleBtn.innerHTML = '¿No tienes cuenta? <span class="text-blue-600">Regístrate aquí</span>';
+                } else {
+                   DOM.auth.submitBtn.textContent = "Crear Cuenta";
+                   DOM.auth.toggleBtn.innerHTML = '¿Ya tienes cuenta? <span class="text-blue-600">Inicia sesión</span>';
+                }
+            });
         }
 
         DOM.auth.form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = DOM.auth.email.value.trim();
             const pass = DOM.auth.pass.value.trim();
-            if(!email || !pass) return;
+            if(!email || !pass) {
+                showNotification("Por favor completa todos los campos.", 'error');
+                return;
+            }
 
-            // MODO NUBE (SUPABASE) - LÓGICA SEGURA
+            // MODO NUBE (SUPABASE)
             if (supabaseClient) {
-                const btn = DOM.auth.form.querySelector('button');
+                const btn = DOM.auth.submitBtn;
                 const oldText = btn.innerHTML;
-                btn.textContent = "Verificando...";
+                btn.textContent = isLoginMode ? "Verificando..." : "Registrando...";
                 btn.disabled = true;
 
                 try {
-                    // 1. Intentar Login Oficial
-                    const { error: signInError } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
-
-                    if (!signInError) {
+                    if (isLoginMode) {
+                        // LOGIN EXACTO
+                        const { error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
+                        if (error) throw error;
                         await loadProfileFromSupabase(email);
                     } else {
-                        // 2. Si falla, intentar Registro (Implicit flow)
-                        console.log("Login fallido, probando registro...");
-                        const { data: signUpData, error: signUpError } = await supabaseClient.auth.signUp({ email, password: pass });
+                        // REGISTRO EXACTO
+                        const { data, error } = await supabaseClient.auth.signUp({ email, password: pass });
+                        if (error) throw error;
+                        
+                        if (data.user && !data.session) {
+                             showNotification("Registro exitoso. Revisa tu correo para confirmar.", 'success');
+                             return; 
+                        }
 
-                        if (signUpError) {
-                            if (signUpError.message.includes("already registered") || signUpError.message.includes("User already registered")) {
-                                alert("Contraseña incorrecta.");
-                            } else {
-                                throw signUpError;
-                            }
-                        } else if (signUpData.user) {
-                            await createInitialProfile(email);
-                            await loadProfileFromSupabase(email);
-                            // Login silencioso exitoso
+                        if (data.user) {
+                           await createInitialProfile(email);
+                           await loadProfileFromSupabase(email);
                         }
                     }
                 } catch (err) {
                     console.error("Error Auth:", err);
-                    alert("Error: " + err.message);
+                    let msg = err.message;
+                    if (msg.includes("security purposes")) msg = "Por seguridad, espera unos segundos antes de intentar de nuevo.";
+                    else if (msg.includes("Invalid login")) msg = "Credenciales incorrectas.";
+                    else if (msg.includes("already registered")) msg = "Este correo ya está registrado.";
+                    
+                    showNotification(msg, 'error');
                 } finally {
                     btn.innerHTML = oldText;
                     btn.disabled = false;
@@ -550,14 +611,22 @@
             const userKey = `foresight_user_${email}`;
             const stored = localStorage.getItem(userKey);
 
-            if (stored) {
-                const data = JSON.parse(stored);
-                if (data.password === pass) login(data);
-                else alert('Contraseña incorrecta');
+            if (isLoginMode) {
+                if (stored) {
+                    const data = JSON.parse(stored);
+                    if (data.password === pass) login(data);
+                    else showNotification('Contraseña incorrecta', 'error');
+                } else {
+                    showNotification("Usuario no encontrado. Por favor, regístrese.", 'error');
+                }
             } else {
-                const newUser = { email, password: pass, budget: 0, expenses: [] };
-                localStorage.setItem(userKey, JSON.stringify(newUser));
-                login(newUser);
+                if (stored) {
+                    showNotification("El usuario ya existe. Por favor inicie sesión.", 'error');
+                } else {
+                    const newUser = { email, password: pass, budget: 0, expenses: [] };
+                    localStorage.setItem(userKey, JSON.stringify(newUser));
+                    login(newUser);
+                }
             }
         });
 
@@ -575,7 +644,10 @@
             updateUI();
         }
 
-        function logout() {
+        async function logout() {
+            if (supabaseClient) {
+                await supabaseClient.auth.signOut();
+            }
             currentUser = null;
             location.reload(); 
         }
@@ -1100,6 +1172,37 @@
 
         function formatMoney(amount) {
             return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(amount);
+        }
+
+        // --- TOAST NOTIFICATIONS ---
+        function showNotification(message, type = 'info') {
+            // Remove existing toasts
+            const existing = document.getElementById('toast-notification');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.id = 'toast-notification';
+            toast.className = `fixed top-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center w-full max-w-xs p-4 space-x-3 text-gray-500 bg-white rounded-lg shadow-2xl slide-up border-l-4 ${type === 'error' ? 'border-red-500' : 'border-blue-500'}`;
+            
+            let icon = type === 'error' ? '<i class="fa-solid fa-circle-exclamation text-red-500 text-lg"></i>' : '<i class="fa-solid fa-circle-check text-blue-500 text-lg"></i>';
+
+            toast.innerHTML = `
+                ${icon}
+                <div class="pl-2 text-sm font-bold text-gray-800">${message}</div>
+            `;
+
+            document.body.appendChild(toast);
+
+            // Audio feedback (optional, subtle click)
+            // const audio = new Audio('path/to/sound.mp3'); audio.play().catch(e=>{});
+
+            setTimeout(() => {
+                toast.classList.remove('slide-up');
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, -20px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
         }
     </script>
 </body>
