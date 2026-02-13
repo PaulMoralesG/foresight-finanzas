@@ -593,7 +593,6 @@
                 }
             });
         }
-
         DOM.auth.form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = DOM.auth.email.value.trim();
@@ -642,7 +641,6 @@
                         msg = "Tu correo no ha sido confirmado. Por favor revisa tu bandeja de entrada.";
                         if(DOM.auth.resendBtn) DOM.auth.resendBtn.classList.remove('hidden-view');
                     }
-
                     showNotification(msg, 'error');
                 } finally {
                     btn.innerHTML = oldText;
