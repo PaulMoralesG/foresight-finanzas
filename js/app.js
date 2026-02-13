@@ -2,6 +2,7 @@ import { AppState, setState, setCurrentUser } from './state.js';
 import * as UI from './ui.js';
 import * as Auth from './auth.js';
 import { showNotification, runAsyncAction } from './utils.js';
+import { getEmailJSConfig } from './config-loader.js';
 
 // --- EXPOSE GLOBALS FOR HTML ---
 window.toggleSummary = UI.toggleSummary;
@@ -42,26 +43,25 @@ window.executeDelete = async function() {
 };
 
 
-import { EMAILJS_PUBLIC_KEY } from './config.js';
-
 // --- INITIALIZATION ---
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     console.log("🚀 App iniciando...");
     
     // 0. Init EmailJS
     try {
-        if(window.emailjs) {
-            window.emailjs.init(EMAILJS_PUBLIC_KEY);
+        const emailConfig = await getEmailJSConfig();
+        if(window.emailjs && emailConfig.EMAILJS_PUBLIC_KEY !== "DEMO_KEY") {
+            window.emailjs.init(emailConfig.EMAILJS_PUBLIC_KEY);
             console.log("✅ EmailJS inicializado");
         } else {
-            console.warn("⚠️ EmailJS no disponible");
+            console.warn("⚠️ EmailJS en modo demo o no disponible");
         }
     } catch(e) { console.error("EmailJS Error:", e); }
 
     // 1. Init Supabase
     console.log("🔧 Intentando inicializar Supabase...");
     console.log("📍 window.supabase existe:", !!window.supabase);
-    Auth.initSupabase();
+    await Auth.initSupabase();
     console.log("📊 supabaseClient después de init:", !!Auth.supabaseClient);
 
     // Loop de seguridad para asegurar que Supabase arranque incluso si el script tarda

@@ -1,19 +1,33 @@
-import { SUPABASE_URL, SUPABASE_KEY } from './config.js';
 import { AppState, setCurrentUser, setState } from './state.js';
 import { showNotification } from './utils.js';
+import { getSupabaseConfig } from './config-loader.js';
+
+// Configuración dinámica: será cargada al inicializar
+let SUPABASE_URL = null;
+let SUPABASE_KEY = null;
 
 // NOTA: Usamos window.supabase cargado desde el CDN en index.html
 // Esto es más robusto contra inyecciones de extensiones (MetaMask, etc.)
 export let supabaseClient = null;
 
-export function initSupabase() {
-    if (window.supabase) {
+export async function initSupabase() {
+    // Cargar configuración dinámica
+    if (!SUPABASE_URL) {
+        const config = await getSupabaseConfig();
+        SUPABASE_URL = config.SUPABASE_URL;
+        SUPABASE_KEY = config.SUPABASE_KEY;
+    }
+
+    if (window.supabase && SUPABASE_URL !== "https://demo.supabase.co") {
         try {
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             console.log("✅ Supabase cliente creado (Global UMD).");
         } catch (e) {
             console.error("❌ Error creando cliente Supabase:", e);
         }
+    } else if (SUPABASE_URL === "https://demo.supabase.co") {
+        console.log("🎭 Modo DEMO activado - funcionalidad limitada a interfaz");
+        supabaseClient = null; // En modo demo no tenemos cliente real
     } else {
         console.warn("⚠️ window.supabase no encontrado aún. Reintentando en breve...");
         // Reintento simple por si el script tarda en cargar
@@ -30,7 +44,13 @@ export function initSupabase() {
 
 // Helpers para manejar Perfiles y Auth de forma segura
 export async function loadProfileFromSupabase(email) {
-    if(!supabaseClient) return null;
+    if(!supabaseClient) {
+        // Modo local/demo - cargar desde localStorage
+        console.log("🎭 Modo DEMO: Cargando perfil local");
+        const userKey = `foresight_user_${email}`;
+        const stored = localStorage.getItem(userKey);
+        return stored ? JSON.parse(stored) : null;
+    }
     
     let { data, error } = await supabaseClient
         .from('profiles')
@@ -72,7 +92,24 @@ export async function createInitialProfile(email) {
 }
 
 export async function signIn(email, password) {
-    if(!supabaseClient) throw new Error("Offline mode");
+    if(!supabaseClient) {
+        // Modo local/demo - usar localStorage
+        console.log("🎭 Modo DEMO: Usando almacenamiento local");
+        const userKey = `foresight_user_${email}`;
+        const stored = localStorage.getItem(userKey);
+        
+        if (stored) {
+            const data = JSON.parse(stored);
+            if (data.password === password) {
+                return { data: { user: { email }, session: { user: { email } } }, error: null };
+            } else {
+                return { error: { message: "Invalid login credentials" } };
+            }
+        } else {
+            return { error: { message: "User not found" } };
+        }
+    }
+    
     console.log("🔑 Intentando login con:", email);
     const result = await supabaseClient.auth.signInWithPassword({ email, password });
     console.log("📬 Resultado Login:", result);
@@ -80,7 +117,21 @@ export async function signIn(email, password) {
 }
 
 export async function signUp(email, password) {
-    if(!supabaseClient) throw new Error("Offline mode");
+    if(!supabaseClient) {
+        // Modo local/demo - crear usuario en localStorage
+        console.log("🎭 Modo DEMO: Creando usuario local");
+        const userKey = `foresight_user_${email}`;
+        const stored = localStorage.getItem(userKey);
+        
+        if (stored) {
+            return { error: { message: "User already exists" } };
+        } else {
+            const newUser = { email, password, budget: 0, expenses: [] };
+            localStorage.setItem(userKey, JSON.stringify(newUser));
+            return { data: { user: { email }, session: { user: { email } } }, error: null };
+        }
+    }
+    
     return await supabaseClient.auth.signUp({ 
         email, 
         password,

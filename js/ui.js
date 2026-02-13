@@ -1,7 +1,29 @@
 import { AppState, setViewDate, setFilter } from './state.js';
 import { formatMoney, showNotification, runAsyncAction } from './utils.js';
-import { getCategoryById, EXPENSE_CATEGORIES, INCOME_CATEGORIES, EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID } from './config.js';
+import { getCategories, getEmailJSConfig } from './config-loader.js';
 import { saveData, logout } from './auth.js';
+
+// Variables globales para configuración cargada dinámicamente
+let EXPENSE_CATEGORIES = [];
+let INCOME_CATEGORIES = [];
+let getCategoryById = () => ({ label: 'Cargando...', icon: '⏳', color: 'bg-gray-100 text-gray-600' });
+let EMAILJS_SERVICE_ID = "";
+let EMAILJS_TEMPLATE_ID = "";
+
+// Cargar configuración al inicializar el módulo
+async function initConfig() {
+    const categoriesConfig = await getCategories();
+    const emailConfig = await getEmailJSConfig();
+    
+    EXPENSE_CATEGORIES = categoriesConfig.EXPENSE_CATEGORIES;
+    INCOME_CATEGORIES = categoriesConfig.INCOME_CATEGORIES;
+    getCategoryById = categoriesConfig.getCategoryById;
+    EMAILJS_SERVICE_ID = emailConfig.EMAILJS_SERVICE_ID;
+    EMAILJS_TEMPLATE_ID = emailConfig.EMAILJS_TEMPLATE_ID;
+}
+
+// Inicializar configuración inmediatamente
+initConfig();
 
 // DOM ELEMENTS GETTER
 export const DOM = {
