@@ -609,6 +609,8 @@
 
             // MODO NUBE (SUPABASE)
             if (supabaseClient) {
+                if(DOM.auth.resendBtn) DOM.auth.resendBtn.classList.add('hidden-view'); // Reset UI
+                
                 const btn = DOM.auth.submitBtn;
                 const oldText = btn.innerHTML;
                 btn.textContent = isLoginMode ? "Verificando..." : "Registrando...";
@@ -643,7 +645,11 @@
                     console.error("Error Auth:", err);
                     let msg = err.message;
                     if (msg.includes("security purposes")) msg = "Por seguridad, espera unos segundos antes de intentar de nuevo.";
-                    else if (msg.includes("Invalid login")) msg = "Credenciales incorrectas.";
+                    else if (msg.includes("Invalid login")) {
+                        msg = "Credenciales incorrectas.";
+                        // Si falla el login, damos la opción de reenviar confirmación por si acaso
+                        if(DOM.auth.resendBtn) DOM.auth.resendBtn.classList.remove('hidden-view');
+                    }
                     else if (msg.includes("already registered")) msg = "Este correo ya está registrado.";
                     else if (msg.includes("rate limit exceeded") || msg.includes("email rate limit")) msg = "Demasiados intentos. Por favor espera un momento antes de volver a intentar.";
                     else if (msg.includes("Email not confirmed")) {
