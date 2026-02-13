@@ -4,6 +4,28 @@ import * as Auth from './auth.js';
 import { showNotification, runAsyncAction } from './utils.js';
 import { getEmailJSConfig } from './config-loader.js';
 
+// ======================================
+// 🚀 GLOBAL FUNCTIONS (accesibles desde HTML)
+// ======================================
+
+// Función global para navegar vistas
+window.showLoginView = function() {
+    showView('login-view');
+};
+
+function showView(viewId) {
+    // Ocultar todas las vistas
+    const views = ['landing-view', 'login-view', 'app-view'];
+    views.forEach(id => {
+        const view = document.getElementById(id);
+        if (view) view.classList.add('hidden-view');
+    });
+    
+    // Mostrar vista solicitada
+    const targetView = document.getElementById(viewId);
+    if (targetView) targetView.classList.remove('hidden-view');
+}
+
 // --- EXPOSE GLOBALS FOR HTML ---
 window.toggleSummary = UI.toggleSummary;
 window.logout = Auth.logout;
@@ -354,8 +376,7 @@ function loginSuccess(userData) {
     
     // Verificamos si los elementos existen antes de actuar
     if(UI.DOM.views.login && UI.DOM.views.app) {
-        UI.DOM.views.login.classList.add('hidden-view');
-        UI.DOM.views.app.classList.remove('hidden-view');
+        showView('app-view');
         console.log("✅ Vistas actualizadas.");
     } else {
         console.error("❌ Error CRÍTICO: No se encontraron los elementos HTML de las vistas.");

@@ -142,14 +142,20 @@ export function updateUI() {
         percent = 100;
     }
 
+    // Alertas específicas para estudiantes universitarios
     DOM.spentPercent.textContent = `${Math.round(percent)}%`;
     DOM.budgetBar.style.width = `${percent}%`;
     
     DOM.budgetBar.className = 'h-full rounded-full transition-all duration-1000 ease-out';
     if(percent > 100) {
-            DOM.budgetBar.classList.add('bg-red-500'); 
+            DOM.budgetBar.classList.add('bg-red-500');
+            showStudentAlert(`😨 ¡Te quedaste sin dinero! Revisa tus gastos estudiantiles.`, 'error', false);
     } else if (percent > 85) {
         DOM.budgetBar.classList.add('bg-yellow-400');
+        showStudentAlert(`⚠️ Cuidado: Ya gastaste ${Math.round(percent)}% de tu presupuesto mensual.`, 'warning', false);
+    } else if (percent > 70) {
+        DOM.budgetBar.classList.add('bg-orange-400');
+        showStudentAlert(`📊 Vas bien, pero modera tus gastos en comida/entretenimiento.`, 'info', false);
     } else {
         DOM.budgetBar.classList.add('bg-white'); 
     }
@@ -161,6 +167,172 @@ export function updateUI() {
 
     renderList(itemsToShow);
     updateFilterHeader();
+    
+    // ACTUALIZAR MENSAJES MOTIVACIONALES PARA UNIVERSITARIOS
+    updateStudentMotivationalMessage(percent, totalSpent, AppState.budget);
+    
+    // CALCULAR MÉTRICAS ESPECÍFICAS PARA UNIVERSITARIOS
+    updateStudentMetrics(expenseItems, totalSpent);
+    
+    // Verificar alertas específicas para estudiantes
+    checkStudentTimeAlerts();
+}
+
+// MENSAJES MOTIVACIONALES PARA ESTUDIANTES
+function updateStudentMotivationalMessage(percent, totalSpent, budget) {
+    const statusElement = document.getElementById('student-status');
+    if (!statusElement) return;
+    
+    let message = "💪 Maneja tu dinero como un pro";
+    
+    if (percent > 100) {
+        message = "😅 ¡Ups! Tiempo de ajustar gastos";
+    } else if (percent > 85) {
+        message = "⚠️ Cuidado - Fin de mes cerca";
+    } else if (percent > 70) {
+        message = "📊 Buen control, modera salidas";
+    } else if (percent > 50) {
+        message = "😎 ¡Excelente control financiero!";
+    } else if (totalSpent > 0) {
+        message = "✨ ¡Vas súper bien!";
+    } else {
+        message = "🚀 ¡Comienza tu control financiero!";
+    }
+    
+    statusElement.textContent = message;
+}
+
+// MÉTRICAS ESPECÍFICAS PARA ESTUDIANTES UNIVERSITARIOS
+function updateStudentMetrics(expenseItems, totalSpent) {
+    // 1. GASTO DIARIO PROMEDIO
+    const now = new Date();
+    const dayOfMonth = now.getDate();
+    const dailyAverage = dayOfMonth > 0 ? totalSpent / dayOfMonth : 0;
+    const dailyAverageElement = document.getElementById('daily-average');
+    if (dailyAverageElement) {
+        dailyAverageElement.textContent = formatMoney(dailyAverage);
+    }
+    
+    // 2. DÍAS RESTANTES DEL MES
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const daysRemaining = daysInMonth - dayOfMonth;
+    const daysRemainingElement = document.getElementById('days-remaining');
+    if (daysRemainingElement) {
+        daysRemainingElement.textContent = daysRemaining <= 0 ? '0' : daysRemaining.toString();
+    }
+    
+    // 3. CATEGORÍA TOP DE GASTOS
+    const topCategory = calculateTopStudentCategory(expenseItems);
+    const topCategoryElement = document.getElementById('top-category');
+    if (topCategoryElement) {
+        topCategoryElement.textContent = topCategory;
+    }
+}
+
+// CALCULAR CATEGORÍA DE GASTO MÁS ALTA PARA UNIVERSITARIOS
+function calculateTopStudentCategory(expenseItems) {
+    if (!expenseItems || expenseItems.length === 0) return '👀';
+    
+    const categoryTotals = {};
+    
+    expenseItems.forEach(expense => {
+        const categoryId = expense.categoryId || 'otros-gastos';
+        categoryTotals[categoryId] = (categoryTotals[categoryId] || 0) + expense.amount;
+    });
+    
+    let maxAmount = 0;
+    let topCategoryId = '';
+    
+    Object.entries(categoryTotals).forEach(([categoryId, amount]) => {
+        if (amount > maxAmount) {
+            maxAmount = amount;
+            topCategoryId = categoryId;
+        }
+    });
+    
+    // Mapeo de categorías a emojis específicos para universitarios
+    const categoryEmojis = {
+        'comida-u': '🍔',
+        'transporte-u': '🚌',
+        'materiales': '📝',
+        'fotocopias': '🖨️',
+        'libros': '📚',
+        'entretenimiento': '🎉',
+        'ropa-casual': '👕',
+        'casa-estudiantil': '🏠',
+        'salud-estudiantil': '💊',
+        'subscripciones': '📱',
+        'salidas-amigos': '🍻',
+        'emergencias': '⚠️',
+        'gimnasio-deporte': '🏋️',
+        'proyectos-uni': '📈',
+        'otros-gastos': '💸'
+    };
+    
+    return categoryEmojis[topCategoryId] || '💸';
+}
+
+// ALERTAS ESPECÍFICAS PARA ESTUDIANTES UNIVERSITARIOS
+function showStudentAlert(message, type, persistent = false) {
+    // Solo mostrar alertas únicas para no saturar
+    const existingAlert = document.querySelector('.student-alert');
+    if (existingAlert && !persistent) return;
+    
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `student-alert fixed top-4 right-4 z-50 p-3 rounded-2xl shadow-lg max-w-sm text-sm font-medium transition-all duration-300`;
+    
+    if (type === 'error') {
+        alertDiv.className += ' bg-red-100 text-red-700 border border-red-200';
+    } else if (type === 'warning') {
+        alertDiv.className += ' bg-yellow-100 text-yellow-700 border border-yellow-200';
+    } else if (type === 'info') {
+        alertDiv.className += ' bg-blue-100 text-blue-700 border border-blue-200';
+    }
+    
+    alertDiv.innerHTML = `<div class="flex items-center"><span>${message}</span><button onclick="this.parentElement.parentElement.remove()" class="ml-2 text-lg">×</button></div>`;
+    document.body.appendChild(alertDiv);
+    
+    if (!persistent) {
+        setTimeout(() => alertDiv.remove(), 5000);
+    }
+}
+
+// ALERTAS POR TIEMPOS ESTUDIANTILES
+function checkStudentTimeAlerts() {
+    const now = new Date();
+    const dayOfMonth = now.getDate();
+    const dayOfWeek = now.getDay(); // 0 = domingo
+    
+    // Alerta de fin de mes (días 25-30)
+    if (dayOfMonth >= 25 && dayOfMonth <= 30) {
+        const { budget, expenses } = AppState;
+        const monthlyExpenses = getMonthlyData().filter(i => i.type === 'expense' || !i.type);
+        const totalSpent = monthlyExpenses.reduce((s, i) => s + i.amount, 0);        
+        if (budget > 0 && totalSpent > budget * 0.90) {
+            showStudentAlert('📅 ¡Fin de mes cerca! Modera gastos hasta tu próxima mesada/beca.', 'warning', false);
+        }
+    }
+    
+    // Alerta de fin de semana (viernes-sábado)
+    if (dayOfWeek === 5 || dayOfWeek === 6) {
+        const weeklySpent = calculateWeeklySpending();
+        if (weeklySpent > (AppState.budget * 0.3)) {
+            showStudentAlert('🎉 Fin de semana: ¡cuidado con los gastos en salidas y entretenimiento!', 'info', false);
+        }
+    }
+}
+
+// CALCULAR GASTOS SEMANALES
+function calculateWeeklySpending() {
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    return AppState.expenses
+        .filter(expense => {
+            const expenseDate = new Date(expense.date);
+            return expenseDate >= weekAgo && (expense.type === 'expense' || !expense.type);
+        })
+        .reduce((sum, expense) => sum + expense.amount, 0);
 }
 
 function updateFilterHeader() {
@@ -447,7 +619,7 @@ export function deleteTransaction() {
     toggleDeleteModal(true);
 }
 
-// EMAIL
+// EMAIL CON CONTEXTO ESTUDIANTIL
 export async function sendAlertEmail(manual) {
     if (!AppState.currentUser || !AppState.currentUser.email) return;
     const monthly = getMonthlyData();
@@ -461,10 +633,23 @@ export async function sendAlertEmail(manual) {
 
     const projection = calculateProjection(totalSpent);
     let status = "Neutro";
+    let studentTip = "";
+    
     if (limit > 0) {
-        if (totalSpent > limit) status = "🛑 Límite Excedido";
-        else if (projection > limit) status = "⚠️ Cuidado (Proyección Alta)";
-        else status = "✅ Saludable";
+        const percentage = (totalSpent / limit) * 100;
+        if (totalSpent > limit) {
+            status = "😨 ¡Sin dinero!"; 
+            studentTip = "Hora de hablar con familia o buscar ingresos extra (tutorías, freelance).";
+        } else if (projection > limit) {
+            status = "⚠️ Proyección riesgosa";
+            studentTip = "Reduce gastos en comida fuera de casa y entretenimiento.";
+        } else if (percentage > 70) {
+            status = "📊 Gastando rápido";
+            studentTip = "Buen ritmo, pero modera las salidas con amigos.";
+        } else {
+            status = "✅ Control financiero estudiantil";
+            studentTip = "¡Excelente! Mantienes un buen control de tus gastos universitarios.";
+        }
     }
 
     const projectedLeftover = limit > 0 ? (limit - projection) : 0;
@@ -481,9 +666,10 @@ export async function sendAlertEmail(manual) {
             total_spent: formatMoney(totalSpent),
             budget_limit: formatMoney(limit), 
             financial_status: status,
-            projected_balance: formatMoney(projectedLeftover) 
+            projected_balance: formatMoney(projectedLeftover),
+            student_tip: studentTip
         });
-        showNotification('¡Enviado! 🚀', 'success');
+        showNotification('🎓 ¡Reporte estudiantil enviado! 🚀', 'success');
     } catch (error) {
         console.error(error);
         showNotification("Error técnico al enviar.", 'error');

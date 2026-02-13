@@ -30,6 +30,99 @@
 <body class="safe-area-inset-bottom">
 
     <!-- ======================= -->
+    <!-- VISTA 0: LANDING EMPRENDEDORA -->
+    <!-- ======================= -->
+    <section id="landing-view" class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+        <!-- Hero Section -->
+        <div class="pt-20 pb-16 px-6">
+            <div class="max-w-4xl mx-auto text-center">
+                <h1 class="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
+                    <span class="text-blue-600">Foresight</span> Finanzas
+                </h1>
+                <p class="text-xl md:text-2xl text-gray-600 mb-4">
+                    📚 La app de control financiero diseñada para <strong>estudiantes universitarios</strong>
+                </p>
+                <p class="text-lg text-gray-500 max-w-2xl mx-auto mb-8">
+                    Porque sabemos que manejar becas, mesadas y gastos estudiantiles es complicado. 
+                    Te ayudamos a tener control total de tu dinero. 💰
+                </p>
+                <button onclick="showLoginView()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-2xl text-lg transition-all">
+                    🚀 Empezar Ahora - Es Gratis
+                </button>
+            </div>
+        </div>
+
+        <!-- Problemática & Solución -->
+        <div class="py-16 px-6 bg-white">
+            <div class="max-w-6xl mx-auto">
+                <div class="grid md:grid-cols-2 gap-12 items-center">
+                    <div>
+                        <h2 class="text-3xl font-bold text-red-600 mb-4">🔴 EL PROBLEMA</h2>
+                        <div class="space-y-4 text-lg text-gray-700">
+                            <p>• <strong>85%</strong> de estudiantes universitarios no lleva control de sus gastos</p>
+                            <p>• Se quedan sin dinero antes de fin de mes</p>
+                            <p>• No saben en qué gastan su beca o mesada</p>
+                            <p>• Gastos impulsivos sin planeación</p>
+                        </div>
+                    </div>
+                    <div>
+                        <h2 class="text-3xl font-bold text-green-600 mb-4">✅ NUESTRA SOLUCIÓN</h2>
+                        <div class="space-y-4 text-lg text-gray-700">
+                            <p>• <strong>Control visual</strong> de todos tus ingresos estudiantiles</p>
+                            <p>• <strong>Alertas inteligentes</strong> antes de quedarte sin dinero</p>
+                            <p>• <strong>Categorías específicas</strong> para universitarios</p>
+                            <p>• <strong>Metas</strong> adaptadas a tu vida estudiantil</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Características -->
+        <div class="py-16 px-6 bg-gradient-to-r from-blue-50 to-green-50">
+            <div class="max-w-6xl mx-auto text-center">
+                <h2 class="text-4xl font-bold text-gray-900 mb-12">🎯 Diseñado Especialmente para Ti</h2>
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div class="bg-white p-8 rounded-2xl shadow-lg">
+                        <div class="text-4xl mb-4">💳</div>
+                        <h3 class="text-xl font-bold mb-4">Control de Becas y Mesadas</h3>
+                        <p class="text-gray-600">Registra tu beca, apoyo familiar y trabajos de medio tiempo. Ve exactamente cuánto tienes disponible.</p>
+                    </div>
+                    <div class="bg-white p-8 rounded-2xl shadow-lg">
+                        <div class="text-4xl mb-4">⚠️</div>
+                        <h3 class="text-xl font-bold mb-4">Alertas Estudiantiles</h3>
+                        <p class="text-gray-600">Te avisamos cuando gastes demasiado en comida, transporte o entretenimiento vs. tu presupuesto estudiantil.</p>
+                    </div>
+                    <div class="bg-white p-8 rounded-2xl shadow-lg">
+                        <div class="text-4xl mb-4">📊</div>
+                        <h3 class="text-xl font-bold mb-4">Dashboard Universitario</h3>
+                        <p class="text-gray-600">Métricas específicas: días hasta tu próximo ingreso, gasto promedio diario, presupuesto por materia.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CTA Final -->
+        <div class="py-20 px-6 text-center">
+            <div class="max-w-3xl mx-auto">
+                <h2 class="text-3xl font-bold text-gray-900 mb-6">
+                    🎓 <span class="text-blue-600">Emprende el control</span> de tus finanzas universitarias
+                </h2>
+                <p class="text-lg text-gray-600 mb-8">
+                    Iniciativa estudiantil creada <strong>por universitarios, para universitarios</strong>.
+                    Únete a la revolución del control financiero estudiantil.
+                </p>
+                <button onclick="showLoginView()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-2xl text-xl transition-all mr-4">
+                    💪 Crear Mi Cuenta Gratis
+                </button>
+                <button onclick="showLoginView()" class="border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white font-bold py-4 px-8 rounded-2xl text-xl transition-all">
+                    📱 Probar Demo
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================= -->
     <!-- VISTA 1: LOGIN AMIGABLE -->
     <!-- ======================= -->
     <section id="login-view" class="min-h-screen flex flex-col items-center justify-center p-6 bg-white">
@@ -102,8 +195,9 @@
                 
                 <div class="relative z-10 flex flex-col justify-between h-full">
                     <div>
-                        <p class="text-blue-200 text-xs font-bold uppercase tracking-widest mb-1">Saldo Disponible</p>
+                        <p class="text-blue-200 text-xs font-bold uppercase tracking-widest mb-1">🎓 Control Financiero Universitario</p>
                         <h2 class="text-4xl font-extrabold tracking-tight" id="available-display">$0</h2>
+                        <p class="text-blue-100 text-xs font-medium mt-1 opacity-80" id="student-status">💪 Maneja tu dinero como un pro</p>
                     </div>
 
                     <!-- Progress Bar for Budget -->
@@ -136,6 +230,36 @@
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Gastos</p>
                         <p class="text-lg font-black text-gray-800 leading-tight" id="dash-expense">$0</p>
                     </div>
+                </div>
+            </div>
+            
+            <!-- MÉTRICAS ESTUDIANTILES ESPECÍFICAS -->
+            <div class="grid grid-cols-3 gap-3 slide-up" style="animation-delay: 0.12s;">
+                <!-- Gasto Diario Promedio -->
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded-2xl border border-blue-200">
+                    <div class="flex items-center justify-center w-8 h-8 rounded-xl bg-blue-200 mb-2 mx-auto">
+                        <i class="fa-solid fa-calculator text-blue-600 text-sm"></i>
+                    </div>
+                    <p class="text-[8px] font-bold text-blue-600 uppercase text-center tracking-wider">Gasto/Día</p>
+                    <p class="text-sm font-black text-blue-800 text-center" id="daily-average">$0</p>
+                </div>
+                
+                <!-- Días hasta fin de mes -->
+                <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 p-3 rounded-2xl border border-yellow-200">
+                    <div class="flex items-center justify-center w-8 h-8 rounded-xl bg-yellow-200 mb-2 mx-auto">
+                        <i class="fa-solid fa-calendar-days text-yellow-600 text-sm"></i>
+                    </div>
+                    <p class="text-[8px] font-bold text-yellow-600 uppercase text-center tracking-wider">Días Rest.</p>
+                    <p class="text-sm font-black text-yellow-800 text-center" id="days-remaining">--</p>
+                </div>
+                
+                <!-- Categoría Top -->
+                <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-3 rounded-2xl border border-purple-200">
+                    <div class="flex items-center justify-center w-8 h-8 rounded-xl bg-purple-200 mb-2 mx-auto">
+                        <i class="fa-solid fa-chart-pie text-purple-600 text-sm"></i>
+                    </div>
+                    <p class="text-[8px] font-bold text-purple-600 uppercase text-center tracking-wider">Top Gasto</p>
+                    <p class="text-xs font-black text-purple-800 text-center" id="top-category">👀</p>
                 </div>
             </div>
 
