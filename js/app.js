@@ -1,0 +1,284 @@
+import { AppState, setState, setCurrentUser } from './state.js';
+import * as UI from './ui.js';
+import * as Auth from './auth.js';
+import { showNotification, runAsyncAction } from './utils.js';
+
+// --- EXPOSE GLOBALS FOR HTML ---
+window.toggleSummary = UI.toggleSummary;
+window.logout = Auth.logout;
+window.changeMonth = UI.changeMonth;
+window.filterTransactions = UI.filterTransactions;
+window.openAddModal = UI.openAddModal;
+window.editTransaction = UI.editTransaction; 
+window.deleteTransaction = UI.deleteTransaction;
+window.toggleModal = UI.toggleModal;
+window.sendAlertEmail = UI.sendAlertEmail;
+window.setTransactionType = UI.setTransactionType;
+window.selectCategory = UI.selectCategory;
+window.toggleDeleteModal = UI.toggleDeleteModal; // Explicitly add this line
+
+window.executeDelete = async function() {
+    const id = parseInt(UI.DOM.editingIdInput.value);
+    if(!id) return;
+    
+    const btn = document.getElementById('btn-confirm-delete');
+
+    await runAsyncAction(btn, async () => {
+        const originalList = [...AppState.expenses];
+        // Remove locally
+        const newExpenses = AppState.expenses.filter(i => i.id !== id);
+        setState({ expenses: newExpenses });
+        
+        const success = await Auth.saveData();
+        
+        if(success) {
+            UI.toggleDeleteModal(false);
+            UI.toggleModal(false); 
+            UI.updateUI();
+        } else {
+            setState({ expenses: originalList });
+        }
+    }, "Borrando...");
+};
+
+
+import { EMAILJS_PUBLIC_KEY } from './config.js';
+
+// --- INITIALIZATION ---
+document.addEventListener('DOMContentLoaded', () => {
+    // 0. Init EmailJS
+    if(window.emailjs) window.emailjs.init(EMAILJS_PUBLIC_KEY);
+
+    // 1. Init Supabase
+    Auth.initSupabase();
+
+    // 2. Setup Auth Listeners
+    if(Auth.supabaseClient) {
+        Auth.supabaseClient.auth.onAuthStateChange(async (event, session) => {
+            if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+                if (session && session.user && !AppState.currentUser) {
+                    try {
+                        console.log("Sesión recuperada:", session.user.email);
+                        const profile = await Auth.loadProfileFromSupabase(session.user.email);
+                        if(profile) loginSuccess({ ...profile, password: '' }); 
+                    } catch(e) { console.error(e); }
+                }
+            } else if (event === 'SIGNED_OUT') {
+                // Handled by logout reload
+            }
+        });
+    }
+
+    // 3. Setup Internal Listeners
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    const { auth, budgetInput } = UI.DOM;
+
+    // Login Toggle
+    let isLoginMode = true;
+    if (auth.toggleBtn) {
+        auth.toggleBtn.addEventListener('click', () => {
+            isLoginMode = !isLoginMode;
+            if (isLoginMode) {
+               auth.submitBtn.textContent = "Iniciar Sesión";
+               auth.toggleBtn.innerHTML = '¿No tienes cuenta? <span class="text-blue-600">Regístrate aquí</span>';
+            } else {
+               auth.submitBtn.textContent = "Crear Cuenta";
+               auth.toggleBtn.innerHTML = '¿Ya tienes cuenta? <span class="text-blue-600">Inicia sesión</span>';
+            }
+        });
+    }
+
+    // Resend Verify
+    if (auth.resendBtn) {
+        auth.resendBtn.addEventListener('click', async () => {
+            const email = auth.email.value.trim();
+            if(!email) { return showNotification("Ingresa tu correo primero", 'error'); }
+            
+            if(Auth.supabaseClient) {
+               await runAsyncAction(auth.resendBtn, async () => {
+                   const { error } = await Auth.resendInvite(email);
+                   if(error) throw error;
+                   showNotification("Correo reenviado.", 'success');
+                   auth.resendBtn.classList.add('hidden-view');
+               }, "Reenviando...");
+            }
+        });
+    }
+
+    // Auth Submit
+    auth.form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = auth.email.value.trim();
+        const pass = auth.pass.value.trim();
+
+        if(!email || !pass) return showNotification("Completa todos los campos", 'error');
+
+        // MODO NUBE
+        if (Auth.supabaseClient) {
+            if(auth.resendBtn) auth.resendBtn.classList.add('hidden-view');
+            
+            const btn = auth.submitBtn;
+            const oldText = btn.innerHTML;
+            btn.textContent = isLoginMode ? "Verificando..." : "Registrando...";
+            btn.disabled = true;
+
+            try {
+                if (isLoginMode) {
+                    const { error } = await Auth.signIn(email, pass);
+                    if (error) throw error;
+                    const profile = await Auth.loadProfileFromSupabase(email);
+                    if(profile) loginSuccess({ ...profile, password: '' });
+                } else {
+                    const { data, error } = await Auth.signUp(email, pass);
+                    if (error) throw error;
+                    
+                    if (data.user && !data.session) {
+                         showNotification("Revisa tu correo para confirmar.", 'success');
+                         return; 
+                    }
+                    if (data.user) {
+                       await Auth.createInitialProfile(email);
+                       const profile = await Auth.loadProfileFromSupabase(email);
+                       loginSuccess({ ...profile, password: '' });
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                handleAuthError(err, auth);
+            } finally {
+                btn.innerHTML = oldText;
+                btn.disabled = false;
+            }
+            return;
+        }
+
+        // MODO LOCAL
+        const userKey = `foresight_user_${email}`;
+        const stored = localStorage.getItem(userKey);
+
+        if (isLoginMode) {
+            if (stored) {
+                const data = JSON.parse(stored);
+                if (data.password === pass) loginSuccess(data);
+                else showNotification('Contraseña incorrecta', 'error');
+            } else {
+                showNotification("Usuario no encontrado.", 'error');
+            }
+        } else {
+            if (stored) {
+                showNotification("Usuario ya existe.", 'error');
+            } else {
+                const newUser = { email, password: pass, budget: 0, expenses: [] };
+                localStorage.setItem(userKey, JSON.stringify(newUser));
+                loginSuccess(newUser);
+            }
+        }
+    });
+
+    // Budget Change
+    if(budgetInput) {
+        budgetInput.addEventListener('change', async (e) => {
+            const val = parseFloat(e.target.value) || 0;
+            setState({ budget: val });
+            e.target.classList.add('bg-blue-100');
+            await Auth.saveData();
+            e.target.classList.remove('bg-blue-100');
+            UI.updateUI(); // Refresh visual
+        });
+    }
+
+    // Expense Form Submit
+    const expenseForm = document.getElementById('expense-form');
+    if(expenseForm) {
+        expenseForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btnSubmit = e.target.querySelector('button[type="submit"]');
+            
+            await runAsyncAction(btnSubmit, async () => {
+                const concept = document.getElementById('concept').value;
+                const amount = parseFloat(document.getElementById('amount').value);
+                const category = document.getElementById('selected-category').value;
+                const dateVal = document.getElementById('date').value;
+                const method = document.getElementById('method').value;
+                const type = document.getElementById('transaction-type').value; 
+                const editingId = UI.DOM.editingIdInput.value ? parseInt(UI.DOM.editingIdInput.value) : null;
+
+                if (amount > 0) {
+                    let finalDate = new Date();
+                    if(dateVal) {
+                        const [y, m, d] = dateVal.split('-').map(Number);
+                        finalDate = new Date(y, m-1, d, 12, 0, 0); 
+                    }
+
+                    const transactionData = { 
+                        id: editingId || Date.now(), 
+                        concept: concept || (type === 'income' ? 'Ingreso' : 'Gasto'), 
+                        amount, 
+                        category,
+                        method,
+                        type,
+                        date: finalDate.toISOString() 
+                    };
+
+                    const originalList = [...AppState.expenses]; 
+                    let newList = [...AppState.expenses];
+
+                    if (editingId) {
+                        const index = newList.findIndex(i => i.id === editingId);
+                        if(index !== -1) newList[index] = transactionData;
+                    } else {
+                        newList.push(transactionData);
+                    }
+
+                    setState({ expenses: newList });
+                    
+                    const success = await Auth.saveData();
+                    
+                    if (success) {
+                        UI.toggleModal(false);
+                        e.target.reset();
+                        UI.setTransactionType('expense');
+                        UI.updateUI();
+                    } else {
+                        setState({ expenses: originalList }); // Revert
+                    }
+                }
+            }, "Guardando...");
+        });
+    }
+}
+
+function loginSuccess(userData) {
+    setCurrentUser(userData);
+    setState({ 
+        budget: userData.budget, 
+        expenses: userData.expenses || [] 
+    });
+    
+    UI.DOM.views.login.classList.add('hidden-view');
+    UI.DOM.views.app.classList.remove('hidden-view');
+    UI.DOM.userDisplay.textContent = userData.email.split('@')[0];
+    UI.DOM.budgetInput.value = userData.budget || '';
+    
+    UI.initCategoryGrid();
+    UI.updateUI();
+}
+
+function handleAuthError(err, authDOM) {
+    let msg = err.message;
+    if (msg.includes("security purposes")) msg = "Espera unos segundos.";
+    else if (msg.includes("Invalid login")) {
+        msg = "Credenciales incorrectas.";
+        if(authDOM.resendBtn) authDOM.resendBtn.classList.remove('hidden-view');
+    }
+    else if (msg.includes("already registered")) msg = "Correo ya registrado.";
+    else if (msg.includes("rate limit")) msg = "Demasiados intentos.";
+    else if (msg.includes("Email not confirmed")) {
+        msg = "Correo no confirmado.";
+        if(authDOM.resendBtn) authDOM.resendBtn.classList.remove('hidden-view');
+    }
+    showNotification(msg, 'error');
+}
