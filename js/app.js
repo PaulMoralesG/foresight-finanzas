@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Loop de seguridad para asegurar que Supabase arranque incluso si el script tarda
     const authCheckInterval = setInterval(() => {
-        if (Auth.supabaseClient || Auth.isDemoMode) {
+        if (Auth.supabaseClient) {
             clearInterval(authCheckInterval);
             setupAuthObserver();
         } else {
@@ -77,22 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 3. Setup Internal Listeners
     setupEventListeners();
-    
-    // 4. Mostrar ayuda para profesores/evaluadores
-    setTimeout(() => {
-        showWelcomeMessage();
-    }, 2000);
 });
-
-function showWelcomeMessage() {
-    // Solo mostrar en modo demo (GitHub Pages)
-    if (window.location.hostname === 'paulmoralesg.github.io' || window.location.hostname === 'localhost') {
-        const isDemo = window.location.hostname === 'paulmoralesg.github.io';
-        if (isDemo) {
-            showNotification("👋 Demo universitario activo. Crea tu cuenta para evaluar la funcionalidad.", 'success');
-        }
-    }
-}
 
 function setupAuthObserver() {
     if(!Auth.supabaseClient) {

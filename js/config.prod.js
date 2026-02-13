@@ -1,15 +1,13 @@
 // CONFIGURACIÓN DE PRODUCCIÓN PARA GITHUB PAGES
-// Este archivo contiene claves de DEMO/DESARROLLO que permiten
-// que la aplicación muestre su interfaz en el deployment público.
-// Para uso real, crea tu archivo config.js con tus propias claves.
+// Este archivo contiene las claves reales para el deployment en la nube
 
-export const EMAILJS_PUBLIC_KEY = "DEMO_KEY";
-export const EMAILJS_SERVICE_ID = "DEMO_SERVICE";  
-export const EMAILJS_TEMPLATE_ID = "DEMO_TEMPLATE";
+export const EMAILJS_PUBLIC_KEY = "jvOpRliw08hAwHWee";
+export const EMAILJS_SERVICE_ID = "service_xfvaqua";
+export const EMAILJS_TEMPLATE_ID = "template_hiw0fpp";
 
-// ⚠️ ESTAS SON CLAVES DE DEMO - REEMPLAZA POR LAS TUYAS
-export const SUPABASE_URL = "https://demo.supabase.co";
-export const SUPABASE_KEY = "DEMO_ANON_KEY";
+// CLAVES REALES DE SUPABASE PARA PRODUCCIÓN
+export const SUPABASE_URL = "https://sphmdtlvxbypckhavhgb.supabase.co"; 
+export const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwaG1kdGx2eGJ5cGNraGF2aGdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5MTA3MTEsImV4cCI6MjA4NjQ4NjcxMX0.kBqqJpwtPL-W8YEGU9wdA3HvwBsL2-G4ZIv051StvrE";
 
 // CATEGORIAS (estas sí funcionan normalmente)
 export const EXPENSE_CATEGORIES = [
