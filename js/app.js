@@ -13,6 +13,8 @@ window.showLoginView = function() {
     showView('login-view');
 };
 
+window.showView = showView;
+
 function showView(viewId) {
     // Ocultar todas las vistas
     const views = ['landing-view', 'login-view', 'app-view'];

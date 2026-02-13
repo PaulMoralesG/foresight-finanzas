@@ -125,7 +125,15 @@
     <!-- ======================= -->
     <!-- VISTA 1: LOGIN AMIGABLE -->
     <!-- ======================= -->
-    <section id="login-view" class="min-h-screen flex flex-col items-center justify-center p-6 bg-white">
+    <section id="login-view" class="min-h-screen flex flex-col items-center justify-center p-6 bg-white hidden-view">
+        
+        <!-- Botón de regreso al landing -->
+        <div class="w-full max-w-sm mb-4">
+            <button onclick="showView('landing-view')" class="flex items-center text-gray-500 hover:text-gray-700 transition-colors">
+                <i class="fa-solid fa-arrow-left mr-2"></i>
+                <span class="text-sm font-medium">Volver</span>
+            </button>
+        </div>
         
         <div class="w-full max-w-sm slide-up">
             <div class="flex justify-center mb-8">
