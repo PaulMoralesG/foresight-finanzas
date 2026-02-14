@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupAuthObserver() {
     if(!Auth.supabaseClient) return;
     
-    Auth.supabaseClient.auth.onAuthStateChange(async (event, session) =>
+    Auth.supabaseClient.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
              if (session && session.user) {
                 if (!AppState.currentUser) {
