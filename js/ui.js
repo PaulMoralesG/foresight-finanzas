@@ -417,26 +417,37 @@ export async function shareReportWhatsApp() {
     const monthly = getMonthlyData();
     
     try {
-        // Generate and download PDF
-        showNotification('📄 Generando PDF para WhatsApp...', 'success');
+        showNotification('📄 Generando PDF...', 'success');
         const pdfResult = await generatePDFReport(monthly, AppState.currentViewDate);
         
         if (pdfResult) {
             const { doc, monthName, year } = pdfResult;
             const fileName = `Reporte-${monthName}-${year}.pdf`;
             
-            // Download PDF
-            doc.save(fileName);
+            // Detectar si es móvil
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             
-            // Wait a moment then open WhatsApp
-            setTimeout(() => {
-                const message = `📊 Reporte Financiero - ${monthName} ${year}\n\nAquí está mi reporte financiero detallado 📄`;
-                window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-                showNotification('💬 PDF descargado - Adjúntalo en WhatsApp', 'success');
-            }, 800);
+            if (isMobile) {
+                // En móvil: abrir PDF en nueva pestaña
+                const pdfUrl = doc.output('bloburl');
+                window.open(pdfUrl, '_blank');
+                
+                setTimeout(() => {
+                    showNotification('📱 PDF abierto - Usa el botón "Compartir" de tu navegador para enviarlo por WhatsApp', 'success', 5000);
+                }, 500);
+            } else {
+                // En desktop: descargar y abrir WhatsApp
+                doc.save(fileName);
+                
+                setTimeout(() => {
+                    const message = `📊 Reporte Financiero - ${monthName} ${year}`;
+                    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+                    showNotification('💬 PDF descargado - Adjúntalo en WhatsApp', 'success');
+                }, 800);
+            }
         }
     } catch (error) {
-        console.error('Error generando PDF para WhatsApp:', error);
+        console.error('Error generando PDF:', error);
         showNotification('⚠️ Error al generar PDF', 'error');
     }
 }
