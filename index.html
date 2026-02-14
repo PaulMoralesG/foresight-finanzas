@@ -141,16 +141,14 @@
                         </div>
                     </div>
                 </div>
-                <!-- Net Balance -->
-                <div class="bg-white p-2.5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                        <div class="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 text-xs"><i class="fa-solid fa-scale-balanced"></i></div>
-                        <div>
-                            <p class="text-[8px] font-bold text-gray-400 uppercase">Balance</p>
-                            <p class="text-xs font-black text-gray-800" id="net-balance">$0</p>
-                        </div>
+                <!-- Report Button -->
+                <button onclick="window.openReportModal()" class="bg-gradient-to-br from-blue-500 to-blue-600 p-2.5 rounded-xl shadow-sm border border-blue-400 flex items-center justify-center gap-2 cursor-pointer hover:shadow-lg transition group text-white">
+                    <div class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-xs group-hover:scale-110 transition"><i class="fa-solid fa-file-lines"></i></div>
+                    <div class="text-left">
+                        <p class="text-[8px] font-bold uppercase tracking-wide opacity-90">Ver</p>
+                        <p class="text-xs font-black leading-none">Reporte</p>
                     </div>
-                </div>
+                </button>
             </div>
 
             <!-- Transactions List -->
@@ -302,6 +300,57 @@
                         <canvas id="expense-chart" class="max-h-64"></canvas>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Modal -->
+    <div id="report-modal" class="fixed inset-0 z-[60] flex items-center justify-center invisible opacity-0 transition-all duration-300">
+        <div onclick="window.toggleReportModal(false)" class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"></div>
+        <div class="bg-white w-full max-w-sm rounded-[30px] shadow-2xl relative z-10 transform scale-90 transition-transform duration-300 m-4" id="report-panel">
+            <!-- Report Content -->
+            <div id="report-content" class="p-6">
+                <div class="text-center mb-4">
+                    <div class="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-2xl text-blue-500 mx-auto mb-3">
+                        <i class="fa-solid fa-chart-simple"></i>
+                    </div>
+                    <h3 class="text-xl font-black text-gray-900 mb-1">Reporte Mensual</h3>
+                    <p class="text-xs font-bold text-gray-400" id="report-month">---</p>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 mb-4">
+                    <div class="text-center mb-3">
+                        <p class="text-xs font-bold text-blue-600 uppercase mb-1">💰 Saldo Final</p>
+                        <p class="text-2xl font-black text-blue-700" id="report-balance">$0</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-white/60 rounded-xl p-3 text-center">
+                            <p class="text-[9px] font-bold text-gray-500 uppercase mb-1">Ingresos</p>
+                            <p class="text-sm font-black text-green-600" id="report-income">$0</p>
+                        </div>
+                        <div class="bg-white/60 rounded-xl p-3 text-center">
+                            <p class="text-[9px] font-bold text-gray-500 uppercase mb-1">Gastos</p>
+                            <p class="text-sm font-black text-red-600" id="report-expenses">$0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transactions Count -->
+                <div class="text-center mb-4">
+                    <p class="text-xs font-bold text-gray-400" id="report-count">0 movimientos registrados</p>
+                </div>
+
+                <!-- Share Buttons -->
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <button onclick="window.shareReportWhatsApp()" class="py-2.5 rounded-2xl font-bold text-xs bg-green-500 text-white hover:bg-green-600 transition flex items-center justify-center gap-2">
+                        <i class="fa-brands fa-whatsapp"></i> WhatsApp
+                    </button>
+                    <button onclick="window.downloadReport()" class="py-2.5 rounded-2xl font-bold text-xs bg-blue-500 text-white hover:bg-blue-600 transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-download"></i> Guardar
+                    </button>
+                </div>
+                <button onclick="window.toggleReportModal(false)" class="w-full py-2.5 rounded-2xl font-bold text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 transition">Cerrar</button>
             </div>
         </div>
     </div>

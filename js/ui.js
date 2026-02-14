@@ -52,7 +52,6 @@ export const DOM = {
     get availableDisplay() { return document.getElementById('available-display'); },
     get dashIncome() { return document.getElementById('dash-income'); },
     get dashExpense() { return document.getElementById('dash-expense'); },
-    get netBalance() { return document.getElementById('net-balance'); },
     get currentMonthLabel() { return document.getElementById('current-month-label'); },
     get monthDisplay() { return document.getElementById('month-display'); },
     get countDisplay() { return document.getElementById('transaction-count'); },
@@ -110,24 +109,11 @@ export function updateUI() {
     
     // Saldo Disponible = Ingresos - Gastos (sin incluir presupuesto)
     const available = totalIncome - totalSpent;
-    const netBalance = totalIncome - totalSpent; // Balance neto del mes
 
     // Visuals
     DOM.availableDisplay.textContent = formatMoney(available);
     DOM.dashIncome.textContent = formatMoney(totalIncome);
     DOM.dashExpense.textContent = formatMoney(totalSpent);
-    
-    // Balance neto con color
-    if (DOM.netBalance) {
-        DOM.netBalance.textContent = formatMoney(netBalance);
-        if (netBalance > 0) {
-            DOM.netBalance.className = 'text-xs font-black text-green-600';
-        } else if (netBalance < 0) {
-            DOM.netBalance.className = 'text-xs font-black text-red-600';
-        } else {
-            DOM.netBalance.className = 'text-xs font-black text-gray-800';
-        }
-    }
     
     // Mes actual en el cuadro de saldo
     if (DOM.currentMonthLabel) {
@@ -389,3 +375,116 @@ export function deleteTransaction() {
     toggleDeleteModal(true);
 }
 
+// REPORT MODAL FUNCTIONS
+export function toggleReportModal(show) {
+    const modal = document.getElementById('report-modal');
+    const panel = document.getElementById('report-panel');
+    if(show) {
+        modal.classList.remove('invisible', 'opacity-0');
+        panel.classList.remove('scale-90');
+        panel.classList.add('scale-100');
+    } else {
+        modal.classList.add('invisible', 'opacity-0');
+        panel.classList.remove('scale-100');
+        panel.classList.add('scale-90');
+    }
+}
+
+export function openReportModal() {
+    const monthly = getMonthlyData();
+    const incomeItems = monthly.filter(i => i.type === 'income');
+    const expenseItems = monthly.filter(i => i.type === 'expense' || !i.type);
+    
+    const totalIncome = incomeItems.reduce((sum, item) => sum + item.amount, 0);
+    const totalExpenses = expenseItems.reduce((sum, item) => sum + item.amount, 0);
+    const balance = totalIncome - totalExpenses;
+    
+    // Populate modal
+    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const monthName = months[AppState.currentViewDate.getMonth()];
+    const year = AppState.currentViewDate.getFullYear();
+    
+    document.getElementById('report-month').textContent = `${monthName} ${year}`;
+    document.getElementById('report-balance').textContent = formatMoney(balance);
+    document.getElementById('report-income').textContent = formatMoney(totalIncome);
+    document.getElementById('report-expenses').textContent = formatMoney(totalExpenses);
+    document.getElementById('report-count').textContent = `${monthly.length} movimiento${monthly.length !== 1 ? 's' : ''} registrado${monthly.length !== 1 ? 's' : ''}`;
+    
+    toggleReportModal(true);
+}
+
+export function shareReportWhatsApp() {
+    const monthly = getMonthlyData();
+    const incomeItems = monthly.filter(i => i.type === 'income');
+    const expenseItems = monthly.filter(i => i.type === 'expense' || !i.type);
+    
+    const totalIncome = incomeItems.reduce((sum, item) => sum + item.amount, 0);
+    const totalExpenses = expenseItems.reduce((sum, item) => sum + item.amount, 0);
+    const balance = totalIncome - totalExpenses;
+    
+    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const monthName = months[AppState.currentViewDate.getMonth()];
+    const year = AppState.currentViewDate.getFullYear();
+    
+    const message = `📊 *Reporte Financiero - ${monthName} ${year}*\n\n` +
+                   `💰 Saldo: ${formatMoney(balance)}\n` +
+                   `📈 Ingresos: ${formatMoney(totalIncome)}\n` +
+                   `📉 Gastos: ${formatMoney(totalExpenses)}\n` +
+                   `📝 Total: ${monthly.length} movimientos\n\n` +
+                   `_Generado con Foresight Finanzas 💙_`;
+    
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+}
+
+export function downloadReport() {
+    const monthly = getMonthlyData();
+    const incomeItems = monthly.filter(i => i.type === 'income');
+    const expenseItems = monthly.filter(i => i.type === 'expense' || !i.type);
+    
+    const totalIncome = incomeItems.reduce((sum, item) => sum + item.amount, 0);
+    const totalExpenses = expenseItems.reduce((sum, item) => sum + item.amount, 0);
+    const balance = totalIncome - totalExpenses;
+    
+    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const monthName = months[AppState.currentViewDate.getMonth()];
+    const year = AppState.currentViewDate.getFullYear();
+    
+    // Create text report
+    let report = `REPORTE FINANCIERO - ${monthName.toUpperCase()} ${year}\n`;
+    report += `${'='.repeat(50)}\n\n`;
+    report += `RESUMEN:\n`;
+    report += `  Saldo Final: ${formatMoney(balance)}\n`;
+    report += `  Ingresos:    ${formatMoney(totalIncome)}\n`;
+    report += `  Gastos:      ${formatMoney(totalExpenses)}\n`;
+    report += `  Movimientos: ${monthly.length}\n\n`;
+    
+    if (monthly.length > 0) {
+        report += `DETALLE DE MOVIMIENTOS:\n`;
+        report += `${'-'.repeat(50)}\n`;
+        
+        monthly.forEach(item => {
+            const type = item.type === 'income' ? 'INGRESO' : 'GASTO';
+            const cat = getCategoryById(item.category);
+            report += `${item.date} | ${type} | ${formatMoney(item.amount)}\n`;
+            report += `  ${item.concept} (${cat.label})\n`;
+        });
+    }
+    
+    report += `\n${'-'.repeat(50)}\n`;
+    report += `Generado: ${new Date().toLocaleString('es-ES')}\n`;
+    report += `Foresight Finanzas - Control Simple y Efectivo\n`;
+    
+    // Download as text file
+    const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `reporte-${monthName}-${year}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showNotification('📄 Reporte descargado', 'success');
+}

@@ -29,6 +29,10 @@ window.openAddModal = UI.openAddModal;
 window.editTransaction = UI.editTransaction;
 window.selectCategory = UI.selectCategory;
 window.toggleDeleteModal = UI.toggleDeleteModal;
+window.toggleReportModal = UI.toggleReportModal;
+window.openReportModal = UI.openReportModal;
+window.shareReportWhatsApp = UI.shareReportWhatsApp;
+window.downloadReport = UI.downloadReport;
 
 window.executeDelete = async function() {
     const id = parseInt(UI.DOM.editingIdInput.value);
