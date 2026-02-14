@@ -1,6 +1,6 @@
-# 💰 Foresight - Gestor de Finanzas Personales
+# 💰 Foresight - Control Financiero Personal
 
-Aplicación web moderna para gestión de finanzas personales con diseño Buddy-Style y sincronización en la nube.
+Aplicación web moderna para gestión de finanzas personales con diseño intuitivo y sincronización en la nube. **Para cualquier persona que quiera tener control total de sus finanzas.**
 
 ## 🚀 Demo en Vivo
 👉 [https://paulmmoralesg.github.io/foresight-finanzas/](https://paulmoralesg.github.io/foresight-finanzas/)

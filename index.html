@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Foresight - Buddy Style</title>
+    <title>Foresight - Tu Control Financiero</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome -->
@@ -47,7 +47,7 @@
                 <input type="email" id="auth-email" required class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-gray-700 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Correo electrónico" autocomplete="email">
                 <input type="password" id="auth-password" required class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-gray-700 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Contraseña" autocomplete="new-password">
                 
-                <button type="submit" id="btn-auth-submit" class="w-full py-4 mt-4 bg-gray-900 text-white font-extrabold rounded-2xl shadow-lg hover:bg-black transition-transform active:scale-95">
+                <button type="submit" id="btn-auth-submit" class="w-full py-3 mt-4 bg-gray-900 text-white font-bold rounded-2xl shadow-lg hover:bg-black transition-transform active:scale-95 text-sm sm:text-base">
                     Iniciar Sesión
                 </button>
                 <div class="text-center mt-4">
@@ -73,9 +73,9 @@
                 <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Hola,</span>
                 <span class="font-black text-xl text-gray-800 leading-none" id="user-display">Usuario</span>
             </div>
-            <div class="flex gap-3">
-                <button onclick="window.toggleSummary(true)" class="w-10 h-10 rounded-full bg-white shadow-sm border border-gray-100 text-gray-400 hover:text-blue-600 hover:border-blue-200 transition flex items-center justify-center active:scale-95"><i class="fa-solid fa-chart-pie"></i></button>
-                <button onclick="window.logout()" class="w-10 h-10 rounded-full bg-white shadow-sm border border-gray-100 text-gray-400 hover:text-red-500 hover:border-red-200 transition flex items-center justify-center active:scale-95"><i class="fa-solid fa-power-off"></i></button>
+            <div class="flex gap-2">
+                <button onclick="window.toggleSummary(true)" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white shadow-sm border border-gray-100 text-gray-400 hover:text-blue-600 hover:border-blue-200 transition flex items-center justify-center active:scale-95 text-sm"><i class="fa-solid fa-chart-pie"></i></button>
+                <button onclick="window.logout()" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white shadow-sm border border-gray-100 text-gray-400 hover:text-red-500 hover:border-red-200 transition flex items-center justify-center active:scale-95 text-sm"><i class="fa-solid fa-power-off"></i></button>
             </div>
         </div>
 
@@ -102,9 +102,9 @@
                 
                 <div class="relative z-10 flex flex-col justify-between h-full">
                     <div>
-                        <p class="text-blue-200 text-xs font-bold uppercase tracking-widest mb-1">🎓 Control Financiero Universitario</p>
-                        <h2 class="text-4xl font-extrabold tracking-tight" id="available-display">$0</h2>
-                        <p class="text-blue-100 text-xs font-medium mt-1 opacity-80" id="student-status">💪 Maneja tu dinero como un pro</p>
+                        <p class="text-blue-200 text-xs font-bold uppercase tracking-widest mb-1">💰 Tu Control Financiero</p>
+                        <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight" id="available-display">$0</h2>
+                        <p class="text-blue-100 text-xs font-medium mt-1 opacity-80" id="student-status">💪 Maneja tu dinero de forma inteligente</p>
                     </div>
 
                     <!-- Progress Bar for Budget -->
@@ -184,11 +184,11 @@
                 </div>
 
                 <!-- Report Button -->
-                <button onclick="window.sendAlertEmail(true)" id="btn-email-report" class="bg-black text-white p-3 rounded-2xl shadow-lg shadow-gray-200 flex items-center justify-center gap-2 hover:bg-gray-800 active:scale-95 transition">
+                <button onclick="window.sendAlertEmail(true)" id="btn-email-report" class="bg-black text-white p-2.5 sm:p-3 rounded-2xl shadow-lg shadow-gray-200 flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-gray-800 active:scale-95 transition">
                     <i class="fa-solid fa-paper-plane text-xs"></i>
                     <div class="text-left leading-none">
                         <p class="text-[8px] font-bold text-gray-400 uppercase opacity-50">Reporte</p>
-                        <p class="text-xs font-bold">Enviar</p>
+                        <p class="text-[10px] sm:text-xs font-bold">Enviar</p>
                     </div>
                 </button>
             </div>
@@ -213,8 +213,8 @@
         </main>
 
         <!-- Fixed Bottom Elements -->
-        <div class="fixed bottom-0 w-full left-0 p-6 pointer-events-none flex justify-center bg-gradient-to-t from-gray-100 via-gray-50/90 to-transparent z-20 pt-24">
-            <button onclick="window.openAddModal()" class="fab-gradient pointer-events-auto text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl shadow-2xl shadow-blue-500/40 hover:scale-110 transition-transform active:scale-95">
+        <div class="fixed bottom-0 w-full left-0 p-5 sm:p-6 pointer-events-none flex justify-center bg-gradient-to-t from-gray-100 via-gray-50/90 to-transparent z-20 pt-24">
+            <button onclick="window.openAddModal()" class="fab-gradient pointer-events-auto text-white w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-xl sm:text-2xl shadow-2xl shadow-blue-500/40 hover:scale-110 transition-transform active:scale-95">
                 <i class="fa-solid fa-plus"></i>
             </button>
         </div>
@@ -235,8 +235,8 @@
             <div class="flex justify-between items-center mb-4">
                 <!-- TABS TIPO -->
                 <div class="flex bg-gray-100 p-1 rounded-xl">
-                    <button type="button" onclick="window.setTransactionType('expense')" id="btn-type-expense" class="px-4 py-1.5 rounded-lg text-sm font-extrabold shadow-sm bg-white text-black transition-all">Gasto</button>
-                    <button type="button" onclick="window.setTransactionType('income')" id="btn-type-income" class="px-4 py-1.5 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-700 transition-all">Ingreso</button>
+                    <button type="button" onclick="window.setTransactionType('expense')" id="btn-type-expense" class="px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-bold shadow-sm bg-white text-black transition-all">Gasto</button>
+                    <button type="button" onclick="window.setTransactionType('income')" id="btn-type-income" class="px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-bold text-gray-500 hover:text-gray-700 transition-all">Ingreso</button>
                 </div>
                 <!-- Botón Eliminar (Hidden by default) -->
                 <div class="flex items-center gap-2">
@@ -284,7 +284,7 @@
                 </div>
             </div>
 
-            <button type="submit" class="w-full bg-black text-white font-extrabold py-3 rounded-2xl shadow-xl active:scale-95 transition-transform text-lg">
+            <button type="submit" class="w-full bg-black text-white font-bold py-3 rounded-2xl shadow-xl active:scale-95 transition-transform text-sm sm:text-base">
                 Guardar
             </button>
         </form>
@@ -347,8 +347,8 @@
                 <p class="text-gray-400 text-xs font-bold leading-relaxed">Si lo borras, desaparecerá de tus registros y estadísticas para siempre.</p>
             </div>
             <div class="grid grid-cols-2 gap-3">
-                <button onclick="window.toggleDeleteModal(false)" class="py-3 rounded-2xl font-extrabold text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 transition">Cancelar</button>
-                <button onclick="window.executeDelete()" id="btn-confirm-delete" class="py-3 rounded-2xl font-extrabold text-white bg-red-500 hover:bg-red-600 transition shadow-lg shadow-red-200 text-xs">Sí, Borrar</button>
+                <button onclick="window.toggleDeleteModal(false)" class="py-2.5 rounded-2xl font-bold text-xs sm:text-sm text-gray-500 bg-gray-100 hover:bg-gray-200 transition">Cancelar</button>
+                <button onclick="window.executeDelete()" id="btn-confirm-delete" class="py-2.5 rounded-2xl font-bold text-white bg-red-500 hover:bg-red-600 transition shadow-lg shadow-red-200 text-xs sm:text-sm">Sí, Borrar</button>
             </div>
         </div>
     </div>
