@@ -1,8 +1,19 @@
 // PDF Generator Module - Lazy Loading
 import { formatMoney } from './utils.js';
+import { getCategories } from './config-loader.js';
 
 let jsPDFLoaded = false;
 let jsPDFInstance = null;
+let categoriesCache = null;
+
+// Load categories dynamically
+async function loadCategories() {
+    if (!categoriesCache) {
+        const config = await getCategories();
+        categoriesCache = config.getCategoryById;
+    }
+    return categoriesCache;
+}
 
 // Load jsPDF libraries dynamically
 async function loadJsPDF() {
@@ -40,28 +51,11 @@ function loadScript(src) {
     });
 }
 
-// Get category by ID
-function getCategoryById(id) {
-    const categories = [
-        { id: 'food', label: 'Comida', icon: 'fa-utensils' },
-        { id: 'transport', label: 'Transporte', icon: 'fa-bus' },
-        { id: 'entertainment', label: 'Entretenimiento', icon: 'fa-gamepad' },
-        { id: 'bills', label: 'Servicios', icon: 'fa-file-invoice-dollar' },
-        { id: 'health', label: 'Salud', icon: 'fa-heartbeat' },
-        { id: 'education', label: 'Educación', icon: 'fa-graduation-cap' },
-        { id: 'shopping', label: 'Compras', icon: 'fa-shopping-bag' },
-        { id: 'salary', label: 'Salario', icon: 'fa-money-bill-wave' },
-        { id: 'investment', label: 'Inversión', icon: 'fa-chart-line' },
-        { id: 'gift', label: 'Regalo', icon: 'fa-gift' },
-        { id: 'other', label: 'Otro', icon: 'fa-ellipsis-h' }
-    ];
-    return categories.find(c => c.id === id) || { id: 'other', label: 'Otro', icon: 'fa-ellipsis-h' };
-}
-
 export async function generatePDFReport(monthly, currentViewDate) {
     try {
-        // Load jsPDF dynamically
+        // Load jsPDF and categories dynamically
         const jsPDF = await loadJsPDF();
+        const getCategoryById = await loadCategories();
         
         const incomeItems = monthly.filter(i => i.type === 'income');
         const expenseItems = monthly.filter(i => i.type === 'expense' || !i.type);
@@ -83,7 +77,7 @@ export async function generatePDFReport(monthly, currentViewDate) {
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(24);
         doc.setFont(undefined, 'bold');
-        doc.text('💰 Foresight Finanzas', 15, 15);
+        doc.text('Foresight Finanzas', 15, 15);
         doc.setFontSize(14);
         doc.setFont(undefined, 'normal');
         doc.text(`Reporte Financiero - ${monthName} ${year}`, 15, 25);
@@ -98,9 +92,8 @@ export async function generatePDFReport(monthly, currentViewDate) {
         // Summary boxes
         const boxY = yStart + 10;
         
-        // Balance box
-        const balanceColor = balance >= 0 ? [34, 197, 94] : [239, 68, 68];
-        doc.setFillColor(...balanceColor);
+        // Balance box - always blue
+        doc.setFillColor(37, 99, 235);
         doc.roundedRect(15, boxY, 60, 25, 3, 3, 'F');
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(10);
