@@ -28,7 +28,9 @@ window.toggleDeleteModal = UI.toggleDeleteModal;
 window.toggleReportModal = UI.toggleReportModal;
 window.toggleSummary = UI.toggleSummary;
 window.openReportModal = UI.openReportModal;
-window.shareReportWhatsApp = UI.shareReportWhatsApp;
+window.shareReportWhatsApp = async function() {
+    await UI.shareReportWhatsApp();
+};
 window.downloadReport = async function() {
     await UI.downloadReport();
 };
