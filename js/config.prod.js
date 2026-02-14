@@ -21,20 +21,21 @@ export const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdX
 
 // CATEGORÍAS DE GASTOS - Para cualquier persona
 export const EXPENSE_CATEGORIES = [
+    { id: 'esenciales', label: 'Esenciales', icon: '⭐', color: 'bg-violet-100 text-violet-600' },
     { id: 'comida', label: 'Comida', icon: '🍴', color: 'bg-orange-100 text-orange-600' },
+    { id: 'supermercado', label: 'Supermercado', icon: '🛒', color: 'bg-green-100 text-green-600' },
     { id: 'transporte', label: 'Transporte', icon: '🚌', color: 'bg-blue-100 text-blue-600' },
-    { id: 'supermercado', label: 'Súper', icon: '🛒', color: 'bg-green-100 text-green-600' },
     { id: 'servicios', label: 'Servicios', icon: '💡', color: 'bg-yellow-100 text-yellow-600' },
-    { id: 'entretenimiento', label: 'Ocio', icon: '🎉', color: 'bg-purple-100 text-purple-600' },
-    { id: 'ropa', label: 'Ropa', icon: '👕', color: 'bg-pink-100 text-pink-600' },
-    { id: 'hogar', label: 'Hogar', icon: '🏠', color: 'bg-teal-100 text-teal-600' },
     { id: 'salud', label: 'Salud', icon: '💊', color: 'bg-red-100 text-red-600' },
     { id: 'educacion', label: 'Educación', icon: '📚', color: 'bg-blue-100 text-blue-700' },
+    { id: 'hogar', label: 'Hogar', icon: '🏠', color: 'bg-teal-100 text-teal-600' },
+    { id: 'ropa', label: 'Ropa', icon: '👕', color: 'bg-pink-100 text-pink-600' },
+    { id: 'entretenimiento', label: 'Ocio', icon: '🎉', color: 'bg-purple-100 text-purple-600' },
     { id: 'subscripciones', label: 'Suscripciones', icon: '📱', color: 'bg-indigo-100 text-indigo-600' },
-    { id: 'restaurantes', label: 'Restaurants', icon: '🍽️', color: 'bg-orange-100 text-orange-700' },
     { id: 'deporte', label: 'Deporte', icon: '🏋️', color: 'bg-green-100 text-green-700' },
     { id: 'mascotas', label: 'Mascotas', icon: '🐾', color: 'bg-amber-100 text-amber-600' },
     { id: 'viajes', label: 'Viajes', icon: '✈️', color: 'bg-cyan-100 text-cyan-600' },
+    { id: 'general', label: 'General', icon: '📋', color: 'bg-slate-100 text-slate-600' },
     { id: 'otros', label: 'Otros', icon: '💸', color: 'bg-gray-100 text-gray-600' },
 ];
 
