@@ -488,3 +488,18 @@ export function downloadReport() {
     
     showNotification('📄 Reporte descargado', 'success');
 }
+
+// SUMMARY MODAL FUNCTION
+export function toggleSummary(show) {
+    const modal = document.getElementById('summary-modal');
+    const panel = document.getElementById('summary-panel');
+    if(!modal || !panel) return;
+    
+    if(show) {
+        modal.classList.remove('invisible', 'opacity-0');
+        panel.classList.remove('translate-y-full');
+    } else {
+        modal.classList.add('invisible', 'opacity-0');
+        panel.classList.add('translate-y-full');
+    }
+}
