@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Foresight - Tu Control Financiero</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Supabase SDK (UMD Global) -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+    <!-- PWA Settings -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2666/2666508.png">
+
+    <!-- Google Font: Nunito (Rounded, friendly, Buddy-like) -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- CUSTOM STYLES -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="safe-area-inset-bottom">
+
+    <!-- ======================= -->
+    <!-- VISTA 1: LOGIN AMIGABLE -->
+    <!-- ======================= -->
+    <section id="login-view" class="min-h-screen flex flex-col items-center justify-center p-6 bg-white">
+        
+        <div class="w-full max-w-sm slide-up">
+            <div class="flex justify-center mb-8">
+                <div class="w-24 h-24 bg-blue-50 rounded-[30px] flex items-center justify-center text-blue-500 text-4xl shadow-sm">
+                    <i class="fa-solid fa-piggy-bank"></i>
+                </div>
+            </div>
+            <h1 class="text-3xl font-extrabold text-center mb-2 text-gray-900">Hola, amigo.</h1>
+            <p class="text-center text-gray-400 font-semibold mb-10">Vamos a cuidar tu dinero.</p>
+
+            <form id="auth-form" class="space-y-4" autocomplete="off">
+                <input type="email" id="auth-email" required class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-gray-700 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Correo electrónico" autocomplete="email">
+                <input type="password" id="auth-password" required class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-gray-700 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Contraseña" autocomplete="new-password">
+                
+                <button type="submit" id="btn-auth-submit" class="w-full py-3 mt-4 bg-gray-900 text-white font-bold rounded-2xl shadow-lg hover:bg-black transition-transform active:scale-95 text-sm sm:text-base">
+                    Iniciar Sesión
+                </button>
+                <div class="text-center mt-4">
+                    <button type="button" id="btn-auth-toggle" class="text-sm font-bold text-gray-400 hover:text-blue-500 transition-colors">
+                        ¿No tienes cuenta? <span class="text-blue-600">Regístrate aquí</span>
+                    </button>
+                    <button type="button" id="btn-resend-verify" class="block w-full mt-3 text-xs font-bold text-orange-400 hover:text-orange-600 transition-colors hidden-view">
+                        ¿No recibiste el correo? Reenviar confirmación
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- ======================= -->
+    <!-- VISTA 2: APP PRINCIPAL (MODERN DASHBOARD) -->
+    <!-- ======================= -->
+    <section id="app-view" class="hidden-view pb-32 bg-gray-50 min-h-screen">
+        
+        <!-- Header: User & Actions -->
+        <div class="px-5 pt-4 pb-2 flex justify-between items-center bg-white/80 backdrop-blur-md sticky top-0 z-30">
+            <div class="flex flex-col">
+                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Hola,</span>
+                <span class="font-black text-lg text-gray-800 leading-none" id="user-display">Usuario</span>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="window.logout()" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white shadow-sm border border-gray-100 text-gray-400 hover:text-red-500 hover:border-red-200 transition flex items-center justify-center active:scale-95 text-sm"><i class="fa-solid fa-power-off"></i></button>
+            </div>
+        </div>
+
+        <!-- MAIN SCROLLABLE -->
+        <main class="px-5 max-w-md mx-auto space-y-3">
+            
+            <!-- Month Navigator (Capsule Style) -->
+            <div class="flex justify-center slide-up">
+                <div class="flex items-center bg-white rounded-full p-1 pl-2 pr-2 shadow-sm border border-gray-100">
+                    <button onclick="window.changeMonth(-1)" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+                    <div class="px-4 text-center min-w-[120px]">
+                        <p id="month-display" class="text-sm font-black text-gray-800 capitalize leading-none">---</p>
+                        <p id="transaction-count" class="text-[9px] font-bold text-gray-400 mt-0.5 uppercase">0 Reg.</p>
+                    </div>
+                    <button onclick="window.changeMonth(1)" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+                </div>
+            </div>
+
+            <!-- HERO CARD (Modern Wallet Style) -->
+            <div class="relative w-full h-28 rounded-3xl p-4 text-white shadow-lg shadow-blue-500/20 overflow-hidden slide-up" style="background: linear-gradient(135deg, #2563eb, #1e40af);">
+                <!-- Decorative Circles -->
+                <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl"></div>
+                <div class="absolute bottom-0 left-0 w-24 h-24 bg-black/10 rounded-full -ml-5 -mb-5 blur-xl"></div>
+                
+                <div class="relative z-10 flex flex-col justify-between h-full">
+                    <div>
+                        <p class="text-blue-200 text-[10px] font-bold uppercase tracking-wider mb-0.5">💰 Saldo Disponible</p>
+                        <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight" id="available-display">$0</h2>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span class="text-blue-200 text-[9px] font-bold">📅</span>
+                        <p class="text-blue-100 text-[9px] font-bold" id="current-month-label">---</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STATS ROW (Floating Pills) -->
+            <div class="grid grid-cols-2 gap-2.5 slide-up" style="animation-delay: 0.1s;">
+                <!-- Income Pill -->
+                <div onclick="window.filterTransactions('income')" class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2 cursor-pointer hover:border-green-200 transition group">
+                    <div class="w-8 h-8 rounded-xl bg-green-50 text-green-500 flex items-center justify-center text-sm group-hover:scale-110 transition"><i class="fa-solid fa-arrow-down"></i></div>
+                    <div>
+                        <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Ingresos</p>
+                        <p class="text-base font-black text-gray-800 leading-tight" id="dash-income">$0</p>
+                    </div>
+                </div>
+                <!-- Expense Pill -->
+                <div onclick="window.filterTransactions('expense')" class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2 cursor-pointer hover:border-red-200 transition group">
+                    <div class="w-8 h-8 rounded-xl bg-red-50 text-red-500 flex items-center justify-center text-sm group-hover:scale-110 transition"><i class="fa-solid fa-arrow-up"></i></div>
+                    <div>
+                        <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Gastos</p>
+                        <p class="text-base font-black text-gray-800 leading-tight" id="dash-expense">$0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions & Status -->
+            <div class="grid grid-cols-2 gap-2 slide-up" style="animation-delay: 0.15s;">
+                <!-- Budget Setting -->
+                <div class="bg-white p-2.5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 text-xs"><i class="fa-solid fa-bullseye"></i></div>
+                        <div>
+                            <p class="text-[8px] font-bold text-gray-400 uppercase">Presupuesto</p>
+                            <input type="number" id="budget-input" class="text-xs font-black text-gray-800 w-20 outline-none placeholder-gray-300" placeholder="Definir...">
+                        </div>
+                    </div>
+                </div>
+                <!-- Report Button -->
+                <button onclick="window.openReportModal()" class="bg-gradient-to-br from-blue-500 to-blue-600 p-2.5 rounded-xl shadow-sm border border-blue-400 flex items-center justify-center gap-2 cursor-pointer hover:shadow-lg transition group text-white">
+                    <div class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-xs group-hover:scale-110 transition"><i class="fa-solid fa-file-lines"></i></div>
+                    <div class="text-left">
+                        <p class="text-[8px] font-bold uppercase tracking-wide opacity-90">Ver</p>
+                        <p class="text-xs font-black leading-none">Reporte</p>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Transactions List -->
+            <div class="pt-1">
+                <div class="flex justify-between items-end mb-2.5 px-1 slide-up" style="animation-delay: 0.2s;">
+                    <h3 id="transactions-title" class="font-black text-base text-gray-800">Movimientos</h3>
+                    <button onclick="window.filterTransactions('all')" id="transactions-subtitle" class="text-[9px] font-bold text-gray-400 bg-white border border-gray-100 px-2.5 py-1 rounded-full shadow-sm">Ver Todo</button>
+                </div>
+
+                <ul id="movements-list" class="space-y-2 pb-8 slide-up" style="animation-delay: 0.25s;">
+                    <li id="empty-state" class="text-center py-6 opacity-40">
+                        <div class="text-4xl mb-2 grayscale">👻</div>
+                        <p class="text-xs font-bold text-gray-400">Sin movimientos aún</p>
+                        <p class="text-[10px] text-gray-300 mt-0.5">Usa el botón + para empezar</p>
+                    </li>
+                    <!-- Items injected via JS -->
+                </ul>
+            </div>
+
+        </main>
+
+        <!-- Fixed Bottom Elements -->
+        <div class="fixed bottom-0 w-full left-0 p-5 sm:p-6 pointer-events-none flex justify-center bg-gradient-to-t from-gray-100 via-gray-50/90 to-transparent z-20 pt-24">
+            <button onclick="window.openAddModal()" class="fab-gradient pointer-events-auto text-white w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-xl sm:text-2xl shadow-2xl shadow-blue-500/40 hover:scale-110 transition-transform active:scale-95">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+        </div>
+
+    </section>
+
+    <!-- ======================= -->
+    <!-- MODALES (Overlays) -->
+    <!-- ======================= -->
+
+
+    <!-- New Expense Modal -->
+    <div id="expense-modal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center invisible opacity-0 transition-all duration-300">
+        <div onclick="window.toggleModal(false)" class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"></div>
+        <form id="expense-form" novalidate class="bg-white w-full max-w-md sm:rounded-3xl rounded-t-3xl p-5 pb-12 shadow-2xl relative z-10 transform translate-y-full sm:translate-y-0 transition-transform duration-300 overflow-y-auto max-h-[85vh] sm:max-h-[90vh]">
+            <div class="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-4 sm:hidden"></div>
+            
+            <div class="flex justify-between items-center mb-4">
+                <!-- TABS TIPO -->
+                <div class="flex bg-gray-100 p-1 rounded-xl">
+                    <button type="button" onclick="window.setTransactionType('expense')" id="btn-type-expense" class="px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-bold shadow-sm bg-white text-black transition-all">Gasto</button>
+                    <button type="button" onclick="window.setTransactionType('income')" id="btn-type-income" class="px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-bold text-gray-500 hover:text-gray-700 transition-all">Ingreso</button>
+                </div>
+                <!-- Botón Eliminar (Hidden by default) -->
+                <div class="flex items-center gap-2">
+                    <button type="button" id="btn-delete" onclick="window.deleteTransaction()" class="hidden text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"><i class="fa-solid fa-trash"></i></button>
+                    <button type="button" onclick="window.toggleModal(false)" class="text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center font-bold">✕</button>
+                </div>
+            </div>
+            
+            <input type="hidden" id="transaction-type" value="expense">
+            <input type="hidden" id="editing-id" value="">
+
+            <!-- Cantidad -->
+            <div class="mb-4 relative">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xl">$</span>
+                <input type="number" id="amount" required step="0.01" min="0.01" class="w-full bg-gray-50 rounded-2xl py-2 pl-10 pr-4 text-3xl font-black text-gray-900 outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder-gray-300 text-center" placeholder="0">
+            </div>
+
+            <!-- Categoría Grid -->
+            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Categoría</label>
+            <div class="grid grid-cols-4 gap-2 mb-4" id="category-grid">
+                <!-- Se inyectan con JS -->
+            </div>
+            <input type="hidden" id="selected-category" value="Otros">
+
+            <!-- Detalles -->
+            <div class="space-y-3 mb-5">
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Nota</label>
+                    <input type="text" id="concept" class="w-full bg-gray-50 rounded-xl px-3 py-2 font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder-gray-400 text-sm" placeholder="¿En qué lo gastaste?">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Fecha</label>
+                        <input type="date" id="date" required class="w-full bg-gray-50 rounded-xl px-3 py-2 font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Método</label>
+                        <select id="method" class="w-full bg-gray-50 rounded-xl px-3 py-2 font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none text-sm">
+                            <option value="Efectivo">💵 Efectivo</option>
+                            <option value="Tarjeta">💳 Tarjeta</option>
+                            <option value="Transferencia">🏦 Transferencia</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-black text-white font-bold py-3 rounded-2xl shadow-xl active:scale-95 transition-transform text-sm sm:text-base">
+                Guardar
+            </button>
+        </form>
+    </div>
+
+    <!-- Summary Modal -->
+    <div id="summary-modal" class="fixed inset-0 z-50 flex items-end justify-center invisible opacity-0 transition-all duration-300">
+        <div onclick="window.toggleSummary(false)" class="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity"></div>
+        <div class="bg-white w-full max-w-md rounded-t-[30px] p-8 shadow-2xl relative z-10 transform translate-y-full transition-transform duration-300 h-[90vh] flex flex-col" id="summary-panel">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-black text-gray-900">Tu Resumen</h3>
+                <button onclick="window.toggleSummary(false)" class="bg-gray-100 w-10 h-10 rounded-full text-gray-500 hover:bg-gray-200"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto">
+                <div class="bg-blue-50 p-6 rounded-3xl mb-4 border border-blue-100">
+                    <p class="text-blue-500 font-bold text-xs uppercase mb-1">Gasto Total (Mes)</p>
+                    <p class="text-4xl font-black text-blue-900" id="summary-total">$0</p>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-gray-50 p-5 rounded-3xl">
+                        <p class="text-gray-400 font-bold text-[10px] uppercase mb-1">Promedio Diario</p>
+                        <p class="text-xl font-bold text-gray-800" id="summary-daily">$0</p>
+                    </div>
+                    <div class="bg-gray-50 p-5 rounded-3xl">
+                        <p class="text-gray-400 font-bold text-[10px] uppercase mb-1">Proyección Fin Mes</p>
+                        <p class="text-xl font-bold text-gray-800" id="summary-proj">$0</p>
+                    </div>
+                </div>
+
+                <!-- Sección Ahorros y Finanzas -->
+                <div class="mt-6 border-t border-gray-100 pt-6">
+                    <h4 class="font-extrabold text-gray-900 mb-4 flex items-center gap-2">
+                        <span class="bg-green-100 text-green-600 p-1.5 rounded-lg text-sm">🐷</span> 
+                        Mis Ahorros & Futuro
+                    </h4>
+                    <div class="bg-green-50 p-6 rounded-3xl border border-green-100 mb-4 transition-all">
+                        <div class="flex justify-between items-end mb-2">
+                            <p class="text-green-600 font-bold text-xs uppercase">Est. Ahorro Fin de Mes</p>
+                            <span class="text-xs font-bold text-green-700 bg-green-200 px-2 py-1 rounded-full" id="savings-status">---</span>
+                        </div>
+                        <p class="text-3xl font-black text-green-800" id="summary-savings">$0</p>
+                        <p class="text-xs font-bold text-green-600 mt-2 opacity-80" id="savings-message">---</p>
+                    </div>
+                </div>
+
+                <!-- Gráfico de Distribución -->
+                <div class="mt-6 border-t border-gray-100 pt-6">
+                    <h4 class="font-extrabold text-gray-900 mb-4 flex items-center gap-2">
+                        <span class="bg-purple-100 text-purple-600 p-1.5 rounded-lg text-sm">📊</span> 
+                        Distribución de Gastos
+                    </h4>
+                    <div class="bg-white p-4 rounded-3xl border border-gray-100">
+                        <canvas id="expense-chart" class="max-h-64"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Modal -->
+    <div id="report-modal" class="fixed inset-0 z-[60] flex items-center justify-center invisible opacity-0 transition-all duration-300">
+        <div onclick="window.toggleReportModal(false)" class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"></div>
+        <div class="bg-white w-full max-w-sm rounded-[30px] shadow-2xl relative z-10 transform scale-90 transition-transform duration-300 m-4" id="report-panel">
+            <!-- Report Content -->
+            <div id="report-content" class="p-6">
+                <div class="text-center mb-4">
+                    <div class="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-2xl text-blue-500 mx-auto mb-3">
+                        <i class="fa-solid fa-chart-simple"></i>
+                    </div>
+                    <h3 class="text-xl font-black text-gray-900 mb-1">Reporte Mensual</h3>
+                    <p class="text-xs font-bold text-gray-400" id="report-month">---</p>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 mb-4">
+                    <div class="text-center mb-3">
+                        <p class="text-xs font-bold text-blue-600 uppercase mb-1">💰 Saldo Final</p>
+                        <p class="text-2xl font-black text-blue-700" id="report-balance">$0</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-white/60 rounded-xl p-3 text-center">
+                            <p class="text-[9px] font-bold text-gray-500 uppercase mb-1">Ingresos</p>
+                            <p class="text-sm font-black text-green-600" id="report-income">$0</p>
+                        </div>
+                        <div class="bg-white/60 rounded-xl p-3 text-center">
+                            <p class="text-[9px] font-bold text-gray-500 uppercase mb-1">Gastos</p>
+                            <p class="text-sm font-black text-red-600" id="report-expenses">$0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transactions Count -->
+                <div class="text-center mb-4">
+                    <p class="text-xs font-bold text-gray-400" id="report-count">0 movimientos registrados</p>
+                </div>
+
+                <!-- Share Buttons -->
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <button onclick="window.shareReportWhatsApp()" class="py-2.5 rounded-2xl font-bold text-xs bg-green-500 text-white hover:bg-green-600 transition flex items-center justify-center gap-2">
+                        <i class="fa-brands fa-whatsapp"></i> WhatsApp
+                    </button>
+                    <button onclick="window.downloadReport()" class="py-2.5 rounded-2xl font-bold text-xs bg-blue-500 text-white hover:bg-blue-600 transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-download"></i> Guardar
+                    </button>
+                </div>
+                <button onclick="window.toggleReportModal(false)" class="w-full py-2.5 rounded-2xl font-bold text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 transition">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal (Custom Style) -->
+    <div id="delete-modal" class="fixed inset-0 z-[60] flex items-center justify-center invisible opacity-0 transition-all duration-300">
+        <div onclick="window.toggleDeleteModal(false)" class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"></div>
+        <div class="bg-white w-full max-w-xs rounded-[30px] p-6 shadow-2xl relative z-10 transform scale-90 transition-transform duration-300 m-4" id="delete-panel">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center text-2xl text-red-500 mx-auto mb-4">
+                    <i class="fa-solid fa-trash-can"></i>
+                </div>
+                <h3 class="text-xl font-black text-gray-900 mb-2">¿Borrar esto?</h3>
+                <p class="text-gray-400 text-xs font-bold leading-relaxed">Si lo borras, desaparecerá de tus registros y estadísticas para siempre.</p>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="window.toggleDeleteModal(false)" class="py-2.5 rounded-2xl font-bold text-xs sm:text-sm text-gray-500 bg-gray-100 hover:bg-gray-200 transition">Cancelar</button>
+                <button onclick="window.executeDelete()" id="btn-confirm-delete" class="py-2.5 rounded-2xl font-bold text-white bg-red-500 hover:bg-red-600 transition shadow-lg shadow-red-200 text-xs sm:text-sm">Sí, Borrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- APP LOGIC MODULES -->
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+# Archivos de configuración local (si existen)
+js/config.js
+
+# Archivos de notas o temporales
+*.txt
+*.log
+.DS_Store
+Thumbs.db
