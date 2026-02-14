@@ -5,9 +5,14 @@
 -- (Dashboard → SQL Editor → New Query → Pega y ejecuta)
 -- ================================================================
 
--- 1. CREAR TABLA DE PERFILES
+-- 1. LIMPIAR Y RECREAR TABLA DE PERFILES
 -- ================================================================
-CREATE TABLE IF NOT EXISTS profiles (
+-- ADVERTENCIA: Esto borrará todos los datos existentes en la tabla profiles
+-- Si tienes usuarios reales, comenta la línea DROP y usa ALTER TABLE en su lugar
+
+DROP TABLE IF EXISTS profiles CASCADE;
+
+CREATE TABLE profiles (
   email TEXT PRIMARY KEY,
   budget NUMERIC DEFAULT 0,
   expenses JSONB DEFAULT '[]',
