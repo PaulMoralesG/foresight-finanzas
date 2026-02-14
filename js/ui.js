@@ -2,6 +2,7 @@ import { AppState, setViewDate, setFilter } from './state.js';
 import { formatMoney, showNotification, runAsyncAction } from './utils.js';
 import { getCategories } from './config-loader.js';
 import { saveData, logout } from './auth.js';
+import { generatePDFReport } from './pdf-generator.js';
 
 // Variables globales para configuración cargada dinámicamente
 let EXPENSE_CATEGORIES = [];
@@ -436,7 +437,7 @@ export function shareReportWhatsApp() {
     window.open(whatsappUrl, '_blank');
 }
 
-export function downloadReport() {
+export async function downloadReport() {
     const monthly = getMonthlyData();
     const incomeItems = monthly.filter(i => i.type === 'income');
     const expenseItems = monthly.filter(i => i.type === 'expense' || !i.type);
@@ -449,7 +450,19 @@ export function downloadReport() {
     const monthName = months[AppState.currentViewDate.getMonth()];
     const year = AppState.currentViewDate.getFullYear();
     
-    // Create text report
+    // Try to generate PDF first
+    try {
+        showNotification('📄 Generando PDF...', 'success');
+        const pdfSuccess = await generatePDFReport(monthly, AppState.currentViewDate);
+        if (pdfSuccess) {
+            showNotification('📄 PDF generado exitosamente', 'success');
+            return;
+        }
+    } catch (error) {
+        console.error('Error generando PDF, usando fallback a texto:', error);
+    }
+    
+    // Fallback to text report if PDF fails
     let report = `REPORTE FINANCIERO - ${monthName.toUpperCase()} ${year}\n`;
     report += `${'='.repeat(50)}\n\n`;
     report += `RESUMEN:\n`;
@@ -485,7 +498,7 @@ export function downloadReport() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    showNotification('📄 Reporte descargado', 'success');
+    showNotification('📄 Reporte de texto descargado', 'success');
 }
 
 // SUMMARY MODAL FUNCTION
