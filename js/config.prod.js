@@ -45,10 +45,11 @@ export const INCOME_CATEGORIES = [
     { id: 'negocio', label: 'Negocio', icon: '🏢', color: 'bg-blue-100 text-blue-600' },
     { id: 'freelance', label: 'Freelance', icon: '💻', color: 'bg-purple-100 text-purple-600' },
     { id: 'inversiones', label: 'Inversiones', icon: '📈', color: 'bg-yellow-100 text-yellow-600' },
-    { id: 'ventas', label: 'Ventas', icon: '🛍️', color: 'bg-pink-100 text-pink-600' },
     { id: 'alquiler', label: 'Alquiler', icon: '🏘️', color: 'bg-teal-100 text-teal-600' },
     { id: 'bonos', label: 'Bonos', icon: '🎁', color: 'bg-indigo-100 text-indigo-600' },
     { id: 'propinas', label: 'Propinas', icon: '💵', color: 'bg-green-100 text-green-700' },
-    { id: 'ayuda-familiar', label: 'Ayuda', icon: '👨‍👩‍👧', color: 'bg-orange-100 text-orange-600' },
+    { id: 'ayuda', label: 'Ayuda Familiar', icon: '👨‍👩‍👧', color: 'bg-orange-100 text-orange-600' },
+    { id: 'reembolsos', label: 'Reembolsos', icon: '↩️', color: 'bg-cyan-100 text-cyan-600' },
+    { id: 'premios', label: 'Premios', icon: '🏆', color: 'bg-amber-100 text-amber-600' },
     { id: 'otros', label: 'Otros', icon: '💰', color: 'bg-gray-100 text-gray-600' },
 ];
