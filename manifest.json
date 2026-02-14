@@ -1,0 +1,46 @@
+{
+  "name": "Foresight Finanzas",
+  "short_name": "Foresight",
+  "description": "Control Financiero Inteligente - Gestiona tus finanzas de forma profesional",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2666/2666508.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2666/2666508.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "productivity"],
+  "screenshots": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2666/2666508.png",
+      "sizes": "540x720",
+      "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Agregar Gasto",
+      "short_name": "Nuevo Gasto",
+      "description": "Registrar un nuevo gasto rápidamente",
+      "url": "/?action=add-expense",
+      "icons": [
+        {
+          "src": "https://cdn-icons-png.flaticon.com/512/2666/2666508.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}
