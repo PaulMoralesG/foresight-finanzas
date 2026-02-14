@@ -9,9 +9,6 @@
             padding-bottom: env(safe-area-inset-bottom);
         }
 
-        /* ================================= */
-        /* SISTEMA DE VISTAS */
-        /* ================================= */
         .hidden-view {
             display: none !important;
         }
@@ -38,9 +35,6 @@
             transform: scale(0.98);
         }
 
-        /* ================================= */
-        /* BUDDY-STYLE AESTHETICS */
-        /* ================================= */
         .buddy-card {
             background: white;
             border-radius: 20px;

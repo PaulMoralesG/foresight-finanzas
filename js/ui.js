@@ -38,7 +38,6 @@ export const DOM = {
         }; 
     },
     get auth() { 
-        // ... (rest of auth)
         return { 
             form: document.getElementById('auth-form'), 
             email: document.getElementById('auth-email'), 

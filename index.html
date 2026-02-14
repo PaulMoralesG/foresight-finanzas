@@ -22,14 +22,10 @@
     <!-- Google Font: Nunito (Rounded, friendly, Buddy-like) -->
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- CUSTOM STYLES -->
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="safe-area-inset-bottom">
 
-    <!-- ======================= -->
-    <!-- VISTA 1: LOGIN AMIGABLE -->
-    <!-- ======================= -->
     <section id="login-view" class="min-h-screen flex flex-col items-center justify-center p-6 bg-white">
         
         <div class="w-full max-w-sm slide-up">
@@ -64,9 +60,6 @@
         </div>
     </section>
 
-    <!-- ======================= -->
-    <!-- VISTA 2: APP PRINCIPAL (MODERN DASHBOARD) -->
-    <!-- ======================= -->
     <section id="app-view" class="hidden-view pb-32 bg-gray-50 min-h-screen">
         
         <!-- Header: User & Actions -->
@@ -183,12 +176,6 @@
 
     </section>
 
-    <!-- ======================= -->
-    <!-- MODALES (Overlays) -->
-    <!-- ======================= -->
-
-
-    <!-- New Expense Modal -->
     <div id="expense-modal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center invisible opacity-0 transition-all duration-300">
         <div onclick="window.toggleModal(false)" class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"></div>
         <form id="expense-form" novalidate class="bg-white w-full max-w-md sm:rounded-3xl rounded-t-3xl p-5 pb-12 shadow-2xl relative z-10 transform translate-y-full sm:translate-y-0 transition-transform duration-300 overflow-y-auto max-h-[85vh] sm:max-h-[90vh]">
