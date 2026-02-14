@@ -11,6 +11,9 @@
 
 -- Agregar columnas nuevas si no existen
 ALTER TABLE profiles 
+ADD COLUMN IF NOT EXISTS name TEXT;
+
+ALTER TABLE profiles 
 ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
 
 ALTER TABLE profiles 

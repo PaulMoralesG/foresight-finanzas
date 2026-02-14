@@ -138,15 +138,24 @@ function setupEventListeners() {
 
     // Login Toggle
     let isLoginMode = true;
+    const nameField = document.getElementById('auth-name');
     if (auth.toggleBtn) {
         auth.toggleBtn.addEventListener('click', () => {
             isLoginMode = !isLoginMode;
             if (isLoginMode) {
                auth.submitBtn.textContent = "Iniciar Sesión";
                auth.toggleBtn.innerHTML = '¿No tienes cuenta? <span class="text-blue-600">Regístrate aquí</span>';
+               if(nameField) {
+                   nameField.style.display = 'none';
+                   nameField.required = false;
+               }
             } else {
                auth.submitBtn.textContent = "Crear Cuenta";
                auth.toggleBtn.innerHTML = '¿Ya tienes cuenta? <span class="text-blue-600">Inicia sesión</span>';
+               if(nameField) {
+                   nameField.style.display = 'block';
+                   nameField.required = true;
+               }
             }
         });
     }
@@ -174,12 +183,18 @@ function setupEventListeners() {
         console.log("🔐 Form submit interceptado");
         const email = auth.email.value.trim();
         const pass = auth.pass.value.trim();
+        const name = nameField ? nameField.value.trim() : '';
         console.log("📧 Email:", email);
         console.log("🔑 Password length:", pass.length);
+        console.log("👤 Name:", name);
 
         if(!email || !pass) {
             console.warn("⚠️ Campos vacíos detectados");
             return showNotification("Completa todos los campos", 'error');
+        }
+        
+        if(!isLoginMode && !name) {
+            return showNotification("Ingresa tu nombre completo", 'error');
         }
 
         // MODO NUBE
@@ -241,7 +256,7 @@ function setupEventListeners() {
                     }
                     if (data.user) {
                         console.log("✅ Registro exitoso. Creando perfil inicial...");
-                        await Auth.createInitialProfile(email);
+                        await Auth.createInitialProfile(email, name);
                         const profile = await Auth.loadProfileFromSupabase(email);
                         console.log("📦 Perfil inicial creado:", profile);
                         if (profile) {
@@ -362,7 +377,8 @@ function loginSuccess(userData) {
     }
 
     if(UI.DOM.userDisplay) {
-        UI.DOM.userDisplay.textContent = userData.email.split('@')[0];
+        const displayName = userData.name || userData.email.split('@')[0];
+        UI.DOM.userDisplay.textContent = displayName;
     }
     
     if(UI.DOM.budgetInput) {
