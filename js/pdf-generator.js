@@ -132,9 +132,9 @@ export async function generatePDFReport(monthly, currentViewDate) {
             const tableData = monthly.map(item => {
                 const type = item.type === 'income' ? 'Ingreso' : 'Gasto';
                 const cat = getCategoryById(item.category);
-                // For expenses, show negative amount with minus sign
+                // For expenses show negative with minus, for income show positive with plus
                 const amount = item.type === 'income' 
-                    ? formatMoney(item.amount)
+                    ? '+' + formatMoney(item.amount)
                     : '-' + formatMoney(item.amount);
                 return [
                     item.date,
