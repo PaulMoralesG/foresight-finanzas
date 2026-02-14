@@ -394,28 +394,28 @@ function renderList(items) {
             }
             
             const li = document.createElement('li');
-            li.className = 'buddy-card p-4 flex justify-between items-center slide-up group cursor-pointer hover:bg-gray-50 transition-colors active:scale-95';
+            li.className = 'buddy-card p-2.5 flex justify-between items-center slide-up group cursor-pointer hover:bg-gray-50 transition-colors active:scale-95';
             li.onclick = () => window.editTransaction(exp.id); 
             
             const amountClass = isIncome ? 'text-green-600' : 'text-gray-900';
             const sign = isIncome ? '+' : '-';
 
             li.innerHTML = `
-                <div class="flex items-center gap-4">
-                    <div class="icon-squircle text-2xl ${catData.color ?? 'bg-gray-100'}">${catData.icon}</div>
+                <div class="flex items-center gap-2.5">
+                    <div class="icon-squircle text-xl ${catData.color ?? 'bg-gray-100'}">${catData.icon}</div>
                     <div class="min-w-0 flex-1">
-                        <p class="font-bold text-gray-800 leading-tight truncate pr-2">${mainTitle}</p>
-                        <p class="text-xs font-bold text-gray-400 mt-0.5 truncate">
+                        <p class="font-bold text-sm text-gray-800 leading-tight truncate pr-1">${mainTitle}</p>
+                        <p class="text-[10px] font-bold text-gray-400 mt-0.5 truncate">
                             ${subTitle} • ${exp.method || 'Efectivo'}
                         </p>
                     </div>
                 </div>
-                <div class="flex items-center gap-3 shrink-0">
+                <div class="flex items-center gap-2 shrink-0">
                         <div class="text-right">
-                            <span class="font-extrabold ${amountClass} text-lg block">${sign}${formatMoney(exp.amount)}</span>
-                            <span class="text-[10px] font-bold text-gray-400 opacity-60">${new Date(exp.date).toLocaleDateString()}</span>
+                            <span class="font-extrabold ${amountClass} text-base block">${sign}${formatMoney(exp.amount)}</span>
+                            <span class="text-[9px] font-bold text-gray-400 opacity-60">${new Date(exp.date).toLocaleDateString()}</span>
                         </div>
-                        <div class="w-6 h-6 rounded-full bg-gray-50 text-gray-300 flex items-center justify-center text-[10px]"><i class="fa-solid fa-pen"></i></div>
+                        <div class="w-5 h-5 rounded-full bg-gray-50 text-gray-300 flex items-center justify-center text-[9px]"><i class="fa-solid fa-pen"></i></div>
                 </div>
             `;
             DOM.movementsList.appendChild(li);

@@ -74,10 +74,10 @@
     <section id="app-view" class="hidden-view pb-32 bg-gray-50 min-h-screen">
         
         <!-- Header: User & Actions -->
-        <div class="px-6 pt-10 pb-4 flex justify-between items-center bg-white/80 backdrop-blur-md sticky top-0 z-30">
+        <div class="px-5 pt-4 pb-2 flex justify-between items-center bg-white/80 backdrop-blur-md sticky top-0 z-30">
             <div class="flex flex-col">
-                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Hola,</span>
-                <span class="font-black text-xl text-gray-800 leading-none" id="user-display">Usuario</span>
+                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Hola,</span>
+                <span class="font-black text-lg text-gray-800 leading-none" id="user-display">Usuario</span>
             </div>
             <div class="flex gap-2">
                 <button id="theme-toggle" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white shadow-sm border border-gray-100 text-gray-400 hover:text-yellow-500 hover:border-yellow-200 transition flex items-center justify-center active:scale-95 text-sm"><i class="fa-solid fa-moon"></i></button>
@@ -87,7 +87,7 @@
         </div>
 
         <!-- MAIN SCROLLABLE -->
-        <main class="px-5 max-w-md mx-auto space-y-6">
+        <main class="px-5 max-w-md mx-auto space-y-3">
             
             <!-- Month Navigator (Capsule Style) -->
             <div class="flex justify-center slide-up">
@@ -102,25 +102,25 @@
             </div>
 
             <!-- HERO CARD (Modern Wallet Style) -->
-            <div class="relative w-full h-48 rounded-[32px] p-6 text-white shadow-xl shadow-blue-500/20 overflow-hidden slide-up" style="background: linear-gradient(135deg, #2563eb, #1e40af);">
+            <div class="relative w-full h-36 rounded-3xl p-4 text-white shadow-lg shadow-blue-500/20 overflow-hidden slide-up" style="background: linear-gradient(135deg, #2563eb, #1e40af);">
                 <!-- Decorative Circles -->
                 <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl"></div>
                 <div class="absolute bottom-0 left-0 w-24 h-24 bg-black/10 rounded-full -ml-5 -mb-5 blur-xl"></div>
                 
                 <div class="relative z-10 flex flex-col justify-between h-full">
                     <div>
-                        <p class="text-blue-200 text-xs font-bold uppercase tracking-widest mb-1">💰 Saldo Disponible</p>
-                        <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight" id="available-display">$0</h2>
-                        <p class="text-blue-100 text-xs font-medium mt-1 opacity-80" id="student-status">💪 Maneja tu dinero de forma inteligente</p>
+                        <p class="text-blue-200 text-[10px] font-bold uppercase tracking-wider mb-0.5">💰 Saldo Disponible</p>
+                        <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight" id="available-display">$0</h2>
+                        <p class="text-blue-100 text-[10px] font-medium mt-0.5 opacity-80" id="student-status">💪 Maneja tu dinero de forma inteligente</p>
                     </div>
 
                     <!-- Progress Bar for Budget -->
-                    <div class="space-y-2">
-                        <div class="flex justify-between items-end text-xs font-bold text-blue-100">
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-end text-[10px] font-bold text-blue-100">
                             <span>Gastado este mes</span>
                             <span id="spent-percent">0%</span>
                         </div>
-                        <div class="w-full h-2 bg-black/20 rounded-full overflow-hidden">
+                        <div class="w-full h-1.5 bg-black/20 rounded-full overflow-hidden">
                             <div id="budget-bar" class="h-full bg-white rounded-full transition-all duration-1000 ease-out" style="width: 0%"></div>
                         </div>
                     </div>
@@ -128,90 +128,90 @@
             </div>
 
             <!-- STATS ROW (Floating Pills) -->
-            <div class="grid grid-cols-2 gap-4 slide-up" style="animation-delay: 0.1s;">
+            <div class="grid grid-cols-2 gap-2.5 slide-up" style="animation-delay: 0.1s;">
                 <!-- Income Pill -->
-                <div onclick="window.filterTransactions('income')" class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-3 cursor-pointer hover:border-green-200 transition group">
-                    <div class="w-10 h-10 rounded-2xl bg-green-50 text-green-500 flex items-center justify-center text-lg group-hover:scale-110 transition"><i class="fa-solid fa-arrow-down"></i></div>
+                <div onclick="window.filterTransactions('income')" class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2 cursor-pointer hover:border-green-200 transition group">
+                    <div class="w-8 h-8 rounded-xl bg-green-50 text-green-500 flex items-center justify-center text-sm group-hover:scale-110 transition"><i class="fa-solid fa-arrow-down"></i></div>
                     <div>
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Ingresos</p>
-                        <p class="text-lg font-black text-gray-800 leading-tight" id="dash-income">$0</p>
+                        <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Ingresos</p>
+                        <p class="text-base font-black text-gray-800 leading-tight" id="dash-income">$0</p>
                     </div>
                 </div>
                 <!-- Expense Pill -->
-                <div onclick="window.filterTransactions('expense')" class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-3 cursor-pointer hover:border-red-200 transition group">
-                    <div class="w-10 h-10 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center text-lg group-hover:scale-110 transition"><i class="fa-solid fa-arrow-up"></i></div>
+                <div onclick="window.filterTransactions('expense')" class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2 cursor-pointer hover:border-red-200 transition group">
+                    <div class="w-8 h-8 rounded-xl bg-red-50 text-red-500 flex items-center justify-center text-sm group-hover:scale-110 transition"><i class="fa-solid fa-arrow-up"></i></div>
                     <div>
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Gastos</p>
-                        <p class="text-lg font-black text-gray-800 leading-tight" id="dash-expense">$0</p>
+                        <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Gastos</p>
+                        <p class="text-base font-black text-gray-800 leading-tight" id="dash-expense">$0</p>
                     </div>
                 </div>
             </div>
             
             <!-- MÉTRICAS ESTUDIANTILES ESPECÍFICAS -->
-            <div class="grid grid-cols-3 gap-3 slide-up" style="animation-delay: 0.12s;">
+            <div class="grid grid-cols-3 gap-2 slide-up" style="animation-delay: 0.12s;">
                 <!-- Gasto Diario Promedio -->
-                <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded-2xl border border-blue-200">
-                    <div class="flex items-center justify-center w-8 h-8 rounded-xl bg-blue-200 mb-2 mx-auto">
-                        <i class="fa-solid fa-calculator text-blue-600 text-sm"></i>
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-2 rounded-xl border border-blue-200">
+                    <div class="flex items-center justify-center w-6 h-6 rounded-lg bg-blue-200 mb-1 mx-auto">
+                        <i class="fa-solid fa-calculator text-blue-600 text-xs"></i>
                     </div>
-                    <p class="text-[8px] font-bold text-blue-600 uppercase text-center tracking-wider">Gasto/Día</p>
-                    <p class="text-sm font-black text-blue-800 text-center" id="daily-average">$0</p>
+                    <p class="text-[7px] font-bold text-blue-600 uppercase text-center tracking-wide">Gasto/Día</p>
+                    <p class="text-xs font-black text-blue-800 text-center" id="daily-average">$0</p>
                 </div>
                 
                 <!-- Días hasta fin de mes -->
-                <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 p-3 rounded-2xl border border-yellow-200">
-                    <div class="flex items-center justify-center w-8 h-8 rounded-xl bg-yellow-200 mb-2 mx-auto">
-                        <i class="fa-solid fa-calendar-days text-yellow-600 text-sm"></i>
+                <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 p-2 rounded-xl border border-yellow-200">
+                    <div class="flex items-center justify-center w-6 h-6 rounded-lg bg-yellow-200 mb-1 mx-auto">
+                        <i class="fa-solid fa-calendar-days text-yellow-600 text-xs"></i>
                     </div>
-                    <p class="text-[8px] font-bold text-yellow-600 uppercase text-center tracking-wider">Días Rest.</p>
-                    <p class="text-sm font-black text-yellow-800 text-center" id="days-remaining">--</p>
+                    <p class="text-[7px] font-bold text-yellow-600 uppercase text-center tracking-wide">Días Rest.</p>
+                    <p class="text-xs font-black text-yellow-800 text-center" id="days-remaining">--</p>
                 </div>
                 
                 <!-- Categoría Top -->
-                <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-3 rounded-2xl border border-purple-200">
-                    <div class="flex items-center justify-center w-8 h-8 rounded-xl bg-purple-200 mb-2 mx-auto">
-                        <i class="fa-solid fa-chart-pie text-purple-600 text-sm"></i>
+                <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-2 rounded-xl border border-purple-200">
+                    <div class="flex items-center justify-center w-6 h-6 rounded-lg bg-purple-200 mb-1 mx-auto">
+                        <i class="fa-solid fa-chart-pie text-purple-600 text-xs"></i>
                     </div>
-                    <p class="text-[8px] font-bold text-purple-600 uppercase text-center tracking-wider">Top Gasto</p>
-                    <p class="text-xs font-black text-purple-800 text-center" id="top-category">👀</p>
+                    <p class="text-[7px] font-bold text-purple-600 uppercase text-center tracking-wide">Top Gasto</p>
+                    <p class="text-[10px] font-black text-purple-800 text-center" id="top-category">👀</p>
                 </div>
             </div>
 
             <!-- Quick Actions & Status -->
-            <div class="grid grid-cols-[1.5fr,1fr] gap-3 slide-up" style="animation-delay: 0.15s;">
+            <div class="grid grid-cols-[1.5fr,1fr] gap-2 slide-up" style="animation-delay: 0.15s;">
                 <!-- Budget Setting -->
-                <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 text-xs"><i class="fa-solid fa-bullseye"></i></div>
+                <div class="bg-white p-2.5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 text-xs"><i class="fa-solid fa-bullseye"></i></div>
                         <div>
-                            <p class="text-[9px] font-bold text-gray-400 uppercase">Meta / Presupuesto</p>
-                            <input type="number" id="budget-input" class="text-sm font-black text-gray-800 w-24 outline-none placeholder-gray-300" placeholder="Definir...">
+                            <p class="text-[8px] font-bold text-gray-400 uppercase">Meta / Presupuesto</p>
+                            <input type="number" id="budget-input" class="text-xs font-black text-gray-800 w-20 outline-none placeholder-gray-300" placeholder="Definir...">
                         </div>
                     </div>
                 </div>
 
                 <!-- Report Button -->
-                <button onclick="window.sendAlertEmail(true)" id="btn-email-report" class="bg-black text-white p-2.5 sm:p-3 rounded-2xl shadow-lg shadow-gray-200 flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-gray-800 active:scale-95 transition">
-                    <i class="fa-solid fa-paper-plane text-xs"></i>
+                <button onclick="window.sendAlertEmail(true)" id="btn-email-report" class="bg-black text-white p-2 rounded-xl shadow-lg shadow-gray-200 flex items-center justify-center gap-1.5 hover:bg-gray-800 active:scale-95 transition">
+                    <i class="fa-solid fa-paper-plane text-[10px]"></i>
                     <div class="text-left leading-none">
-                        <p class="text-[8px] font-bold text-gray-400 uppercase opacity-50">Reporte</p>
-                        <p class="text-[10px] sm:text-xs font-bold">Enviar</p>
+                        <p class="text-[7px] font-bold text-gray-400 uppercase opacity-50">Reporte</p>
+                        <p class="text-[9px] font-bold">Enviar</p>
                     </div>
                 </button>
             </div>
 
             <!-- Transactions List -->
-            <div class="pt-2">
-                <div class="flex justify-between items-end mb-4 px-1 slide-up" style="animation-delay: 0.2s;">
-                    <h3 id="transactions-title" class="font-black text-lg text-gray-800">Movimientos</h3>
-                    <button onclick="window.filterTransactions('all')" id="transactions-subtitle" class="text-[10px] font-bold text-gray-400 bg-white border border-gray-100 px-3 py-1 rounded-full shadow-sm">Ver Todo</button>
+            <div class="pt-1">
+                <div class="flex justify-between items-end mb-2.5 px-1 slide-up" style="animation-delay: 0.2s;">
+                    <h3 id="transactions-title" class="font-black text-base text-gray-800">Movimientos</h3>
+                    <button onclick="window.filterTransactions('all')" id="transactions-subtitle" class="text-[9px] font-bold text-gray-400 bg-white border border-gray-100 px-2.5 py-1 rounded-full shadow-sm">Ver Todo</button>
                 </div>
 
-                <ul id="movements-list" class="space-y-3 pb-8 slide-up" style="animation-delay: 0.25s;">
-                    <li id="empty-state" class="text-center py-12 opacity-40">
-                        <div class="text-5xl mb-4 grayscale">👻</div>
-                        <p class="text-sm font-bold text-gray-400">Sin movimientos aún</p>
-                        <p class="text-xs text-gray-300 mt-1">Usa el botón + para empezar</p>
+                <ul id="movements-list" class="space-y-2 pb-8 slide-up" style="animation-delay: 0.25s;">
+                    <li id="empty-state" class="text-center py-6 opacity-40">
+                        <div class="text-4xl mb-2 grayscale">👻</div>
+                        <p class="text-xs font-bold text-gray-400">Sin movimientos aún</p>
+                        <p class="text-[10px] text-gray-300 mt-0.5">Usa el botón + para empezar</p>
                     </li>
                     <!-- Items injected via JS -->
                 </ul>
