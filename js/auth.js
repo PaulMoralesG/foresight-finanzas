@@ -13,9 +13,21 @@ export let supabaseClient = null;
 export async function initSupabase() {
     // Cargar configuración dinámica
     if (!SUPABASE_URL) {
-        const config = await getSupabaseConfig();
-        SUPABASE_URL = config.SUPABASE_URL;
-        SUPABASE_KEY = config.SUPABASE_KEY;
+        try {
+            const config = await getSupabaseConfig();
+            SUPABASE_URL = config.SUPABASE_URL;
+            SUPABASE_KEY = config.SUPABASE_KEY;
+        } catch (e) {
+            console.error("❌ Error cargando configuración Supabase:", e);
+            return null;
+        }
+    }
+
+    // Esperar a que window.supabase esté disponible (máx 5 seg)
+    let attempts = 0;
+    while (!window.supabase && attempts < 10) {
+        await new Promise(r => setTimeout(r, 500));
+        attempts++;
     }
 
     if (window.supabase) {
@@ -26,14 +38,8 @@ export async function initSupabase() {
             console.error("❌ Error creando cliente Supabase:", e);
         }
     } else {
-        console.warn("⚠️ window.supabase no encontrado aún. Reintentando en breve...");
-        // Reintento simple por si el script tarda en cargar
-        setTimeout(() => {
-            if(window.supabase && !supabaseClient) {
-                initSupabase();
-                console.log("🔄 Inicialización diferida ejecutada.");
-            }
-        }, 1000);
+        console.error("❌ CRÍTICO: window.supabase no cargó desde CDN.");
+        showNotification("Error de conexión: Librería no cargada.", 'error');
     }
     return supabaseClient;
 }
@@ -103,11 +109,19 @@ export async function signUp(email, password) {
     }
     
     console.log("📝 Creando cuenta en Supabase para:", email);
-    return await supabaseClient.auth.signUp({ 
+    const result = await supabaseClient.auth.signUp({ 
         email, 
         password,
         options: { emailRedirectTo: window.location.origin }
     });
+
+    // Si la sesión se crea inmediatamente (sin confirmación de email requerida), crear perfil
+    if (result.data?.session) {
+        console.log("⚡ Sesión creada inmediatamente. Inicializando perfil...");
+        await createInitialProfile(email);
+    }
+
+    return result;
 }
 
 export async function resendInvite(email) {
@@ -143,10 +157,15 @@ export async function saveData() {
     
     try {
         if (supabaseClient) {
+            // Usar upsert para asegurar que se guarde incluso si el perfil no existía
             const { error } = await supabaseClient
                 .from('profiles')
-                .update({ budget, expenses })
-                .eq('email', currentUser.email);
+                .upsert({ 
+                    email: currentUser.email, 
+                    budget, 
+                    expenses,
+                    updated_at: new Date()
+                }, { onConflict: 'email' });
             
             if (error) throw error;
         } else {

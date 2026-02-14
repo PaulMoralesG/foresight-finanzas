@@ -78,35 +78,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 1. Init Supabase
     console.log("🔧 Intentando inicializar Supabase...");
-    console.log("📍 window.supabase existe:", !!window.supabase);
     await Auth.initSupabase();
     console.log("📊 supabaseClient después de init:", !!Auth.supabaseClient);
 
-        }
-    } else {
-        // Mostrar landing por defecto y configurar historial
-        updateBrowserHistory('landing');
-    }    // Configurar historial inicial
-    const urlParams = new URLSearchParams(window.location.search);
-    const page = urlParams.get('page');
-    if (page && page !== 'landing') {
-        // Si hay una página específica pero no es landing, verificar autenticación
-        const currentSession = Auth.supabaseClient?.auth?.getSession();
-        if (!currentSession?.data?.session) {
-            // Sin sesión - forzar landing
-            window.goToLanding();
-        }
-    } else {
-        // Mostrar landing por defecto
-        updateBrowserHistory('landing');
-    }
     // Loop de seguridad para asegurar que Supabase arranque incluso si el script tarda
     const authCheckInterval = setInterval(() => {
         if (Auth.supabaseClient) {
             clearInterval(authCheckInterval);
             setupAuthObserver();
         } else {
-            // Reintentar init si sigue null
+            console.log("⏳ Esperando a Supabase Client...");
             Auth.initSupabase();
         }
     }, 500);
@@ -137,10 +118,20 @@ function setupAuthObserver() {
                         if(profile) {
                             loginSuccess({ ...profile, password: '' }); 
                         } else {
-                            console.error("❌ Perfil no devuelto por loadProfileFromSupabase");
-                            showNotification("Error cargando perfil.", 'error');
+                            console.error("❌ Perfil no devuelto (null) por loadProfileFromSupabase");
+                            // Intento final de recuperación
+                            await Auth.createInitialProfile(session.user.email);
+                            const retry = await Auth.loadProfileFromSupabase(session.user.email);
+                            if(retry) {
+                                loginSuccess({ ...retry, password: '' });
+                            } else {
+                                showNotification("Error crítico: No se puede cargar el perfil.", 'error');
+                            }
                         }
-                    } catch(e) { console.error("❌ Error cargando perfil:", e); }
+                    } catch(e) { 
+                        console.error("❌ Error cargando perfil:", e);
+                        showNotification("Error de conexión o perfil.", 'error'); 
+                    }
                 } else {
                     console.log("ℹ️ Usuario ya estaba en estado local.");
                 }
@@ -276,28 +267,10 @@ function setupEventListeners() {
                 btn.disabled = false;
             }
             return;
-        }
-
-        // MODO LOCAL
-        const userKey = `foresight_user_${email}`;
-        const stored = localStorage.getItem(userKey);
-
-        if (isLoginMode) {
-            if (stored) {
-                const data = JSON.parse(stored);
-                if (data.password === pass) loginSuccess(data);
-                else showNotification('Contraseña incorrecta', 'error');
-            } else {
-                showNotification("Usuario no encontrado.", 'error');
-            }
         } else {
-            if (stored) {
-                showNotification("Usuario ya existe.", 'error');
-            } else {
-                const newUser = { email, password: pass, budget: 0, expenses: [] };
-                localStorage.setItem(userKey, JSON.stringify(newUser));
-                loginSuccess(newUser);
-            }
+            console.error("❌ Supabase Client no inicializado.");
+            showNotification("Error de conexión. Intenta recargar la página.", 'error');
+            return;
         }
     });
 

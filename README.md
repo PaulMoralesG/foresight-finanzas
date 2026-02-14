@@ -5,35 +5,32 @@ Aplicación web moderna para gestión de finanzas personales con diseño Buddy-S
 ## 🚀 Demo en Vivo
 👉 [https://paulmmoralesg.github.io/foresight-finanzas/](https://paulmoralesg.github.io/foresight-finanzas/)
 ### 📋 Para Profesores/Evaluadores
-**¡Bienvenidos a la evaluación!** Este proyecto funciona de la siguiente manera:
+**¡Bienvenidos a la evaluación!** Esta es la versión **v2.0 (Producción)** del proyecto.
 
 #### 🔧 Cómo probar la aplicación:
 1. **Accede al enlace de GitHub Pages** (arriba)
-2. **Crea una cuenta** con tu correo universitario:
+2. **Crea una cuenta Real**:
    - Presiona "Regístrate aquí"
-   - Ingresa tu correo (ej: `profesora@universidad.edu`)
-   - Crea una contraseña (mínimo 6 caracteres)
-   - Presiona "Crear Cuenta"
-3. **¡Listo!** Puedes usar toda la funcionalidad:
-   - Agregar gastos e ingresos
-   - Ver estadísticas en tiempo real
-   - Configurar presupuestos
-   - Explorar las categorías
-   - Generar reportes
+   - Ingresa un correo real (para confirmación) o de prueba.
+   - Crea una contraseña.
+3. **¡Listo!** Tus datos se sincronizan en tiempo real con la nube (Supabase):
+   - Si inicias sesión en otro dispositivo, tus datos te acompañan.
+   - Si borras el caché del navegador, tus datos NO se pierden.
+   - Gestión completa de perfil y presupuesto en la nube.
 
-#### 💡 Notas importantes:
-- ✅ **Funciona inmediatamente** - No requiere instalación
-- 💾 **Datos locales** - Se guardan en el navegador para la demo
-- 🔒 **Seguro** - No se envían datos reales a internet
-- 🎯 **Funcionalidad completa** - Todas las características están disponibles
+#### 💡 Notas importantes (Versión Producción):
+- ✅ **Cloud-Native**: Arquitectura 100% basada en la nube.
+- 💾 **Persistencia Real**: Base de datos PostgreSQL (Supabase) como fuente de verdad.
+- 🔒 **Seguridad**: Autenticación robusta y Row Level Security (RLS).
+- 🔄 **Sincronización**: Cambios reflejados al instante.
 
 #### 🏆 Objetivos de evaluación cubiertos:
-- ✅ Interfaz moderna y responsive
-- ✅ Gestión de estado complejo (ingresos, gastos, categorías)
-- ✅ Cálculos financieros en tiempo real
-- ✅ Arquitectura modular (ES6 Modules)
-- ✅ Experiencia de usuario fluida
-- ✅ Código limpio y documentado
+- ✅ Backend as a Service (BaaS) con Supabase
+- ✅ Autenticación de usuarios real
+- ✅ CRUD completo contra base de datos SQL
+- ✅ Manejo de errores y estados de carga (Loading States)
+- ✅ Código limpio y modular (ES6 Modules)
+- ✅ Despliegue continuo (CD) en GitHub Pages
 ## ✨ Características
 - 📊 Dashboard moderno con estadísticas en tiempo real
 - 💳 Registro de ingresos y gastos por categorías
