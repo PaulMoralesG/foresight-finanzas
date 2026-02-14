@@ -29,7 +29,9 @@ window.toggleReportModal = UI.toggleReportModal;
 window.toggleSummary = UI.toggleSummary;
 window.openReportModal = UI.openReportModal;
 window.shareReportWhatsApp = UI.shareReportWhatsApp;
-window.downloadReport = UI.downloadReport;
+window.downloadReport = async function() {
+    await UI.downloadReport();
+};
 
 window.executeDelete = async function() {
     const id = parseInt(UI.DOM.editingIdInput.value);

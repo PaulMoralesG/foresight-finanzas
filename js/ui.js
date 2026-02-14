@@ -439,12 +439,6 @@ export function shareReportWhatsApp() {
 
 export async function downloadReport() {
     const monthly = getMonthlyData();
-    const incomeItems = monthly.filter(i => i.type === 'income');
-    const expenseItems = monthly.filter(i => i.type === 'expense' || !i.type);
-    
-    const totalIncome = incomeItems.reduce((sum, item) => sum + item.amount, 0);
-    const totalExpenses = expenseItems.reduce((sum, item) => sum + item.amount, 0);
-    const balance = totalIncome - totalExpenses;
     
     const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     const monthName = months[AppState.currentViewDate.getMonth()];
@@ -452,17 +446,24 @@ export async function downloadReport() {
     
     // Try to generate PDF first
     try {
-        showNotification('📄 Generando PDF...', 'success');
+        showNotification('📄 Generando PDF profesional...', 'success');
         const pdfSuccess = await generatePDFReport(monthly, AppState.currentViewDate);
         if (pdfSuccess) {
-            showNotification('📄 PDF generado exitosamente', 'success');
             return;
         }
     } catch (error) {
-        console.error('Error generando PDF, usando fallback a texto:', error);
+        showNotification('⚠️ Error generando PDF, descargando archivo de texto', 'error');
+        console.error('PDF Error:', error);
     }
     
     // Fallback to text report if PDF fails
+    const incomeItems = monthly.filter(i => i.type === 'income');
+    const expenseItems = monthly.filter(i => i.type === 'expense' || !i.type);
+    
+    const totalIncome = incomeItems.reduce((sum, item) => sum + item.amount, 0);
+    const totalExpenses = expenseItems.reduce((sum, item) => sum + item.amount, 0);
+    const balance = totalIncome - totalExpenses;
+    
     let report = `REPORTE FINANCIERO - ${monthName.toUpperCase()} ${year}\n`;
     report += `${'='.repeat(50)}\n\n`;
     report += `RESUMEN:\n`;
