@@ -328,19 +328,15 @@
                 </div>
 
                 <!-- Transactions Count -->
-                <div class="text-center mb-4">
+<div class="text-center mb-4">
                     <p class="text-xs font-bold text-gray-400" id="report-count">0 movimientos registrados</p>
                 </div>
 
-                <!-- Share Buttons -->
-                <div class="grid grid-cols-2 gap-3 mb-3">
-                    <button onclick="window.shareReportWhatsApp()" class="py-2.5 rounded-2xl font-bold text-xs bg-green-500 text-white hover:bg-green-600 transition flex items-center justify-center gap-2">
-                        <i class="fa-brands fa-whatsapp"></i> WhatsApp
-                    </button>
-                    <button onclick="window.downloadReport()" class="py-2.5 rounded-2xl font-bold text-xs bg-blue-500 text-white hover:bg-blue-600 transition flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-file-pdf"></i> PDF
-                    </button>
-                </div>
+                <!-- Generate PDF Button -->
+                <button onclick="window.downloadReport()" class="w-full py-3 rounded-2xl font-bold text-sm bg-blue-500 text-white hover:bg-blue-600 transition flex items-center justify-center gap-2 mb-3">
+                    <i class="fa-solid fa-file-pdf"></i> Generar PDF
+                </button>
+                
                 <button onclick="window.toggleReportModal(false)" class="w-full py-2.5 rounded-2xl font-bold text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 transition">Cerrar</button>
             </div>
         </div>

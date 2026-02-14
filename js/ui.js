@@ -413,30 +413,6 @@ export function openReportModal() {
     toggleReportModal(true);
 }
 
-export async function shareReportWhatsApp() {
-    const monthly = getMonthlyData();
-    const incomeItems = monthly.filter(i => i.type === 'income');
-    const expenseItems = monthly.filter(i => i.type === 'expense' || !i.type);
-    
-    const totalIncome = incomeItems.reduce((sum, item) => sum + item.amount, 0);
-    const totalExpenses = expenseItems.reduce((sum, item) => sum + item.amount, 0);
-    const balance = totalIncome - totalExpenses;
-    
-    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    const monthName = months[AppState.currentViewDate.getMonth()];
-    const year = AppState.currentViewDate.getFullYear();
-    
-    const message = `📊 *Reporte Financiero - ${monthName} ${year}*\n\n` +
-                   `💰 Saldo Final: ${formatMoney(balance)}\n` +
-                   `✅ Ingresos: ${formatMoney(totalIncome)}\n` +
-                   `❌ Gastos: ${formatMoney(totalExpenses)}\n` +
-                   `📝 Total Movimientos: ${monthly.length}`;
-    
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
-    showNotification('💬 WhatsApp abierto', 'success');
-}
-
 export async function downloadReport() {
     const monthly = getMonthlyData();
     
