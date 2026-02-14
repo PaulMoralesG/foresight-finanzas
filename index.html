@@ -8,8 +8,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- EmailJS SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     
     <!-- Supabase SDK (UMD Global) -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -139,15 +137,6 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Report Button -->
-                <button onclick="window.sendAlertEmail(true)" id="btn-email-report" class="bg-black text-white p-2 rounded-xl shadow-lg shadow-gray-200 flex items-center justify-center gap-1.5 hover:bg-gray-800 active:scale-95 transition">
-                    <i class="fa-solid fa-paper-plane text-[10px]"></i>
-                    <div class="text-left leading-none">
-                        <p class="text-[7px] font-bold text-gray-400 uppercase opacity-50">Reporte</p>
-                        <p class="text-[9px] font-bold">Enviar</p>
-                    </div>
-                </button>
             </div>
 
             <!-- Transactions List -->

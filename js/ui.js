@@ -1,25 +1,20 @@
 import { AppState, setViewDate, setFilter } from './state.js';
 import { formatMoney, showNotification, runAsyncAction } from './utils.js';
-import { getCategories, getEmailJSConfig } from './config-loader.js';
+import { getCategories } from './config-loader.js';
 import { saveData, logout } from './auth.js';
 
 // Variables globales para configuración cargada dinámicamente
 let EXPENSE_CATEGORIES = [];
 let INCOME_CATEGORIES = [];
 let getCategoryById = () => ({ label: 'Cargando...', icon: '⏳', color: 'bg-gray-100 text-gray-600' });
-let EMAILJS_SERVICE_ID = "";
-let EMAILJS_TEMPLATE_ID = "";
 
 // Cargar configuración al inicializar el módulo
 async function initConfig() {
     const categoriesConfig = await getCategories();
-    const emailConfig = await getEmailJSConfig();
     
     EXPENSE_CATEGORIES = categoriesConfig.EXPENSE_CATEGORIES;
     INCOME_CATEGORIES = categoriesConfig.INCOME_CATEGORIES;
     getCategoryById = categoriesConfig.getCategoryById;
-    EMAILJS_SERVICE_ID = emailConfig.EMAILJS_SERVICE_ID;
-    EMAILJS_TEMPLATE_ID = emailConfig.EMAILJS_TEMPLATE_ID;
 }
 
 // Inicializar configuración inmediatamente
@@ -84,14 +79,7 @@ export function getMonthlyData() {
     });
 }
 
-function calculateProjection(totalSpent) {
-    const now = new Date();
-    if(now.getMonth() !== AppState.currentViewDate.getMonth() || now.getFullYear() !== AppState.currentViewDate.getFullYear()) {
-        return totalSpent; 
-    }
-    const day = Math.max(1, now.getDate());
-    return (totalSpent / day) * 30; 
-}
+
 
 // UI UPDATES
 export function updateUI() {
@@ -365,62 +353,3 @@ export function deleteTransaction() {
     toggleDeleteModal(true);
 }
 
-// EMAIL CON CONTEXTO ESTUDIANTIL
-export async function sendAlertEmail(manual) {
-    if (!AppState.currentUser || !AppState.currentUser.email) return;
-    const monthly = getMonthlyData();
-    const expensesOnly = monthly.filter(i => i.type === 'expense' || !i.type);
-    const incomeOnly = monthly.filter(i => i.type === 'income');
-    const totalSpent = expensesOnly.reduce((s, i) => s + i.amount, 0);
-    const totalIncome = incomeOnly.reduce((s, i) => s + i.amount, 0);
-    
-    let limit = AppState.budget;
-    if (limit <= 0 && totalIncome > 0) limit = totalIncome;
-
-    const projection = calculateProjection(totalSpent);
-    let status = "Neutro";
-    let studentTip = "";
-    
-    if (limit > 0) {
-        const percentage = (totalSpent / limit) * 100;
-        if (totalSpent > limit) {
-            status = "😨 ¡Sin dinero!"; 
-            studentTip = "Hora de hablar con familia o buscar ingresos extra (tutorías, freelance).";
-        } else if (projection > limit) {
-            status = "⚠️ Proyección riesgosa";
-            studentTip = "Reduce gastos en comida fuera de casa y entretenimiento.";
-        } else if (percentage > 70) {
-            status = "📊 Gastando rápido";
-            studentTip = "Buen ritmo, pero modera las salidas con amigos.";
-        } else {
-            status = "✅ Control financiero estudiantil";
-            studentTip = "¡Excelente! Mantienes un buen control de tus gastos universitarios.";
-        }
-    }
-
-    const projectedLeftover = limit > 0 ? (limit - projection) : 0;
-    const btn = DOM.btnEmail;
-    const label = btn.querySelector('p:nth-child(2)');
-    const originalText = label.textContent;
-    label.textContent = 'Enviando...';
-    btn.disabled = true;
-
-    try {
-        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-            to_email: AppState.currentUser.email,
-            user_name: AppState.currentUser.email.split('@')[0],
-            total_spent: formatMoney(totalSpent),
-            budget_limit: formatMoney(limit), 
-            financial_status: status,
-            projected_balance: formatMoney(projectedLeftover),
-            student_tip: studentTip
-        });
-        showNotification('🎓 ¡Reporte estudiantil enviado! 🚀', 'success');
-    } catch (error) {
-        console.error(error);
-        showNotification("Error técnico al enviar.", 'error');
-    } finally {
-        label.textContent = originalText;
-        btn.disabled = false;
-    }
-}

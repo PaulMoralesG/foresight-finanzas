@@ -2,7 +2,6 @@ import { AppState, setState, setCurrentUser } from './state.js';
 import * as UI from './ui.js';
 import * as Auth from './auth.js';
 import { showNotification, runAsyncAction } from './utils.js';
-import { getEmailJSConfig } from './config-loader.js';
 
 // ======================================
 // 🚀 GLOBAL FUNCTIONS (accesibles desde HTML)
@@ -27,13 +26,9 @@ window.logout = Auth.logout;
 window.changeMonth = UI.changeMonth;
 window.filterTransactions = UI.filterTransactions;
 window.openAddModal = UI.openAddModal;
-window.editTransaction = UI.editTransaction; 
-window.deleteTransaction = UI.deleteTransaction;
-window.toggleModal = UI.toggleModal;
-window.sendAlertEmail = UI.sendAlertEmail;
-window.setTransactionType = UI.setTransactionType;
+window.editTransaction = UI.editTransaction;
 window.selectCategory = UI.selectCategory;
-window.toggleDeleteModal = UI.toggleDeleteModal; // Explicitly add this line
+window.toggleDeleteModal = UI.toggleDeleteModal;
 
 window.executeDelete = async function() {
     const id = parseInt(UI.DOM.editingIdInput.value);
@@ -63,17 +58,6 @@ window.executeDelete = async function() {
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
     console.log("🚀 App iniciando...");
-    
-    // 0. Init EmailJS
-    try {
-        const emailConfig = await getEmailJSConfig();
-        if(window.emailjs && emailConfig.EMAILJS_PUBLIC_KEY !== "DEMO_KEY") {
-            window.emailjs.init(emailConfig.EMAILJS_PUBLIC_KEY);
-            console.log("✅ EmailJS inicializado");
-        } else {
-            console.warn("⚠️ EmailJS en modo demo o no disponible");
-        }
-    } catch(e) { console.error("EmailJS Error:", e); }
 
     // 1. Init Supabase
     console.log("🔧 Intentando inicializar Supabase...");
