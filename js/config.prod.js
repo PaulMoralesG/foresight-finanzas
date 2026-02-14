@@ -1,11 +1,21 @@
+// ================================================================
 // CONFIGURACIÓN DE PRODUCCIÓN PARA GITHUB PAGES
-// Este archivo contiene las claves reales para el deployment en la nube
+// ================================================================
+// Este archivo contiene las claves PÚBLICAS para la aplicación.
+// 
+// 🔐 NOTA DE SEGURIDAD:
+// - La clave SUPABASE_KEY es la clave 'anon' (pública) - ES SEGURO exponerla.
+// - Esta clave NO da acceso total a la base de datos.
+// - La seguridad real viene de Row Level Security (RLS) en Supabase.
+// - Las contraseñas de usuarios NUNCA están aquí - están hasheadas en Supabase Auth.
+// - NUNCA expongas la clave 'service_role' (la clave de administrador).
+// ================================================================
 
 export const EMAILJS_PUBLIC_KEY = "jvOpRliw08hAwHWee";
 export const EMAILJS_SERVICE_ID = "service_xfvaqua";
 export const EMAILJS_TEMPLATE_ID = "template_hiw0fpp";
 
-// CLAVES REALES DE SUPABASE PARA PRODUCCIÓN
+// Clave 'anon' de Supabase (pública, segura para exponer)
 export const SUPABASE_URL = "https://sphmdtlvxbypckhavhgb.supabase.co"; 
 export const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwaG1kdGx2eGJ5cGNraGF2aGdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5MTA3MTEsImV4cCI6MjA4NjQ4NjcxMX0.kBqqJpwtPL-W8YEGU9wdA3HvwBsL2-G4ZIv051StvrE";
 

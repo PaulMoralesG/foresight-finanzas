@@ -145,31 +145,34 @@ Ve a **Settings → API** y copia:
 ### 2. EmailJS
 Regístrate en [EmailJS](https://emailjs.com) y crea un servicio.
 
-### 3. Variables de Configuración
-Renombra `js/config.example.js` a `js/config.js` y configura tus claves:
+### 3. Actualizar Configuración (Opcional)
+Si necesitas usar tus propias claves, edita [`js/config.prod.js`](js/config.prod.js):
 
 ```javascript
 export const SUPABASE_URL = "TU_SUPABASE_URL";
-export const SUPABASE_KEY = "TU_SUPABASE_ANON_KEY";
+export const SUPABASE_KEY = "TU_SUPABASE_ANON_KEY";  // ⚠️ Solo clave 'anon', NO 'service_role'
 export const EMAILJS_PUBLIC_KEY = "TU_EMAILJS_PUBLIC_KEY";
 export const EMAILJS_SERVICE_ID = "TU_SERVICE_ID";
 export const EMAILJS_TEMPLATE_ID = "TU_TEMPLATE_ID";
 ```
 
+**🔐 Nota de Seguridad**: La clave `SUPABASE_KEY` debe ser la clave **anon/public**, NO la clave `service_role`. Es seguro exponerla porque la seguridad real está en las políticas RLS de Supabase.
+
 ## 📂 Estructura del Proyecto
 ```
 foresight-finanzas/
-├── index.html              # Estructura principal
+├── index.html              # Estructura principal HTML
+├── supabase-setup.sql      # Script de configuración de base de datos
 ├── css/
 │   └── styles.css         # Estilos personalizados
 ├── js/
-│   ├── app.js             # Controlador principal
-│   ├── auth.js            # Autenticación y Supabase
-│   ├── ui.js              # Interfaz y renderizado
-│   ├── state.js           # Gestión de estado
-│   ├── utils.js           # Utilidades
-│   ├── config.js          # Configuración (IGNORADO por git)
-│   └── config.example.js  # Plantilla de configuración
+│   ├── app.js             # Controlador principal de la aplicación
+│   ├── auth.js            # Autenticación y sincronización con Supabase
+│   ├── ui.js              # Renderizado de interfaz y componentes
+│   ├── state.js           # Gestión de estado global (AppState)
+│   ├── utils.js           # Utilidades y helpers
+│   ├── config.prod.js     # Configuración de producción (claves públicas)
+│   └── config-loader.js   # Cargador dinámico de configuración
 └── README.md
 ```
 
@@ -181,9 +184,10 @@ Este proyecto usa **ES6 Modules** (`import`/`export`), que requieren un servidor
 **NO** puedes abrir `index.html` directamente haciendo doble clic (protocolo `file://`).
 
 ### Seguridad
-- `js/config.js` está en `.gitignore` para proteger tus claves
-- Nunca subas tus credenciales al repositorio
-- Las claves de Supabase deben ser solo de "Anonymous" (sin permisos críticos)
+- 🔐 **Claves públicas expuestas**: La clave `SUPABASE_KEY` en `config.prod.js` es la clave **anon/public**. Es seguro exponerla.
+- 🔒 **Seguridad real**: Row Level Security (RLS) en Supabase protege los datos. Cada usuario solo ve su propia información.
+- 🔑 **Contraseñas**: Nunca están en el código. Están hasheadas en Supabase Auth.
+- ⚠️ **NUNCA expongas**: La clave `service_role` de Supabase (tiene acceso de administrador total).
 
 ## 🐛 Solución de Problemas
 
