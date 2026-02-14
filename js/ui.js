@@ -449,43 +449,145 @@ export function downloadReport() {
     const monthName = months[AppState.currentViewDate.getMonth()];
     const year = AppState.currentViewDate.getFullYear();
     
-    // Create text report
-    let report = `REPORTE FINANCIERO - ${monthName.toUpperCase()} ${year}\n`;
-    report += `${'='.repeat(50)}\n\n`;
-    report += `RESUMEN:\n`;
-    report += `  Saldo Final: ${formatMoney(balance)}\n`;
-    report += `  Ingresos:    ${formatMoney(totalIncome)}\n`;
-    report += `  Gastos:      ${formatMoney(totalExpenses)}\n`;
-    report += `  Movimientos: ${monthly.length}\n\n`;
+    // Create PDF
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Header with logo
+    doc.setFillColor(37, 99, 235); // Blue
+    doc.rect(0, 0, 210, 35, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.setFont(undefined, 'bold');
+    doc.text('💰 Foresight Finanzas', 15, 15);
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Reporte Financiero - ${monthName} ${year}`, 15, 25);
+    
+    // Summary section
+    const yStart = 45;
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(16);
+    doc.setFont(undefined, 'bold');
+    doc.text('Resumen del Período', 15, yStart);
+    
+    // Summary boxes
+    const boxY = yStart + 10;
+    
+    // Balance box
+    const balanceColor = balance >= 0 ? [34, 197, 94] : [239, 68, 68];
+    doc.setFillColor(...balanceColor);
+    doc.roundedRect(15, boxY, 60, 25, 3, 3, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.text('SALDO FINAL', 45, boxY + 8, { align: 'center' });
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text(formatMoney(balance), 45, boxY + 18, { align: 'center' });
+    
+    // Income box
+    doc.setFillColor(34, 197, 94);
+    doc.roundedRect(80, boxY, 55, 25, 3, 3, 'F');
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text('INGRESOS', 107.5, boxY + 8, { align: 'center' });
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text(formatMoney(totalIncome), 107.5, boxY + 18, { align: 'center' });
+    
+    // Expenses box
+    doc.setFillColor(239, 68, 68);
+    doc.roundedRect(140, boxY, 55, 25, 3, 3, 'F');
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text('GASTOS', 167.5, boxY + 8, { align: 'center' });
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text(formatMoney(totalExpenses), 167.5, boxY + 18, { align: 'center' });
+    
+    // Transactions table
+    const tableY = boxY + 35;
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(16);
+    doc.text('Detalle de Transacciones', 15, tableY);
     
     if (monthly.length > 0) {
-        report += `DETALLE DE MOVIMIENTOS:\n`;
-        report += `${'-'.repeat(50)}\n`;
-        
-        monthly.forEach(item => {
-            const type = item.type === 'income' ? 'INGRESO' : 'GASTO';
+        const tableData = monthly.map(item => {
+            const type = item.type === 'income' ? 'Ingreso' : 'Gasto';
             const cat = getCategoryById(item.category);
-            report += `${item.date} | ${type} | ${formatMoney(item.amount)}\n`;
-            report += `  ${item.concept} (${cat.label})\n`;
+            return [
+                item.date,
+                type,
+                cat.label,
+                item.concept,
+                formatMoney(item.amount)
+            ];
         });
+        
+        doc.autoTable({
+            startY: tableY + 5,
+            head: [['Fecha', 'Tipo', 'Categoría', 'Concepto', 'Monto']],
+            body: tableData,
+            theme: 'striped',
+            headStyles: {
+                fillColor: [37, 99, 235],
+                textColor: [255, 255, 255],
+                fontStyle: 'bold',
+                fontSize: 10
+            },
+            bodyStyles: {
+                fontSize: 9
+            },
+            columnStyles: {
+                0: { cellWidth: 25 },
+                1: { cellWidth: 25 },
+                2: { cellWidth: 35 },
+                3: { cellWidth: 65 },
+                4: { cellWidth: 30, halign: 'right', fontStyle: 'bold' }
+            },
+            didParseCell: function(data) {
+                // Color the type column
+                if (data.column.index === 1 && data.section === 'body') {
+                    if (data.cell.raw === 'Ingreso') {
+                        data.cell.styles.textColor = [34, 197, 94];
+                        data.cell.styles.fontStyle = 'bold';
+                    } else {
+                        data.cell.styles.textColor = [239, 68, 68];
+                        data.cell.styles.fontStyle = 'bold';
+                    }
+                }
+                // Color the amount column
+                if (data.column.index === 4 && data.section === 'body') {
+                    const rowData = monthly[data.row.index];
+                    if (rowData.type === 'income') {
+                        data.cell.styles.textColor = [34, 197, 94];
+                    } else {
+                        data.cell.styles.textColor = [239, 68, 68];
+                    }
+                }
+            },
+            margin: { left: 15, right: 15 }
+        });
+    } else {
+        doc.setFontSize(11);
+        doc.setTextColor(100, 100, 100);
+        doc.text('No hay transacciones registradas en este período.', 15, tableY + 10);
     }
     
-    report += `\n${'-'.repeat(50)}\n`;
-    report += `Generado: ${new Date().toLocaleString('es-ES')}\n`;
-    report += `Foresight Finanzas - Control Simple y Efectivo\n`;
+    // Footer
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(9);
+        doc.setTextColor(150, 150, 150);
+        const footerText = `Generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}`;
+        doc.text(footerText, 15, 285);
+        doc.text(`Página ${i} de ${pageCount}`, 195, 285, { align: 'right' });
+    }
     
-    // Download as text file
-    const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `reporte-${monthName}-${year}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    showNotification('📄 Reporte descargado', 'success');
+    // Save PDF
+    doc.save(`Reporte-${monthName}-${year}.pdf`);
+    showNotification('📄 PDF generado exitosamente', 'success');
 }
 
 // SUMMARY MODAL FUNCTION
