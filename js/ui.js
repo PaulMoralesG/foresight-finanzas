@@ -417,28 +417,46 @@ export async function shareReportWhatsApp() {
     const monthly = getMonthlyData();
     
     const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    const monthName = months[AppState.currentViewDate.getMonth()];
-    const year = AppState.currentViewDate.getFullYear();
     
     try {
-        // Generate PDF first
-        showNotification('📄 Generando PDF para WhatsApp...', 'success');
-        const pdfSuccess = await generatePDFReport(monthly, AppState.currentViewDate);
+        // Generate PDF
+        showNotification('📄 Generando PDF para compartir...', 'success');
+        const pdfResult = await generatePDFReport(monthly, AppState.currentViewDate);
         
-        if (pdfSuccess) {
-            // Open WhatsApp with message
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            setTimeout(() => {
-                const message = `📊 Reporte Financiero - ${monthName} ${year}\n\nAquí está mi reporte financiero detallado 📄`;
-                const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-                window.open(whatsappUrl, '_blank');
-                
-                if (isMobile) {
-                    showNotification('📱 PDF abierto en nueva pestaña - Comparte por WhatsApp', 'success');
-                } else {
-                    showNotification('💬 PDF descargado - Abre WhatsApp y adjunta el archivo', 'success');
+        if (pdfResult) {
+            const { doc, monthName, year } = pdfResult;
+            const fileName = `Reporte-${monthName}-${year}.pdf`;
+            
+            // Check if Web Share API is available (mobile)
+            if (navigator.share) {
+                try {
+                    const pdfBlob = doc.output('blob');
+                    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+                    
+                    await navigator.share({
+                        title: `Reporte Financiero - ${monthName} ${year}`,
+                        text: `📊 Reporte Financiero - ${monthName} ${year}`,
+                        files: [file]
+                    });
+                    
+                    showNotification('✅ PDF compartido exitosamente', 'success');
+                } catch (shareError) {
+                    if (shareError.name !== 'AbortError') {
+                        console.error('Error compartiendo:', shareError);
+                        // Fallback: download and open WhatsApp
+                        doc.save(fileName);
+                        window.open(`https://wa.me/?text=${encodeURIComponent(`📊 Reporte Financiero - ${monthName} ${year}`)}`, '_blank');
+                        showNotification('📥 PDF descargado - Adjúntalo en WhatsApp', 'success');
+                    }
                 }
-            }, 500);
+            } else {
+                // Desktop: Download and open WhatsApp
+                doc.save(fileName);
+                setTimeout(() => {
+                    window.open(`https://wa.me/?text=${encodeURIComponent(`📊 Reporte Financiero - ${monthName} ${year}\n\nAquí está mi reporte financiero detallado 📄`)}`, '_blank');
+                    showNotification('💬 PDF descargado - Abre WhatsApp y adjunta el archivo', 'success');
+                }, 500);
+            }
         }
     } catch (error) {
         console.error('Error generando PDF para WhatsApp:', error);
@@ -457,11 +475,20 @@ export async function downloadReport() {
     try {
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         showNotification('📄 Generando PDF profesional...', 'success');
-        const pdfSuccess = await generatePDFReport(monthly, AppState.currentViewDate);
-        if (pdfSuccess) {
+        const pdfResult = await generatePDFReport(monthly, AppState.currentViewDate);
+        
+        if (pdfResult) {
+            const { doc, monthName: pdfMonth, year: pdfYear } = pdfResult;
+            const fileName = `Reporte-${pdfMonth}-${pdfYear}.pdf`;
+            
             if (isMobile) {
+                // Mobile: Open in new tab for viewing
+                const pdfUrl = doc.output('bloburl');
+                window.open(pdfUrl, '_blank');
                 showNotification('📱 PDF abierto en nueva pestaña', 'success');
             } else {
+                // Desktop: Download file
+                doc.save(fileName);
                 showNotification('📄 PDF descargado exitosamente', 'success');
             }
             return;
