@@ -171,9 +171,6 @@ export function updateUI() {
     // ACTUALIZAR MENSAJES MOTIVACIONALES PARA UNIVERSITARIOS
     updateStudentMotivationalMessage(percent, totalSpent, AppState.budget);
     
-    // CALCULAR MÉTRICAS ESPECÍFICAS PARA UNIVERSITARIOS
-    updateStudentMetrics(expenseItems, totalSpent);
-    
     // Verificar alertas específicas para estudiantes
     checkStudentTimeAlerts();
     
@@ -205,76 +202,6 @@ function updateStudentMotivationalMessage(percent, totalSpent, budget) {
     }
     
     statusElement.textContent = message;
-}
-
-// MÉTRICAS ESPECÍFICAS PARA ESTUDIANTES UNIVERSITARIOS
-function updateStudentMetrics(expenseItems, totalSpent) {
-    // 1. GASTO DIARIO PROMEDIO
-    const now = new Date();
-    const dayOfMonth = now.getDate();
-    const dailyAverage = dayOfMonth > 0 ? totalSpent / dayOfMonth : 0;
-    const dailyAverageElement = document.getElementById('daily-average');
-    if (dailyAverageElement) {
-        dailyAverageElement.textContent = formatMoney(dailyAverage);
-    }
-    
-    // 2. DÍAS RESTANTES DEL MES
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const daysRemaining = daysInMonth - dayOfMonth;
-    const daysRemainingElement = document.getElementById('days-remaining');
-    if (daysRemainingElement) {
-        daysRemainingElement.textContent = daysRemaining <= 0 ? '0' : daysRemaining.toString();
-    }
-    
-    // 3. CATEGORÍA TOP DE GASTOS
-    const topCategory = calculateTopStudentCategory(expenseItems);
-    const topCategoryElement = document.getElementById('top-category');
-    if (topCategoryElement) {
-        topCategoryElement.textContent = topCategory;
-    }
-}
-
-// CALCULAR CATEGORÍA DE GASTO MÁS ALTA PARA UNIVERSITARIOS
-function calculateTopStudentCategory(expenseItems) {
-    if (!expenseItems || expenseItems.length === 0) return '👀';
-    
-    const categoryTotals = {};
-    
-    expenseItems.forEach(expense => {
-        const categoryId = expense.categoryId || 'otros-gastos';
-        categoryTotals[categoryId] = (categoryTotals[categoryId] || 0) + expense.amount;
-    });
-    
-    let maxAmount = 0;
-    let topCategoryId = '';
-    
-    Object.entries(categoryTotals).forEach(([categoryId, amount]) => {
-        if (amount > maxAmount) {
-            maxAmount = amount;
-            topCategoryId = categoryId;
-        }
-    });
-    
-    // Mapeo de categorías a emojis específicos para universitarios
-    const categoryEmojis = {
-        'comida-u': '🍔',
-        'transporte-u': '🚌',
-        'materiales': '📝',
-        'fotocopias': '🖨️',
-        'libros': '📚',
-        'entretenimiento': '🎉',
-        'ropa-casual': '👕',
-        'casa-estudiantil': '🏠',
-        'salud-estudiantil': '💊',
-        'subscripciones': '📱',
-        'salidas-amigos': '🍻',
-        'emergencias': '⚠️',
-        'gimnasio-deporte': '🏋️',
-        'proyectos-uni': '📈',
-        'otros-gastos': '💸'
-    };
-    
-    return categoryEmojis[topCategoryId] || '💸';
 }
 
 // ALERTAS ESPECÍFICAS PARA ESTUDIANTES UNIVERSITARIOS

@@ -3,58 +3,14 @@ import { showNotification } from './utils.js';
 import * as Auth from './auth.js';
 
 // ================================================================
-// 🌙 MODO OSCURO
-// ================================================================
-let expenseChart = null;
-
-export function initDarkMode() {
-    const themeToggle = document.getElementById('theme-toggle');
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    
-    if (savedTheme === 'dark') {
-        document.body.classList.add('dark-mode');
-        updateThemeIcon(true);
-    }
-    
-    if (themeToggle) {
-        themeToggle.addEventListener('click', () => {
-            const isDark = document.body.classList.toggle('dark-mode');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            updateThemeIcon(isDark);
-            
-            // Recrear gráfico con nuevo tema
-            if (expenseChart) {
-                updateExpenseChart();
-            }
-        });
-    }
-}
-
-function updateThemeIcon(isDark) {
-    const themeToggle = document.getElementById('theme-toggle');
-    if (themeToggle) {
-        const icon = themeToggle.querySelector('i');
-        if (isDark) {
-            icon.className = 'fa-solid fa-sun';
-            themeToggle.classList.remove('hover:text-yellow-500');
-            themeToggle.classList.add('hover:text-orange-400');
-        } else {
-            icon.className = 'fa-solid fa-moon';
-            themeToggle.classList.remove('hover:text-orange-400');
-            themeToggle.classList.add('hover:text-yellow-500');
-        }
-    }
-}
-
-// ================================================================
 // 📊 GRÁFICO DE GASTOS
 // ================================================================
+let expenseChart = null;
 export function updateExpenseChart() {
     const canvas = document.getElementById('expense-chart');
     if (!canvas) return;
     
     const ctx = canvas.getContext('2d');
-    const isDark = document.body.classList.contains('dark-mode');
     
     // Filtrar solo gastos del mes actual
     const expenses = AppState.expenses.filter(e => 
@@ -88,7 +44,7 @@ export function updateExpenseChart() {
     if (labels.length === 0) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.font = '14px Nunito';
-        ctx.fillStyle = isDark ? '#AEAEB2' : '#6B7280';
+        ctx.fillStyle = '#6B7280';
         ctx.textAlign = 'center';
         ctx.fillText('No hay datos para mostrar', canvas.width / 2, canvas.height / 2);
         return;
@@ -102,7 +58,7 @@ export function updateExpenseChart() {
                 data: data,
                 backgroundColor: colors.slice(0, labels.length),
                 borderWidth: 2,
-                borderColor: isDark ? '#1C1C1E' : '#FFFFFF'
+                borderColor: '#FFFFFF'
             }]
         },
         options: {
@@ -118,7 +74,7 @@ export function updateExpenseChart() {
                             family: 'Nunito',
                             weight: 'bold'
                         },
-                        color: isDark ? '#F2F2F7' : '#1C1C1E'
+                        color: '#1C1C1E'
                     }
                 },
                 tooltip: {
@@ -141,7 +97,7 @@ export function updateExpenseChart() {
 // 🎨 INICIALIZACIÓN
 // ================================================================
 export function initFeatures() {
-    initDarkMode();
+    // Características inicializadas
 }
 
 // Exponer funciones globalmente
