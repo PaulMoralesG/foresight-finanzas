@@ -43,6 +43,8 @@ export const DOM = {
     get availableDisplay() { return document.getElementById('available-display'); },
     get dashIncome() { return document.getElementById('dash-income'); },
     get dashExpense() { return document.getElementById('dash-expense'); },
+    get netBalance() { return document.getElementById('net-balance'); },
+    get currentMonthLabel() { return document.getElementById('current-month-label'); },
     get monthDisplay() { return document.getElementById('month-display'); },
     get countDisplay() { return document.getElementById('transaction-count'); },
     get budgetInput() { return document.getElementById('budget-input'); },
@@ -98,12 +100,33 @@ export function updateUI() {
     const totalSpent = expenseItems.reduce((sum, item) => sum + item.amount, 0);
     
     // Saldo Disponible = Ingresos - Gastos (sin incluir presupuesto)
-    const available = totalIncome - totalSpent; 
+    const available = totalIncome - totalSpent;
+    const netBalance = totalIncome - totalSpent; // Balance neto del mes
 
     // Visuals
     DOM.availableDisplay.textContent = formatMoney(available);
     DOM.dashIncome.textContent = formatMoney(totalIncome);
     DOM.dashExpense.textContent = formatMoney(totalSpent);
+    
+    // Balance neto con color
+    if (DOM.netBalance) {
+        DOM.netBalance.textContent = formatMoney(netBalance);
+        if (netBalance > 0) {
+            DOM.netBalance.className = 'text-xs font-black text-green-600';
+        } else if (netBalance < 0) {
+            DOM.netBalance.className = 'text-xs font-black text-red-600';
+        } else {
+            DOM.netBalance.className = 'text-xs font-black text-gray-800';
+        }
+    }
+    
+    // Mes actual en el cuadro de saldo
+    if (DOM.currentMonthLabel) {
+        const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        const monthName = months[AppState.currentViewDate.getMonth()];
+        const year = AppState.currentViewDate.getFullYear();
+        DOM.currentMonthLabel.textContent = `${monthName} ${year}`;
+    }
 
     // List Rendering
     let itemsToShow = monthlyData;
