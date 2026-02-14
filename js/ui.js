@@ -427,11 +427,17 @@ export async function shareReportWhatsApp() {
         
         if (pdfSuccess) {
             // Open WhatsApp with message
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             setTimeout(() => {
                 const message = `📊 Reporte Financiero - ${monthName} ${year}\n\nAquí está mi reporte financiero detallado 📄`;
                 const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
                 window.open(whatsappUrl, '_blank');
-                showNotification('💬 PDF descargado - Abre WhatsApp y adjunta el archivo', 'success');
+                
+                if (isMobile) {
+                    showNotification('📱 PDF abierto en nueva pestaña - Comparte por WhatsApp', 'success');
+                } else {
+                    showNotification('💬 PDF descargado - Abre WhatsApp y adjunta el archivo', 'success');
+                }
             }, 500);
         }
     } catch (error) {
@@ -449,9 +455,15 @@ export async function downloadReport() {
     
     // Try to generate PDF first
     try {
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         showNotification('📄 Generando PDF profesional...', 'success');
         const pdfSuccess = await generatePDFReport(monthly, AppState.currentViewDate);
         if (pdfSuccess) {
+            if (isMobile) {
+                showNotification('📱 PDF abierto en nueva pestaña', 'success');
+            } else {
+                showNotification('📄 PDF descargado exitosamente', 'success');
+            }
             return;
         }
     } catch (error) {

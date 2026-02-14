@@ -204,8 +204,18 @@ export async function generatePDFReport(monthly, currentViewDate) {
             doc.text(`Página ${i} de ${pageCount}`, 195, 285, { align: 'right' });
         }
         
-        // Save PDF
-        doc.save(`Reporte-${monthName}-${year}.pdf`);
+        // Detect mobile device
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        if (isMobile) {
+            // On mobile: Open PDF in new tab for viewing
+            const pdfBlob = doc.output('bloburl');
+            window.open(pdfBlob, '_blank');
+        } else {
+            // On desktop: Download PDF
+            doc.save(`Reporte-${monthName}-${year}.pdf`);
+        }
+        
         return true;
     } catch (error) {
         console.error('Error generando PDF:', error);
