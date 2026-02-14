@@ -3,7 +3,6 @@ import * as UI from './ui.js';
 import * as Auth from './auth.js';
 import { showNotification, runAsyncAction } from './utils.js';
 import { getEmailJSConfig } from './config-loader.js';
-import { initFeatures, updateExpenseChart } from './features.js';
 
 // ======================================
 // 🚀 GLOBAL FUNCTIONS (accesibles desde HTML)
@@ -24,7 +23,6 @@ function showView(viewId) {
 }
 
 // --- EXPOSE GLOBALS FOR HTML ---
-window.toggleSummary = UI.toggleSummary;
 window.logout = Auth.logout;
 window.changeMonth = UI.changeMonth;
 window.filterTransactions = UI.filterTransactions;
@@ -382,10 +380,6 @@ function loginSuccess(userData) {
     console.log("Inicializando UI...");
     UI.initCategoryGrid();
     UI.updateUI();
-    
-    // Inicializar nuevas funcionalidades
-    initFeatures();
-    updateExpenseChart();
     
     console.log("🚀 Aplicación lista.");
 }

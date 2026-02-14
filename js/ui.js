@@ -56,20 +56,6 @@ export const DOM = {
     get movementsList() { return document.getElementById('movements-list'); },
     get emptyState() { return document.getElementById('empty-state'); },
     get modal() { return document.getElementById('expense-modal'); },
-
-    // Summary Object with children
-    get summary() {
-        return {
-            modal: document.getElementById('summary-modal'),
-            panel: document.getElementById('summary-panel'),
-            total: document.getElementById('summary-total'),
-            daily: document.getElementById('summary-daily'),
-            proj: document.getElementById('summary-proj'),
-            savings: document.getElementById('summary-savings'),
-            savingsStatus: document.getElementById('savings-status'),
-            savingsMsg: document.getElementById('savings-message')
-        };
-    },
     
     // Inputs del Modal
     get typeInput() { return document.getElementById('transaction-type'); },
@@ -442,51 +428,6 @@ export function toggleModal(show) {
             DOM.dateInput.valueAsDate = new Date();
             selectCategory('comida', DOM.categoryGrid.firstChild);
         }, 300);
-    }
-}
-
-export function toggleSummary(show) {
-    const monthly = getMonthlyData();
-    const expensesOnly = monthly.filter(i => i.type === 'expense' || !i.type);
-    const incomeOnly = monthly.filter(i => i.type === 'income');
-    const totalSpent = expensesOnly.reduce((s, i) => s + i.amount, 0);
-    const totalIncome = incomeOnly.reduce((s, i) => s + i.amount, 0);
-
-    const now = new Date();
-    const viewingMonth = AppState.currentViewDate.getMonth();
-    const viewingYear = AppState.currentViewDate.getFullYear();
-    const isCurrentMonth = (now.getMonth() === viewingMonth) && (now.getFullYear() === viewingYear);
-    const daysInMonth = new Date(viewingYear, viewingMonth + 1, 0).getDate();
-    let dayDivisor = isCurrentMonth ? Math.max(1, now.getDate()) : daysInMonth;
-    const dailyAvg = totalSpent / dayDivisor;
-    const projectionSpent = isCurrentMonth ? (dailyAvg * daysInMonth) : totalSpent;
-    const totalCapacity = AppState.budget > 0 ? AppState.budget : totalIncome;
-    const projectedSavings = totalCapacity - projectionSpent;
-
-    if(show) {
-        DOM.summary.total.textContent = formatMoney(totalSpent);
-        DOM.summary.daily.textContent = formatMoney(dailyAvg);
-        DOM.summary.proj.textContent = formatMoney(projectionSpent); 
-        DOM.summary.savings.textContent = formatMoney(projectedSavings);
-
-        if (projectedSavings >= 0) {
-            DOM.summary.savings.classList.remove('text-red-800');
-            DOM.summary.savings.classList.add('text-green-800');
-            DOM.summary.savingsStatus.textContent = "Superávit";
-            DOM.summary.savingsStatus.className = "text-xs font-bold text-green-700 bg-green-200 px-2 py-1 rounded-full";
-            DOM.summary.savingsMsg.textContent = isCurrentMonth ? "¡Bien! A este ritmo te sobrará dinero." : "Cerraste el mes con saldo positivo.";
-        } else {
-            DOM.summary.savings.classList.remove('text-green-800');
-            DOM.summary.savings.classList.add('text-red-800');
-            DOM.summary.savingsStatus.textContent = "Déficit";
-            DOM.summary.savingsStatus.className = "text-xs font-bold text-red-700 bg-red-200 px-2 py-1 rounded-full";
-            DOM.summary.savingsMsg.textContent = isCurrentMonth ? "Cuidado: Vas camino a gastar más de lo que tienes." : "Gastaste más de lo disponible este mes.";
-        }
-        DOM.summary.modal.classList.remove('invisible', 'opacity-0');
-        DOM.summary.panel.classList.remove('translate-y-full');
-    } else {
-        DOM.summary.modal.classList.add('invisible', 'opacity-0');
-        DOM.summary.panel.classList.add('translate-y-full');
     }
 }
 
