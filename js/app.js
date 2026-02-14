@@ -3,6 +3,7 @@ import * as UI from './ui.js';
 import * as Auth from './auth.js';
 import { showNotification, runAsyncAction } from './utils.js';
 import { getEmailJSConfig } from './config-loader.js';
+import { initFeatures, updateExpenseChart, loadGoals } from './features.js';
 
 // ======================================
 // 🚀 GLOBAL FUNCTIONS (accesibles desde HTML)
@@ -381,6 +382,12 @@ function loginSuccess(userData) {
     console.log("Inicializando UI...");
     UI.initCategoryGrid();
     UI.updateUI();
+    
+    // Inicializar nuevas funcionalidades
+    initFeatures();
+    loadGoals();
+    updateExpenseChart();
+    
     console.log("🚀 Aplicación lista.");
 }
 

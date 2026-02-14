@@ -79,3 +79,74 @@
             background: linear-gradient(135deg, #007AFF, #5856D6);
             box-shadow: 0 8px 20px rgba(88, 86, 214, 0.4);
         }
+
+        /* ================================= */
+        /* MODO OSCURO */
+        /* ================================= */
+        body.dark-mode {
+            background-color: #1C1C1E;
+            color: #F2F2F7;
+        }
+
+        body.dark-mode #app-view {
+            background-color: #1C1C1E !important;
+        }
+
+        body.dark-mode .bg-white {
+            background-color: #2C2C2E !important;
+        }
+
+        body.dark-mode .bg-gray-50 {
+            background-color: #1C1C1E !important;
+        }
+
+        body.dark-mode .bg-gray-100 {
+            background-color: #2C2C2E !important;
+        }
+
+        body.dark-mode .text-gray-800, 
+        body.dark-mode .text-gray-900 {
+            color: #F2F2F7 !important;
+        }
+
+        body.dark-mode .text-gray-400,
+        body.dark-mode .text-gray-500 {
+            color: #AEAEB2 !important;
+        }
+
+        body.dark-mode .border-gray-100,
+        body.dark-mode .border-gray-200 {
+            border-color: #3A3A3C !important;
+        }
+
+        body.dark-mode .shadow-sm,
+        body.dark-mode .shadow-lg,
+        body.dark-mode .shadow-xl {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+        }
+
+        body.dark-mode input,
+        body.dark-mode select,
+        body.dark-mode textarea {
+            background-color: #3A3A3C !important;
+            color: #F2F2F7 !important;
+        }
+
+        body.dark-mode .buddy-input {
+            background-color: #3A3A3C !important;
+        }
+
+        /* Mantener colores de marca en modo oscuro */
+        body.dark-mode .bg-blue-50,
+        body.dark-mode .bg-green-50,
+        body.dark-mode .bg-purple-50,
+        body.dark-mode .bg-yellow-50,
+        body.dark-mode .bg-red-50,
+        body.dark-mode .bg-orange-50 {
+            opacity: 0.9;
+        }
+
+        /* Transición suave al cambiar de modo */
+        body {
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }

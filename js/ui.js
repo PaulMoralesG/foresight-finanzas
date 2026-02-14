@@ -176,6 +176,11 @@ export function updateUI() {
     
     // Verificar alertas específicas para estudiantes
     checkStudentTimeAlerts();
+    
+    // Actualizar gráfico de gastos (si existe)
+    if (window.updateExpenseChart) {
+        window.updateExpenseChart();
+    }
 }
 
 // MENSAJES MOTIVACIONALES PARA ESTUDIANTES
