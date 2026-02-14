@@ -70,10 +70,17 @@ export async function loadProfileFromSupabase(email) {
             throw new Error("Perfil no encontrado incluso después de intentar crearlo.");
         }
     }
+    
+    // Convertir nombres de columnas snake_case a camelCase para JS
+    if(data) {
+        data.firstName = data.first_name;
+        data.lastName = data.last_name;
+    }
+    
     return data;
 }
 
-export async function createInitialProfile(email, name = '') {
+export async function createInitialProfile(email, firstName = '', lastName = '') {
     if(!supabaseClient) {
         throw new Error("No hay conexión con la base de datos para crear el perfil.");
     }
@@ -82,13 +89,13 @@ export async function createInitialProfile(email, name = '') {
     if (!data) {
         const { error: insertError } = await supabaseClient
             .from('profiles')
-            .insert([{ email, name, budget: 0, expenses: [], password: 'auth-managed' }]);
+            .insert([{ email, first_name: firstName, last_name: lastName, budget: 0, expenses: [], password: 'auth-managed' }]);
         
         if (insertError) {
             console.error("Error creando perfil:", insertError);
             throw new Error("No se pudo crear el perfil: " + insertError.message);
         }
-        console.log("✅ Perfil inicial creado en Supabase para:", email, "| Nombre:", name);
+        console.log("✅ Perfil inicial creado en Supabase para:", email, "| Nombre:", firstName, lastName);
     }
 }
 

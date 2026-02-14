@@ -2,7 +2,7 @@
 
 ## ⚠️ ACCIÓN REQUERIDA
 
-Se agregó la funcionalidad de **Nombre Completo** en el registro. Para que funcione correctamente, debes actualizar tu base de datos de Supabase.
+Se agregó la funcionalidad de **Nombre y Apellido** en el registro. Para que funcione correctamente, debes actualizar tu base de datos de Supabase.
 
 ## 📋 Pasos para Actualizar Supabase
 
@@ -15,11 +15,14 @@ Se agregó la funcionalidad de **Nombre Completo** en el registro. Para que func
 - Haz clic en **+ New query**
 
 ### 3️⃣ Ejecuta el Comando SQL
-Copia y pega este comando en el editor:
+Copia y pega estos comandos en el editor:
 
 ```sql
 ALTER TABLE profiles 
-ADD COLUMN IF NOT EXISTS name TEXT;
+ADD COLUMN IF NOT EXISTS first_name TEXT;
+
+ALTER TABLE profiles 
+ADD COLUMN IF NOT EXISTS last_name TEXT;
 ```
 
 ### 4️⃣ Ejecuta el Script
@@ -29,9 +32,9 @@ ADD COLUMN IF NOT EXISTS name TEXT;
 ## ✅ ¡Listo!
 
 Ahora tu aplicación:
-- ✅ Muestra el campo "Nombre completo" al registrarse
-- ✅ Saluda al usuario por su nombre en el dashboard
-- ✅ Guarda el nombre en la base de datos
+- ✅ Muestra campos separados de "Nombre" y "Apellido" al registrarse
+- ✅ Saluda al usuario con su nombre completo formateado correctamente
+- ✅ Guarda nombre y apellido por separado en la base de datos
 
 ---
 
@@ -39,11 +42,11 @@ Ahora tu aplicación:
 
 1. Ve a **Table Editor** en Supabase
 2. Selecciona la tabla `profiles`
-3. Deberías ver una nueva columna llamada `name`
+3. Deberías ver dos nuevas columnas: `first_name` y `last_name`
 
 ## 🆕 Usuarios Nuevos vs Existentes
 
-- **Nuevos usuarios**: Verán el campo de nombre al registrarse
+- **Nuevos usuarios**: Verán los campos de nombre y apellido al registrarse
 - **Usuarios existentes**: Verán su email como nombre hasta que actualicen su perfil
 
 ---

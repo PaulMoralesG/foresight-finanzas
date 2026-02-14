@@ -138,23 +138,27 @@ function setupEventListeners() {
 
     // Login Toggle
     let isLoginMode = true;
-    const nameField = document.getElementById('auth-name');
+    const nameFieldsContainer = document.getElementById('name-fields');
+    const firstNameField = document.getElementById('auth-firstname');
+    const lastNameField = document.getElementById('auth-lastname');
     if (auth.toggleBtn) {
         auth.toggleBtn.addEventListener('click', () => {
             isLoginMode = !isLoginMode;
             if (isLoginMode) {
                auth.submitBtn.textContent = "Iniciar Sesión";
                auth.toggleBtn.innerHTML = '¿No tienes cuenta? <span class="text-blue-600">Regístrate aquí</span>';
-               if(nameField) {
-                   nameField.style.display = 'none';
-                   nameField.required = false;
+               if(nameFieldsContainer) {
+                   nameFieldsContainer.style.display = 'none';
+                   if(firstNameField) firstNameField.required = false;
+                   if(lastNameField) lastNameField.required = false;
                }
             } else {
                auth.submitBtn.textContent = "Crear Cuenta";
                auth.toggleBtn.innerHTML = '¿Ya tienes cuenta? <span class="text-blue-600">Inicia sesión</span>';
-               if(nameField) {
-                   nameField.style.display = 'block';
-                   nameField.required = true;
+               if(nameFieldsContainer) {
+                   nameFieldsContainer.style.display = 'grid';
+                   if(firstNameField) firstNameField.required = true;
+                   if(lastNameField) lastNameField.required = true;
                }
             }
         });
@@ -183,18 +187,20 @@ function setupEventListeners() {
         console.log("🔐 Form submit interceptado");
         const email = auth.email.value.trim();
         const pass = auth.pass.value.trim();
-        const name = nameField ? nameField.value.trim() : '';
+        const firstName = firstNameField ? firstNameField.value.trim() : '';
+        const lastName = lastNameField ? lastNameField.value.trim() : '';
         console.log("📧 Email:", email);
         console.log("🔑 Password length:", pass.length);
-        console.log("👤 Name:", name);
+        console.log("👤 First Name:", firstName);
+        console.log("👤 Last Name:", lastName);
 
         if(!email || !pass) {
             console.warn("⚠️ Campos vacíos detectados");
             return showNotification("Completa todos los campos", 'error');
         }
         
-        if(!isLoginMode && !name) {
-            return showNotification("Ingresa tu nombre completo", 'error');
+        if(!isLoginMode && (!firstName || !lastName)) {
+            return showNotification("Ingresa tu nombre y apellido", 'error');
         }
 
         // MODO NUBE
@@ -256,7 +262,7 @@ function setupEventListeners() {
                     }
                     if (data.user) {
                         console.log("✅ Registro exitoso. Creando perfil inicial...");
-                        await Auth.createInitialProfile(email, name);
+                        await Auth.createInitialProfile(email, firstName, lastName);
                         const profile = await Auth.loadProfileFromSupabase(email);
                         console.log("📦 Perfil inicial creado:", profile);
                         if (profile) {
@@ -377,7 +383,12 @@ function loginSuccess(userData) {
     }
 
     if(UI.DOM.userDisplay) {
-        const displayName = userData.name || userData.email.split('@')[0];
+        let displayName = userData.email.split('@')[0];
+        if(userData.firstName && userData.lastName) {
+            displayName = `${userData.firstName} ${userData.lastName}`;
+        } else if(userData.firstName) {
+            displayName = userData.firstName;
+        }
         UI.DOM.userDisplay.textContent = displayName;
     }
     
