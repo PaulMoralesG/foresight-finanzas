@@ -416,47 +416,24 @@ export function openReportModal() {
 export async function shareReportWhatsApp() {
     const monthly = getMonthlyData();
     
-    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    
     try {
-        // Generate PDF
-        showNotification('📄 Generando PDF para compartir...', 'success');
+        // Generate and download PDF
+        showNotification('📄 Generando PDF para WhatsApp...', 'success');
         const pdfResult = await generatePDFReport(monthly, AppState.currentViewDate);
         
         if (pdfResult) {
             const { doc, monthName, year } = pdfResult;
             const fileName = `Reporte-${monthName}-${year}.pdf`;
             
-            // Check if Web Share API is available (mobile)
-            if (navigator.share) {
-                try {
-                    const pdfBlob = doc.output('blob');
-                    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-                    
-                    await navigator.share({
-                        title: `Reporte Financiero - ${monthName} ${year}`,
-                        text: `📊 Reporte Financiero - ${monthName} ${year}`,
-                        files: [file]
-                    });
-                    
-                    showNotification('✅ PDF compartido exitosamente', 'success');
-                } catch (shareError) {
-                    if (shareError.name !== 'AbortError') {
-                        console.error('Error compartiendo:', shareError);
-                        // Fallback: download and open WhatsApp
-                        doc.save(fileName);
-                        window.open(`https://wa.me/?text=${encodeURIComponent(`📊 Reporte Financiero - ${monthName} ${year}`)}`, '_blank');
-                        showNotification('📥 PDF descargado - Adjúntalo en WhatsApp', 'success');
-                    }
-                }
-            } else {
-                // Desktop: Download and open WhatsApp
-                doc.save(fileName);
-                setTimeout(() => {
-                    window.open(`https://wa.me/?text=${encodeURIComponent(`📊 Reporte Financiero - ${monthName} ${year}\n\nAquí está mi reporte financiero detallado 📄`)}`, '_blank');
-                    showNotification('💬 PDF descargado - Abre WhatsApp y adjunta el archivo', 'success');
-                }, 500);
-            }
+            // Download PDF
+            doc.save(fileName);
+            
+            // Wait a moment then open WhatsApp
+            setTimeout(() => {
+                const message = `📊 Reporte Financiero - ${monthName} ${year}\n\nAquí está mi reporte financiero detallado 📄`;
+                window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+                showNotification('💬 PDF descargado - Adjúntalo en WhatsApp', 'success');
+            }, 800);
         }
     } catch (error) {
         console.error('Error generando PDF para WhatsApp:', error);
