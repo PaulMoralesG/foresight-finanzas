@@ -125,19 +125,19 @@ export function updateUI() {
     const totalIncome = incomeItems.reduce((sum, item) => sum + item.amount, 0);
     const totalSpent = expenseItems.reduce((sum, item) => sum + item.amount, 0);
     
-    const available = (AppState.budget + totalIncome) - totalSpent; 
+    // Saldo Disponible = Ingresos - Gastos (sin incluir presupuesto)
+    const available = totalIncome - totalSpent; 
 
     // Visuals
     DOM.availableDisplay.textContent = formatMoney(available);
     DOM.dashIncome.textContent = formatMoney(totalIncome);
     DOM.dashExpense.textContent = formatMoney(totalSpent);
     
-    // Budget Bar Logic
-    const totalCapacity = AppState.budget + totalIncome;
+    // Budget Bar Logic - el presupuesto es solo una meta de gasto
     let percent = 0;
     
-    if (totalCapacity > 0) {
-        percent = Math.min((totalSpent / totalCapacity) * 100, 100);
+    if (AppState.budget > 0) {
+        percent = Math.min((totalSpent / AppState.budget) * 100, 100);
     } else if (totalSpent > 0) {
         percent = 100;
     }
