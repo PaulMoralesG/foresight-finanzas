@@ -20,6 +20,15 @@ async function initConfig() {
 // Inicializar configuración inmediatamente
 initConfig();
 
+// Helper: Obtener fecha de hoy en formato ISO local (evita problemas de zona horaria)
+function getTodayISO() {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
 // DOM ELEMENTS GETTER
 export const DOM = {
     get views() { 
@@ -309,7 +318,7 @@ export function toggleModal(show) {
             document.getElementById('expense-form').reset();
             DOM.btnDelete.classList.add('hidden'); 
             setTransactionType('expense');
-            DOM.dateInput.valueAsDate = new Date();
+            DOM.dateInput.value = getTodayISO();
             selectCategory('comida', DOM.categoryGrid.firstChild);
         }, 300);
     }
@@ -334,7 +343,9 @@ export function openAddModal() {
     document.getElementById('expense-form').reset();
     DOM.btnDelete.classList.add('hidden'); 
     setTransactionType('expense');
-    if(DOM.dateInput) DOM.dateInput.valueAsDate = new Date();
+    if(DOM.dateInput) {
+        DOM.dateInput.value = getTodayISO();
+    }
     selectCategory('comida', DOM.categoryGrid.firstChild); 
     toggleModal(true);
 }
@@ -352,7 +363,9 @@ export function editTransaction(id) {
         const dateObj = new Date(item.date);
         const isoDate = dateObj.toISOString().split('T')[0];
         DOM.dateInput.value = isoDate;
-    } catch(e) { DOM.dateInput.valueAsDate = new Date(); }
+    } catch(e) { 
+        DOM.dateInput.value = getTodayISO();
+    }
 
     const type = item.type || 'expense';
     setTransactionType(type);
