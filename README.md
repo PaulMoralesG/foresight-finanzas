@@ -73,19 +73,74 @@ npx http-server -p 8000
 
 ## ⚙️ Configuración
 
-### 1. Supabase
-Crea un proyecto en [Supabase](https://supabase.com) y configura:
+### 1. Supabase - Configuración Completa
+Crea un proyecto en [Supabase](https://supabase.com) y ejecuta estos pasos:
 
-**Tabla `profiles`:**
+#### 🚀 MÉTODO RÁPIDO (Recomendado)
+1. Ve a tu Dashboard de Supabase → **SQL Editor**
+2. Copia y pega TODO el contenido del archivo [`supabase-setup.sql`](supabase-setup.sql)
+3. Presiona **RUN** ▶️
+4. ✅ ¡Listo! Tu base de datos está configurada
+
+#### 📝 Método Manual (paso a paso)
+
+#### Paso 1: Crear la tabla `profiles`
+Ve a **SQL Editor** y ejecuta:
+
 ```sql
+-- Crear tabla de perfiles
 CREATE TABLE profiles (
   email TEXT PRIMARY KEY,
   budget NUMERIC DEFAULT 0,
   expenses JSONB DEFAULT '[]',
   password TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
 );
 ```
+
+#### Paso 2: Configurar Row Level Security (RLS)
+**IMPORTANTE**: Sin estas políticas, no podrás crear usuarios ni guardar datos.
+
+```sql
+-- Habilitar RLS
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+-- Política para permitir registro (INSERT público)
+CREATE POLICY "Permitir registro público"
+ON profiles FOR INSERT
+TO public
+WITH CHECK (true);
+
+-- Política para que usuarios autenticados lean su propio perfil
+CREATE POLICY "Usuarios leen su propio perfil"
+ON profiles FOR SELECT
+TO authenticated
+USING (email = auth.jwt()->>'email');
+
+-- Política para que usuarios autenticados actualicen su propio perfil
+CREATE POLICY "Usuarios actualizan su propio perfil"
+ON profiles FOR UPDATE
+TO authenticated
+USING (email = auth.jwt()->>'email')
+WITH CHECK (email = auth.jwt()->>'email');
+
+-- Política para borrar (opcional, por seguridad)
+CREATE POLICY "Usuarios borran su propio perfil"
+ON profiles FOR DELETE
+TO authenticated
+USING (email = auth.jwt()->>'email');
+```
+
+#### Paso 3: Verificar Email Settings
+Ve a **Authentication → Settings → Email Auth** y asegúrate de:
+- ✅ **Confirm email** esté activo O desactivo según tu preferencia
+- ✅ **Site URL** apunte a tu URL de GitHub Pages: `https://TU_USERNAME.github.io/foresight-finanzas`
+
+#### Paso 4: Obtener tus claves
+Ve a **Settings → API** y copia:
+- `Project URL` → Será tu `SUPABASE_URL`
+- `anon/public` key → Será tu `SUPABASE_KEY`
 
 ### 2. EmailJS
 Regístrate en [EmailJS](https://emailjs.com) y crea un servicio.
@@ -132,14 +187,35 @@ Este proyecto usa **ES6 Modules** (`import`/`export`), que requieren un servidor
 
 ## 🐛 Solución de Problemas
 
-### Error: "CORS policy" o "Failed to load module"
-→ Asegúrate de usar un servidor HTTP (Live Server, Python, etc.)
+### ❌ No puedo crear cuenta / Error al registrarme
+**Causa**: Falta configurar las políticas de RLS en Supabase.
+**Solución**:
+1. Ve a tu proyecto de Supabase
+2. Abre **SQL Editor**
+3. Ejecuta el archivo completo `supabase-setup.sql` que está en este repositorio
+4. Verifica que dice "Success" ✅
+5. Intenta registrarte de nuevo
 
-### Error: "Supabase no inicializado"
-→ Verifica que `js/config.js` tenga las claves correctas
+### ❌ Error: "CORS policy" o "Failed to load module"
+**Causa**: Intentas abrir el archivo directamente (`file://`)
+**Solución**: Usa un servidor HTTP (Live Server, Python, etc.)
 
-### Conflicto con extensiones del navegador
-→ Desactiva MetaMask/Keplr o usa ventana de incógnito
+### ❌ Error: "Supabase no inicializado" o console muestra "null"
+**Causa**: Las claves no están configuradas o son incorrectas.
+**Solución**:
+1. Verifica que `js/config.prod.js` (para GitHub Pages) tenga tus claves reales
+2. Asegúrate de copiar la **anon/public key**, NO la service_role
+3. Refresca la página con cache limpio (Ctrl + Shift + R)
+
+### ❌ Puedo registrarme pero no puedo login
+**Causa**: Email no confirmado (si tienes confirmación activa en Supabase)
+**Solución**:
+1. Revisa tu bandeja de entrada (y spam)
+2. O desactiva la confirmación: **Authentication → Settings → Email → Confirm email = OFF**
+
+### ⚠️ Conflicto con extensiones del navegador (MetaMask, etc.)
+**Causa**: Extensiones inyectan scripts que interfieren con Supabase
+**Solución**: Usa ventana de incógnito o desactiva extensiones
 
 ## 📄 Licencia
 MIT License - Proyecto educativo
