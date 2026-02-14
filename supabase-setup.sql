@@ -5,21 +5,25 @@
 -- (Dashboard → SQL Editor → New Query → Pega y ejecuta)
 -- ================================================================
 
--- 1. LIMPIAR Y RECREAR TABLA DE PERFILES
+-- 1. ACTUALIZAR TABLA DE PERFILES (SIN BORRAR DATOS)
 -- ================================================================
--- ADVERTENCIA: Esto borrará todos los datos existentes en la tabla profiles
--- Si tienes usuarios reales, comenta la línea DROP y usa ALTER TABLE en su lugar
+-- Este script agregará las columnas faltantes sin perder tus datos existentes
 
-DROP TABLE IF EXISTS profiles CASCADE;
+-- Agregar columnas nuevas si no existen
+ALTER TABLE profiles 
+ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
 
-CREATE TABLE profiles (
-  email TEXT PRIMARY KEY,
-  budget NUMERIC DEFAULT 0,
-  expenses JSONB DEFAULT '[]',
-  password TEXT DEFAULT 'auth-managed',
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
+ALTER TABLE profiles 
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+
+-- Actualizar valores de created_at para registros existentes que no lo tengan
+UPDATE profiles 
+SET created_at = NOW() 
+WHERE created_at IS NULL;
+
+UPDATE profiles 
+SET updated_at = NOW() 
+WHERE updated_at IS NULL;
 
 -- 2. HABILITAR ROW LEVEL SECURITY (RLS)
 -- ================================================================
