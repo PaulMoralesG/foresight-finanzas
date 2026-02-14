@@ -189,7 +189,7 @@ function renderList(items) {
             li.className = 'buddy-card p-2.5 flex justify-between items-center slide-up group cursor-pointer hover:bg-gray-50 transition-colors active:scale-95';
             li.onclick = () => window.editTransaction(exp.id); 
             
-            const amountClass = isIncome ? 'text-green-600' : 'text-gray-900';
+            const amountClass = isIncome ? 'text-green-600' : 'text-red-600';
             const sign = isIncome ? '+' : '-';
 
             li.innerHTML = `
