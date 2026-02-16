@@ -202,27 +202,7 @@ export const EMAILJS_TEMPLATE_ID = "TU_TEMPLATE_ID";
 
 **🔐 Nota de Seguridad**: La clave `SUPABASE_KEY` debe ser la clave **anon/public**, NO la clave `service_role`. Es seguro exponerla porque la seguridad real está en las políticas RLS de Supabase.
 
-## 📂 Estructura del Proyecto
-```
-foresight-finanzas/
-├── index.html              # Estructura principal HTML
-├── supabase-setup.sql      # Script de configuración de base de datos
-├── manifest.json           # PWA manifest
-├── service-worker.js       # Service Worker para PWA
-├── css/
-│   └── styles.css         # Estilos personalizados y animaciones
-├── js/
-│   ├── app.js             # Controlador principal de la aplicación
-│   ├── auth.js            # Autenticación y sincronización con Supabase
-│   ├── ui.js              # Renderizado de interfaz y componentes
-│   ├── state.js           # Gestión de estado global (AppState)
-│   ├── utils.js           # Utilidades y helpers
-│   ├── onboarding.js      # Tutorial interactivo para usuarios nuevos
-│   ├── pdf-generator.js   # Generación de reportes PDF
-│   ├── config.prod.js     # Configuración de producción (claves públicas)
-│   └── config-loader.js   # Cargador dinámico de configuración
-└── README.md
-```
+
 
 ## ⚠️ Importante
 
