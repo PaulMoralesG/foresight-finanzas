@@ -144,10 +144,14 @@ function setupEventListeners() {
             if(Auth.supabaseClient) {
                await runAsyncAction(auth.resendBtn, async () => {
                    const { error } = await Auth.resendInvite(email);
-                   if(error) throw error;
-                   showNotification("Correo reenviado.", 'success');
-                   auth.resendBtn.classList.add('hidden-view');
+                   if(error) {
+                       showNotification("Error al reenviar. Intenta de nuevo.", 'error');
+                       throw error;
+                   }
+                   showNotification("✅ Correo reenviado. Revisa tu bandeja de entrada y spam.", 'success');
                }, "Reenviando...");
+            } else {
+                showNotification("Error de conexión. Recarga la página.", 'error');
             }
         });
     }
@@ -198,11 +202,10 @@ function setupEventListeners() {
 
                     if (data.user && !data.session) {
                         // Requiere confirmación por correo
-                        showNotification("📧 Cuenta creada. Revisa tu correo (y spam) para confirmar. Si no llega en 2 minutos, contacta soporte.", 'success');
-                        auth.email.value = '';
-                        auth.pass.value = '';
+                        showNotification("📧 Cuenta creada. Revisa tu correo (y spam) para confirmar.", 'success');
                         if(firstNameField) firstNameField.value = '';
                         if(lastNameField) lastNameField.value = '';
+                        if(auth.resendBtn) auth.resendBtn.classList.remove('hidden-view');
                         isLoginMode = true;
                         auth.submitBtn.textContent = "Iniciar Sesión";
                         auth.toggleBtn.innerHTML = '¿No tienes cuenta? <span class="text-blue-600">Regístrate aquí</span>';
