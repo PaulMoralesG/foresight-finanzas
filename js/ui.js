@@ -493,62 +493,80 @@ export function openAddModal() {
     toggleModal(true);
 }
 
-export function editTransaction(id) {
-    const item = AppState.expenses.find(i => i.id === id);
-    if(!item) return;
-
-    DOM.editingIdInput.value = item.id;
-    DOM.amountInput.value = item.amount;
-    DOM.conceptInput.value = item.concept;
-    DOM.methodInput.value = item.method || 'Efectivo';
-    
+export async function downloadReport(type) {
+    const monthly = getMonthlyData();
+    let filtered = monthly;
+    let label = '';
+    if (type === 'business') {
+        filtered = monthly.filter(i => i.businessType === 'business');
+        label = 'Negocio';
+    } else if (type === 'personal') {
+        filtered = monthly.filter(i => i.businessType === 'personal');
+        label = 'Personal';
+    }
+    if (filtered.length === 0) {
+        showNotification(`No hay movimientos de ${label.toLowerCase()} para exportar`, 'error');
+        return;
+    }
     try {
-        const dateObj = new Date(item.date);
-        const isoDate = dateObj.toISOString().split('T')[0];
-        DOM.dateInput.value = isoDate;
-    } catch(e) { 
-        DOM.dateInput.value = getTodayISO();
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        showNotification(`📄 Generando PDF de ${label}...`, 'success');
+        const pdfResult = await generatePDFReport(filtered, AppState.currentViewDate, label);
+        if (pdfResult) {
+            const { doc, monthName: pdfMonth, year: pdfYear } = pdfResult;
+            const fileName = `Reporte-${label.toLowerCase()}-${pdfMonth}-${pdfYear}.pdf`;
+            if (isMobile) {
+                const pdfUrl = doc.output('bloburl');
+                window.open(pdfUrl, '_blank');
+                showNotification('📱 PDF abierto en nueva pestaña', 'success');
+            } else {
+                doc.save(fileName);
+                showNotification(`📄 PDF de ${label} descargado exitosamente`, 'success');
+            }
+            return;
+        }
+    } catch (error) {
+        showNotification(`⚠️ Error generando PDF de ${label}, descargando archivo de texto`, 'error');
+        console.error('PDF Error:', error);
     }
-
-    const type = item.type || 'expense';
-    setTransactionType(type);
-    
-    // Restore Business Type
-    const businessType = item.businessType || 'business';
-    setBusinessType(businessType);
-    
-    // Restore Category
-    const catId = item.category || (type === 'income' ? 'otros_ingreso' : 'otros');
-    const targetList = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
-    const catIndex = targetList.findIndex(c => c.id === catId);
-    
-    if (catIndex >= 0 && DOM.categoryGrid.children[catIndex]) {
-        selectCategory(catId, DOM.categoryGrid.children[catIndex]);
-    } else if (DOM.categoryGrid.children.length > 0) {
-            selectCategory(targetList[0].id, DOM.categoryGrid.children[0]);
+    // Fallback to text report if PDF fails
+    const incomeItems = filtered.filter(i => i.type === 'income');
+    const expenseItems = filtered.filter(i => i.type === 'expense' || !i.type);
+    const totalIncome = incomeItems.reduce((sum, item) => sum + item.amount, 0);
+    const totalExpenses = expenseItems.reduce((sum, item) => sum + item.amount, 0);
+    const balance = totalIncome - totalExpenses;
+    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const monthName = months[AppState.currentViewDate.getMonth()];
+    const year = AppState.currentViewDate.getFullYear();
+    let report = `REPORTE FINANCIERO - ${monthName.toUpperCase()} ${year} (${label})\n`;
+    report += `${'='.repeat(50)}\n\n`;
+    report += `RESUMEN:\n`;
+    report += `  Saldo Final: ${formatMoney(balance)}\n`;
+    report += `  Ingresos:    ${formatMoney(totalIncome)}\n`;
+    report += `  Gastos:      ${formatMoney(totalExpenses)}\n`;
+    report += `  Movimientos: ${filtered.length}\n\n`;
+    if (filtered.length > 0) {
+        report += `DETALLE DE MOVIMIENTOS:\n`;
+        report += `${'-'.repeat(50)}\n`;
+        filtered.forEach(item => {
+            const type = item.type === 'income' ? 'INGRESO' : 'GASTO';
+            report += `${item.date} | ${type} | ${formatMoney(item.amount)}\n`;
+            report += `  ${item.concept}\n`;
+        });
     }
-
-    DOM.btnDelete.classList.remove('hidden'); 
-    toggleModal(true);
-}
-
-export function deleteTransaction() {
-    toggleDeleteModal(true);
-}
-
-// REPORT MODAL FUNCTIONS
-export function toggleReportModal(show) {
-    const modal = document.getElementById('report-modal');
-    const panel = document.getElementById('report-panel');
-    if(show) {
-        modal.classList.remove('invisible', 'opacity-0');
-        panel.classList.remove('scale-90');
-        panel.classList.add('scale-100');
-    } else {
-        modal.classList.add('invisible', 'opacity-0');
-        panel.classList.remove('scale-100');
-        panel.classList.add('scale-90');
-    }
+    report += `\n${'-'.repeat(50)}\n`;
+    report += `Generado: ${new Date().toLocaleString('es-ES')}\n`;
+    report += `Foresight Finanzas - Control Simple y Efectivo\n`;
+    const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `reporte-${label.toLowerCase()}-${monthName}-${year}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showNotification(`📄 Reporte de texto de ${label} descargado`, 'success');
 }
 
 export function openReportModal() {
@@ -560,98 +578,39 @@ export function openReportModal() {
     const totalExpenses = expenseItems.reduce((sum, item) => sum + item.amount, 0);
     const balance = totalIncome - totalExpenses;
     
-    // Populate modal
     const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     const monthName = months[AppState.currentViewDate.getMonth()];
     const year = AppState.currentViewDate.getFullYear();
     
-    document.getElementById('report-month').textContent = `${monthName} ${year}`;
-    document.getElementById('report-balance').textContent = formatMoney(balance);
-    document.getElementById('report-income').textContent = formatMoney(totalIncome);
-    document.getElementById('report-expenses').textContent = formatMoney(totalExpenses);
-    document.getElementById('report-count').textContent = `${monthly.length} movimiento${monthly.length !== 1 ? 's' : ''} registrado${monthly.length !== 1 ? 's' : ''}`;
+    const reportMonthEl = document.getElementById('report-month');
+    const reportBalanceEl = document.getElementById('report-balance');
+    const reportIncomeEl = document.getElementById('report-income');
+    const reportExpensesEl = document.getElementById('report-expenses');
+    const reportCountEl = document.getElementById('report-count');
+    
+    if (reportMonthEl) reportMonthEl.textContent = `${monthName} ${year}`;
+    if (reportBalanceEl) reportBalanceEl.textContent = formatMoney(balance);
+    if (reportIncomeEl) reportIncomeEl.textContent = formatMoney(totalIncome);
+    if (reportExpensesEl) reportExpensesEl.textContent = formatMoney(totalExpenses);
+    if (reportCountEl) reportCountEl.textContent = `${monthly.length} movimiento${monthly.length !== 1 ? 's' : ''} registrado${monthly.length !== 1 ? 's' : ''}`;
     
     toggleReportModal(true);
 }
 
-export async function downloadReport() {
-    const monthly = getMonthlyData();
+export function toggleReportModal(show) {
+    const modal = document.getElementById('report-modal');
+    const panel = document.getElementById('report-panel');
+    if (!modal || !panel) return;
     
-    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    const monthName = months[AppState.currentViewDate.getMonth()];
-    const year = AppState.currentViewDate.getFullYear();
-    
-    // Try to generate PDF first
-    try {
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        showNotification('📄 Generando PDF profesional...', 'success');
-        const pdfResult = await generatePDFReport(monthly, AppState.currentViewDate);
-        
-        if (pdfResult) {
-            const { doc, monthName: pdfMonth, year: pdfYear } = pdfResult;
-            const fileName = `Reporte-${pdfMonth}-${pdfYear}.pdf`;
-            
-            if (isMobile) {
-                // Mobile: Open in new tab for viewing
-                const pdfUrl = doc.output('bloburl');
-                window.open(pdfUrl, '_blank');
-                showNotification('📱 PDF abierto en nueva pestaña', 'success');
-            } else {
-                // Desktop: Download file
-                doc.save(fileName);
-                showNotification('📄 PDF descargado exitosamente', 'success');
-            }
-            return;
-        }
-    } catch (error) {
-        showNotification('⚠️ Error generando PDF, descargando archivo de texto', 'error');
-        console.error('PDF Error:', error);
+    if (show) {
+        modal.classList.remove('invisible', 'opacity-0');
+        panel.classList.remove('scale-90');
+        panel.classList.add('scale-100');
+    } else {
+        modal.classList.add('invisible', 'opacity-0');
+        panel.classList.remove('scale-100');
+        panel.classList.add('scale-90');
     }
-    
-    // Fallback to text report if PDF fails
-    const incomeItems = monthly.filter(i => i.type === 'income');
-    const expenseItems = monthly.filter(i => i.type === 'expense' || !i.type);
-    
-    const totalIncome = incomeItems.reduce((sum, item) => sum + item.amount, 0);
-    const totalExpenses = expenseItems.reduce((sum, item) => sum + item.amount, 0);
-    const balance = totalIncome - totalExpenses;
-    
-    let report = `REPORTE FINANCIERO - ${monthName.toUpperCase()} ${year}\n`;
-    report += `${'='.repeat(50)}\n\n`;
-    report += `RESUMEN:\n`;
-    report += `  Saldo Final: ${formatMoney(balance)}\n`;
-    report += `  Ingresos:    ${formatMoney(totalIncome)}\n`;
-    report += `  Gastos:      ${formatMoney(totalExpenses)}\n`;
-    report += `  Movimientos: ${monthly.length}\n\n`;
-    
-    if (monthly.length > 0) {
-        report += `DETALLE DE MOVIMIENTOS:\n`;
-        report += `${'-'.repeat(50)}\n`;
-        
-        monthly.forEach(item => {
-            const type = item.type === 'income' ? 'INGRESO' : 'GASTO';
-            const cat = getCategoryById(item.category);
-            report += `${item.date} | ${type} | ${formatMoney(item.amount)}\n`;
-            report += `  ${item.concept} (${cat.label})\n`;
-        });
-    }
-    
-    report += `\n${'-'.repeat(50)}\n`;
-    report += `Generado: ${new Date().toLocaleString('es-ES')}\n`;
-    report += `Foresight Finanzas - Control Simple y Efectivo\n`;
-    
-    // Download as text file
-    const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `reporte-${monthName}-${year}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    showNotification('📄 Reporte de texto descargado', 'success');
 }
 
 // SUMMARY MODAL FUNCTION

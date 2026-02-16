@@ -1,16 +1,17 @@
-const CACHE_NAME = 'foresight-finanzas-v1';
+const CACHE_NAME = 'foresight-finanzas-v2';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/css/styles.css',
-  '/js/app.js',
-  '/js/auth.js',
-  '/js/config-loader.js',
-  '/js/config.prod.js',
-  '/js/pdf-generator.js',
-  '/js/state.js',
-  '/js/ui.js',
-  '/js/utils.js'
+  './',
+  './index.html',
+  './css/styles.css',
+  './js/app.js',
+  './js/auth.js',
+  './js/config-loader.js',
+  './js/config.prod.js',
+  './js/onboarding.js',
+  './js/pdf-generator.js',
+  './js/state.js',
+  './js/ui.js',
+  './js/utils.js'
 ];
 
 // Install Service Worker

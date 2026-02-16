@@ -30,8 +30,8 @@ window.toggleDeleteModal = UI.toggleDeleteModal;
 window.toggleReportModal = UI.toggleReportModal;
 window.toggleSummary = UI.toggleSummary;
 window.openReportModal = UI.openReportModal;
-window.downloadReport = async function() {
-    await UI.downloadReport();
+window.downloadReport = async function(type) {
+    await UI.downloadReport(type);
 };
 window.showTutorial = () => {
     resetOnboarding();
@@ -169,11 +169,15 @@ function setupEventListeners() {
         const firstName = firstNameField ? firstNameField.value.trim() : '';
         const lastName = lastNameField ? lastNameField.value.trim() : '';
 
+        console.log('[LOGIN] Submit:', { email, pass, firstName, lastName, isLoginMode });
+
         if(!email || !pass) {
+            console.warn('[LOGIN] Faltan campos');
             return showNotification("Completa todos los campos", 'error');
         }
         
         if(!isLoginMode && (!firstName || !lastName)) {
+            console.warn('[LOGIN] Faltan nombre/apellido');
             return showNotification("Ingresa tu nombre y apellido", 'error');
         }
 
@@ -187,12 +191,14 @@ function setupEventListeners() {
 
             try {
                 if (isLoginMode) {
+                    console.log('[LOGIN] Intentando signIn...');
                     const { data, error } = await Auth.signIn(email, pass);
-                    
+                    console.log('[LOGIN] signIn result:', { data, error });
                     if (error) throw error;
                     
                     if (data && data.user) {
                         const profile = await Auth.loadProfileFromSupabase(email);
+                        console.log('[LOGIN] Perfil cargado:', profile);
                         if(profile) {
                             loginSuccess({ ...profile, password: '' });
                         } else {
@@ -202,8 +208,9 @@ function setupEventListeners() {
                         showNotification("Error en respuesta del servidor.", 'error');
                     }
                 } else {
+                    console.log('[LOGIN] Intentando signUp...');
                     const { data, error } = await Auth.signUp(email, pass, firstName, lastName);
-                    
+                    console.log('[LOGIN] signUp result:', { data, error });
                     if (error) throw error;
 
                     if (data.user && !data.session) {
@@ -222,6 +229,7 @@ function setupEventListeners() {
                         // Login automático (confirmación desactivada)
                         await Auth.createInitialProfile(email, firstName, lastName);
                         const profile = await Auth.loadProfileFromSupabase(email);
+                        console.log('[LOGIN] Perfil creado y cargado:', profile);
                         if (profile) {
                             showNotification("✅ Cuenta creada exitosamente. ¡Bienvenido!", 'success');
                             loginSuccess({ ...profile, password: '' });
@@ -229,12 +237,14 @@ function setupEventListeners() {
                     }
                 }
             } catch (err) {
+                console.error('[LOGIN] Error:', err);
                 handleAuthError(err, auth);
             } finally {
                 btn.innerHTML = oldText;
                 btn.disabled = false;
             }
         } else {
+            console.error('[LOGIN] SupabaseClient no inicializado');
             showNotification("Error de conexión. Intenta recargar la página.", 'error');
         }
     });

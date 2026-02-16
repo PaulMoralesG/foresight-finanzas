@@ -430,11 +430,13 @@
                     <p class="text-xs font-bold text-gray-400" id="report-count">0 movimientos registrados</p>
                 </div>
 
-                <!-- Generate PDF Button -->
-                <button onclick="window.downloadReport()" class="w-full py-3 rounded-2xl font-bold text-sm bg-blue-500 text-white hover:bg-blue-600 transition flex items-center justify-center gap-2 mb-3">
-                    <i class="fa-solid fa-file-pdf"></i> Generar PDF
+                <!-- Generate PDF Buttons -->
+                <button onclick="window.downloadReport('business')" class="w-full py-3 rounded-2xl font-bold text-sm bg-blue-500 text-white hover:bg-blue-600 transition flex items-center justify-center gap-2 mb-2">
+                    <i class="fa-solid fa-file-pdf"></i> Descargar PDF Negocio
                 </button>
-                
+                <button onclick="window.downloadReport('personal')" class="w-full py-3 rounded-2xl font-bold text-sm bg-purple-500 text-white hover:bg-purple-600 transition flex items-center justify-center gap-2 mb-3">
+                    <i class="fa-solid fa-file-pdf"></i> Descargar PDF Personal
+                </button>
                 <button onclick="window.toggleReportModal(false)" class="w-full py-2.5 rounded-2xl font-bold text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 transition">Cerrar</button>
             </div>
         </div>
@@ -465,7 +467,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
+                navigator.serviceWorker.register('./service-worker.js')
                     .then(registration => {
                         console.log('✅ Service Worker registrado:', registration.scope);
                     })

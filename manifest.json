@@ -2,7 +2,7 @@
   "name": "Foresight Finanzas",
   "short_name": "Foresight",
   "description": "Tus finanzas personales y de negocio, claras y en un solo lugar. Sin complicaciones.",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2563eb",
