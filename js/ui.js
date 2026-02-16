@@ -115,6 +115,9 @@ export function updateUI() {
     DOM.dashIncome.textContent = formatMoney(totalIncome);
     DOM.dashExpense.textContent = formatMoney(totalSpent);
     
+    // Actualizar Utilidad del Mes
+    updateProfitDisplay(totalIncome, totalSpent);
+    
     // Mes actual en el cuadro de saldo
     if (DOM.currentMonthLabel) {
         const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -130,6 +133,44 @@ export function updateUI() {
 
     renderList(itemsToShow);
     updateFilterHeader();
+}
+
+// Actualizar visualización de utilidad (lenguaje simple para emprendedores)
+function updateProfitDisplay(totalIncome, totalSpent) {
+    const profitAmount = totalIncome - totalSpent;
+    const profitMargin = totalIncome > 0 ? ((profitAmount / totalIncome) * 100).toFixed(1) : 0;
+    
+    // Elementos del DOM
+    const profitAmountEl = document.getElementById('profit-amount');
+    const profitStatusEl = document.getElementById('profit-status');
+    const profitEmojiEl = document.getElementById('profit-emoji');
+    const profitMarginEl = document.getElementById('profit-margin');
+    
+    if (!profitAmountEl) return; // Si no existe el elemento, salir
+    
+    // Actualizar monto
+    profitAmountEl.textContent = formatMoney(profitAmount);
+    
+    // Actualizar margen
+    profitMarginEl.textContent = `Margen: ${profitMargin}%`;
+    
+    // Determinar estado y estilo según la utilidad
+    if (profitAmount > 0) {
+        profitAmountEl.className = 'text-2xl font-black leading-none mb-1 text-green-600';
+        profitStatusEl.textContent = '¡Estás ganando! 🎉';
+        profitStatusEl.className = 'text-[10px] font-bold text-green-600';
+        profitEmojiEl.textContent = '📈';
+    } else if (profitAmount < 0) {
+        profitAmountEl.className = 'text-2xl font-black leading-none mb-1 text-red-600';
+        profitStatusEl.textContent = 'Estás perdiendo dinero ⚠️';
+        profitStatusEl.className = 'text-[10px] font-bold text-red-600';
+        profitEmojiEl.textContent = '📉';
+    } else {
+        profitAmountEl.className = 'text-2xl font-black leading-none mb-1 text-gray-700';
+        profitStatusEl.textContent = 'Sin movimientos aún';
+        profitStatusEl.className = 'text-[10px] font-bold text-gray-500';
+        profitEmojiEl.textContent = '💰';
+    }
 }
 
 function updateFilterHeader() {
