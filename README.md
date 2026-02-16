@@ -1,11 +1,29 @@
-# 💰 Foresight - Control Financiero Personal
+# 💰 Foresight Finanzas
 
-Aplicación web moderna para gestión de finanzas personales con diseño intuitivo y sincronización en la nube. **Para cualquier persona que quiera tener control total de sus finanzas.**
+**Tus finanzas personales y de negocio, claras y en un solo lugar**
+
+Aplicación web moderna diseñada para emprendedores y personas que necesitan separar y controlar sus finanzas personales y de negocio. Con lenguaje simple, sin necesidad de conocimientos contables.
+
+## 🎯 ¿Para quién es Foresight?
+- 👤 **Emprendedores** que mezclan finanzas personales con las del negocio
+- 💼 **Pequeños negocios** que necesitan claridad en sus números
+- 📊 **Personas** que quieren ver su crecimiento mes a mes
+- 🚀 **Cualquiera** que busque control financiero sin complicaciones
 
 ## 🚀 Demo en Vivo
-👉 [https://paulmmoralesg.github.io/foresight-finanzas/](https://paulmoralesg.github.io/foresight-finanzas/)
+👉 [https://paulmoralesg.github.io/foresight-finanzas/](https://paulmoralesg.github.io/foresight-finanzas/)
+
+### ✨ ¿Qué puedes hacer en Foresight?
+- ✅ Registrar ingresos y gastos clasificados por categoría
+- ✅ Separar movimientos personales de los de tu negocio
+- ✅ Ver al instante si estás ganando o perdiendo dinero
+- ✅ Comparar tu crecimiento mes a mes con gráficas claras
+- ✅ Generar reportes PDF de tus finanzas
+- ✅ Tutorial interactivo que te guía paso a paso
+- ✅ Acceso desde cualquier dispositivo con sincronización en la nube
+
 ### 📋 Para Profesores/Evaluadores
-**¡Bienvenidos a la evaluación!** Esta es la versión **v2.0 (Producción)** del proyecto.
+**¡Bienvenidos a la evaluación!** Esta es la versión **v3.0 (Producción)** del proyecto.
 
 #### 🔧 Cómo probar la aplicación:
 1. **Accede al enlace de GitHub Pages** (arriba)
@@ -26,25 +44,51 @@ Aplicación web moderna para gestión de finanzas personales con diseño intuiti
 
 #### 🏆 Objetivos de evaluación cubiertos:
 - ✅ Backend as a Service (BaaS) con Supabase
-- ✅ Autenticación de usuarios real
+- ✅ Autenticación de usuarios real con metadata personalizada
 - ✅ CRUD completo contra base de datos SQL
 - ✅ Manejo de errores y estados de carga (Loading States)
 - ✅ Código limpio y modular (ES6 Modules)
 - ✅ Despliegue continuo (CD) en GitHub Pages
-## ✨ Características
-- 📊 Dashboard moderno con estadísticas en tiempo real
-- 💳 Registro de ingresos y gastos por categorías
-- 📈 Proyecciones y análisis de ahorro
-- ☁️ Sincronización con Supabase
-- 📧 Reportes por correo electrónico
-- 🎨 Diseño responsivo tipo iOS/Buddy
-- 🔐 Autenticación segura
+- ✅ UX/UI optimizada para móviles con tooltips y onboarding
+- ✅ Funcionalidades especializadas para el público objetivo
+- ✅ Separación de responsabilidades (8 módulos JavaScript)
+## ✨ Características Principales
+
+### 💼 Separación Personal vs Negocio
+- Clasifica cada movimiento como personal o de negocio
+- Filtros inteligentes para ver cada categoría por separado
+- Identifica claramente qué gastos corresponden a cada ámbito
+
+### 📊 Calculadora de Utilidades
+- **"¿Estoy ganando o perdiendo?"** - Respuesta clara e inmediata
+- Visualización del margen de ganancia en porcentaje
+- Alertas visuales con emojis y colores (verde = ganando, rojo = perdiendo)
+
+### 📈 Comparación Mes a Mes
+- Ve tu crecimiento comparado con el mes anterior
+- Porcentajes de crecimiento o decrecimiento
+- Mensajes motivacionales en lenguaje simple
+- Badges visuales de progreso
+
+### 🎓 Tutorial Interactivo
+- Guía paso a paso para nuevos usuarios
+- 7 pasos que explican cada funcionalidad
+- Tooltips descriptivos en todos los botones
+- Diseñado para personas sin conocimientos contables
+
+### 💾 Otras Características
+- ☁️ Sincronización automática en la nube (Supabase)
+- 📱 Diseño responsivo optimizado para móvil
+- 📄 Generación de reportes PDF
+- 🔐 Autenticación segura con verificación de email
+- 🎨 Interfaz moderna y amigable
 
 ## 🛠️ Tecnologías
 - **Frontend**: HTML5, CSS3 (Tailwind CDN), JavaScript (ES6 Modules)
-- **Backend**: Supabase (Auth + Database)
-- **Email**: EmailJS
+- **Backend**: Supabase (PostgreSQL + Auth)
+- **Reportes**: jsPDF para generación de PDFs
 - **Hosting**: GitHub Pages
+- **Arquitectura**: Modular con separación de responsabilidades
 
 ## 📦 Instalación Local
 
@@ -163,14 +207,18 @@ export const EMAILJS_TEMPLATE_ID = "TU_TEMPLATE_ID";
 foresight-finanzas/
 ├── index.html              # Estructura principal HTML
 ├── supabase-setup.sql      # Script de configuración de base de datos
+├── manifest.json           # PWA manifest
+├── service-worker.js       # Service Worker para PWA
 ├── css/
-│   └── styles.css         # Estilos personalizados
+│   └── styles.css         # Estilos personalizados y animaciones
 ├── js/
 │   ├── app.js             # Controlador principal de la aplicación
 │   ├── auth.js            # Autenticación y sincronización con Supabase
 │   ├── ui.js              # Renderizado de interfaz y componentes
 │   ├── state.js           # Gestión de estado global (AppState)
 │   ├── utils.js           # Utilidades y helpers
+│   ├── onboarding.js      # Tutorial interactivo para usuarios nuevos
+│   ├── pdf-generator.js   # Generación de reportes PDF
 │   ├── config.prod.js     # Configuración de producción (claves públicas)
 │   └── config-loader.js   # Cargador dinámico de configuración
 └── README.md
@@ -221,8 +269,39 @@ Este proyecto usa **ES6 Modules** (`import`/`export`), que requieren un servidor
 **Causa**: Extensiones inyectan scripts que interfieren con Supabase
 **Solución**: Usa ventana de incógnito o desactiva extensiones
 
+## �️ Roadmap - Próximas Funcionalidades
+
+### 🎯 En Desarrollo
+- 📊 Exportación a Excel para compartir con contadores
+- 🔔 Recordatorios de cobros pendientes
+- 🎯 Metas de ingresos mensuales con seguimiento
+- 📧 Notificaciones por email de resumen mensual
+
+### 💡 Ideas Futuras
+- 📸 Captura de fotos de recibos/facturas
+- 🤝 Modo multiusuario (para parejas o equipos)
+- 🌐 Multi-idioma (inglés, portugués)
+- 📱 Aplicación móvil nativa (React Native)
+- 🧾 Categorías personalizadas por usuario
+- 📊 Dashboards con más métricas avanzadas
+
+## 🤝 Contribuciones
+Este es un proyecto educativo desarrollado para la clase de **Liderazgo, Emprendimiento e Innovación** en UEES.
+
+**Equipo de desarrollo:**
+- **Paul Morales** - Desarrollo técnico y arquitectura
+- Equipo multidisciplinario de 6 personas
+
+Si encuentras bugs o tienes sugerencias, por favor abre un [Issue](https://github.com/PaulMoralesG/foresight-finanzas/issues).
+
 ## 📄 Licencia
 MIT License - Proyecto educativo
 
 ## 👨‍💻 Autor
-Paul Morales G.
+**Paul Morales G.**
+- GitHub: [@PaulMoralesG](https://github.com/PaulMoralesG)
+- Proyecto: [Foresight Finanzas](https://paulmoralesg.github.io/foresight-finanzas/)
+
+---
+
+💙 Desarrollado con pasión para emprendedores que buscan claridad financiera
