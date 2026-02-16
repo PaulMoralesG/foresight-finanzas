@@ -186,18 +186,13 @@ Ve a **Settings → API** y copia:
 - `Project URL` → Será tu `SUPABASE_URL`
 - `anon/public` key → Será tu `SUPABASE_KEY`
 
-### 2. EmailJS
-Regístrate en [EmailJS](https://emailjs.com) y crea un servicio.
 
-### 3. Actualizar Configuración (Opcional)
+### 2. Actualizar Configuración (Opcional)
 Si necesitas usar tus propias claves, edita [`js/config.prod.js`](js/config.prod.js):
 
 ```javascript
 export const SUPABASE_URL = "TU_SUPABASE_URL";
 export const SUPABASE_KEY = "TU_SUPABASE_ANON_KEY";  // ⚠️ Solo clave 'anon', NO 'service_role'
-export const EMAILJS_PUBLIC_KEY = "TU_EMAILJS_PUBLIC_KEY";
-export const EMAILJS_SERVICE_ID = "TU_SERVICE_ID";
-export const EMAILJS_TEMPLATE_ID = "TU_TEMPLATE_ID";
 ```
 
 **🔐 Nota de Seguridad**: La clave `SUPABASE_KEY` debe ser la clave **anon/public**, NO la clave `service_role`. Es seguro exponerla porque la seguridad real está en las políticas RLS de Supabase.
