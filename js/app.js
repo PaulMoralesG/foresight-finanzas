@@ -22,6 +22,7 @@ window.openAddModal = UI.openAddModal;
 window.editTransaction = UI.editTransaction;
 window.selectCategory = UI.selectCategory;
 window.setTransactionType = UI.setTransactionType;
+window.setBusinessType = UI.setBusinessType;
 window.toggleModal = UI.toggleModal;
 window.deleteTransaction = UI.deleteTransaction;
 window.toggleDeleteModal = UI.toggleDeleteModal;
@@ -259,6 +260,7 @@ function setupEventListeners() {
                 const dateVal = document.getElementById('date').value;
                 const method = document.getElementById('method').value;
                 const type = document.getElementById('transaction-type').value; 
+                const businessType = document.getElementById('business-type').value || 'business';
                 const editingId = UI.DOM.editingIdInput.value ? parseInt(UI.DOM.editingIdInput.value) : null;
 
                 if (amount > 0) {
@@ -275,6 +277,7 @@ function setupEventListeners() {
                         category,
                         method,
                         type,
+                        businessType,
                         date: finalDate.toISOString() 
                     };
 

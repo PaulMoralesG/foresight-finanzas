@@ -182,6 +182,25 @@
                     <button onclick="window.filterTransactions('all')" id="transactions-subtitle" class="text-[9px] font-bold text-gray-400 bg-white border border-gray-100 px-2.5 py-1 rounded-full shadow-sm">Ver Todo</button>
                 </div>
 
+                <!-- Filtros mejorados -->
+                <div class="flex gap-1.5 mb-3 overflow-x-auto pb-1 px-1 slide-up" style="animation-delay: 0.22s; scrollbar-width: none; -ms-overflow-style: none;">
+                    <button onclick="window.filterTransactions('all')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all">
+                        📊 Todos
+                    </button>
+                    <button onclick="window.filterTransactions('business')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-3 py-1.5 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all">
+                        💼 Negocio
+                    </button>
+                    <button onclick="window.filterTransactions('personal')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-3 py-1.5 rounded-full bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all">
+                        👤 Personal
+                    </button>
+                    <button onclick="window.filterTransactions('income')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-3 py-1.5 rounded-full bg-green-50 text-green-600 hover:bg-green-100 transition-all">
+                        ⬇️ Ingresos
+                    </button>
+                    <button onclick="window.filterTransactions('expense')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-3 py-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-all">
+                        ⬆️ Gastos
+                    </button>
+                </div>
+
                 <ul id="movements-list" class="space-y-2 pb-8 slide-up" style="animation-delay: 0.25s;">
                     <li id="empty-state" class="text-center py-6 opacity-40">
                         <div class="text-4xl mb-2 grayscale">👻</div>
@@ -258,6 +277,20 @@
                         </select>
                     </div>
                 </div>
+
+                <!-- NUEVO: Toggle Personal/Negocio -->
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">¿Es gasto personal o de tu negocio?</label>
+                    <div class="flex bg-gray-100 p-1 rounded-xl">
+                        <button type="button" onclick="window.setBusinessType('business')" id="btn-business" class="flex-1 py-2 rounded-lg text-xs font-bold bg-blue-500 text-white shadow-sm transition-all">
+                            <i class="fa-solid fa-briefcase mr-1"></i> Negocio
+                        </button>
+                        <button type="button" onclick="window.setBusinessType('personal')" id="btn-personal" class="flex-1 py-2 rounded-lg text-xs font-bold text-gray-500 hover:text-gray-700 transition-all">
+                            <i class="fa-solid fa-user mr-1"></i> Personal
+                        </button>
+                    </div>
+                </div>
+                <input type="hidden" id="business-type" value="business">
             </div>
 
             <button type="submit" class="w-full bg-black text-white font-bold py-3 rounded-2xl shadow-xl active:scale-95 transition-transform text-sm sm:text-base">

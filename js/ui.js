@@ -71,10 +71,13 @@ export const DOM = {
     // Botones especiales
     get btnTypeExpense() { return document.getElementById('btn-type-expense'); },
     get btnTypeIncome() { return document.getElementById('btn-type-income'); },
+    get btnBusiness() { return document.getElementById('btn-business'); },
+    get btnPersonal() { return document.getElementById('btn-personal'); },
     get btnDelete() { return document.getElementById('btn-delete'); },
     
     // Inputs ocultos/estado
     get selectedCategoryInput() { return document.getElementById('selected-category'); },
+    get businessTypeInput() { return document.getElementById('business-type'); },
     get editingIdInput() { return document.getElementById('editing-id'); }
 };
 
@@ -130,6 +133,8 @@ export function updateUI() {
     let itemsToShow = monthlyData;
     if (AppState.currentFilter === 'income') itemsToShow = incomeItems;
     if (AppState.currentFilter === 'expense') itemsToShow = expenseItems;
+    if (AppState.currentFilter === 'business') itemsToShow = monthlyData.filter(i => i.businessType === 'business' || !i.businessType);
+    if (AppState.currentFilter === 'personal') itemsToShow = monthlyData.filter(i => i.businessType === 'personal');
 
     renderList(itemsToShow);
     updateFilterHeader();
@@ -232,6 +237,12 @@ function renderList(items) {
             
             const amountClass = isIncome ? 'text-green-600' : 'text-red-600';
             const sign = isIncome ? '+' : '-';
+            
+            // Indicador de tipo de gasto (Personal/Negocio)
+            const businessType = exp.businessType || 'business';
+            const businessBadge = businessType === 'personal' 
+                ? '<span class="text-[8px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-600">👤 Personal</span>'
+                : '<span class="text-[8px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">💼 Negocio</span>';
 
             li.innerHTML = `
                 <div class="flex items-center gap-2.5">
@@ -241,6 +252,9 @@ function renderList(items) {
                         <p class="text-[10px] font-bold text-gray-400 mt-0.5 truncate">
                             ${subTitle} • ${exp.method || 'Efectivo'}
                         </p>
+                        <div class="mt-1">
+                            ${businessBadge}
+                        </div>
                     </div>
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
@@ -287,6 +301,19 @@ export function setTransactionType(type) {
         DOM.btnTypeExpense.className = "px-4 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-700 transition-all";
         initCategoryGrid(INCOME_CATEGORIES);
         DOM.conceptInput.placeholder = "¿De dónde provino este dinero?";
+    }
+}
+
+export function setBusinessType(type) {
+    if(!DOM.businessTypeInput) return;
+    DOM.businessTypeInput.value = type;
+    
+    if(type === 'business') {
+        DOM.btnBusiness.className = "flex-1 py-2 rounded-lg text-xs font-bold bg-blue-500 text-white shadow-sm transition-all";
+        DOM.btnPersonal.className = "flex-1 py-2 rounded-lg text-xs font-bold text-gray-500 hover:text-gray-700 transition-all";
+    } else {
+        DOM.btnPersonal.className = "flex-1 py-2 rounded-lg text-xs font-bold bg-purple-500 text-white shadow-sm transition-all";
+        DOM.btnBusiness.className = "flex-1 py-2 rounded-lg text-xs font-bold text-gray-500 hover:text-gray-700 transition-all";
     }
 }
 
@@ -370,6 +397,7 @@ export function openAddModal() {
     document.getElementById('expense-form').reset();
     DOM.btnDelete.classList.add('hidden'); 
     setTransactionType('expense');
+    setBusinessType('business'); // Por defecto es negocio
     if(DOM.dateInput) {
         DOM.dateInput.value = getTodayISO();
     }
@@ -396,6 +424,10 @@ export function editTransaction(id) {
 
     const type = item.type || 'expense';
     setTransactionType(type);
+    
+    // Restore Business Type
+    const businessType = item.businessType || 'business';
+    setBusinessType(businessType);
     
     // Restore Category
     const catId = item.category || (type === 'income' ? 'otros_ingreso' : 'otros');
