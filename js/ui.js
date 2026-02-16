@@ -92,6 +92,20 @@ export function getMonthlyData() {
     });
 }
 
+// Obtener datos del mes anterior
+function getPreviousMonthData() {
+    const previousDate = new Date(AppState.currentViewDate);
+    previousDate.setMonth(previousDate.getMonth() - 1);
+    
+    const prevMonth = previousDate.getMonth();
+    const prevYear = previousDate.getFullYear();
+
+    return AppState.expenses.filter(item => {
+        const d = new Date(item.date);
+        return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
+    });
+}
+
 
 
 // UI UPDATES
@@ -120,6 +134,9 @@ export function updateUI() {
     
     // Actualizar Utilidad del Mes
     updateProfitDisplay(totalIncome, totalSpent);
+    
+    // Actualizar Comparación Mes a Mes
+    updateMonthlyGrowth(totalIncome);
     
     // Mes actual en el cuadro de saldo
     if (DOM.currentMonthLabel) {
@@ -175,6 +192,77 @@ function updateProfitDisplay(totalIncome, totalSpent) {
         profitStatusEl.textContent = 'Sin movimientos aún';
         profitStatusEl.className = 'text-[10px] font-bold text-gray-500';
         profitEmojiEl.textContent = '💰';
+    }
+}
+
+// Actualizar comparación mes a mes (para emprendedores: ¿estoy creciendo?)
+function updateMonthlyGrowth(currentIncome) {
+    const growthPercentageEl = document.getElementById('growth-percentage');
+    const growthStatusEl = document.getElementById('growth-status');
+    const growthEmojiEl = document.getElementById('growth-emoji');
+    const growthBadgeEl = document.getElementById('growth-badge');
+    const currentMonthIncomeEl = document.getElementById('current-month-income');
+    const lastMonthIncomeEl = document.getElementById('last-month-income');
+    
+    if (!growthPercentageEl) return; // Si no existe el elemento, salir
+    
+    // Obtener datos del mes anterior
+    const previousMonthData = getPreviousMonthData();
+    const previousIncome = previousMonthData
+        .filter(i => i.type === 'income')
+        .reduce((sum, item) => sum + item.amount, 0);
+    
+    // Actualizar valores
+    currentMonthIncomeEl.textContent = formatMoney(currentIncome);
+    lastMonthIncomeEl.textContent = formatMoney(previousIncome);
+    
+    // Calcular crecimiento
+    if (previousIncome === 0 && currentIncome === 0) {
+        // Sin datos
+        growthPercentageEl.textContent = '0%';
+        growthPercentageEl.className = 'text-2xl font-black leading-none text-gray-500';
+        growthStatusEl.textContent = 'Sin datos del mes pasado';
+        growthEmojiEl.textContent = '📊';
+        growthBadgeEl.textContent = 'Sin datos';
+        growthBadgeEl.className = 'text-xs font-bold px-2 py-1 rounded-full bg-gray-100 text-gray-500';
+    } else if (previousIncome === 0) {
+        // Primer mes con ingresos
+        growthPercentageEl.textContent = '🎉 Nuevo';
+        growthPercentageEl.className = 'text-2xl font-black leading-none text-blue-600';
+        growthStatusEl.textContent = '¡Primeros ingresos!';
+        growthEmojiEl.textContent = '🚀';
+        growthBadgeEl.textContent = '¡Comenzando!';
+        growthBadgeEl.className = 'text-xs font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-600';
+    } else {
+        // Calcular porcentaje de crecimiento
+        const growthPercentage = ((currentIncome - previousIncome) / previousIncome * 100).toFixed(1);
+        const absGrowth = Math.abs(parseFloat(growthPercentage));
+        
+        if (growthPercentage > 0) {
+            // Creciendo
+            growthPercentageEl.textContent = `+${absGrowth}%`;
+            growthPercentageEl.className = 'text-2xl font-black leading-none text-green-600';
+            growthStatusEl.textContent = absGrowth > 10 ? '¡Excelente crecimiento! 🎉' : '¡Vas creciendo! 👍';
+            growthEmojiEl.textContent = '📈';
+            growthBadgeEl.textContent = 'Creciendo';
+            growthBadgeEl.className = 'text-xs font-bold px-2 py-1 rounded-full bg-green-100 text-green-600';
+        } else if (growthPercentage < 0) {
+            // Decreciendo
+            growthPercentageEl.textContent = `-${absGrowth}%`;
+            growthPercentageEl.className = 'text-2xl font-black leading-none text-orange-600';
+            growthStatusEl.textContent = '¡Hay que mejorar las ventas!';
+            growthEmojiEl.textContent = '📉';
+            growthBadgeEl.textContent = 'Bajó';
+            growthBadgeEl.className = 'text-xs font-bold px-2 py-1 rounded-full bg-orange-100 text-orange-600';
+        } else {
+            // Igual
+            growthPercentageEl.textContent = '0%';
+            growthPercentageEl.className = 'text-2xl font-black leading-none text-gray-600';
+            growthStatusEl.textContent = 'Igual que el mes pasado';
+            growthEmojiEl.textContent = '➡️';
+            growthBadgeEl.textContent = 'Estable';
+            growthBadgeEl.className = 'text-xs font-bold px-2 py-1 rounded-full bg-gray-100 text-gray-600';
+        }
     }
 }
 
