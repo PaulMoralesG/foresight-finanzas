@@ -189,7 +189,7 @@ function setupEventListeners() {
                         showNotification("Error en respuesta del servidor.", 'error');
                     }
                 } else {
-                    const { data, error } = await Auth.signUp(email, pass);
+                    const { data, error } = await Auth.signUp(email, pass, firstName, lastName);
                     
                     if (error) throw error;
 
@@ -201,7 +201,6 @@ function setupEventListeners() {
                         return;
                     }
                     if (data.user) {
-                        await Auth.createInitialProfile(email, firstName, lastName);
                         const profile = await Auth.loadProfileFromSupabase(email);
                         if (profile) {
                             showNotification("✅ Cuenta creada exitosamente.", 'success');

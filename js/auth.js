@@ -92,7 +92,7 @@ export async function signIn(email, password) {
     return result;
 }
 
-export async function signUp(email, password) {
+export async function signUp(email, password, firstName = '', lastName = '') {
     if(!supabaseClient) {
         throw new Error("No hay conexión con la base de datos. Verifica tu conexión a internet.");
     }
@@ -104,7 +104,7 @@ export async function signUp(email, password) {
     });
 
     if (result.data?.session) {
-        await createInitialProfile(email);
+        await createInitialProfile(email, firstName, lastName);
     }
 
     return result;
