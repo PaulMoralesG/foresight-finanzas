@@ -69,8 +69,8 @@
                 <span class="font-black text-lg text-gray-800 leading-none" id="user-display">Usuario</span>
             </div>
             <div class="flex gap-2">
-                <button onclick="window.showTutorial()" title="Ver tutorial" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white shadow-sm border border-gray-100 text-gray-400 hover:text-blue-500 hover:border-blue-200 transition flex items-center justify-center active:scale-95 text-sm"><i class="fa-solid fa-question"></i></button>
-                <button onclick="window.logout()" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white shadow-sm border border-gray-100 text-gray-400 hover:text-red-500 hover:border-red-200 transition flex items-center justify-center active:scale-95 text-sm"><i class="fa-solid fa-power-off"></i></button>
+                <button onclick="window.showTutorial()" title="Ver tutorial interactivo" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white shadow-sm border border-gray-100 text-gray-400 hover:text-blue-500 hover:border-blue-200 transition flex items-center justify-center active:scale-95 text-sm"><i class="fa-solid fa-question"></i></button>
+                <button onclick="window.logout()" title="Cerrar sesión" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white shadow-sm border border-gray-100 text-gray-400 hover:text-red-500 hover:border-red-200 transition flex items-center justify-center active:scale-95 text-sm"><i class="fa-solid fa-power-off"></i></button>
             </div>
         </div>
 
@@ -80,12 +80,12 @@
             <!-- Month Navigator (Capsule Style) -->
             <div class="flex justify-center slide-up">
                 <div class="flex items-center bg-white rounded-full p-1 pl-2 pr-2 shadow-sm border border-gray-100">
-                    <button onclick="window.changeMonth(-1)" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+                    <button onclick="window.changeMonth(-1)" title="Mes anterior" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition"><i class="fa-solid fa-chevron-left text-xs"></i></button>
                     <div class="px-4 text-center min-w-[120px]">
                         <p id="month-display" class="text-sm font-black text-gray-800 capitalize leading-none">---</p>
                         <p id="transaction-count" class="text-[9px] font-bold text-gray-400 mt-0.5 uppercase">0 Reg.</p>
                     </div>
-                    <button onclick="window.changeMonth(1)" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+                    <button onclick="window.changeMonth(1)" title="Mes siguiente" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition"><i class="fa-solid fa-chevron-right text-xs"></i></button>
                 </div>
             </div>
 
@@ -198,7 +198,7 @@
                     </div>
                 </div>
                 <!-- Report Button -->
-                <button onclick="window.openReportModal()" class="bg-gradient-to-br from-blue-500 to-blue-600 p-2.5 rounded-xl shadow-sm border border-blue-400 flex items-center justify-center gap-2 cursor-pointer hover:shadow-lg transition group text-white">
+                <button onclick="window.openReportModal()" title="Generar y descargar reporte PDF" class="bg-gradient-to-br from-blue-500 to-blue-600 p-2.5 rounded-xl shadow-sm border border-blue-400 flex items-center justify-center gap-2 cursor-pointer hover:shadow-lg transition group text-white">
                     <div class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-xs group-hover:scale-110 transition"><i class="fa-solid fa-file-lines"></i></div>
                     <div class="text-left">
                         <p class="text-[8px] font-bold uppercase tracking-wide opacity-90">Ver</p>
@@ -211,7 +211,7 @@
             <div class="pt-1">
                 <div class="flex justify-between items-end mb-2.5 px-1 slide-up" style="animation-delay: 0.2s;">
                     <h3 id="transactions-title" class="font-black text-base text-gray-800">Movimientos</h3>
-                    <button onclick="window.filterTransactions('all')" id="transactions-subtitle" class="text-[9px] font-bold text-gray-400 bg-white border border-gray-100 px-2.5 py-1 rounded-full shadow-sm">Ver Todo</button>
+                    <button onclick="window.filterTransactions('all')" title="Mostrar todos los movimientos" id="transactions-subtitle" class="text-[9px] font-bold text-gray-400 bg-white border border-gray-100 px-2.5 py-1 rounded-full shadow-sm">Ver Todo</button>
                 </div>
 
                 <!-- Filtros mejorados -->
@@ -247,7 +247,7 @@
 
         <!-- Fixed Bottom Elements -->
         <div class="fixed bottom-0 w-full left-0 p-5 sm:p-6 pointer-events-none flex justify-center bg-gradient-to-t from-gray-100 via-gray-50/90 to-transparent z-20 pt-24">
-            <button onclick="window.openAddModal()" class="add-button fab-gradient pointer-events-auto text-white w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-xl sm:text-2xl shadow-2xl shadow-blue-500/40 hover:scale-110 transition-transform active:scale-95">
+            <button onclick="window.openAddModal()" title="Agregar nuevo movimiento" class="add-button fab-gradient pointer-events-auto text-white w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-xl sm:text-2xl shadow-2xl shadow-blue-500/40 hover:scale-110 transition-transform active:scale-95">
                 <i class="fa-solid fa-plus"></i>
             </button>
         </div>
@@ -267,8 +267,8 @@
                 </div>
                 <!-- Botón Eliminar (Hidden by default) -->
                 <div class="flex items-center gap-2">
-                    <button type="button" id="btn-delete" onclick="window.deleteTransaction()" class="hidden text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"><i class="fa-solid fa-trash"></i></button>
-                    <button type="button" onclick="window.toggleModal(false)" class="text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center font-bold">✕</button>
+                    <button type="button" id="btn-delete" onclick="window.deleteTransaction()" title="Eliminar este movimiento" class="hidden text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"><i class="fa-solid fa-trash"></i></button>
+                    <button type="button" onclick="window.toggleModal(false)" title="Cerrar" class="text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center font-bold">✕</button>
                 </div>
             </div>
             
@@ -337,7 +337,7 @@
         <div class="bg-white w-full max-w-md rounded-t-[30px] p-8 shadow-2xl relative z-10 transform translate-y-full transition-transform duration-300 h-[90vh] flex flex-col" id="summary-panel">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-2xl font-black text-gray-900">Tu Resumen</h3>
-                <button onclick="window.toggleSummary(false)" class="bg-gray-100 w-10 h-10 rounded-full text-gray-500 hover:bg-gray-200"><i class="fa-solid fa-xmark"></i></button>
+                <button onclick="window.toggleSummary(false)" title="Cerrar resumen" class="bg-gray-100 w-10 h-10 rounded-full text-gray-500 hover:bg-gray-200"><i class="fa-solid fa-xmark"></i></button>
             </div>
             
             <div class="flex-1 overflow-y-auto">
