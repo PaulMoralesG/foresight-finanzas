@@ -12,13 +12,14 @@ export function showNotification(message, type = 'info') {
 
     const toast = document.createElement('div');
     toast.id = 'toast-notification';
-    toast.className = `fixed top-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center w-full max-w-xs p-4 space-x-3 text-gray-500 bg-white rounded-lg shadow-2xl slide-up border-l-4 ${type === 'error' ? 'border-red-500' : 'border-blue-500'}`;
+    toast.className = `fixed top-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center p-4 space-x-3 text-gray-500 bg-white rounded-lg shadow-2xl slide-up border-l-4 ${type === 'error' ? 'border-red-500' : 'border-blue-500'}`;
+    toast.style.cssText = 'width: calc(100% - 2rem); max-width: 420px;';
     
-    let icon = type === 'error' ? '<i class="fa-solid fa-circle-exclamation text-red-500 text-lg"></i>' : '<i class="fa-solid fa-circle-check text-blue-500 text-lg"></i>';
+    let icon = type === 'error' ? '<i class="fa-solid fa-circle-exclamation text-red-500 text-lg flex-shrink-0"></i>' : '<i class="fa-solid fa-circle-check text-blue-500 text-lg flex-shrink-0"></i>';
 
     toast.innerHTML = `
         ${icon}
-        <div class="pl-2 text-sm font-bold text-gray-800">${message}</div>
+        <div class="pl-2 text-sm font-bold text-gray-800 break-words flex-1">${message}</div>
     `;
 
     document.body.appendChild(toast);
