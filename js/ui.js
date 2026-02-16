@@ -412,6 +412,7 @@ export function initCategoryGrid(categoriesToRender = EXPENSE_CATEGORIES) {
     categoriesToRender.forEach((cat, index) => {
         const btn = document.createElement('button');
         btn.type = 'button';
+        btn.dataset.category = cat.id;
         const isDefault = index === 0;
         btn.className = `flex flex-col items-center justify-center p-1 rounded-xl border-2 border-transparent transition-all ${isDefault ? 'bg-white shadow-md border-gray-200 transform scale-105' : 'bg-gray-50 hover:bg-gray-100'}`;
         
@@ -491,6 +492,58 @@ export function openAddModal() {
     }
     selectCategory('comida', DOM.categoryGrid.firstChild); 
     toggleModal(true);
+}
+
+export function editTransaction(id) {
+    const transaction = AppState.expenses.find(exp => exp.id === id);
+    if (!transaction) {
+        showNotification('Transacción no encontrada', 'error');
+        return;
+    }
+    
+    // Establecer modo edición
+    DOM.editingIdInput.value = transaction.id;
+    
+    // Rellenar campos del formulario
+    DOM.amountInput.value = transaction.amount;
+    DOM.conceptInput.value = transaction.concept;
+    DOM.methodInput.value = transaction.method;
+    
+    // Configurar fecha
+    if (transaction.date) {
+        const date = new Date(transaction.date);
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        DOM.dateInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+    
+    // Configurar tipo de transacción (ingreso/gasto)
+    setTransactionType(transaction.type || 'expense');
+    
+    // Configurar tipo de negocio (personal/negocio)
+    setBusinessType(transaction.businessType || 'business');
+    
+    // Seleccionar categoría (esperar a que se genere el grid)
+    setTimeout(() => {
+        const category = transaction.category || 'Otros';
+        const categoryBtn = Array.from(DOM.categoryGrid.children).find(
+            btn => btn.dataset.category === category
+        );
+        if (categoryBtn) {
+            selectCategory(category, categoryBtn);
+        }
+    }, 50);
+    
+    // Mostrar botón eliminar
+    DOM.btnDelete.classList.remove('hidden');
+    
+    // Abrir modal
+    toggleModal(true);
+}
+
+export function deleteTransaction() {
+    toggleDeleteModal(true);
 }
 
 export async function downloadReport(type) {
