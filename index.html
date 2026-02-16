@@ -69,6 +69,7 @@
                 <span class="font-black text-lg text-gray-800 leading-none" id="user-display">Usuario</span>
             </div>
             <div class="flex gap-2">
+                <button onclick="window.showTutorial()" title="Ver tutorial" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white shadow-sm border border-gray-100 text-gray-400 hover:text-blue-500 hover:border-blue-200 transition flex items-center justify-center active:scale-95 text-sm"><i class="fa-solid fa-question"></i></button>
                 <button onclick="window.logout()" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white shadow-sm border border-gray-100 text-gray-400 hover:text-red-500 hover:border-red-200 transition flex items-center justify-center active:scale-95 text-sm"><i class="fa-solid fa-power-off"></i></button>
             </div>
         </div>
@@ -246,7 +247,7 @@
 
         <!-- Fixed Bottom Elements -->
         <div class="fixed bottom-0 w-full left-0 p-5 sm:p-6 pointer-events-none flex justify-center bg-gradient-to-t from-gray-100 via-gray-50/90 to-transparent z-20 pt-24">
-            <button onclick="window.openAddModal()" class="fab-gradient pointer-events-auto text-white w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-xl sm:text-2xl shadow-2xl shadow-blue-500/40 hover:scale-110 transition-transform active:scale-95">
+            <button onclick="window.openAddModal()" class="add-button fab-gradient pointer-events-auto text-white w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-xl sm:text-2xl shadow-2xl shadow-blue-500/40 hover:scale-110 transition-transform active:scale-95">
                 <i class="fa-solid fa-plus"></i>
             </button>
         </div>

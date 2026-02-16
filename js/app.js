@@ -2,6 +2,7 @@ import { AppState, setState, setCurrentUser } from './state.js';
 import * as UI from './ui.js';
 import * as Auth from './auth.js';
 import { showNotification, runAsyncAction } from './utils.js';
+import { startOnboarding, resetOnboarding } from './onboarding.js';
 
 function showView(viewId) {
     const views = ['login-view', 'app-view'];
@@ -31,6 +32,10 @@ window.toggleSummary = UI.toggleSummary;
 window.openReportModal = UI.openReportModal;
 window.downloadReport = async function() {
     await UI.downloadReport();
+};
+window.showTutorial = () => {
+    resetOnboarding();
+    setTimeout(() => startOnboarding(), 100);
 };
 
 window.executeDelete = async function() {
@@ -338,6 +343,9 @@ function loginSuccess(userData) {
     
     UI.initCategoryGrid();
     UI.updateUI();
+    
+    // Mostrar tutorial si es primera vez
+    setTimeout(() => startOnboarding(), 800);
 }
 
 function handleAuthError(err, authDOM) {
