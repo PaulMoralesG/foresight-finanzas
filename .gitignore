@@ -1,8 +1,31 @@
 # Archivos de configuración local (si existen)
 js/config.js
 
-# Archivos de notas o temporales
-*.txt
+# Dependencias
+node_modules/
+package-lock.json
+
+# Archivos temporales
+*.tmp
+*.temp
 *.log
+*.bak
+*.old
+*.swp
+*.swo
+*~
+
+# Archivos del sistema
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# IDEs y editores
+.vscode/
+.idea/
+*.sublime-*
+.history/
+
+# Archivos de respaldo
+backup/
+*.backup
