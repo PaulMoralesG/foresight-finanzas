@@ -5,7 +5,7 @@ let currentStep = 0;
 const steps = [
     {
         title: "¡Bienvenido a Foresight! 👋",
-        message: "Te ayudaremos a controlar las finanzas de tu negocio de forma simple. ¡No necesitas ser contador!",
+        message: "Te ayudaremos a controlar tus finanzas personales y de tu negocio de forma simple. ¡No necesitas ser contador!",
         target: null,
         position: "center"
     },
@@ -17,7 +17,7 @@ const steps = [
     },
     {
         title: "¿Estás Ganando o Perdiendo? 📊",
-        message: "Esta tarjeta te dice claramente si tu negocio está generando utilidad o pérdidas este mes.",
+        message: "Esta tarjeta te dice claramente si estás generando utilidad o pérdidas este mes.",
         target: "#profit-amount",
         position: "bottom"
     },
