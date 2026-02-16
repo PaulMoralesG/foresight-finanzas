@@ -12,14 +12,23 @@ export function showNotification(message, type = 'info') {
 
     const toast = document.createElement('div');
     toast.id = 'toast-notification';
-    toast.className = `fixed top-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center p-4 space-x-3 text-gray-500 bg-white rounded-lg shadow-2xl slide-up border-l-4 ${type === 'error' ? 'border-red-500' : 'border-blue-500'}`;
-    toast.style.cssText = 'width: calc(100% - 2rem); max-width: 420px;';
+    toast.className = `fixed z-50 flex items-start p-4 space-x-3 text-gray-500 bg-white rounded-lg shadow-2xl slide-up border-l-4 ${type === 'error' ? 'border-red-500' : 'border-blue-500'}`;
+    
+    // Estilos inline más robustos para móviles
+    toast.style.cssText = `
+        top: 1.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+        width: calc(100% - 2rem);
+        max-width: 420px;
+        box-sizing: border-box;
+    `;
     
     let icon = type === 'error' ? '<i class="fa-solid fa-circle-exclamation text-red-500 text-lg flex-shrink-0"></i>' : '<i class="fa-solid fa-circle-check text-blue-500 text-lg flex-shrink-0"></i>';
 
     toast.innerHTML = `
         ${icon}
-        <div class="pl-2 text-sm font-bold text-gray-800 break-words flex-1">${message}</div>
+        <div class="text-sm font-bold text-gray-800" style="word-wrap: break-word; overflow-wrap: break-word; flex: 1; padding-left: 0.5rem;">${message}</div>
     `;
 
     document.body.appendChild(toast);
@@ -27,10 +36,10 @@ export function showNotification(message, type = 'info') {
     setTimeout(() => {
         toast.classList.remove('slide-up');
         toast.style.opacity = '0';
-        toast.style.transform = 'translate(-50%, -20px)';
+        toast.style.transform = 'translateX(-50%) translateY(-20px)';
         toast.style.transition = 'all 0.3s ease';
         setTimeout(() => toast.remove(), 300);
-    }, 4000);
+    }, 5000);
 }
 
 // Helper para botones con estado de carga
