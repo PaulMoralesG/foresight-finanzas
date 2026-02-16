@@ -100,9 +100,16 @@ export async function signUp(email, password, firstName = '', lastName = '') {
     const result = await supabaseClient.auth.signUp({ 
         email, 
         password,
-        options: { emailRedirectTo: window.location.origin }
+        options: { 
+            emailRedirectTo: window.location.origin,
+            data: {
+                first_name: firstName,
+                last_name: lastName
+            }
+        }
     });
 
+    // Solo crear perfil si hay sesión automática (sin confirmación de correo)
     if (result.data?.session) {
         await createInitialProfile(email, firstName, lastName);
     }

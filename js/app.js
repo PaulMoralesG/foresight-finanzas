@@ -84,7 +84,10 @@ function setupAuthObserver() {
                         if(profile) {
                             loginSuccess({ ...profile, password: '' }); 
                         } else {
-                            await Auth.createInitialProfile(session.user.email);
+                            // Intentar obtener nombre y apellido de metadatos del usuario
+                            const firstName = session.user.user_metadata?.first_name || '';
+                            const lastName = session.user.user_metadata?.last_name || '';
+                            await Auth.createInitialProfile(session.user.email, firstName, lastName);
                             const retry = await Auth.loadProfileFromSupabase(session.user.email);
                             if(retry) {
                                 loginSuccess({ ...retry, password: '' });
@@ -194,16 +197,24 @@ function setupEventListeners() {
                     if (error) throw error;
 
                     if (data.user && !data.session) {
-                        showNotification("✅ Cuenta creada. Revisa tu correo para confirmar.", 'success');
+                        // Requiere confirmación por correo
+                        showNotification("📧 Cuenta creada. Revisa tu correo (y spam) para confirmar. Si no llega en 2 minutos, contacta soporte.", 'success');
+                        auth.email.value = '';
+                        auth.pass.value = '';
+                        if(firstNameField) firstNameField.value = '';
+                        if(lastNameField) lastNameField.value = '';
                         isLoginMode = true;
                         auth.submitBtn.textContent = "Iniciar Sesión";
                         auth.toggleBtn.innerHTML = '¿No tienes cuenta? <span class="text-blue-600">Regístrate aquí</span>';
+                        if(nameFieldsContainer) nameFieldsContainer.style.display = 'none';
                         return;
                     }
-                    if (data.user) {
+                    if (data.user && data.session) {
+                        // Login automático (confirmación desactivada)
+                        await Auth.createInitialProfile(email, firstName, lastName);
                         const profile = await Auth.loadProfileFromSupabase(email);
                         if (profile) {
-                            showNotification("✅ Cuenta creada exitosamente.", 'success');
+                            showNotification("✅ Cuenta creada exitosamente. ¡Bienvenido!", 'success');
                             loginSuccess({ ...profile, password: '' });
                         }
                     }
