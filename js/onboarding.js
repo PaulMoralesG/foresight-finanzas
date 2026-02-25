@@ -249,7 +249,6 @@ window.skipOnboarding = () => {
 // Función para resetear el tutorial (útil para desarrollo/testing)
 export function resetOnboarding() {
     localStorage.removeItem('foresight_onboarding_completed');
-    showNotification('Tutorial reseteado. Recarga la página para verlo de nuevo.', 'success');
 }
 
 // Exponer función de reset globalmente
