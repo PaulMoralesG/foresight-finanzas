@@ -125,44 +125,16 @@ Instala Foresight en tu celular como una app nativa:
 
 ---
 
-##  Instalación Local (Desarrolladores)
+##  Desarrollo Local
 
-Si quieres ejecutar Foresight localmente para desarrollo:
+Para desarrolladores que deseen explorar el código:
 
-### Prerrequisitos
-- Un servidor HTTP local (Live Server, Python, Node.js)
-- Navegador moderno (Chrome, Firefox, Safari, Edge)
-
-### Método 1: Live Server (VS Code)
-\\\ash
-# 1. Clona el repositorio
+```bash
 git clone https://github.com/PaulMoralesG/foresight-finanzas.git
 cd foresight-finanzas
+```
 
-# 2. Abre en VS Code
-code .
-
-# 3. Instala la extensión "Live Server"
-# 4. Click derecho en index.html  "Open with Live Server"
-\\\
-
-### Método 2: Python HTTP Server
-\\\ash
-git clone https://github.com/PaulMoralesG/foresight-finanzas.git
-cd foresight-finanzas
-python -m http.server 8000
-# Abre http://localhost:8000
-\\\
-
-### Método 3: Node.js HTTP Server
-\\\ash
-git clone https://github.com/PaulMoralesG/foresight-finanzas.git
-cd foresight-finanzas
-npx http-server -p 8000
-# Abre http://localhost:8000
-\\\
-
->  **Importante**: NO abras \index.html\ directamente con doble click. Este proyecto usa ES6 Modules que requieren un servidor HTTP por políticas CORS del navegador.
+>  Requiere un servidor HTTP local (Live Server, Python, Node.js). No funciona abriendo `index.html` directamente.
 
 ---
 
@@ -194,3 +166,4 @@ GitHub: [@PaulMoralesG](https://github.com/PaulMoralesG)
 ---
 
 > _"El control de tus finanzas no debería requerir un título en contabilidad"_
+
