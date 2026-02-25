@@ -113,10 +113,10 @@ export function updateUI() {
     const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
     DOM.monthDisplay.textContent = `${monthNames[AppState.currentViewDate.getMonth()]} ${AppState.currentViewDate.getFullYear()}`;
     
-    // Actualizar campo de presupuesto con el valor del mes actual
-    const currentBudget = getCurrentMonthBudget();
+    // Limpiar campo de presupuesto cuando se cambia de mes (cada mes comienza vacío)
     if (DOM.budgetInput) {
-        DOM.budgetInput.value = currentBudget || '';
+        const currentBudget = getCurrentMonthBudget();
+        DOM.budgetInput.value = currentBudget > 0 ? currentBudget : '';
     }
     
     // Get Data
