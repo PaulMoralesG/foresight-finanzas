@@ -8,7 +8,7 @@ export async function loadConfig() {
     if (configCache) return configCache;
     
     try {
-        // Siempre usar config.prod.js (configuración basada en la nube)
+        // Cargar configuración de producción
         configCache = await import('./config.prod.js');
     } catch (e) {
         console.error("❌ Error cargando configuración:", e);
@@ -16,16 +16,6 @@ export async function loadConfig() {
     }
     
     return configCache;
-}
-
-// Exportamos funciones async para obtener cada valor
-export async function getEmailJSConfig() {
-    const config = await loadConfig();
-    return {
-        EMAILJS_PUBLIC_KEY: config.EMAILJS_PUBLIC_KEY,
-        EMAILJS_SERVICE_ID: config.EMAILJS_SERVICE_ID,
-        EMAILJS_TEMPLATE_ID: config.EMAILJS_TEMPLATE_ID
-    };
 }
 
 export async function getSupabaseConfig() {

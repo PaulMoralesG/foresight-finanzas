@@ -11,10 +11,6 @@
 // - NUNCA expongas la clave 'service_role' (la clave de administrador).
 // ================================================================
 
-export const EMAILJS_PUBLIC_KEY = "jvOpRliw08hAwHWee";
-export const EMAILJS_SERVICE_ID = "service_xfvaqua";
-export const EMAILJS_TEMPLATE_ID = "template_hiw0fpp";
-
 // Clave 'anon' de Supabase (pública, segura para exponer)
 export const SUPABASE_URL = "https://sphmdtlvxbypckhavhgb.supabase.co"; 
 export const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwaG1kdGx2eGJ5cGNraGF2aGdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5MTA3MTEsImV4cCI6MjA4NjQ4NjcxMX0.kBqqJpwtPL-W8YEGU9wdA3HvwBsL2-G4ZIv051StvrE";

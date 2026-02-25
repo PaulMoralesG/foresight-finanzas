@@ -1,6 +1,16 @@
 # Archivos de configuración local (si existen)
 js/config.js
 
+# Archivos sensibles de base de datos
+*.sql
+supabase-setup.sql
+database-*.sql
+
+# Scripts de desarrollo y testing
+start-server.ps1
+verificar-github-pages.ps1
+*.ps1
+
 # Dependencias
 node_modules/
 package-lock.json
@@ -29,3 +39,8 @@ desktop.ini
 # Archivos de respaldo
 backup/
 *.backup
+
+# Variables de entorno
+.env
+.env.local
+.env.*.local
