@@ -192,25 +192,40 @@ function removeTooltip() {
     if (tooltip) {
         tooltip.style.opacity = '0';
         tooltip.style.transform = tooltip.style.transform.replace('scale(1)', 'scale(0.9)');
-        setTimeout(() => tooltip.remove(), 300);
+        setTimeout(() => {
+            if (tooltip && tooltip.parentNode) {
+                tooltip.remove();
+            }
+        }, 300);
     }
     
     if (overlay) {
         overlay.style.opacity = '0';
-        setTimeout(() => overlay.remove(), 300);
+        setTimeout(() => {
+            if (overlay && overlay.parentNode) {
+                overlay.remove();
+            }
+        }, 300);
     }
 }
 
 function completeOnboarding() {
     removeTooltip();
     localStorage.setItem('foresight_onboarding_completed', 'true');
-    showNotification('¡Tutorial completado! Ya puedes comenzar a usar Foresight 🚀', 'success');
     
-    // Refrescar la UI principal después de completar el onboarding
+    // Asegurar que el overlay se elimine completamente
     setTimeout(() => {
+        // Limpiar cualquier overlay residual
+        const overlays = document.querySelectorAll('#onboarding-overlay, #onboarding-tooltip');
+        overlays.forEach(el => el && el.remove());
+        
+        // Refrescar la UI principal
         if (typeof updateUI === 'function') {
             updateUI();
         }
+        
+        // Mostrar notificación después de que la UI esté limpia
+        showNotification('¡Tutorial completado! Ya puedes comenzar a usar Foresight 🚀', 'success');
     }, 400);
 }
 
