@@ -6,13 +6,39 @@ let SUPABASE_URL = null;
 let SUPABASE_KEY = null;
 export let supabaseClient = null;
 
+// Función para limpiar el storage cuando hay problemas de sesión
+async function clearAuthStorage() {
+    try {
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (key.includes('auth-token') || key.includes('supabase'))) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach(key => {
+            console.log('[AUTH] Limpiando:', key);
+            localStorage.removeItem(key);
+        });
+        console.log('[AUTH] ✅ Storage limpiado');
+    } catch (e) {
+        console.error('[AUTH] Error limpiando storage:', e);
+    }
+}
+
 export async function initSupabase() {
+    if (supabaseClient) {
+        console.log('[SUPABASE] Cliente ya inicializado');
+        return supabaseClient;
+    }
+    
     if (!SUPABASE_URL) {
         try {
             const config = await getSupabaseConfig();
             SUPABASE_URL = config.SUPABASE_URL;
             SUPABASE_KEY = config.SUPABASE_KEY;
         } catch (e) {
+            console.error('[SUPABASE] Error cargando config:', e);
             return null;
         }
     }
@@ -25,9 +51,36 @@ export async function initSupabase() {
 
     if (window.supabase) {
         try {
-            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+                auth: {
+                    autoRefreshToken: true,
+                    persistSession: true,
+                    detectSessionInUrl: true,
+                    flowType: 'pkce',
+                    // Configuración para evitar problemas con LockManager
+                    storage: window.localStorage,
+                    storageKey: 'foresight-auth-token',
+                    // Aumentar timeout para evitar errores de lock
+                    lock: {
+                        acquireTimeout: 15000 // 15 segundos en lugar de 10
+                    }
+                },
+                global: {
+                    headers: {
+                        'X-Client-Info': 'foresight-finanzas'
+                    }
+                }
+            });
+            console.log('[SUPABASE] ✅ Cliente inicializado correctamente');
         } catch (e) {
             console.error("❌ Error creando cliente Supabase:", e);
+            // Limpiar localStorage si hay error
+            try {
+                localStorage.removeItem('foresight-auth-token');
+                localStorage.removeItem('sb-sphmtdtlvxbypckhavhgb-auth-token');
+            } catch (cleanError) {
+                console.error('Error limpiando storage:', cleanError);
+            }
         }
     } else {
         showNotification("Error de conexión: Librería no cargada.", 'error');
@@ -88,8 +141,20 @@ export async function signIn(email, password) {
         throw new Error("No hay conexión con la base de datos. Verifica tu conexión a internet.");
     }
     
-    const result = await supabaseClient.auth.signInWithPassword({ email, password });
-    return result;
+    try {
+        const result = await supabaseClient.auth.signInWithPassword({ email, password });
+        return result;
+    } catch (error) {
+        // Detectar error de LockManager y limpiar storage
+        if (error.message && error.message.includes('LockManager')) {
+            console.error('[AUTH] Error de LockManager detectado, limpiando storage...');
+            await clearAuthStorage();
+            // Reintentar una vez después de limpiar
+            const retryResult = await supabaseClient.auth.signInWithPassword({ email, password });
+            return retryResult;
+        }
+        throw error;
+    }
 }
 
 export async function signUp(email, password, firstName = '', lastName = '') {
@@ -194,3 +259,16 @@ export async function saveData() {
         return false; 
     }
 }
+
+// Función de emergencia para limpiar storage manualmente
+export async function clearStorageAndReload() {
+    console.log('[AUTH] Limpiando storage y recargando...');
+    await clearAuthStorage();
+    showNotification('🔄 Storage limpiado. Recargando aplicación...', 'success');
+    setTimeout(() => {
+        window.location.reload();
+    }, 1500);
+}
+
+// Exponer función globalmente para uso en consola si es necesario
+window.clearForesightStorage = clearStorageAndReload;

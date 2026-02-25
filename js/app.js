@@ -362,7 +362,13 @@ function handleAuthError(err, authDOM) {
     let msg = err.message || "Error desconocido";
     
     // Mensajes más claros para usuarios finales
-    if (msg.includes("security purposes") || msg.includes("rate limit")) {
+    if (msg.includes("LockManager") || msg.includes("timed out waiting")) {
+        msg = "🔒 Error de sesión detectado.\n\nSoluciones:\n1. Cierra otras pestañas de Foresight\n2. Presiona F5 para recargar\n3. Si persiste, ejecuta en consola: clearForesightStorage()";
+        showNotification(msg, 'error');
+        console.error('❌ Error LockManager:', err);
+        console.log('💡 TIP: Ejecuta clearForesightStorage() en la consola para limpiar el storage');
+        return;
+    } else if (msg.includes("security purposes") || msg.includes("rate limit")) {
         msg = "⏰ Demasiados intentos. Espera 1 minuto e intenta nuevamente.";
     } else if (msg.includes("Invalid login") || msg.includes("Invalid credentials")) {
         msg = "❌ Correo o contraseña incorrectos. Verifica tus datos.";
