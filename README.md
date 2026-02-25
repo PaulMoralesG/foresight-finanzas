@@ -11,7 +11,20 @@ Aplicación web moderna diseñada para emprendedores y personas que necesitan se
 - 🚀 **Cualquiera** que busque control financiero sin complicaciones
 
 ## 🚀 Demo en Vivo
-👉 [https://paulmoralesg.github.io/foresight-finanzas/](https://paulmoralesg.github.io/foresight-finanzas/)
+👉 **[https://paulmoralesg.github.io/foresight-finanzas/](https://paulmoralesg.github.io/foresight-finanzas/)**
+
+### 📱 Acceso desde tu Celular
+**¿Quieres usar Foresight como app en tu celular?**
+
+1. **Abre la URL en tu celular**: `https://paulmoralesg.github.io/foresight-finanzas/`
+2. **Instala como app**:
+   - **Android (Chrome)**: Menú ⋮ → "Instalar app"
+   - **iPhone (Safari)**: Compartir 📤 → "Añadir a inicio"
+3. ✅ **¡Listo!** Funciona sin internet, pantalla completa, acceso rápido
+
+📖 **Instrucciones detalladas:** Ver [ACCESO-CELULAR.md](ACCESO-CELULAR.md)
+
+---
 
 ### ✨ ¿Qué puedes hacer en Foresight?
 - ✅ Registrar ingresos y gastos clasificados por categoría
