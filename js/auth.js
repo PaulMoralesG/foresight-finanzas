@@ -86,6 +86,28 @@ export async function loadProfileFromSupabase(email) {
     if(data) {
         data.firstName = data.first_name;
         data.lastName = data.last_name;
+        
+        // Parsear budgets si viene como string JSON
+        if (typeof data.budgets === 'string') {
+            try {
+                data.budgets = JSON.parse(data.budgets);
+            } catch (e) {
+                data.budgets = {};
+            }
+        }
+        
+        // Parsear expenses si viene como string JSON
+        if (typeof data.expenses === 'string') {
+            try {
+                data.expenses = JSON.parse(data.expenses);
+            } catch (e) {
+                data.expenses = [];
+            }
+        }
+        
+        // Asegurar valores por defecto
+        data.budgets = data.budgets || {};
+        data.expenses = data.expenses || [];
     }
     
     return data;
@@ -100,7 +122,14 @@ export async function createInitialProfile(email, firstName = '', lastName = '')
     if (!data) {
         const { error: insertError } = await supabaseClient
             .from('profiles')
-            .insert([{ email, first_name: firstName, last_name: lastName, budget: 0, expenses: [], password: 'auth-managed' }]);
+            .insert([{ 
+                email, 
+                first_name: firstName, 
+                last_name: lastName, 
+                budgets: {}, 
+                expenses: [], 
+                password: 'auth-managed' 
+            }]);
         
         if (insertError) {
             throw new Error("No se pudo crear el perfil: " + insertError.message);

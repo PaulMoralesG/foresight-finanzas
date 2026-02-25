@@ -26,6 +26,20 @@ Aplicación web moderna diseñada para emprendedores y personas que necesitan se
 
 ---
 
+### ⚠️ IMPORTANTE: Actualización de Base de Datos
+
+**Si ves errores al guardar transacciones** después de actualizar el código, necesitas actualizar tu base de datos de Supabase para soportar **presupuestos por mes**.
+
+📖 **Guía completa de actualización:** Ver [ACTUALIZAR-BASE-DATOS.md](ACTUALIZAR-BASE-DATOS.md)
+
+**Resumen rápido:**
+1. Ve a Supabase → SQL Editor
+2. Ejecuta el script de `supabase-setup.sql` (líneas 13-37)
+3. Esto agregará la columna `budgets` (JSONB) para presupuestos mensuales
+4. Tus datos existentes se migran automáticamente
+
+---
+
 ### ✨ ¿Qué puedes hacer en Foresight?
 - ✅ Registrar ingresos y gastos clasificados por categoría
 - ✅ Separar movimientos personales de los de tu negocio

@@ -22,6 +22,25 @@ ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
 ALTER TABLE profiles 
 ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
 
+-- Agregar columna budgets (JSONB) para presupuestos por mes
+ALTER TABLE profiles 
+ADD COLUMN IF NOT EXISTS budgets JSONB DEFAULT '{}'::jsonb;
+
+-- Migrar datos de budget antiguo a budgets (si existe)
+-- Esto convertirá el valor numérico en un objeto JSON con el mes actual
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns 
+               WHERE table_name='profiles' AND column_name='budget') THEN
+        UPDATE profiles 
+        SET budgets = jsonb_build_object(
+            to_char(CURRENT_DATE, 'YYYY-MM'), 
+            COALESCE(budget, 0)
+        )
+        WHERE budgets = '{}'::jsonb AND budget IS NOT NULL;
+    END IF;
+END $$;
+
 -- Actualizar valores de created_at para registros existentes que no lo tengan
 UPDATE profiles 
 SET created_at = NOW() 
