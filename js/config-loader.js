@@ -7,12 +7,8 @@ let configCache = null;
 export async function loadConfig() {
     if (configCache) return configCache;
     
-    // Detectar si estamos en GitHub Pages
-    const isGitHubPages = window.location.hostname.includes('github.io');
-    
     try {
         // Siempre usar config.prod.js (configuración basada en la nube)
-        console.log(isGitHubPages ? "📦 GitHub Pages - Usando configuración de producción" : "📦 Local - Usando configuración de producción");
         configCache = await import('./config.prod.js');
     } catch (e) {
         console.error("❌ Error cargando configuración:", e);
