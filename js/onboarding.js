@@ -100,11 +100,19 @@ function createTooltip(step, stepIndex) {
     } else {
         const targetEl = document.querySelector(step.target);
         if (targetEl) {
-            // Highlight del elemento objetivo
+            // Scroll automático hacia el elemento
+            targetEl.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center',
+                inline: 'center' 
+            });
+            
+            // Highlight del elemento objetivo con mejor visibilidad
             targetEl.style.position = 'relative';
             targetEl.style.zIndex = '102';
-            targetEl.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.5)';
+            targetEl.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.8), 0 0 20px rgba(59, 130, 246, 0.4)';
             targetEl.style.borderRadius = '1rem';
+            targetEl.style.transition = 'all 0.3s ease';
             
             const rect = targetEl.getBoundingClientRect();
             if (step.position === 'bottom') {
