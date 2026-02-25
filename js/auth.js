@@ -222,7 +222,7 @@ export async function saveData() {
                 throw error;
             }
             
-            showNotification("✅ Datos guardados en la nube", 'success');
+            // Sincronización silenciosa - sin notificación para no interrumpir al usuario
         } else {
             throw new Error("No hay conexión con la base de datos.");
         }
