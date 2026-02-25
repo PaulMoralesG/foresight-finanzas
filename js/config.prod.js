@@ -22,6 +22,7 @@ export const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdX
 // CATEGORÍAS DE GASTOS - Para cualquier persona
 export const EXPENSE_CATEGORIES = [
     { id: 'esenciales', label: 'Esenciales', icon: '⭐', color: 'bg-violet-100 text-violet-600' },
+    { id: 'pago-tarjetas', label: 'Pago de Tarjetas', icon: '💳', color: 'bg-red-100 text-red-600' },
     { id: 'comida', label: 'Comida', icon: '🍴', color: 'bg-orange-100 text-orange-600' },
     { id: 'supermercado', label: 'Supermercado', icon: '🛒', color: 'bg-green-100 text-green-600' },
     { id: 'transporte', label: 'Transporte', icon: '🚌', color: 'bg-blue-100 text-blue-600' },
