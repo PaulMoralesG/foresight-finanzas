@@ -361,12 +361,25 @@ function loginSuccess(userData) {
 function handleAuthError(err, authDOM) {
     let msg = err.message || "Error desconocido";
     
-    // Mensajes más claros para usuarios finales
+    // Limpieza automática y transparente de errores de sesión
     if (msg.includes("LockManager") || msg.includes("timed out waiting")) {
-        msg = "🔒 Error de sesión detectado.\n\nSoluciones:\n1. Cierra otras pestañas de Foresight\n2. Presiona F5 para recargar\n3. Si persiste, ejecuta en consola: clearForesightStorage()";
-        showNotification(msg, 'error');
-        console.error('❌ Error LockManager:', err);
-        console.log('💡 TIP: Ejecuta clearForesightStorage() en la consola para limpiar el storage');
+        console.log('[AUTH] Error de sesión detectado. Limpiando automáticamente...');
+        // Limpiar storage automáticamente sin molestar al usuario
+        if (window.clearForesightStorage) {
+            // Limpiar y recargar de forma silenciosa
+            localStorage.removeItem('foresight-auth-token');
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && (key.includes('auth-token') || key.includes('supabase'))) {
+                    localStorage.removeItem(key);
+                }
+            }
+            console.log('[AUTH] ✅ Storage limpiado automáticamente');
+            // Recargar sin mostrar mensaje al usuario
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        }
         return;
     } else if (msg.includes("security purposes") || msg.includes("rate limit")) {
         msg = "⏰ Demasiados intentos. Espera 1 minuto e intenta nuevamente.";
