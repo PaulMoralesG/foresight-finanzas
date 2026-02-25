@@ -1,4 +1,4 @@
-import { AppState, setViewDate, setFilter } from './state.js';
+import { AppState, setViewDate, setFilter, getCurrentMonthBudget } from './state.js';
 import { formatMoney, showNotification, runAsyncAction } from './utils.js';
 import { getCategories } from './config-loader.js';
 import { saveData, logout } from './auth.js';
@@ -112,6 +112,12 @@ function getPreviousMonthData() {
 export function updateUI() {
     const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
     DOM.monthDisplay.textContent = `${monthNames[AppState.currentViewDate.getMonth()]} ${AppState.currentViewDate.getFullYear()}`;
+    
+    // Actualizar campo de presupuesto con el valor del mes actual
+    const currentBudget = getCurrentMonthBudget();
+    if (DOM.budgetInput) {
+        DOM.budgetInput.value = currentBudget || '';
+    }
     
     // Get Data
     const monthlyData = getMonthlyData();
@@ -282,7 +288,7 @@ function updateBudgetAlert(totalSpent) {
     
     if (!budgetAlertCard) return; // Si no existe el elemento, salir
     
-    const budget = AppState.budget || 0;
+    const budget = getCurrentMonthBudget();
     
     // Actualizar montos
     budgetSpentAmount.textContent = formatMoney(totalSpent);

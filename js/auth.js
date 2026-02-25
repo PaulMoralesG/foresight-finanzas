@@ -165,19 +165,19 @@ export async function logout() {
 }
 
 export async function saveData() {
-    const { currentUser, budget, expenses } = AppState;
+    const { currentUser, budgets, expenses } = AppState;
     if (!currentUser) {
         return false;
     }
     
-    currentUser.budget = budget;
+    currentUser.budgets = budgets;
     currentUser.expenses = expenses;
     
     try {
         if (supabaseClient) {
             const dataToSave = { 
                 email: currentUser.email, 
-                budget, 
+                budgets,
                 expenses,
                 first_name: currentUser.firstName || currentUser.first_name || '',
                 last_name: currentUser.lastName || currentUser.last_name || '',

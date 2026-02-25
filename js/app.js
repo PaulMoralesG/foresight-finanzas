@@ -1,4 +1,4 @@
-import { AppState, setState, setCurrentUser } from './state.js';
+import { AppState, setState, setCurrentUser, setCurrentMonthBudget } from './state.js';
 import * as UI from './ui.js';
 import * as Auth from './auth.js';
 import { showNotification, runAsyncAction } from './utils.js';
@@ -241,7 +241,7 @@ function setupEventListeners() {
     if(budgetInput) {
         budgetInput.addEventListener('change', async (e) => {
             const val = parseFloat(e.target.value) || 0;
-            setState({ budget: val });
+            setCurrentMonthBudget(val);
             e.target.classList.add('bg-blue-100');
             await Auth.saveData();
             e.target.classList.remove('bg-blue-100');
@@ -315,7 +315,7 @@ function setupEventListeners() {
 function loginSuccess(userData) {
     setCurrentUser(userData);
     setState({ 
-        budget: userData.budget, 
+        budgets: userData.budgets || {}, 
         expenses: userData.expenses || [] 
     });
     
@@ -333,10 +333,6 @@ function loginSuccess(userData) {
             displayName = userData.firstName;
         }
         UI.DOM.userDisplay.textContent = displayName;
-    }
-    
-    if(UI.DOM.budgetInput) {
-        UI.DOM.budgetInput.value = userData.budget || '';
     }
     
     UI.initCategoryGrid();
