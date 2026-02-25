@@ -12,9 +12,10 @@ export function showNotification(message, type = 'info') {
 
     const toast = document.createElement('div');
     toast.id = 'toast-notification';
-    toast.className = `fixed z-50 flex items-start p-4 space-x-3 text-gray-500 bg-white rounded-lg shadow-2xl slide-up border-l-4 ${type === 'error' ? 'border-red-500' : 'border-blue-500'}`;
+    toast.className = `fixed z-[9999] flex items-start p-4 space-x-3 text-gray-500 bg-white rounded-lg shadow-2xl slide-up border-l-4 ${type === 'error' ? 'border-red-500' : 'border-blue-500'}`;
     
     // Estilos inline más robustos para móviles - forzar centrado
+    // z-index muy alto para que siempre esté por encima de modales
     toast.style.cssText = `
         top: 1.5rem !important;
         left: 50% !important;
@@ -24,6 +25,7 @@ export function showNotification(message, type = 'info') {
         max-width: 420px !important;
         box-sizing: border-box !important;
         margin: 0 auto !important;
+        z-index: 9999 !important;
     `;
     
     let icon = type === 'error' ? '<i class="fa-solid fa-circle-exclamation text-red-500 text-lg flex-shrink-0"></i>' : '<i class="fa-solid fa-circle-check text-blue-500 text-lg flex-shrink-0"></i>';
