@@ -1,7 +1,7 @@
 // UTILIDADES GENERALES
 
 export function formatMoney(amount) {
-    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(amount);
+    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
 }
 
 // TOAST NOTIFICATIONS
