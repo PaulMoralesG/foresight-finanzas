@@ -467,9 +467,9 @@ export function initCategoryGrid(categoriesToRender = EXPENSE_CATEGORIES) {
         btn.onclick = () => selectCategory(cat.id, btn);
         DOM.categoryGrid.appendChild(btn);
     });
-    // Select default
-    if(categoriesToRender.length > 0) {
-            selectCategory(categoriesToRender[0].id, DOM.categoryGrid.firstChild);
+    // Seleccionar automáticamente la primera categoría del tipo actual
+    if(categoriesToRender.length > 0 && DOM.categoryGrid.firstChild) {
+        selectCategory(categoriesToRender[0].id, DOM.categoryGrid.firstChild);
     }
 }
 
@@ -508,7 +508,7 @@ export function toggleModal(show) {
             DOM.btnDelete.classList.add('hidden'); 
             setTransactionType('expense');
             DOM.dateInput.value = getTodayISO();
-            selectCategory('comida', DOM.categoryGrid.firstChild);
+            // La categoría se selecciona automáticamente en initCategoryGrid()
         }, 300);
     }
 }
@@ -536,7 +536,7 @@ export function openAddModal() {
     if(DOM.dateInput) {
         DOM.dateInput.value = getTodayISO();
     }
-    selectCategory('comida', DOM.categoryGrid.firstChild); 
+    // La categoría se selecciona automáticamente en initCategoryGrid()
     toggleModal(true);
 }
 
