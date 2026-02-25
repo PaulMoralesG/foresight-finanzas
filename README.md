@@ -18,9 +18,12 @@ Aplicación web moderna diseñada para emprendedores y personas que necesitan se
 - ✅ Separar movimientos personales de los de tu negocio
 - ✅ Ver al instante si estás ganando o perdiendo dinero
 - ✅ Comparar tu crecimiento mes a mes con gráficas claras
+- ✅ **Alertas inteligentes de presupuesto** - Te avisa cuando te acercas al límite
+- ✅ **Dashboard de control de presupuesto** - Barra de progreso visual en tiempo real
 - ✅ Generar reportes PDF de tus finanzas
 - ✅ Tutorial interactivo que te guía paso a paso
 - ✅ Acceso desde cualquier dispositivo con sincronización en la nube
+- ✅ PWA - Instala como app en tu celular o computadora
 
 ### 📋 Para Profesores/Evaluadores
 **¡Bienvenidos a la evaluación!** Esta es la versión **v3.0 (Producción)** del proyecto.
