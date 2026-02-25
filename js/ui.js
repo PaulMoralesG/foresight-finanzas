@@ -628,9 +628,14 @@ export function deleteTransaction() {
 }
 
 export async function downloadReport(type) {
+    // Ocultar feedback previo
+    const feedbackDiv = document.getElementById('report-feedback');
+    if (feedbackDiv) feedbackDiv.classList.add('hidden');
+    
     const monthly = getMonthlyData();
     let filtered = monthly;
     let label = '';
+    
     if (type === 'business') {
         filtered = monthly.filter(i => i.businessType === 'business');
         label = 'Negocio';
@@ -638,10 +643,39 @@ export async function downloadReport(type) {
         filtered = monthly.filter(i => i.businessType === 'personal');
         label = 'Personal';
     }
+    
+    // Si no hay datos, mostrar mensaje DENTRO del modal
     if (filtered.length === 0) {
-        showNotification(`No hay movimientos de ${label.toLowerCase()} para exportar`, 'error');
+        if (feedbackDiv) {
+            const feedbackEmoji = document.getElementById('report-feedback-emoji');
+            const feedbackMessage = document.getElementById('report-feedback-message');
+            const feedbackHint = document.getElementById('report-feedback-hint');
+            
+            feedbackEmoji.textContent = '📭';
+            feedbackMessage.textContent = `No hay movimientos de ${label}`;
+            feedbackHint.textContent = 'Registra gastos o ingresos de este tipo primero';
+            
+            // Aplicar estilo según el tipo
+            if (type === 'business') {
+                feedbackDiv.className = 'mb-4 p-4 rounded-2xl text-center bg-blue-50 border-2 border-blue-200';
+                feedbackMessage.className = 'text-sm font-bold text-blue-700';
+                feedbackHint.className = 'text-xs text-blue-600 mt-1';
+            } else {
+                feedbackDiv.className = 'mb-4 p-4 rounded-2xl text-center bg-purple-50 border-2 border-purple-200';
+                feedbackMessage.className = 'text-sm font-bold text-purple-700';
+                feedbackHint.className = 'text-xs text-purple-600 mt-1';
+            }
+            
+            feedbackDiv.classList.remove('hidden');
+            
+            // Auto-ocultar después de 5 segundos
+            setTimeout(() => {
+                if (feedbackDiv) feedbackDiv.classList.add('hidden');
+            }, 5000);
+        }
         return;
     }
+    
     try {
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         showNotification(`📄 Generando PDF de ${label}...`, 'success');
@@ -704,6 +738,10 @@ export async function downloadReport(type) {
 }
 
 export function openReportModal() {
+    // Ocultar mensaje de feedback previo
+    const feedbackDiv = document.getElementById('report-feedback');
+    if (feedbackDiv) feedbackDiv.classList.add('hidden');
+    
     const monthly = getMonthlyData();
     const incomeItems = monthly.filter(i => i.type === 'income');
     const expenseItems = monthly.filter(i => i.type === 'expense' || !i.type);
