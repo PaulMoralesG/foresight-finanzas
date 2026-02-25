@@ -81,6 +81,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupAuthObserver() {
     if(!Auth.supabaseClient) return;
     
+    // Fallback: Si después de 2 segundos ninguna vista está visible, mostrar login
+    setTimeout(() => {
+        const loginView = document.getElementById('login-view');
+        const appView = document.getElementById('app-view');
+        if (loginView && appView && 
+            loginView.classList.contains('hidden-view') && 
+            appView.classList.contains('hidden-view')) {
+            showView('login-view');
+        }
+    }, 2000);
+    
     Auth.supabaseClient.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
              if (session && session.user) {
@@ -99,13 +110,21 @@ function setupAuthObserver() {
                                 loginSuccess({ ...retry, password: '' });
                             } else {
                                 showNotification("Error: No se puede cargar el perfil.", 'error');
+                                showView('login-view');
                             }
                         }
                     } catch(e) { 
-                        showNotification("Error de conexión.", 'error'); 
+                        showNotification("Error de conexión.", 'error');
+                        showView('login-view');
                     }
                 }
+             } else {
+                // Session es null pero el evento es INITIAL_SESSION - no hay sesión
+                showView('login-view');
              }
+        } else if (event === 'SIGNED_OUT') {
+            // Usuario cerró sesión
+            showView('login-view');
         }
     });
 }
