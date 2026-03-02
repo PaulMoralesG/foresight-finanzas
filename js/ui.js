@@ -130,6 +130,10 @@ export function updateUI() {
     const totalIncome = incomeItems.reduce((sum, item) => sum + item.amount, 0);
     const totalSpent = expenseItems.reduce((sum, item) => sum + item.amount, 0);
     
+    // Separar ingresos del NEGOCIO para comparación de crecimiento
+    const businessIncomeItems = incomeItems.filter(i => i.businessType === 'business' || !i.businessType);
+    const businessIncome = businessIncomeItems.reduce((sum, item) => sum + item.amount, 0);
+    
     // Saldo Disponible = Ingresos - Gastos (sin incluir presupuesto)
     const available = totalIncome - totalSpent;
 
@@ -138,8 +142,8 @@ export function updateUI() {
     DOM.dashIncome.textContent = formatMoney(totalIncome);
     DOM.dashExpense.textContent = formatMoney(totalSpent);
     
-    // Actualizar Comparación Mes a Mes
-    updateMonthlyGrowth(totalIncome);
+    // Actualizar Comparación Mes a Mes (SOLO ingresos de negocio)
+    updateMonthlyGrowth(businessIncome);
     
     // Actualizar Control de Presupuesto
     updateBudgetAlert(totalSpent);
@@ -167,7 +171,8 @@ export function updateUI() {
 }
 
 // Actualizar comparación mes a mes (para emprendedores: ¿estoy creciendo?)
-function updateMonthlyGrowth(currentIncome) {
+// IMPORTANTE: Solo mide ingresos de NEGOCIO, no personales
+function updateMonthlyGrowth(currentBusinessIncome) {
     const growthPercentageEl = document.getElementById('growth-percentage');
     const growthStatusEl = document.getElementById('growth-status');
     const growthEmojiEl = document.getElementById('growth-emoji');
@@ -177,51 +182,51 @@ function updateMonthlyGrowth(currentIncome) {
     
     if (!growthPercentageEl) return; // Si no existe el elemento, salir
     
-    // Obtener datos del mes anterior
+    // Obtener datos del mes anterior (SOLO negocio)
     const previousMonthData = getPreviousMonthData();
-    const previousIncome = previousMonthData
-        .filter(i => i.type === 'income')
+    const previousBusinessIncome = previousMonthData
+        .filter(i => i.type === 'income' && (i.businessType === 'business' || !i.businessType))
         .reduce((sum, item) => sum + item.amount, 0);
     
-    // Actualizar valores
-    currentMonthIncomeEl.textContent = formatMoney(currentIncome);
-    lastMonthIncomeEl.textContent = formatMoney(previousIncome);
+    // Actualizar valores (solo ingresos de negocio)
+    currentMonthIncomeEl.textContent = formatMoney(currentBusinessIncome);
+    lastMonthIncomeEl.textContent = formatMoney(previousBusinessIncome);
     
-    // Calcular crecimiento
-    if (previousIncome === 0 && currentIncome === 0) {
-        // Sin datos
+    // Calcular crecimiento del NEGOCIO
+    if (previousBusinessIncome === 0 && currentBusinessIncome === 0) {
+        // Sin datos de negocio
         growthPercentageEl.textContent = '0%';
         growthPercentageEl.className = 'text-2xl font-black leading-none text-gray-500';
-        growthStatusEl.textContent = 'Sin datos del mes pasado';
-        growthEmojiEl.textContent = '📊';
+        growthStatusEl.textContent = 'Sin ventas registradas';
+        growthEmojiEl.textContent = '💼';
         growthBadgeEl.textContent = 'Sin datos';
         growthBadgeEl.className = 'text-xs font-bold px-2 py-1 rounded-full bg-gray-100 text-gray-500';
-    } else if (previousIncome === 0) {
-        // Primer mes con ingresos
+    } else if (previousBusinessIncome === 0) {
+        // Primer mes con ventas del negocio
         growthPercentageEl.textContent = '🎉 Nuevo';
         growthPercentageEl.className = 'text-2xl font-black leading-none text-blue-600';
-        growthStatusEl.textContent = '¡Primeros ingresos!';
+        growthStatusEl.textContent = '¡Primeras ventas del negocio!';
         growthEmojiEl.textContent = '🚀';
         growthBadgeEl.textContent = '¡Comenzando!';
         growthBadgeEl.className = 'text-xs font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-600';
     } else {
-        // Calcular porcentaje de crecimiento
-        const growthPercentage = ((currentIncome - previousIncome) / previousIncome * 100).toFixed(1);
+        // Calcular porcentaje de crecimiento del negocio
+        const growthPercentage = ((currentBusinessIncome - previousBusinessIncome) / previousBusinessIncome * 100).toFixed(1);
         const absGrowth = Math.abs(parseFloat(growthPercentage));
         
         if (growthPercentage > 0) {
-            // Creciendo
+            // Negocio creciendo
             growthPercentageEl.textContent = `+${absGrowth}%`;
             growthPercentageEl.className = 'text-2xl font-black leading-none text-green-600';
-            growthStatusEl.textContent = absGrowth > 10 ? '¡Excelente crecimiento! 🎉' : '¡Vas creciendo! 👍';
+            growthStatusEl.textContent = absGrowth > 10 ? '¡Excelente crecimiento! 🎉' : '¡Tu negocio va creciendo! 👍';
             growthEmojiEl.textContent = '📈';
             growthBadgeEl.textContent = 'Creciendo';
             growthBadgeEl.className = 'text-xs font-bold px-2 py-1 rounded-full bg-green-100 text-green-600';
         } else if (growthPercentage < 0) {
-            // Decreciendo
+            // Ventas del negocio bajaron
             growthPercentageEl.textContent = `-${absGrowth}%`;
             growthPercentageEl.className = 'text-2xl font-black leading-none text-orange-600';
-            growthStatusEl.textContent = '¡Hay que mejorar las ventas!';
+            growthStatusEl.textContent = '¡Hay que mejorar las ventas del negocio!';
             growthEmojiEl.textContent = '📉';
             growthBadgeEl.textContent = 'Bajó';
             growthBadgeEl.className = 'text-xs font-bold px-2 py-1 rounded-full bg-orange-100 text-orange-600';
