@@ -130,11 +130,14 @@ export function updateUI() {
     const totalIncome = incomeItems.reduce((sum, item) => sum + item.amount, 0);
     const totalSpent = expenseItems.reduce((sum, item) => sum + item.amount, 0);
     
-    // Separar ingresos del NEGOCIO para comparación de crecimiento
+    // Separar ingresos y gastos del NEGOCIO (para comparación y utilidad)
     const businessIncomeItems = incomeItems.filter(i => i.businessType === 'business' || !i.businessType);
     const businessIncome = businessIncomeItems.reduce((sum, item) => sum + item.amount, 0);
     
-    // Saldo Disponible = Ingresos - Gastos (sin incluir presupuesto)
+    const businessExpenseItems = expenseItems.filter(i => i.businessType === 'business' || !i.businessType);
+    const businessSpent = businessExpenseItems.reduce((sum, item) => sum + item.amount, 0);
+    
+    // Saldo Disponible = Ingresos - Gastos TOTALES (personal + negocio)
     const available = totalIncome - totalSpent;
 
     // Visuals
@@ -145,11 +148,11 @@ export function updateUI() {
     // Actualizar Comparación Mes a Mes (SOLO ingresos de negocio)
     updateMonthlyGrowth(businessIncome);
     
-    // Actualizar Control de Presupuesto
+    // Actualizar Control de Presupuesto (todos los gastos)
     updateBudgetAlert(totalSpent);
     
-    // Actualizar Utilidad del Mes
-    updateProfitCalculation(totalIncome, totalSpent);
+    // Actualizar Utilidad del Negocio (SOLO negocio, no personal)
+    updateProfitCalculation(businessIncome, businessSpent);
     
     // Mes actual en el cuadro de saldo
     if (DOM.currentMonthLabel) {
@@ -320,8 +323,9 @@ function updateBudgetAlert(totalSpent) {
     }
 }
 
-// Actualizar cálculo de utilidad del mes (ingresos - gastos)
-function updateProfitCalculation(totalIncome, totalSpent) {
+// Actualizar cálculo de utilidad del NEGOCIO (solo ingresos y gastos de negocio)
+// IMPORTANTE: No incluye movimientos personales (esos ya se ven en Saldo Disponible)
+function updateProfitCalculation(businessIncome, businessSpent) {
     const profitAmountEl = document.getElementById('profit-amount');
     const profitStatusEl = document.getElementById('profit-status');
     const profitEmojiEl = document.getElementById('profit-emoji');
@@ -329,61 +333,61 @@ function updateProfitCalculation(totalIncome, totalSpent) {
     
     if (!profitAmountEl) return; // Si no existe el elemento, salir
     
-    // Calcular utilidad (ingresos - gastos)
-    const profit = totalIncome - totalSpent;
+    // Calcular utilidad del NEGOCIO (ventas - gastos de negocio)
+    const profit = businessIncome - businessSpent;
     
-    // Calcular margen de utilidad (profit / ingresos * 100)
+    // Calcular margen de utilidad (profit / ventas * 100)
     let marginPercentage = 0;
-    if (totalIncome > 0) {
-        marginPercentage = (profit / totalIncome * 100).toFixed(1);
+    if (businessIncome > 0) {
+        marginPercentage = (profit / businessIncome * 100).toFixed(1);
     }
     
-    // Actualizar monto de utilidad
+    // Actualizar monto de utilidad del negocio
     profitAmountEl.textContent = formatMoney(profit);
     profitMarginEl.textContent = `Margen: ${marginPercentage}%`;
     
-    // Estados visuales según la utilidad
-    if (totalIncome === 0 && totalSpent === 0) {
-        // Sin movimientos
+    // Estados visuales según la utilidad del negocio
+    if (businessIncome === 0 && businessSpent === 0) {
+        // Sin movimientos de negocio
         profitAmountEl.className = 'text-2xl font-black leading-none mb-1 text-gray-500';
-        profitStatusEl.textContent = 'Sin movimientos este mes';
-        profitEmojiEl.textContent = '📊';
+        profitStatusEl.textContent = 'Sin ventas del negocio este mes';
+        profitEmojiEl.textContent = '💼';
     } else if (profit > 0) {
-        // GANANDO - Utilidad positiva
+        // NEGOCIO RENTABLE - Utilidad positiva
         profitAmountEl.className = 'text-2xl font-black leading-none mb-1 text-green-600';
         
         if (marginPercentage >= 50) {
-            profitStatusEl.textContent = '¡Excelente rentabilidad! 🎉';
+            profitStatusEl.textContent = '¡Negocio muy rentable! 🎉';
             profitEmojiEl.textContent = '🤑';
         } else if (marginPercentage >= 30) {
-            profitStatusEl.textContent = '¡Muy bien! Estás ganando 💪';
+            profitStatusEl.textContent = '¡Tu negocio está dando utilidad! 💪';
             profitEmojiEl.textContent = '💰';
         } else if (marginPercentage >= 10) {
-            profitStatusEl.textContent = 'Ganando, ¡sigue así! 👍';
+            profitStatusEl.textContent = 'Negocio con utilidad, ¡sigue así!';
             profitEmojiEl.textContent = '💵';
         } else {
-            profitStatusEl.textContent = 'Ganando poco, hay que mejorar';
+            profitStatusEl.textContent = 'Utilidad baja, hay que mejorar';
             profitEmojiEl.textContent = '💸';
         }
     } else if (profit < 0) {
-        // PERDIENDO - Utilidad negativa
+        // NEGOCIO CON PÉRDIDAS - Utilidad negativa
         profitAmountEl.className = 'text-2xl font-black leading-none mb-1 text-red-600';
         
         const lossAmount = Math.abs(profit);
-        if (lossAmount > totalIncome * 0.5) {
-            profitStatusEl.textContent = '⚠️ Pérdidas altas - ¡Atención!';
+        if (lossAmount > businessIncome * 0.5) {
+            profitStatusEl.textContent = '⚠️ Negocio con pérdidas altas!';
             profitEmojiEl.textContent = '🚨';
-        } else if (lossAmount > totalIncome * 0.2) {
-            profitStatusEl.textContent = '⚠️ Estás perdiendo dinero';
+        } else if (lossAmount > businessIncome * 0.2) {
+            profitStatusEl.textContent = '⚠️ El negocio está perdiendo';
             profitEmojiEl.textContent = '📉';
         } else {
             profitStatusEl.textContent = 'Pérdida pequeña - Puedes recuperar';
             profitEmojiEl.textContent = '⚠️';
         }
     } else {
-        // EQUILIBRIO - Ingresos = Gastos
+        // EQUILIBRIO - Ventas = Gastos del negocio
         profitAmountEl.className = 'text-2xl font-black leading-none mb-1 text-blue-600';
-        profitStatusEl.textContent = 'En equilibrio (ingresos = gastos)';
+        profitStatusEl.textContent = 'Negocio en punto de equilibrio';
         profitEmojiEl.textContent = '⚖️';
     }
 }

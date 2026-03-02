@@ -17,14 +17,14 @@ const steps = [
         position: "bottom"
     },
     {
-        title: "¿Estás Ganando o Perdiendo? 📊",
-        message: "Esta tarjeta te dice claramente si estás generando utilidad o pérdidas este mes.",
+        title: "¿Tu Negocio Está Dando Utilidad? 💼",
+        message: "Esta tarjeta calcula si tu NEGOCIO es rentable (ventas - gastos de negocio). Solo mide movimientos del negocio, no personales.",
         target: "#profit-amount",
         position: "bottom"
     },
     {
         title: "¿Está Creciendo tu Negocio? 📈",
-        message: "Compara tus ingresos con el mes anterior para saber si estás creciendo. ¡Muy importante!",
+        message: "Compara las VENTAS de tu negocio con el mes anterior. Solo mide ingresos del negocio, no personales. ¡Muy importante!",
         target: "#growth-percentage",
         position: "bottom"
     },
