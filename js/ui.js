@@ -144,6 +144,9 @@ export function updateUI() {
     // Actualizar Control de Presupuesto
     updateBudgetAlert(totalSpent);
     
+    // Actualizar Utilidad del Mes
+    updateProfitCalculation(totalIncome, totalSpent);
+    
     // Mes actual en el cuadro de saldo
     if (DOM.currentMonthLabel) {
         const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -309,6 +312,74 @@ function updateBudgetAlert(totalSpent) {
         budgetEmoji.textContent = '✅';
         budgetProgressBar.className = 'h-full bg-green-500 transition-all duration-500';
         budgetAlertCard.className = 'bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-2xl shadow-sm border border-green-200';
+    }
+}
+
+// Actualizar cálculo de utilidad del mes (ingresos - gastos)
+function updateProfitCalculation(totalIncome, totalSpent) {
+    const profitAmountEl = document.getElementById('profit-amount');
+    const profitStatusEl = document.getElementById('profit-status');
+    const profitEmojiEl = document.getElementById('profit-emoji');
+    const profitMarginEl = document.getElementById('profit-margin');
+    
+    if (!profitAmountEl) return; // Si no existe el elemento, salir
+    
+    // Calcular utilidad (ingresos - gastos)
+    const profit = totalIncome - totalSpent;
+    
+    // Calcular margen de utilidad (profit / ingresos * 100)
+    let marginPercentage = 0;
+    if (totalIncome > 0) {
+        marginPercentage = (profit / totalIncome * 100).toFixed(1);
+    }
+    
+    // Actualizar monto de utilidad
+    profitAmountEl.textContent = formatMoney(profit);
+    profitMarginEl.textContent = `Margen: ${marginPercentage}%`;
+    
+    // Estados visuales según la utilidad
+    if (totalIncome === 0 && totalSpent === 0) {
+        // Sin movimientos
+        profitAmountEl.className = 'text-2xl font-black leading-none mb-1 text-gray-500';
+        profitStatusEl.textContent = 'Sin movimientos este mes';
+        profitEmojiEl.textContent = '📊';
+    } else if (profit > 0) {
+        // GANANDO - Utilidad positiva
+        profitAmountEl.className = 'text-2xl font-black leading-none mb-1 text-green-600';
+        
+        if (marginPercentage >= 50) {
+            profitStatusEl.textContent = '¡Excelente rentabilidad! 🎉';
+            profitEmojiEl.textContent = '🤑';
+        } else if (marginPercentage >= 30) {
+            profitStatusEl.textContent = '¡Muy bien! Estás ganando 💪';
+            profitEmojiEl.textContent = '💰';
+        } else if (marginPercentage >= 10) {
+            profitStatusEl.textContent = 'Ganando, ¡sigue así! 👍';
+            profitEmojiEl.textContent = '💵';
+        } else {
+            profitStatusEl.textContent = 'Ganando poco, hay que mejorar';
+            profitEmojiEl.textContent = '💸';
+        }
+    } else if (profit < 0) {
+        // PERDIENDO - Utilidad negativa
+        profitAmountEl.className = 'text-2xl font-black leading-none mb-1 text-red-600';
+        
+        const lossAmount = Math.abs(profit);
+        if (lossAmount > totalIncome * 0.5) {
+            profitStatusEl.textContent = '⚠️ Pérdidas altas - ¡Atención!';
+            profitEmojiEl.textContent = '🚨';
+        } else if (lossAmount > totalIncome * 0.2) {
+            profitStatusEl.textContent = '⚠️ Estás perdiendo dinero';
+            profitEmojiEl.textContent = '📉';
+        } else {
+            profitStatusEl.textContent = 'Pérdida pequeña - Puedes recuperar';
+            profitEmojiEl.textContent = '⚠️';
+        }
+    } else {
+        // EQUILIBRIO - Ingresos = Gastos
+        profitAmountEl.className = 'text-2xl font-black leading-none mb-1 text-blue-600';
+        profitStatusEl.textContent = 'En equilibrio (ingresos = gastos)';
+        profitEmojiEl.textContent = '⚖️';
     }
 }
 
