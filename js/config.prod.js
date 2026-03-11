@@ -32,6 +32,7 @@ export const EXPENSE_CATEGORIES = [
     { id: 'deporte', label: 'Deporte', icon: '🏋️', color: 'bg-green-100 text-green-700' },
     { id: 'mascotas', label: 'Mascotas', icon: '🐾', color: 'bg-amber-100 text-amber-600' },
     { id: 'viajes', label: 'Viajes', icon: '✈️', color: 'bg-cyan-100 text-cyan-600' },
+    { id: 'ahorro', label: 'Ahorro', icon: '🐷', color: 'bg-emerald-100 text-emerald-600' },
     { id: 'general', label: 'General', icon: '📋', color: 'bg-slate-100 text-slate-600' },
     { id: 'otros', label: 'Otros', icon: '💸', color: 'bg-gray-100 text-gray-600' },
 ];
@@ -48,5 +49,6 @@ export const INCOME_CATEGORIES = [
     { id: 'ayuda', label: 'Ayuda Familiar', icon: '👨‍👩‍👧', color: 'bg-orange-100 text-orange-600' },
     { id: 'reembolsos', label: 'Reembolsos', icon: '↩️', color: 'bg-cyan-100 text-cyan-600' },
     { id: 'premios', label: 'Premios', icon: '🏆', color: 'bg-amber-100 text-amber-600' },
+    { id: 'ahorros_retiro', label: 'Retiro de Ahorros', icon: '🏦', color: 'bg-emerald-100 text-emerald-600' },
     { id: 'otros', label: 'Otros', icon: '💰', color: 'bg-gray-100 text-gray-600' },
 ];
