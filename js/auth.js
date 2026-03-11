@@ -155,7 +155,7 @@ export async function signUp(email, password, firstName = '', lastName = '') {
         email, 
         password,
         options: { 
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: window.location.origin + window.location.pathname,
             data: {
                 first_name: firstName,
                 last_name: lastName
