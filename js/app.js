@@ -148,11 +148,14 @@ function setupEventListeners() {
     const togglePasswordBtn = document.getElementById('toggle-password');
     const togglePasswordIcon = document.getElementById('toggle-password-icon');
     if (togglePasswordBtn && auth.pass) {
-        togglePasswordBtn.addEventListener('click', () => {
+        const togglePassword = (e) => {
+            if (e) e.preventDefault();
             const isPassword = auth.pass.type === 'password';
             auth.pass.type = isPassword ? 'text' : 'password';
-            togglePasswordIcon.className = isPassword ? 'fa-solid fa-eye text-blue-600' : 'fa-solid fa-eye-slash';
-        });
+            togglePasswordIcon.className = isPassword ? 'fa-solid fa-eye text-blue-600 text-lg' : 'fa-solid fa-eye-slash text-lg';
+        };
+        togglePasswordBtn.addEventListener('click', togglePassword);
+        togglePasswordBtn.addEventListener('touchstart', togglePassword, { passive: false });
     }
 
     if (auth.toggleBtn) {
