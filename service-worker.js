@@ -1,4 +1,4 @@
-const CACHE_NAME = 'foresight-finanzas-v3';
+const CACHE_NAME = 'foresight-finanzas-v4';
 const urlsToCache = [
   './',
   './index.html',
