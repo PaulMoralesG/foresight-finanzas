@@ -97,15 +97,21 @@ function setupAuthObserver() {
              if (session && session.user) {
                 if (!AppState.currentUser) {
                     try {
-                        const profile = await Auth.loadProfileFromSupabase(session.user.email);
+                        let profile = await Auth.loadProfileFromSupabase(session.user.email);
                         if(profile) {
                             loginSuccess({ ...profile, password: '' }); 
                         } else {
-                            // Intentar obtener nombre y apellido de metadatos del usuario
-                            const firstName = session.user.user_metadata?.first_name || '';
-                            const lastName = session.user.user_metadata?.last_name || '';
+                            // Intentar obtener nombre y apellido de metadatos del usuario o del sessionStorage si acaba de confirmar
+                            const firstName = session.user.user_metadata?.first_name || sessionStorage.getItem('temp_first_name') || '';
+                            const lastName = session.user.user_metadata?.last_name || sessionStorage.getItem('temp_last_name') || '';
+                            
                             await Auth.createInitialProfile(session.user.email, firstName, lastName);
                             const retry = await Auth.loadProfileFromSupabase(session.user.email);
+                            
+                            // Limpiar variables temporales si existen
+                            sessionStorage.removeItem('temp_first_name');
+                            sessionStorage.removeItem('temp_last_name');
+                            
                             if(retry) {
                                 loginSuccess({ ...retry, password: '' });
                             } else {
@@ -302,6 +308,10 @@ function setupEventListeners() {
                         const toggleBtn = document.getElementById('btn-auth-toggle');
                         const forgotPass = document.getElementById('btn-forgot-password');
                         const reqText = document.getElementById('password-requirements');
+                        
+                        // Guardar nombre y apellido temporalmente en sessionStorage para usarlos al confirmar
+                        sessionStorage.setItem('temp_first_name', firstName);
+                        sessionStorage.setItem('temp_last_name', lastName);
                         
                         if(toggleText) toggleText.textContent = '¿No tienes cuenta?';
                         if(toggleBtn) toggleBtn.textContent = 'Regístrate';
