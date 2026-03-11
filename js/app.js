@@ -137,12 +137,33 @@ function setupEventListeners() {
     const nameFieldsContainer = document.getElementById('name-fields');
     const firstNameField = document.getElementById('auth-firstname');
     const lastNameField = document.getElementById('auth-lastname');
+    
+    // Toggle para ver/ocultar contraseña
+    const togglePasswordBtn = document.getElementById('toggle-password');
+    const togglePasswordIcon = document.getElementById('toggle-password-icon');
+    if (togglePasswordBtn && auth.pass) {
+        togglePasswordBtn.addEventListener('click', () => {
+            const isPassword = auth.pass.type === 'password';
+            auth.pass.type = isPassword ? 'text' : 'password';
+            togglePasswordIcon.className = isPassword ? 'fa-solid fa-eye text-blue-600' : 'fa-solid fa-eye-slash';
+        });
+    }
+
     if (auth.toggleBtn) {
         auth.toggleBtn.addEventListener('click', () => {
             isLoginMode = !isLoginMode;
+            const toggleText = document.getElementById('auth-toggle-text');
+            const toggleBtn = document.getElementById('btn-auth-toggle');
+            const forgotPass = document.getElementById('btn-forgot-password');
+            const reqText = document.getElementById('password-requirements');
+
             if (isLoginMode) {
                auth.submitBtn.textContent = "Iniciar Sesión";
-               auth.toggleBtn.innerHTML = '¿No tienes cuenta? <span class="text-blue-600">Regístrate aquí</span>';
+               if(toggleText) toggleText.textContent = '¿No tienes cuenta?';
+               if(toggleBtn) toggleBtn.textContent = 'Regístrate';
+               if(forgotPass) forgotPass.style.display = 'block';
+               if(reqText) reqText.classList.add('hidden-view');
+               
                if(nameFieldsContainer) {
                    nameFieldsContainer.style.display = 'none';
                    if(firstNameField) firstNameField.required = false;
@@ -150,7 +171,11 @@ function setupEventListeners() {
                }
             } else {
                auth.submitBtn.textContent = "Crear Cuenta";
-               auth.toggleBtn.innerHTML = '¿Ya tienes cuenta? <span class="text-blue-600">Inicia sesión</span>';
+               if(toggleText) toggleText.textContent = '¿Ya tienes cuenta?';
+               if(toggleBtn) toggleBtn.textContent = 'Inicia sesión';
+               if(forgotPass) forgotPass.style.display = 'none';
+               if(reqText) reqText.classList.remove('hidden-view');
+
                if(nameFieldsContainer) {
                    nameFieldsContainer.style.display = 'grid';
                    if(firstNameField) firstNameField.required = true;
@@ -162,7 +187,13 @@ function setupEventListeners() {
 
     // Resend Verify
     if (auth.resendBtn) {
+        let lastResend = 0;
         auth.resendBtn.addEventListener('click', async () => {
+            const now = Date.now();
+            if (now - lastResend < 60000) {
+                return showNotification("Por favor espera 1 minuto antes de volver a intentar.", 'error');
+            }
+
             const email = auth.email.value.trim();
             if(!email) { return showNotification("Ingresa tu correo primero", 'error'); }
             
@@ -170,13 +201,38 @@ function setupEventListeners() {
                await runAsyncAction(auth.resendBtn, async () => {
                    const { error } = await Auth.resendInvite(email);
                    if(error) {
-                       showNotification("Error al reenviar. Intenta de nuevo.", 'error');
+                       if(error.message.includes('rate limit')) {
+                           showNotification("Límite de envíos alcanzado. Intenta de nuevo en unos minutos.", 'error');
+                       } else {
+                           showNotification("Error al reenviar: " + error.message, 'error');
+                       }
                        throw error;
                    }
+                   lastResend = Date.now();
                    showNotification("✅ Correo reenviado. Revisa tu bandeja de entrada y spam.", 'success');
                }, "Reenviando...");
             } else {
                 showNotification("Error de conexión. Recarga la página.", 'error');
+            }
+        });
+    }
+
+    // Olvidé mi contraseña
+    const forgotPassBtn = document.getElementById('btn-forgot-password');
+    if (forgotPassBtn) {
+        forgotPassBtn.addEventListener('click', async () => {
+            const email = auth.email.value.trim();
+            if(!email) {
+                return showNotification("⚠️ Ingresa tu correo primero en el campo de Email para recuperar tu contraseña.", 'error');
+            }
+            if(Auth.supabaseClient) {
+                await runAsyncAction(forgotPassBtn, async () => {
+                    const { error } = await Auth.supabaseClient.auth.resetPasswordForEmail(email, {
+                        redirectTo: window.location.origin
+                    });
+                    if(error) throw error;
+                    showNotification("✅ Se ha enviado un enlace a tu correo para restablecer la contraseña.", 'success');
+                }, "Enviando...");
             }
         });
     }
@@ -194,6 +250,14 @@ function setupEventListeners() {
         
         if(!isLoginMode && (!firstName || !lastName)) {
             return showNotification("Ingresa tu nombre y apellido", 'error');
+        }
+
+        // Validación de contraseña segura (Solo en registro)
+        if (!isLoginMode) {
+            const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,}$/;
+            if (!passwordRegex.test(pass)) {
+                return showNotification("La contraseña debe tener al menos 8 caracteres, mayúscula, minúscula, número y un carácter especial", 'error');
+            }
         }
 
         if (Auth.supabaseClient) {
@@ -228,10 +292,21 @@ function setupEventListeners() {
                         showNotification("📧 Cuenta creada. Revisa tu correo (y spam) para confirmar.", 'success');
                         if(firstNameField) firstNameField.value = '';
                         if(lastNameField) lastNameField.value = '';
+                        auth.pass.value = '';
                         if(auth.resendBtn) auth.resendBtn.classList.remove('hidden-view');
                         isLoginMode = true;
+                        
+                        // Retornar la interfaz a modo inicio de sesión
                         auth.submitBtn.textContent = "Iniciar Sesión";
-                        auth.toggleBtn.innerHTML = '¿No tienes cuenta? <span class="text-blue-600">Regístrate aquí</span>';
+                        const toggleText = document.getElementById('auth-toggle-text');
+                        const toggleBtn = document.getElementById('btn-auth-toggle');
+                        const forgotPass = document.getElementById('btn-forgot-password');
+                        const reqText = document.getElementById('password-requirements');
+                        
+                        if(toggleText) toggleText.textContent = '¿No tienes cuenta?';
+                        if(toggleBtn) toggleBtn.textContent = 'Regístrate';
+                        if(forgotPass) forgotPass.style.display = 'block';
+                        if(reqText) reqText.classList.add('hidden-view');
                         if(nameFieldsContainer) nameFieldsContainer.style.display = 'none';
                         return;
                     }
