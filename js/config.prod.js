@@ -11,9 +11,9 @@
 // - NUNCA expongas la clave 'service_role' (la clave de administrador).
 // ================================================================
 
-// Clave 'anon' de Supabase (pública, segura para exponer)
-export const SUPABASE_URL = "https://sphmdtlvxbypckhavhgb.supabase.co"; 
-export const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwaG1kdGx2eGJ5cGNraGF2aGdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5MTA3MTEsImV4cCI6MjA4NjQ4NjcxMX0.kBqqJpwtPL-W8YEGU9wdA3HvwBsL2-G4ZIv051StvrE";
+// Clave 'anon' de Supabase (pública, segura para exponer frontend, pero ocultamos valores reales en GitHub)
+export const SUPABASE_URL = "TU_SUPABASE_URL_AQUI";
+export const SUPABASE_KEY = "TU_SUPABASE_ANON_KEY_AQUI";
 
 // CATEGORÍAS DE GASTOS - Para cualquier persona
 export const EXPENSE_CATEGORIES = [
