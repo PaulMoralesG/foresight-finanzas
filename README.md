@@ -211,7 +211,6 @@ MIT License - Proyecto educativo de código abierto
 
 **Paul Morales**  
 GitHub: [@PaulMoralesG](https://github.com/PaulMoralesG)  
-Universidad de Especialidades Espíritu Santo (UEES), Ecuador
 
 ---
 
