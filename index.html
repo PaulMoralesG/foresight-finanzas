@@ -260,8 +260,36 @@
                 </div>
             </div>
 
+            <!-- Seguimiento Mensual -->
+            <div class="slide-up" style="animation-delay: 0.2s;">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center text-sm">
+                            <i class="fa-solid fa-repeat"></i>
+                        </div>
+                        <div>
+                            <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Seguimiento Mensual</p>
+                            <p class="text-[10px] font-bold text-gray-500">Saldo que se arrastra y pagos por vencer</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="rounded-xl bg-amber-50 p-3">
+                            <p class="text-[9px] font-bold text-amber-700 uppercase">Saldo arrastrado</p>
+                            <p class="text-lg font-black text-amber-800 mt-1" id="carryover-balance">$0</p>
+                            <p class="text-[10px] font-bold text-amber-600 mt-1" id="carryover-status">Sin movimiento</p>
+                        </div>
+                        <div class="rounded-xl bg-sky-50 p-3">
+                            <p class="text-[9px] font-bold text-sky-700 uppercase">Próximos pagos</p>
+                            <ul id="reminders-list" class="mt-1 space-y-1 text-[10px] font-bold text-sky-700">
+                                <li class="opacity-70">Agrega gastos con fecha futura para verlos aquí</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Quick Actions & Status -->
-            <div class="grid grid-cols-2 gap-2 slide-up" style="animation-delay: 0.2s;">
+            <div class="grid grid-cols-2 gap-2 slide-up" style="animation-delay: 0.22s;">
                 <!-- Budget Setting -->
                 <div class="bg-white p-2.5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
                     <div class="flex items-center gap-2">
@@ -499,6 +527,24 @@
                     <p class="text-xs font-bold text-gray-400" id="report-count">0 movimientos registrados</p>
                 </div>
 
+                <!-- Consolidado por rango -->
+                <div class="mb-4 rounded-2xl border border-gray-200 bg-gray-50 p-3">
+                    <p class="text-[10px] font-black uppercase tracking-wider text-gray-500">Consolidado</p>
+                    <div class="grid grid-cols-2 gap-2 mt-2">
+                        <div>
+                            <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1">Desde</label>
+                            <input type="month" id="consolidated-start" class="w-full rounded-xl border border-gray-200 bg-white px-2 py-2 text-xs font-bold text-gray-700 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1">Hasta</label>
+                            <input type="month" id="consolidated-end" class="w-full rounded-xl border border-gray-200 bg-white px-2 py-2 text-xs font-bold text-gray-700 outline-none">
+                        </div>
+                    </div>
+                    <button onclick="window.showConsolidatedReport()" class="mt-2 w-full rounded-xl bg-blue-600 px-3 py-2 text-xs font-black text-white">Ver consolidado</button>
+                    <div id="consolidated-summary" class="mt-3 rounded-xl bg-white p-3 text-xs font-bold text-gray-600">
+                        Selecciona un rango para ver el resumen acumulado.
+                    </div>
+                </div>
                 <!-- Mensaje de feedback (oculto por defecto) -->
                 <div id="report-feedback" class="hidden mb-4 p-4 rounded-2xl text-center">
                     <div class="text-3xl mb-2" id="report-feedback-emoji">📭</div>

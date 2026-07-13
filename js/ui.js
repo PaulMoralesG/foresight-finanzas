@@ -1,4 +1,4 @@
-import { AppState, setViewDate, setFilter, getCurrentMonthBudget } from './state.js';
+import { AppState, setViewDate, setFilter, getCurrentMonthBudget, getCarryOverForMonth, setCarryOverForMonth } from './state.js';
 import { formatMoney, showNotification, runAsyncAction } from './utils.js';
 import { getCategories } from './config-loader.js';
 import { saveData, logout } from './auth.js';
@@ -150,6 +150,9 @@ export function updateUI() {
     
     // Actualizar Control de Presupuesto (todos los gastos)
     updateBudgetAlert(totalSpent);
+
+    // Actualizar seguimiento mensual y recordatorios
+    updateCarryOverAndReminders(monthlyData, totalIncome, totalSpent);
     
     // Actualizar Utilidad del Negocio (SOLO negocio, no personal)
     updateProfitCalculation(businessIncome, businessSpent);
@@ -390,6 +393,50 @@ function updateProfitCalculation(businessIncome, businessSpent) {
         profitStatusEl.textContent = 'Negocio en punto de equilibrio';
         profitEmojiEl.textContent = '⚖️';
     }
+}
+
+function updateCarryOverAndReminders(monthlyData, totalIncome, totalSpent) {
+    const carryoverBalanceEl = document.getElementById('carryover-balance');
+    const carryoverStatusEl = document.getElementById('carryover-status');
+    const remindersListEl = document.getElementById('reminders-list');
+
+    if (!carryoverBalanceEl || !carryoverStatusEl || !remindersListEl) return;
+
+    const previousMonthDate = new Date(AppState.currentViewDate.getFullYear(), AppState.currentViewDate.getMonth() - 1, 1);
+    const previousCarryOver = getCarryOverForMonth(previousMonthDate);
+    const currentCarryOver = Math.max(0, previousCarryOver + totalIncome - totalSpent);
+    setCarryOverForMonth(AppState.currentViewDate, currentCarryOver);
+
+    carryoverBalanceEl.textContent = formatMoney(currentCarryOver);
+    if (currentCarryOver > 0) {
+        carryoverStatusEl.textContent = 'Puedes usar este saldo el próximo mes';
+    } else if (currentCarryOver === 0) {
+        carryoverStatusEl.textContent = 'Sin saldo pendiente';
+    } else {
+        carryoverStatusEl.textContent = 'Saldo comprometido';
+    }
+
+    const upcomingReminders = monthlyData
+        .filter(item => item.type === 'expense' && item.date)
+        .filter(item => {
+            const expenseDate = new Date(item.date);
+            const today = new Date();
+            const diffDays = Math.ceil((expenseDate - today) / (1000 * 60 * 60 * 24));
+            return diffDays >= 0 && diffDays <= 15;
+        })
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .slice(0, 3);
+
+    if (upcomingReminders.length === 0) {
+        remindersListEl.innerHTML = '<li class="opacity-70">No hay pagos próximos en este mes</li>';
+        return;
+    }
+
+    remindersListEl.innerHTML = upcomingReminders.map(item => {
+        const dueDate = new Date(item.date);
+        const dateLabel = dueDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+        return `<li class="rounded-lg bg-white/80 px-2 py-1">${item.concept || 'Pago'} • ${dateLabel}</li>`;
+    }).join('');
 }
 
 function updateFilterHeader() {
@@ -780,6 +827,63 @@ export async function downloadReport(type) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     showNotification(`📄 Reporte de texto de ${label} descargado`, 'success');
+}
+
+export function showConsolidatedReport() {
+    const startInput = document.getElementById('consolidated-start');
+    const endInput = document.getElementById('consolidated-end');
+    const summaryEl = document.getElementById('consolidated-summary');
+
+    if (!startInput || !endInput || !summaryEl) return;
+
+    const startValue = startInput.value;
+    const endValue = endInput.value;
+
+    if (!startValue || !endValue) {
+        summaryEl.innerHTML = 'Selecciona un rango completo para ver el consolidado.';
+        return;
+    }
+
+    const start = new Date(`${startValue}-01T12:00:00`);
+    const end = new Date(`${endValue}-01T12:00:00`);
+    const months = [];
+    const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+
+    while (cursor <= end) {
+        months.push(new Date(cursor));
+        cursor.setMonth(cursor.getMonth() + 1);
+    }
+
+    let totalIncome = 0;
+    let totalExpenses = 0;
+    let transactionCount = 0;
+
+    months.forEach(monthDate => {
+        const monthTransactions = AppState.expenses.filter(item => {
+            const d = new Date(item.date);
+            return d.getFullYear() === monthDate.getFullYear() && d.getMonth() === monthDate.getMonth();
+        });
+        totalIncome += monthTransactions.filter(i => i.type === 'income').reduce((sum, item) => sum + item.amount, 0);
+        totalExpenses += monthTransactions.filter(i => i.type === 'expense' || !i.type).reduce((sum, item) => sum + item.amount, 0);
+        transactionCount += monthTransactions.length;
+    });
+
+    const balance = totalIncome - totalExpenses;
+    const monthLabel = months.length === 1
+        ? `${months[0].toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}`
+        : `${months[0].toLocaleDateString('es-ES', { month: 'short', year: 'numeric' })} - ${months[months.length - 1].toLocaleDateString('es-ES', { month: 'short', year: 'numeric' })}`;
+
+    summaryEl.innerHTML = `
+        <div class="space-y-2">
+            <p class="text-[10px] uppercase tracking-wider text-gray-400">${monthLabel}</p>
+            <p class="text-sm font-black text-gray-800">Saldo: ${formatMoney(balance)}</p>
+            <div class="grid grid-cols-2 gap-2 text-[11px]">
+                <div class="rounded-lg bg-green-50 p-2 text-green-700">Ingresos: ${formatMoney(totalIncome)}</div>
+                <div class="rounded-lg bg-red-50 p-2 text-red-700">Gastos: ${formatMoney(totalExpenses)}</div>
+            </div>
+            <p class="text-[10px] text-gray-500">${transactionCount} movimientos en el rango</p>
+        </div>
+    `;
 }
 
 export function openReportModal() {

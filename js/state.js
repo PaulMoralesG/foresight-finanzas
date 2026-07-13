@@ -4,7 +4,8 @@ export const AppState = {
     currentViewDate: new Date(),
     budgets: {},  // Formato: { "YYYY-MM": valor }
     expenses: [],
-    currentFilter: 'all'
+    currentFilter: 'all',
+    carryOver: {} // Formato: { "YYYY-MM": valor }
 };
 
 export function setCurrentUser(user) {
@@ -14,6 +15,7 @@ export function setCurrentUser(user) {
 export function setState(newState) {
     if(newState.budgets !== undefined) AppState.budgets = newState.budgets;
     if(newState.expenses !== undefined) AppState.expenses = newState.expenses;
+    if(newState.carryOver !== undefined) AppState.carryOver = newState.carryOver;
 }
 
 // Obtener presupuesto del mes actual visualizado
@@ -26,6 +28,16 @@ export function getCurrentMonthBudget() {
 export function setCurrentMonthBudget(value) {
     const monthKey = getMonthKey(AppState.currentViewDate);
     AppState.budgets[monthKey] = value;
+}
+
+export function getCarryOverForMonth(date) {
+    const monthKey = getMonthKey(date);
+    return AppState.carryOver[monthKey] || 0;
+}
+
+export function setCarryOverForMonth(date, value) {
+    const monthKey = getMonthKey(date);
+    AppState.carryOver[monthKey] = value;
 }
 
 // Generar clave de mes en formato YYYY-MM

@@ -104,10 +104,20 @@ export async function loadProfileFromSupabase(email) {
                 data.expenses = [];
             }
         }
+
+        // Parsear carryOver si viene como string JSON
+        if (typeof data.carry_over === 'string') {
+            try {
+                data.carry_over = JSON.parse(data.carry_over);
+            } catch (e) {
+                data.carry_over = {};
+            }
+        }
         
         // Asegurar valores por defecto
         data.budgets = data.budgets || {};
         data.expenses = data.expenses || [];
+        data.carryOver = data.carryOver || data.carry_over || {};
     }
     
     return data;
@@ -128,6 +138,7 @@ export async function createInitialProfile(email, firstName = '', lastName = '')
                 last_name: lastName, 
                 budgets: {}, 
                 expenses: [], 
+                carry_over: {},
                 password: 'auth-managed' 
             }]);
         
@@ -208,6 +219,7 @@ export async function saveData() {
                 email: currentUser.email, 
                 budgets,
                 expenses,
+                carry_over: AppState.carryOver || {},
                 first_name: currentUser.firstName || currentUser.first_name || '',
                 last_name: currentUser.lastName || currentUser.last_name || '',
                 updated_at: new Date().toISOString()

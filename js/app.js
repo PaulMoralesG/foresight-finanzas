@@ -30,6 +30,7 @@ window.toggleDeleteModal = UI.toggleDeleteModal;
 window.toggleReportModal = UI.toggleReportModal;
 window.toggleSummary = UI.toggleSummary;
 window.openReportModal = UI.openReportModal;
+window.showConsolidatedReport = UI.showConsolidatedReport;
 window.downloadReport = async function(type) {
     await UI.downloadReport(type);
 };
@@ -423,7 +424,8 @@ function loginSuccess(userData) {
     setCurrentUser(userData);
     setState({ 
         budgets: userData.budgets || {}, 
-        expenses: userData.expenses || [] 
+        expenses: userData.expenses || [],
+        carryOver: userData.carryOver || userData.carry_over || {}
     });
     
     if(UI.DOM.views.login && UI.DOM.views.app) {
