@@ -18,6 +18,10 @@ function showView(viewId) {
 // --- EXPOSE GLOBALS FOR HTML ---
 window.logout = Auth.logout;
 window.changeMonth = UI.changeMonth;
+window.toggleMonthPicker = UI.toggleMonthPicker;
+window.selectMonth = UI.selectMonth;
+window.changePickerYear = UI.changePickerYear;
+window.goToToday = UI.goToToday;
 window.filterTransactions = UI.filterTransactions;
 window.openAddModal = UI.openAddModal;
 window.editTransaction = UI.editTransaction;
@@ -30,6 +34,7 @@ window.toggleDeleteModal = UI.toggleDeleteModal;
 window.toggleReportModal = UI.toggleReportModal;
 window.toggleSummary = UI.toggleSummary;
 window.openReportModal = UI.openReportModal;
+window.filterReportByDateRange = UI.filterReportByDateRange;
 window.showConsolidatedReport = UI.showConsolidatedReport;
 window.downloadReport = async function(type) {
     await UI.downloadReport(type);

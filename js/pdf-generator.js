@@ -33,7 +33,7 @@ async function loadJsPDF() {
 }
 
 // Genera un PDF simple del mes actual
-export async function generatePDFReport(monthly, viewDate, label = '') {
+export async function generatePDFReport(monthly, viewDate, label = '', rangeLabel = '') {
     const jsPDF = await loadJsPDF();
     const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     const monthName = months[viewDate.getMonth()];
@@ -44,7 +44,12 @@ export async function generatePDFReport(monthly, viewDate, label = '') {
 
     const doc = new jsPDF();
     doc.setFontSize(18);
-    const title = label ? `Reporte ${label} - ${monthName} ${year}` : `Reporte Financiero - ${monthName} ${year}`;
+    let title;
+    if (rangeLabel) {
+        title = label ? `Reporte ${label} - ${rangeLabel}` : `Reporte Financiero - ${rangeLabel}`;
+    } else {
+        title = label ? `Reporte ${label} - ${monthName} ${year}` : `Reporte Financiero - ${monthName} ${year}`;
+    }
     doc.text(title, 15, 20);
     doc.setFontSize(12);
     doc.text(`Saldo Final: ${formatMoney(balance)}`, 15, 35);

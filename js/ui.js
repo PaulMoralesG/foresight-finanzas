@@ -1,4 +1,4 @@
-import { AppState, setViewDate, setFilter, getCurrentMonthBudget, getCarryOverForMonth, setCarryOverForMonth } from './state.js';
+import { AppState, setViewDate, setViewMonth, setFilter, getCurrentMonthBudget, getCarryOverForMonth, setCarryOverForMonth } from './state.js';
 import { formatMoney, showNotification, runAsyncAction } from './utils.js';
 import { getCategories } from './config-loader.js';
 import { saveData, logout } from './auth.js';
@@ -8,6 +8,9 @@ import { generatePDFReport } from './pdf-generator.js';
 let EXPENSE_CATEGORIES = [];
 let INCOME_CATEGORIES = [];
 let getCategoryById = () => ({ label: 'Cargando...', icon: '⏳', color: 'bg-gray-100 text-gray-600' });
+
+// Estado del filtro por rango de fechas en el reporte
+let reportDateFilter = null; // { start: 'YYYY-MM-DD', end: 'YYYY-MM-DD' } o null
 
 // Cargar configuración al inicializar el módulo
 async function initConfig() {
@@ -106,7 +109,98 @@ function getPreviousMonthData() {
     });
 }
 
+// Obtener datos filtrados por rango de fechas (o del mes actual si no hay filtro)
+function getReportFilteredData() {
+    if (reportDateFilter) {
+        const startDate = new Date(reportDateFilter.start + 'T00:00:00');
+        const endDate = new Date(reportDateFilter.end + 'T23:59:59');
+        return AppState.expenses.filter(item => {
+            const d = new Date(item.date);
+            return d >= startDate && d <= endDate;
+        });
+    }
+    return getMonthlyData();
+}
 
+// Actualizar las estadísticas del modal con datos filtrados
+function updateReportStats(data, label) {
+    const reportMonthEl = document.getElementById('report-month');
+    const reportBalanceEl = document.getElementById('report-balance');
+    const reportIncomeEl = document.getElementById('report-income');
+    const reportExpensesEl = document.getElementById('report-expenses');
+    const reportCountEl = document.getElementById('report-count');
+
+    const incomeItems = data.filter(i => i.type === 'income');
+    const expenseItems = data.filter(i => i.type === 'expense' || !i.type);
+    const totalIncome = incomeItems.reduce((sum, item) => sum + item.amount, 0);
+    const totalExpenses = expenseItems.reduce((sum, item) => sum + item.amount, 0);
+    const balance = totalIncome - totalExpenses;
+
+    if (reportMonthEl) reportMonthEl.textContent = label;
+    if (reportBalanceEl) reportBalanceEl.textContent = formatMoney(balance);
+    if (reportIncomeEl) reportIncomeEl.textContent = formatMoney(totalIncome);
+    if (reportExpensesEl) reportExpensesEl.textContent = formatMoney(totalExpenses);
+    if (reportCountEl) reportCountEl.textContent = `${data.length} movimiento${data.length !== 1 ? 's' : ''} registrado${data.length !== 1 ? 's' : ''}`;
+}
+
+// Filtrar reporte por rango de fechas (calendario día/mes)
+export function filterReportByDateRange() {
+    const startInput = document.getElementById('report-date-start');
+    const endInput = document.getElementById('report-date-end');
+    const rangeSummary = document.getElementById('report-range-summary');
+
+    if (!startInput || !endInput || !rangeSummary) return;
+
+    const startValue = startInput.value;
+    const endValue = endInput.value;
+
+    if (!startValue || !endValue) {
+        showNotification('⚠️ Selecciona ambas fechas (desde y hasta)', 'error');
+        return;
+    }
+
+    if (startValue > endValue) {
+        showNotification('⚠️ La fecha "Desde" debe ser anterior a "Hasta"', 'error');
+        return;
+    }
+
+    // Guardar filtro activo
+    reportDateFilter = { start: startValue, end: endValue };
+
+    const filtered = getReportFilteredData();
+
+    // Formatear fechas para mostrar
+    const startDate = new Date(startValue + 'T12:00:00');
+    const endDate = new Date(endValue + 'T12:00:00');
+    const formatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
+    const startLabel = startDate.toLocaleDateString('es-ES', formatOptions);
+    const endLabel = endDate.toLocaleDateString('es-ES', formatOptions);
+    const label = `${startLabel} - ${endLabel}`;
+
+    // Actualizar estadísticas del modal
+    updateReportStats(filtered, label);
+
+    // Mostrar resumen del filtro
+    const incomeItems = filtered.filter(i => i.type === 'income');
+    const expenseItems = filtered.filter(i => i.type === 'expense' || !i.type);
+    const totalIncome = incomeItems.reduce((sum, item) => sum + item.amount, 0);
+    const totalExpenses = expenseItems.reduce((sum, item) => sum + item.amount, 0);
+    const balance = totalIncome - totalExpenses;
+
+    rangeSummary.innerHTML = `
+        <div class="space-y-1">
+            <p class="text-[10px] uppercase tracking-wider text-blue-500">${label}</p>
+            <p class="text-sm font-black text-gray-800">Saldo: ${formatMoney(balance)}</p>
+            <div class="grid grid-cols-2 gap-2 text-[10px]">
+                <div class="rounded-lg bg-green-50 p-1.5 text-green-700">Ingresos: ${formatMoney(totalIncome)}</div>
+                <div class="rounded-lg bg-red-50 p-1.5 text-red-700">Gastos: ${formatMoney(totalExpenses)}</div>
+            </div>
+        </div>
+    `;
+    rangeSummary.classList.remove('hidden');
+
+    showNotification(`📅 Mostrando datos del ${label}`, 'success');
+}
 
 // UI UPDATES
 export function updateUI() {
@@ -537,6 +631,102 @@ export function changeMonth(step) {
     updateUI();
 }
 
+// === SELECTOR DE MES (CALENDARIO) ===
+// Nombres de mes en español (centralizados para el picker)
+const PICKER_MONTH_NAMES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+// Año que se está navegando DENTRO del picker (independiente del mes visualizado)
+let pickerDisplayYear = new Date().getFullYear();
+
+// Abrir/cerrar el popover del calendario (mismo patrón que toggleReportModal)
+export function toggleMonthPicker(show) {
+    const modal = document.getElementById('month-picker-modal');
+    const panel = document.getElementById('month-picker-panel');
+    if (!modal || !panel) return;
+
+    if (show) {
+        // Sincroniza el año del picker con el mes que se está visualizando
+        pickerDisplayYear = AppState.currentViewDate.getFullYear();
+        renderMonthPicker();
+        modal.classList.remove('invisible', 'opacity-0');
+        panel.classList.remove('scale-90');
+        panel.classList.add('scale-100');
+    } else {
+        modal.classList.add('invisible', 'opacity-0');
+        panel.classList.remove('scale-100');
+        panel.classList.add('scale-90');
+    }
+}
+
+// Avanzar/retroceder el año mostrado en el picker
+export function changePickerYear(step) {
+    pickerDisplayYear += step;
+    renderMonthPicker();
+}
+
+// Volver al mes/año reales de hoy
+export function goToToday() {
+    const today = new Date();
+    pickerDisplayYear = today.getFullYear();
+    setViewMonth(today.getFullYear(), today.getMonth());
+    toggleMonthPicker(false);
+    updateUI();
+}
+
+// Seleccionar un mes del grid: cambia el mes visualizado, cierra el picker y re-renderiza
+export function selectMonth(monthIndex) {
+    setViewMonth(pickerDisplayYear, monthIndex);
+    toggleMonthPicker(false);
+    updateUI();
+}
+
+// Construye el grid de los 12 meses dentro del picker
+function renderMonthPicker() {
+    const yearEl = document.getElementById('picker-year');
+    const grid = document.getElementById('picker-month-grid');
+    if (!yearEl || !grid) return;
+
+    yearEl.textContent = pickerDisplayYear;
+    grid.innerHTML = '';
+
+    const viewYear = AppState.currentViewDate.getFullYear();
+    const viewMonth = AppState.currentViewDate.getMonth();
+    const today = new Date();
+    const isCurrentRealYear = today.getFullYear() === pickerDisplayYear;
+
+    // Conteo de movimientos por mes (para el indicador de actividad)
+    const countsByMonth = {};
+    AppState.expenses.forEach(item => {
+        const d = new Date(item.date);
+        if (d.getFullYear() === pickerDisplayYear) {
+            countsByMonth[d.getMonth()] = (countsByMonth[d.getMonth()] || 0) + 1;
+        }
+    });
+
+    PICKER_MONTH_NAMES.forEach((name, index) => {
+        const isSelected = pickerDisplayYear === viewYear && index === viewMonth;
+        const isToday = isCurrentRealYear && index === today.getMonth();
+        const hasActivity = countsByMonth[index] > 0;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `relative flex flex-col items-center justify-center py-3 rounded-xl text-xs font-extrabold uppercase transition-all ${
+            isSelected
+                ? 'bg-blue-500 text-white shadow-md scale-105'
+                : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+        }`;
+        btn.innerHTML = `
+            <span class="leading-none">${name.slice(0, 3)}</span>
+            ${hasActivity ? `<span class="mt-1 w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-blue-400'}"></span>` : '<span class="mt-1 w-1.5 h-1.5"></span>'}
+        `;
+        if (isToday && !isSelected) {
+            btn.innerHTML += `<span class="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-blue-500"></span>`;
+        }
+        btn.onclick = () => selectMonth(index);
+        grid.appendChild(btn);
+    });
+}
+
 export function filterTransactions(type) {
     if (type === 'all') {
         setFilter('all');
@@ -724,7 +914,8 @@ export async function downloadReport(type) {
     const feedbackDiv = document.getElementById('report-feedback');
     if (feedbackDiv) feedbackDiv.classList.add('hidden');
     
-    const monthly = getMonthlyData();
+    // Usar datos filtrados por rango si existe filtro activo, o del mes actual
+    const monthly = getReportFilteredData();
     let filtered = monthly;
     let label = '';
     
@@ -734,6 +925,17 @@ export async function downloadReport(type) {
     } else if (type === 'personal') {
         filtered = monthly.filter(i => i.businessType === 'personal');
         label = 'Personal';
+    }
+    
+    // Determinar fecha de referencia para el título del PDF
+    let viewDateForPDF = AppState.currentViewDate;
+    let rangeLabel = '';
+    if (reportDateFilter) {
+        const startDate = new Date(reportDateFilter.start + 'T12:00:00');
+        viewDateForPDF = startDate;
+        const endDate = new Date(reportDateFilter.end + 'T12:00:00');
+        const fmt = { day: 'numeric', month: 'short', year: 'numeric' };
+        rangeLabel = `${startDate.toLocaleDateString('es-ES', fmt)} - ${endDate.toLocaleDateString('es-ES', fmt)}`;
     }
     
     // Si no hay datos, mostrar mensaje DENTRO del modal
@@ -771,10 +973,11 @@ export async function downloadReport(type) {
     try {
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         showNotification(`📄 Generando PDF de ${label}...`, 'success');
-        const pdfResult = await generatePDFReport(filtered, AppState.currentViewDate, label);
+        const pdfResult = await generatePDFReport(filtered, viewDateForPDF, label, rangeLabel);
         if (pdfResult) {
             const { doc, monthName: pdfMonth, year: pdfYear } = pdfResult;
-            const fileName = `Reporte-${label.toLowerCase()}-${pdfMonth}-${pdfYear}.pdf`;
+            const suffix = rangeLabel ? rangeLabel.replace(/[\/\s-]/g, '_') : `${pdfMonth}-${pdfYear}`;
+            const fileName = `Reporte-${label.toLowerCase()}-${suffix}.pdf`;
             if (isMobile) {
                 const pdfUrl = doc.output('bloburl');
                 window.open(pdfUrl, '_blank');
@@ -796,9 +999,10 @@ export async function downloadReport(type) {
     const totalExpenses = expenseItems.reduce((sum, item) => sum + item.amount, 0);
     const balance = totalIncome - totalExpenses;
     const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    const monthName = months[AppState.currentViewDate.getMonth()];
-    const year = AppState.currentViewDate.getFullYear();
-    let report = `REPORTE FINANCIERO - ${monthName.toUpperCase()} ${year} (${label})\n`;
+    const monthName = months[viewDateForPDF.getMonth()];
+    const year = viewDateForPDF.getFullYear();
+    const periodTitle = rangeLabel || `${monthName} ${year}`;
+    let report = `REPORTE FINANCIERO - ${periodTitle.toUpperCase()} (${label})\n`;
     report += `${'='.repeat(50)}\n\n`;
     report += `RESUMEN:\n`;
     report += `  Saldo Final: ${formatMoney(balance)}\n`;
@@ -821,7 +1025,8 @@ export async function downloadReport(type) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `reporte-${label.toLowerCase()}-${monthName}-${year}.txt`;
+    const fileSuffix = rangeLabel ? rangeLabel.replace(/[\/\s-]/g, '_') : `${monthName}-${year}`;
+    a.download = `reporte-${label.toLowerCase()}-${fileSuffix}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -887,6 +1092,15 @@ export function showConsolidatedReport() {
 }
 
 export function openReportModal() {
+    // Resetear filtro de rango de fechas
+    reportDateFilter = null;
+    const startInput = document.getElementById('report-date-start');
+    const endInput = document.getElementById('report-date-end');
+    const rangeSummary = document.getElementById('report-range-summary');
+    if (startInput) startInput.value = '';
+    if (endInput) endInput.value = '';
+    if (rangeSummary) rangeSummary.classList.add('hidden');
+    
     // Ocultar mensaje de feedback previo
     const feedbackDiv = document.getElementById('report-feedback');
     if (feedbackDiv) feedbackDiv.classList.add('hidden');

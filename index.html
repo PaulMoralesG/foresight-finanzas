@@ -111,10 +111,13 @@
             <div class="flex justify-center slide-up">
                 <div class="flex items-center bg-white rounded-full p-1 pl-2 pr-2 shadow-sm border border-gray-100">
                     <button onclick="window.changeMonth(-1)" title="Mes anterior" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition"><i class="fa-solid fa-chevron-left text-xs"></i></button>
-                    <div class="px-4 text-center min-w-[120px]">
-                        <p id="month-display" class="text-sm font-black text-gray-800 capitalize leading-none">---</p>
+                    <button onclick="window.toggleMonthPicker(true)" title="Seleccionar mes" class="px-4 text-center min-w-[120px] rounded-full hover:bg-gray-50 transition flex flex-col items-center">
+                        <span class="flex items-center justify-center gap-1.5">
+                            <p id="month-display" class="text-sm font-black text-gray-800 capitalize leading-none">---</p>
+                            <i class="fa-regular fa-calendar text-[11px] text-blue-400"></i>
+                        </span>
                         <p id="transaction-count" class="text-[9px] font-bold text-gray-400 mt-0.5 uppercase">0 Reg.</p>
-                    </div>
+                    </button>
                     <button onclick="window.changeMonth(1)" title="Mes siguiente" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition"><i class="fa-solid fa-chevron-right text-xs"></i></button>
                 </div>
             </div>
@@ -490,6 +493,43 @@
         </div>
     </div>
 
+    <!-- Month Picker Modal (Calendario) -->
+    <div id="month-picker-modal" class="fixed inset-0 z-[60] flex items-center justify-center invisible opacity-0 transition-all duration-300">
+        <div onclick="window.toggleMonthPicker(false)" class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"></div>
+        <div class="bg-white w-full max-w-xs rounded-[30px] shadow-2xl relative z-10 transform scale-90 transition-transform duration-300 m-4" id="month-picker-panel">
+            <div class="p-6">
+                <!-- Header -->
+                <div class="text-center mb-4">
+                    <div class="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-2xl text-blue-500 mx-auto mb-3">
+                        <i class="fa-regular fa-calendar"></i>
+                    </div>
+                    <h3 class="text-xl font-black text-gray-900 mb-1">Selecciona el mes</h3>
+                    <p class="text-xs font-bold text-gray-400">Elige un mes para ver tus reportes</p>
+                </div>
+
+                <!-- Navegador de año -->
+                <div class="flex items-center justify-between bg-gray-50 rounded-2xl p-2 mb-4">
+                    <button onclick="window.changePickerYear(-1)" title="Año anterior" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-white text-gray-400 transition">
+                        <i class="fa-solid fa-chevron-left text-xs"></i>
+                    </button>
+                    <p id="picker-year" class="text-lg font-black text-gray-800">----</p>
+                    <button onclick="window.changePickerYear(1)" title="Año siguiente" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-white text-gray-400 transition">
+                        <i class="fa-solid fa-chevron-right text-xs"></i>
+                    </button>
+                </div>
+
+                <!-- Grid de meses (4x3) -->
+                <div id="picker-month-grid" class="grid grid-cols-3 gap-2"></div>
+
+                <!-- Acciones -->
+                <div class="mt-4 grid grid-cols-2 gap-2">
+                    <button onclick="window.toggleMonthPicker(false)" class="py-2.5 rounded-2xl font-bold text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 transition">Cancelar</button>
+                    <button onclick="window.goToToday()" class="py-2.5 rounded-2xl font-bold text-xs text-white bg-blue-500 hover:bg-blue-600 transition">Hoy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Report Modal -->
     <div id="report-modal" class="fixed inset-0 z-[60] flex items-center justify-center invisible opacity-0 transition-all duration-300">
         <div onclick="window.toggleReportModal(false)" class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"></div>
@@ -527,9 +567,27 @@
                     <p class="text-xs font-bold text-gray-400" id="report-count">0 movimientos registrados</p>
                 </div>
 
-                <!-- Consolidado por rango -->
+                <!-- Filtro por rango de fechas (con calendario día/mes) -->
+                <div class="mb-3 rounded-2xl border border-blue-200 bg-blue-50/50 p-3">
+                    <p class="text-[10px] font-black uppercase tracking-wider text-blue-600 mb-2">📅 Filtrar por rango</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1">Desde</label>
+                            <input type="date" id="report-date-start" class="w-full rounded-xl border border-blue-200 bg-white px-2 py-2 text-xs font-bold text-gray-700 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1">Hasta</label>
+                            <input type="date" id="report-date-end" class="w-full rounded-xl border border-blue-200 bg-white px-2 py-2 text-xs font-bold text-gray-700 outline-none">
+                        </div>
+                    </div>
+                    <button onclick="window.filterReportByDateRange()" class="mt-2 w-full rounded-xl bg-blue-600 px-3 py-2 text-xs font-black text-white hover:bg-blue-700 transition">Filtrar</button>
+                    <!-- Resultado del filtro (oculto por defecto) -->
+                    <div id="report-range-summary" class="hidden mt-2 rounded-xl bg-white p-3 text-xs font-bold text-gray-600"></div>
+                </div>
+
+                <!-- Consolidado por rango de meses -->
                 <div class="mb-4 rounded-2xl border border-gray-200 bg-gray-50 p-3">
-                    <p class="text-[10px] font-black uppercase tracking-wider text-gray-500">Consolidado</p>
+                    <p class="text-[10px] font-black uppercase tracking-wider text-gray-500">📆 Consolidado mensual</p>
                     <div class="grid grid-cols-2 gap-2 mt-2">
                         <div>
                             <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1">Desde</label>
