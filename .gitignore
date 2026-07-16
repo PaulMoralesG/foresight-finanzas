@@ -6,6 +6,9 @@ js/config.js
 supabase-setup.sql
 database-*.sql
 
+# Excepción: las migraciones versionables sí se commitean
+!supabase/migrations/*.sql
+
 # Scripts de desarrollo y testing
 start-server.ps1
 verificar-github-pages.ps1
