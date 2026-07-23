@@ -62,14 +62,27 @@ window.executeDelete = async function() {
     }, "Borrando...");
 };
 
-// --- TAB BAR NAVIGATION ---
-window.switchTab = function(tab) {
-    const tabs = ['home', 'movements', 'stats', 'profile'];
-    const contentIds = ['tab-home-content', 'tab-movements-content', 'tab-stats-content', 'tab-profile-content'];
+// --- TAB BAR NAVIGATION with Sliding Pill + Swipe ---
+const TAB_ORDER = ['home', 'movements', 'stats', 'profile'];
+const CONTENT_IDS = ['tab-home-content', 'tab-movements-content', 'tab-stats-content', 'tab-profile-content'];
+
+function moveSliderPill(tab) {
+    const pill = document.getElementById('slider-pill');
+    const btn = document.getElementById(`tab-${tab}`);
+    if (!pill || !btn) return;
     
-    tabs.forEach((t, i) => {
+    const nav = document.getElementById('tab-bar');
+    const navRect = nav.getBoundingClientRect();
+    const btnRect = btn.getBoundingClientRect();
+    
+    pill.style.left = (btnRect.left - navRect.left) + 'px';
+    pill.style.width = btnRect.width + 'px';
+}
+
+window.switchTab = function(tab) {
+    TAB_ORDER.forEach((t, i) => {
         const btn = document.getElementById(`tab-${t}`);
-        const content = document.getElementById(contentIds[i]);
+        const content = document.getElementById(CONTENT_IDS[i]);
         
         if (t === tab) {
             btn.classList.add('activo');
@@ -79,10 +92,71 @@ window.switchTab = function(tab) {
             content.classList.add('hidden');
         }
     });
+    
+    moveSliderPill(tab);
 
     if (tab === 'stats') updateStatsTab();
     if (tab === 'profile') updateProfileTab();
 };
+
+// --- SWIPE GESTURE SUPPORT (como Reddit) ---
+let touchStartX = 0;
+let touchStartY = 0;
+let isSwiping = false;
+
+function getCurrentTabIndex() {
+    for (let i = 0; i < TAB_ORDER.length; i++) {
+        const btn = document.getElementById(`tab-${TAB_ORDER[i]}`);
+        if (btn && btn.classList.contains('activo')) return i;
+    }
+    return 0;
+}
+
+document.addEventListener('touchstart', function(e) {
+    // Only handle swipes on the main content area or tabs
+    const target = e.target;
+    const isContent = target.closest('.tab-content') || target.closest('#app-view') || target.closest('.barra-flotante');
+    if (!isContent) return;
+    
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+    isSwiping = false;
+}, { passive: true });
+
+document.addEventListener('touchmove', function(e) {
+    if (touchStartX === 0) return;
+    const deltaX = e.changedTouches[0].screenX - touchStartX;
+    const deltaY = e.changedTouches[0].screenY - touchStartY;
+    
+    // Only activate if horizontal swipe > vertical
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+        isSwiping = true;
+    }
+}, { passive: true });
+
+document.addEventListener('touchend', function(e) {
+    if (!isSwiping || touchStartX === 0) {
+        touchStartX = 0;
+        touchStartY = 0;
+        return;
+    }
+    
+    const deltaX = e.changedTouches[0].screenX - touchStartX;
+    const currentIdx = getCurrentTabIndex();
+    const threshold = 50;
+    
+    if (deltaX < -threshold && currentIdx < TAB_ORDER.length - 1) {
+        // Swipe left -> next tab
+        window.switchTab(TAB_ORDER[currentIdx + 1]);
+    } else if (deltaX > threshold && currentIdx > 0) {
+        // Swipe right -> previous tab
+        window.switchTab(TAB_ORDER[currentIdx - 1]);
+    }
+    
+    touchStartX = 0;
+    touchStartY = 0;
+    isSwiping = false;
+}, { passive: true });
 
 function updateProfileTab() {
     const avatar = document.getElementById('profile-avatar-letter');
@@ -804,6 +878,9 @@ function loginSuccess(userData) {
     
     UI.initCategoryGrid();
     UI.updateUI();
+    
+    // Inicializar slider pill en el tab activo
+    setTimeout(() => moveSliderPill('home'), 100);
     
     // Mostrar tutorial si es primera vez
     setTimeout(() => startOnboarding(), 800);
