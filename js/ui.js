@@ -228,19 +228,19 @@ function updateMonthlyGrowth(currentBusinessIncome) {
         } else if (growthPercentage < 0) {
             // Ventas del negocio bajaron
             growthPercentageEl.textContent = `-${absGrowth}%`;
-            growthPercentageEl.className = 'text-2xl font-black leading-none text-orange-600';
+            growthPercentageEl.className = 'text-2xl font-black leading-none text-orange-600 dark:text-orange-400';
             growthStatusEl.textContent = '¡Hay que mejorar las ventas del negocio!';
             growthEmojiEl.textContent = '📉';
             growthBadgeEl.textContent = 'Bajó';
-            growthBadgeEl.className = 'text-xs font-bold px-2 py-1 rounded-full bg-orange-100 text-orange-600';
+            growthBadgeEl.className = 'text-xs font-bold px-2 py-1 rounded-full bg-orange-100 text-orange-600 dark:bg-orange-900/50 dark:text-orange-300';
         } else {
             // Igual
             growthPercentageEl.textContent = '0%';
-            growthPercentageEl.className = 'text-2xl font-black leading-none text-gray-600';
+            growthPercentageEl.className = 'text-2xl font-black leading-none text-gray-600 dark:text-gray-400';
             growthStatusEl.textContent = 'Igual que el mes pasado';
             growthEmojiEl.textContent = '➡️';
             growthBadgeEl.textContent = 'Estable';
-            growthBadgeEl.className = 'text-xs font-bold px-2 py-1 rounded-full bg-gray-100 text-gray-600';
+            growthBadgeEl.className = 'text-xs font-bold px-2 py-1 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300';
         }
     }
 }
@@ -269,10 +269,10 @@ function updateBudgetAlert(totalSpent) {
         budgetStatusText.textContent = 'Define tu presupuesto mensual';
         budgetEmoji.textContent = '🎯';
         budgetProgressBar.style.width = '0%';
-        budgetProgressBar.className = 'h-full bg-gray-300 transition-all duration-500';
+        budgetProgressBar.className = 'h-full bg-gray-300 dark:bg-gray-600 transition-all duration-500';
         budgetPercentage.textContent = '0%';
         budgetRemaining.textContent = formatMoney(0);
-        budgetAlertCard.className = 'bg-white p-4 rounded-2xl shadow-sm border border-gray-100';
+        budgetAlertCard.className = 'bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700';
         return;
     }
     
@@ -290,7 +290,7 @@ function updateBudgetAlert(totalSpent) {
         budgetStatusText.textContent = '⚠️ ¡Presupuesto excedido!';
         budgetEmoji.textContent = '🚨';
         budgetProgressBar.className = 'h-full bg-red-500 transition-all duration-500';
-        budgetAlertCard.className = 'bg-gradient-to-br from-red-50 to-red-100 p-4 rounded-2xl shadow-lg border-2 border-red-300 animate-pulse';
+        budgetAlertCard.className = 'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/60 dark:to-red-950 p-4 rounded-2xl shadow-lg border-2 border-red-300 dark:border-red-700 animate-pulse';
         
         // Mostrar notificación si se acaba de exceder
         if (percentageUsed >= 100 && percentageUsed < 105) {
@@ -301,25 +301,25 @@ function updateBudgetAlert(totalSpent) {
         budgetStatusText.textContent = '⚠️ Cerca del límite';
         budgetEmoji.textContent = '⚠️';
         budgetProgressBar.className = 'h-full bg-orange-500 transition-all duration-500';
-        budgetAlertCard.className = 'bg-gradient-to-br from-orange-50 to-yellow-50 p-4 rounded-2xl shadow-md border-2 border-orange-200';
+        budgetAlertCard.className = 'bg-gradient-to-br from-orange-50 to-yellow-50 dark:from-orange-900/60 dark:to-yellow-900/60 p-4 rounded-2xl shadow-md border-2 border-orange-200 dark:border-orange-700';
     } else if (percentageUsed >= 75) {
         // PRECAUCIÓN - Alto uso
         budgetStatusText.textContent = 'Controlando gastos 👀';
         budgetEmoji.textContent = '📊';
         budgetProgressBar.className = 'h-full bg-yellow-500 transition-all duration-500';
-        budgetAlertCard.className = 'bg-white p-4 rounded-2xl shadow-sm border-2 border-yellow-200';
+        budgetAlertCard.className = 'bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border-2 border-yellow-200 dark:border-yellow-700';
     } else if (percentageUsed >= 50) {
         // MEDIO - Uso moderado
         budgetStatusText.textContent = 'Vas bien 👍';
         budgetEmoji.textContent = '💪';
         budgetProgressBar.className = 'h-full bg-blue-500 transition-all duration-500';
-        budgetAlertCard.className = 'bg-white p-4 rounded-2xl shadow-sm border border-gray-100';
+        budgetAlertCard.className = 'bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700';
     } else {
         // BUENO - Bajo uso
         budgetStatusText.textContent = '¡Excelente control! 🎉';
         budgetEmoji.textContent = '✅';
         budgetProgressBar.className = 'h-full bg-green-500 transition-all duration-500';
-        budgetAlertCard.className = 'bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-2xl shadow-sm border border-green-200';
+        budgetAlertCard.className = 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/60 dark:to-emerald-900/60 p-4 rounded-2xl shadow-sm border border-green-200 dark:border-green-700';
     }
 }
 
