@@ -229,19 +229,28 @@ html.dark .text-gray-600 { color: #9CA3AF !important; }
             background-color: #374151;
         }
 
-        /* === TAB BAR === */
+        /* === FLOATING PILL TAB BAR === */
         #tab-bar {
             padding-bottom: max(env(safe-area-inset-bottom, 0px), 4px);
-            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
+            padding-left: 6px;
+            padding-right: 6px;
+            border-radius: 28px;
+            max-width: 580px;
+            margin: 0 auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+            transition: border-color 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
         }
 
         html.dark #tab-bar {
-            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
         }
 
         .tab-btn {
             position: relative;
-            transition: color 0.2s ease, transform 0.2s ease;
+            transition: color 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+            border-radius: 16px;
+            padding: 8px 4px;
+            margin: 2px 0;
         }
 
         .tab-btn:active {
@@ -260,16 +269,17 @@ html.dark .text-gray-600 { color: #9CA3AF !important; }
             transform: scale(1.05);
         }
 
+        /* Pill indicator dot instead of top bar */
         .tab-btn.active-tab::before {
             content: '';
             position: absolute;
-            top: 0;
+            bottom: 0;
             left: 50%;
             transform: translateX(-50%);
-            width: 20px;
+            width: 16px;
             height: 3px;
             background: #2563EB;
-            border-radius: 0 0 3px 3px;
+            border-radius: 3px 3px 0 0;
         }
 
         html.dark .tab-btn.active-tab::before {
@@ -285,7 +295,7 @@ html.dark .text-gray-600 { color: #9CA3AF !important; }
             display: none;
         }
 
-        /* Adjust main padding for tab bar */
+        /* Adjust main padding for floating tab bar */
         .safe-area-inset-bottom-tab {
             padding-bottom: max(env(safe-area-inset-bottom, 0px), 4px);
         }
