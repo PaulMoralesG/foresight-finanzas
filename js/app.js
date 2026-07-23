@@ -72,14 +72,10 @@ window.switchTab = function(tab) {
         const content = document.getElementById(contentIds[i]);
         
         if (t === tab) {
-            btn.classList.add('active-tab');
-            btn.classList.remove('text-gray-400', 'dark:text-gray-500');
-            btn.classList.add('text-blue-600', 'dark:text-blue-400');
+            btn.classList.add('activo');
             content.classList.remove('hidden');
         } else {
-            btn.classList.remove('active-tab');
-            btn.classList.remove('text-blue-600', 'dark:text-blue-400');
-            btn.classList.add('text-gray-400', 'dark:text-gray-500');
+            btn.classList.remove('activo');
             content.classList.add('hidden');
         }
     });

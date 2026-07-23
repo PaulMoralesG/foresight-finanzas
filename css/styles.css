@@ -230,60 +230,108 @@ html.dark .text-gray-600 { color: #9CA3AF !important; }
         }
 
         /* === FLOATING PILL TAB BAR === */
-        #tab-bar {
-            padding-bottom: max(env(safe-area-inset-bottom, 0px), 4px);
-            padding-left: 6px;
-            padding-right: 6px;
-            border-radius: 28px;
-            max-width: 580px;
-            margin: 0 auto;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-            transition: border-color 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
+        .barra-flotante {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 40;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 2px;
+            padding: 6px 12px;
+            padding-bottom: max(env(safe-area-inset-bottom, 0px), 6px);
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(200, 200, 210, 0.4);
+            border-radius: 32px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            max-width: 520px;
+            width: calc(100% - 32px);
+            transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
         }
 
-        html.dark #tab-bar {
+        html.dark .barra-flotante {
+            background: rgba(31, 41, 55, 0.95);
+            border-color: rgba(75, 85, 99, 0.5);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
         }
 
-        .tab-btn {
+        .barra-flotante .item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            padding: 8px 6px;
+            min-width: 56px;
+            text-decoration: none;
+            color: #9CA3AF;
+            transition: color 0.2s ease, transform 0.2s ease;
             position: relative;
-            transition: color 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
             border-radius: 16px;
-            padding: 8px 4px;
-            margin: 2px 0;
         }
 
-        .tab-btn:active {
+        .barra-flotante .item:active {
             transform: scale(0.92);
         }
 
-        .tab-btn.active-tab {
+        .barra-flotante .item .icono {
+            font-size: 20px;
+            line-height: 1;
+            transition: transform 0.2s ease;
+        }
+
+        .barra-flotante .item .texto {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            line-height: 1;
+        }
+
+        .barra-flotante .item.activo {
             color: #2563EB;
         }
 
-        html.dark .tab-btn.active-tab {
+        html.dark .barra-flotante .item.activo {
             color: #60A5FA;
         }
 
-        .tab-btn.active-tab i {
-            transform: scale(1.05);
+        .barra-flotante .item.activo .icono {
+            transform: scale(1.08);
         }
 
-        /* Pill indicator dot instead of top bar */
-        .tab-btn.active-tab::before {
+        /* Pill indicator dot */
+        .barra-flotante .item.activo::after {
             content: '';
             position: absolute;
-            bottom: 0;
+            bottom: -2px;
             left: 50%;
             transform: translateX(-50%);
             width: 16px;
             height: 3px;
             background: #2563EB;
-            border-radius: 3px 3px 0 0;
+            border-radius: 3px;
         }
 
-        html.dark .tab-btn.active-tab::before {
+        html.dark .barra-flotante .item.activo::after {
             background: #60A5FA;
+        }
+
+        /* FAB centered above the bar */
+        .barra-flotante .fab-center {
+            position: absolute;
+            top: -26px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            width: 52px;
+            height: 52px;
+            border: none;
+            cursor: pointer;
         }
 
         /* Tab content transitions */
@@ -293,11 +341,6 @@ html.dark .text-gray-600 { color: #9CA3AF !important; }
 
         .tab-content.hidden {
             display: none;
-        }
-
-        /* Adjust main padding for floating tab bar */
-        .safe-area-inset-bottom-tab {
-            padding-bottom: max(env(safe-area-inset-bottom, 0px), 4px);
         }
 
         /* Keep existing FAB but ensure it's above the tab bar */

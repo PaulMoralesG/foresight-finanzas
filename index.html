@@ -504,42 +504,37 @@
         </main>
 
         <!-- TAB BAR (Floating Pill Navigation) -->
-        <nav id="tab-bar" class="fixed bottom-4 z-40 bg-white/90 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg shadow-black/10 dark:shadow-black/30 safe-area-inset-bottom-tab">
-            <div class="flex items-center justify-around max-w-lg mx-auto relative">
-                <!-- FAB over tab bar (centered, floating) -->
-                <div class="absolute -top-7 left-1/2 -translate-x-1/2 z-10">
-                    <button onclick="window.openAddModal()" title="Agregar nuevo movimiento" class="add-button w-14 h-14 rounded-full flex items-center justify-center text-xl shadow-xl shadow-blue-500/40 hover:scale-110 transition-transform active:scale-95 fab-gradient">
-                        <i class="fa-solid fa-plus"></i>
-                    </button>
-                </div>
+        <nav id="tab-bar" class="barra-flotante">
+            
+            <!-- FAB (centrado flotante) -->
+            <button onclick="window.openAddModal()" title="Agregar nuevo movimiento" class="fab-center w-14 h-14 rounded-full flex items-center justify-center text-xl shadow-xl shadow-blue-500/40 hover:scale-110 transition-transform active:scale-95 fab-gradient">
+                <i class="fa-solid fa-plus"></i>
+            </button>
 
-                <!-- Tab 1: Inicio -->
-                <button onclick="window.switchTab('home')" id="tab-home" class="tab-btn flex-1 flex flex-col items-center justify-center py-2 pt-3 gap-0.5 text-gray-400 dark:text-gray-500 transition-colors relative active-tab">
-                    <i class="fa-solid fa-house text-xl"></i>
-                    <span class="text-[9px] font-bold uppercase tracking-wider">Inicio</span>
-                </button>
+            <!-- Opción 1: Inicio -->
+            <a href="#" onclick="window.switchTab('home'); return false;" id="tab-home" class="item activo">
+                <span class="icono"><i class="fa-solid fa-house"></i></span>
+                <span class="texto">Inicio</span>
+            </a>
 
-                <!-- Tab 2: Movimientos -->
-                <button onclick="window.switchTab('movements')" id="tab-movements" class="tab-btn flex-1 flex flex-col items-center justify-center py-2 pt-3 gap-0.5 text-gray-400 dark:text-gray-500 transition-colors relative">
-                    <i class="fa-solid fa-arrow-trend-up text-xl"></i>
-                    <span class="text-[9px] font-bold uppercase tracking-wider">Movimientos</span>
-                </button>
+            <!-- Opción 2: Movimientos -->
+            <a href="#" onclick="window.switchTab('movements'); return false;" id="tab-movements" class="item">
+                <span class="icono"><i class="fa-solid fa-arrow-trend-up"></i></span>
+                <span class="texto">Movimientos</span>
+            </a>
 
-                <!-- Spacer for FAB -->
-                <div class="flex-1"></div>
+            <!-- Opción 3: Estadísticas -->
+            <a href="#" onclick="window.switchTab('stats'); return false;" id="tab-stats" class="item">
+                <span class="icono"><i class="fa-solid fa-chart-pie"></i></span>
+                <span class="texto">Estadísticas</span>
+            </a>
 
-                <!-- Tab 3: Stats -->
-                <button onclick="window.switchTab('stats')" id="tab-stats" class="tab-btn flex-1 flex flex-col items-center justify-center py-2 pt-3 gap-0.5 text-gray-400 dark:text-gray-500 transition-colors relative">
-                    <i class="fa-solid fa-chart-pie text-xl"></i>
-                    <span class="text-[9px] font-bold uppercase tracking-wider">Estadísticas</span>
-                </button>
+            <!-- Opción 4: Perfil -->
+            <a href="#" onclick="window.switchTab('profile'); return false;" id="tab-profile" class="item">
+                <span class="icono"><i class="fa-solid fa-user"></i></span>
+                <span class="texto">Perfil</span>
+            </a>
 
-                <!-- Tab 4: Perfil -->
-                <button onclick="window.switchTab('profile')" id="tab-profile" class="tab-btn flex-1 flex flex-col items-center justify-center py-2 pt-3 gap-0.5 text-gray-400 dark:text-gray-500 transition-colors relative">
-                    <i class="fa-solid fa-user text-xl"></i>
-                    <span class="text-[9px] font-bold uppercase tracking-wider">Perfil</span>
-                </button>
-            </div>
         </nav>
 
     </section>
