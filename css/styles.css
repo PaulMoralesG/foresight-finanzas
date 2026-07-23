@@ -218,79 +218,85 @@ html.dark .text-gray-600 { color: #9CA3AF !important; }
             background-color: #374151;
         }
 
-        /* === TAB BAR (WhatsApp-style Glassmorphism con Slider) === */
+        /* === TAB BAR (Píldora Flotante + Sliding Pill) === */
         .barra-flotante {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
+            position: fixed !important;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
             display: flex;
             justify-content: space-around;
             align-items: center;
-            width: 100%;
-            padding: 6px 12px;
-            padding-bottom: max(env(safe-area-inset-bottom, 0px), 6px);
-            gap: 2px;
-            background: rgba(25, 25, 30, 0.85);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.06);
+            width: auto;
+            min-width: 280px;
+            max-width: 360px;
+            padding: 6px 10px;
+            gap: 0;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            border-radius: 50px;
             z-index: 1000;
-            position: relative;
             overflow: visible;
-            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
         }
 
         html.dark .barra-flotante {
             background: rgba(20, 22, 28, 0.92);
-            border-top-color: rgba(75, 85, 99, 0.3);
+            border-color: rgba(75, 85, 99, 0.25);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
         }
 
         .item {
             text-decoration: none;
-            color: rgba(255, 255, 255, 0.45);
+            color: rgba(100, 100, 120, 0.7);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             font-family: sans-serif;
-            font-size: 11px;
+            font-size: 10px;
             padding: 6px 4px;
-            min-width: 56px;
+            min-width: 48px;
             border-radius: 30px;
             transition: color 0.25s ease;
             position: relative;
             z-index: 2;
             flex: 1;
-            max-width: 80px;
+            max-width: 72px;
             cursor: pointer;
             user-select: none;
             -webkit-user-select: none;
         }
 
+        html.dark .item {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
         .item .icono {
-            font-size: 20px;
+            font-size: 18px;
             line-height: 1;
-            transition: transform 0.3s ease;
+            transition: transform 0.2s ease;
             position: relative;
             z-index: 2;
         }
 
         .item .texto {
-            margin-top: 3px;
-            font-size: 8px;
+            margin-top: 2px;
+            font-size: 7.5px;
             font-weight: 600;
             letter-spacing: 0.3px;
             position: relative;
             z-index: 2;
         }
 
-        .item:hover {
-            color: rgba(255, 255, 255, 0.8);
+        .item.activo {
+            color: #2563EB;
         }
 
-        .item.activo {
-            color: #ffffff;
+        html.dark .item.activo {
+            color: #60A5FA;
         }
 
         .item.activo .icono {
@@ -302,19 +308,23 @@ html.dark .text-gray-600 { color: #9CA3AF !important; }
             position: absolute;
             top: 4px;
             bottom: 4px;
-            left: 0;
-            width: 0;
-            background: rgba(255, 255, 255, 0.1);
+            left: 10px;
+            width: 48px;
+            background: rgba(37, 99, 235, 0.08);
             border-radius: 30px;
-            transition: left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transition: left 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
             z-index: 1;
             pointer-events: none;
+        }
+
+        html.dark .slider-pill {
+            background: rgba(96, 165, 250, 0.12);
         }
 
         /* FAB centered above the bar */
         .barra-flotante .fab-center {
             position: absolute;
-            top: -24px;
+            top: -26px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 20;
@@ -324,9 +334,9 @@ html.dark .text-gray-600 { color: #9CA3AF !important; }
             cursor: pointer;
         }
 
-        /* Tab content swipe transitions - slide horizontal */
+        /* Tab content transitions */
         .tab-content {
-            transition: opacity 0.3s ease, transform 0.3s ease;
+            transition: opacity 0.3s ease;
         }
 
         .tab-content.hidden {
