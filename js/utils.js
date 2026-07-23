@@ -12,7 +12,12 @@ export function showNotification(message, type = 'info') {
 
     const toast = document.createElement('div');
     toast.id = 'toast-notification';
-    toast.className = `fixed z-[9999] flex items-start p-4 space-x-3 text-gray-500 bg-white rounded-lg shadow-2xl slide-up border-l-4 ${type === 'error' ? 'border-red-500' : 'border-blue-500'}`;
+    const isDark = document.documentElement.classList.contains('dark');
+    const toastBg = isDark ? 'bg-gray-800' : 'bg-white';
+    const toastText = isDark ? 'text-gray-800' : 'text-gray-800';
+    const toastTextDark = isDark ? 'text-white' : 'text-gray-800';
+    const borderColor = type === 'error' ? 'border-red-500' : 'border-blue-500';
+    toast.className = `fixed z-[9999] flex items-start p-4 space-x-3 text-gray-500 rounded-lg shadow-2xl slide-up border-l-4 ${toastBg} ${borderColor}`;
     
     // Estilos inline más robustos para móviles - forzar centrado
     // z-index muy alto para que siempre esté por encima de modales
@@ -32,7 +37,7 @@ export function showNotification(message, type = 'info') {
 
     toast.innerHTML = `
         ${icon}
-        <div class="text-sm font-bold text-gray-800" style="word-wrap: break-word; overflow-wrap: break-word; flex: 1; padding-left: 0.5rem; line-height: 1.4;">${message}</div>
+        <div class="text-sm font-bold ${toastTextDark}" style="word-wrap: break-word; overflow-wrap: break-word; flex: 1; padding-left: 0.5rem; line-height: 1.4;">${message}</div>
     `;
 
     document.body.appendChild(toast);

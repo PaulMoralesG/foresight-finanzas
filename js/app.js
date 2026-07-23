@@ -88,21 +88,6 @@ window.switchTab = function(tab) {
     if (tab === 'profile') updateProfileTab();
 };
 
-function updateStatsTab() {
-    const totalEl = document.getElementById('tab-stats-total');
-    const incomeEl = document.getElementById('tab-stats-income');
-    const expenseEl = document.getElementById('tab-stats-expense');
-    if (!totalEl) return;
-    
-    const monthlyData = getMonthlyData();
-    const totalIncome = monthlyData.filter(i => i.type === 'income').reduce((s, i) => s + i.amount, 0);
-    const totalExpense = monthlyData.filter(i => i.type === 'expense').reduce((s, i) => s + i.amount, 0);
-    
-    incomeEl.textContent = `$${totalIncome.toFixed(2)}`;
-    expenseEl.textContent = `$${totalExpense.toFixed(2)}`;
-    totalEl.textContent = `$${(totalIncome - totalExpense).toFixed(2)}`;
-}
-
 function updateProfileTab() {
     const avatar = document.getElementById('profile-avatar-letter');
     const nameEl = document.getElementById('profile-name');
