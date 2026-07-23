@@ -7,6 +7,11 @@
     <meta name="description" content="Control financiero simple para emprendedores. Separa tus finanzas personales de tu negocio, ve tu crecimiento mes a mes. Sin complicaciones.">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -27,49 +32,55 @@
 </head>
 <body class="safe-area-inset-bottom">
 
-    <section id="login-view" class="hidden-view min-h-screen flex flex-col items-center justify-center p-6 bg-white">
+    <section id="login-view" class="hidden-view min-h-screen flex flex-col items-center justify-center p-6 bg-white dark:bg-gray-900">
         
         <div class="w-full max-w-sm slide-up">
+            <div class="flex justify-between items-start mb-4">
+                <div></div>
+                <button onclick="window.toggleDarkMode()" id="dark-toggle-login" title="Modo oscuro" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 flex items-center justify-center transition-all text-sm">
+                    <i class="fa-solid fa-moon" id="dark-icon-login"></i>
+                </button>
+            </div>
             <div class="flex justify-center mb-8">
                 <div class="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-[30px] flex items-center justify-center text-white text-4xl shadow-lg shadow-blue-500/30">
                     <i class="fa-solid fa-chart-line"></i>
                 </div>
             </div>
-            <h1 class="text-4xl font-black text-center mb-2 text-gray-900">Foresight Finanzas</h1>
-            <p class="text-center text-gray-500 font-bold text-sm mb-3">Organiza tus finanzas personales y de negocio<br>de forma clara y en un solo lugar</p>
+            <h1 class="text-4xl font-black text-center mb-2 text-gray-900 dark:text-white">Foresight Finanzas</h1>
+            <p class="text-center text-gray-500 dark:text-gray-400 font-bold text-sm mb-3">Organiza tus finanzas personales y de negocio<br>de forma clara y en un solo lugar</p>
             <div class="flex justify-center gap-2 mb-8 flex-wrap px-4">
-                <span class="text-xs font-bold bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full">📊 Sin complicaciones</span>
-                <span class="text-xs font-bold bg-green-50 text-green-600 px-3 py-1.5 rounded-full">💼 Personal + Negocio</span>
-                <span class="text-xs font-bold bg-purple-50 text-purple-600 px-3 py-1.5 rounded-full">📈 Visualiza tu crecimiento</span>
+                <span class="text-xs font-bold bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 px-3 py-1.5 rounded-full">📊 Sin complicaciones</span>
+                <span class="text-xs font-bold bg-green-50 dark:bg-green-900/40 text-green-600 dark:text-green-300 px-3 py-1.5 rounded-full">💼 Personal + Negocio</span>
+                <span class="text-xs font-bold bg-purple-50 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300 px-3 py-1.5 rounded-full">📈 Visualiza tu crecimiento</span>
             </div>
 
             <form id="auth-form" class="space-y-4" autocomplete="off">
                 <div class="grid grid-cols-2 gap-3" id="name-fields" style="display: none;">
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-1 ml-1">Nombre</label>
-                        <input type="text" id="auth-firstname" class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-gray-700 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Ej. Juan" autocomplete="given-name">
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 ml-1">Nombre</label>
+                        <input type="text" id="auth-firstname" class="w-full p-4 bg-gray-100 dark:bg-gray-800 rounded-2xl font-bold text-gray-700 dark:text-gray-200 outline-none focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Ej. Juan" autocomplete="given-name">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-1 ml-1">Apellido</label>
-                        <input type="text" id="auth-lastname" class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-gray-700 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Ej. Pérez" autocomplete="family-name">
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 ml-1">Apellido</label>
+                        <input type="text" id="auth-lastname" class="w-full p-4 bg-gray-100 dark:bg-gray-800 rounded-2xl font-bold text-gray-700 dark:text-gray-200 outline-none focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Ej. Pérez" autocomplete="family-name">
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1 ml-1">Email</label>
-                    <input type="email" id="auth-email" required class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-gray-700 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all" placeholder="ejemplo@correo.com" autocomplete="email">
+                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 ml-1">Email</label>
+                    <input type="email" id="auth-email" required class="w-full p-4 bg-gray-100 dark:bg-gray-800 rounded-2xl font-bold text-gray-700 dark:text-gray-200 outline-none focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500 transition-all" placeholder="ejemplo@correo.com" autocomplete="email">
                 </div>
                 <div>
                     <div class="flex justify-between items-center mb-1 ml-1">
-                        <label class="block text-xs font-bold text-gray-500">Contraseña</label>
-                        <button type="button" id="btn-forgot-password" class="text-xs font-bold text-blue-600 hover:underline">¿Has olvidado tu contraseña?</button>
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400">Contraseña</label>
+                        <button type="button" id="btn-forgot-password" class="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">¿Has olvidado tu contraseña?</button>
                     </div>
                     <div class="relative">
-                        <input type="password" id="auth-password" required class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-gray-700 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all pr-12" placeholder="Ingrese su contraseña" autocomplete="new-password">
+                        <input type="password" id="auth-password" required class="w-full p-4 bg-gray-100 dark:bg-gray-800 rounded-2xl font-bold text-gray-700 dark:text-gray-200 outline-none focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500 transition-all pr-12" placeholder="Ingrese su contraseña" autocomplete="new-password">
                         <button type="button" id="toggle-password" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none flex items-center justify-center p-2">
                             <i class="fa-solid fa-eye-slash text-lg" id="toggle-password-icon"></i>
                         </button>
                     </div>
-                    <p id="password-requirements" class="text-[10px] text-gray-400 mt-2 ml-1 hidden-view">
+                    <p id="password-requirements" class="text-[10px] text-gray-400 dark:text-gray-500 mt-2 ml-1 hidden-view">
                         Debe tener al menos 8 caracteres, mayúscula, minúscula, número y un carácter especial.
                     </p>
                 </div>
@@ -78,7 +89,7 @@
                     Iniciar Sesión
                 </button>
                 <div class="text-center mt-4">
-                    <p class="text-sm font-bold text-gray-400">
+                    <p class="text-sm font-bold text-gray-400 dark:text-gray-500">
                         <span id="auth-toggle-text">¿No tienes cuenta?</span> 
                         <button type="button" id="btn-auth-toggle" class="text-blue-600 hover:text-blue-700 hover:underline transition-all">Regístrate</button>
                     </p>
@@ -90,17 +101,18 @@
         </div>
     </section>
 
-    <section id="app-view" class="hidden-view pb-32 bg-gray-50 min-h-screen">
+    <section id="app-view" class="hidden-view pb-32 bg-gray-50 dark:bg-gray-900 min-h-screen">
         
         <!-- Header: User & Actions -->
-        <div class="px-5 pt-4 pb-2 flex justify-between items-center bg-white/80 backdrop-blur-md sticky top-0 z-30">
+        <div class="px-5 pt-4 pb-2 flex justify-between items-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-md sticky top-0 z-30">
             <div class="flex flex-col">
-                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Hola,</span>
-                <span class="font-black text-lg text-gray-800 leading-none" id="user-display">Usuario</span>
+                <span class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Hola,</span>
+                <span class="font-black text-lg text-gray-800 dark:text-white leading-none" id="user-display">Usuario</span>
             </div>
             <div class="flex gap-2">
-                <button onclick="window.showTutorial()" title="Ver tutorial interactivo" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white shadow-sm border border-gray-100 text-gray-400 hover:text-blue-500 hover:border-blue-200 transition flex items-center justify-center active:scale-95 text-sm"><i class="fa-solid fa-question"></i></button>
-                <button onclick="window.logout()" title="Cerrar sesión" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white shadow-sm border border-gray-100 text-gray-400 hover:text-red-500 hover:border-red-200 transition flex items-center justify-center active:scale-95 text-sm"><i class="fa-solid fa-power-off"></i></button>
+                <button onclick="window.toggleDarkMode()" id="dark-toggle-app" title="Modo oscuro" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 text-gray-400 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 transition flex items-center justify-center active:scale-95 text-sm"><i class="fa-solid fa-moon" id="dark-icon-app"></i></button>
+                <button onclick="window.showTutorial()" title="Ver tutorial interactivo" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 text-gray-400 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 transition flex items-center justify-center active:scale-95 text-sm"><i class="fa-solid fa-question"></i></button>
+                <button onclick="window.logout()" title="Cerrar sesión" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 text-gray-400 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 transition flex items-center justify-center active:scale-95 text-sm"><i class="fa-solid fa-power-off"></i></button>
             </div>
         </div>
 
@@ -109,13 +121,13 @@
             
             <!-- Month Navigator (Capsule Style) -->
             <div class="flex justify-center slide-up">
-                <div class="flex items-center bg-white rounded-full p-1 pl-2 pr-2 shadow-sm border border-gray-100">
-                    <button onclick="window.changeMonth(-1)" title="Mes anterior" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+                <div class="flex items-center bg-white dark:bg-gray-800 rounded-full p-1 pl-2 pr-2 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <button onclick="window.changeMonth(-1)" title="Mes anterior" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 dark:text-gray-500 transition"><i class="fa-solid fa-chevron-left text-xs"></i></button>
                     <div class="px-4 text-center min-w-[120px]">
-                        <p id="month-display" class="text-sm font-black text-gray-800 capitalize leading-none">---</p>
-                        <p id="transaction-count" class="text-[9px] font-bold text-gray-400 mt-0.5 uppercase">0 Reg.</p>
+                        <p id="month-display" class="text-sm font-black text-gray-800 dark:text-white capitalize leading-none">---</p>
+                        <p id="transaction-count" class="text-[9px] font-bold text-gray-400 dark:text-gray-500 mt-0.5 uppercase">0 Reg.</p>
                     </div>
-                    <button onclick="window.changeMonth(1)" title="Mes siguiente" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+                    <button onclick="window.changeMonth(1)" title="Mes siguiente" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 dark:text-gray-500 transition"><i class="fa-solid fa-chevron-right text-xs"></i></button>
                 </div>
             </div>
 
@@ -140,44 +152,44 @@
             <!-- STATS ROW (Floating Pills) -->
             <div class="grid grid-cols-2 gap-2.5 slide-up" style="animation-delay: 0.1s;">
                 <!-- Income Pill -->
-                <div onclick="window.filterTransactions('income')" class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2 cursor-pointer hover:border-green-200 transition group">
-                    <div class="w-8 h-8 rounded-xl bg-green-50 text-green-500 flex items-center justify-center text-sm group-hover:scale-110 transition"><i class="fa-solid fa-arrow-down"></i></div>
+                <div onclick="window.filterTransactions('income')" class="bg-white dark:bg-gray-800 p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-2 cursor-pointer hover:border-green-200 dark:hover:border-green-700 transition group">
+                    <div class="w-8 h-8 rounded-xl bg-green-50 dark:bg-green-900/40 text-green-500 dark:text-green-400 flex items-center justify-center text-sm group-hover:scale-110 transition"><i class="fa-solid fa-arrow-down"></i></div>
                     <div>
-                        <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Ingresos</p>
-                        <p class="text-base font-black text-gray-800 leading-tight" id="dash-income">$0</p>
+                        <p class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Ingresos</p>
+                        <p class="text-base font-black text-gray-800 dark:text-white leading-tight" id="dash-income">$0</p>
                     </div>
                 </div>
                 <!-- Expense Pill -->
-                <div onclick="window.filterTransactions('expense')" class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2 cursor-pointer hover:border-red-200 transition group">
-                    <div class="w-8 h-8 rounded-xl bg-red-50 text-red-500 flex items-center justify-center text-sm group-hover:scale-110 transition"><i class="fa-solid fa-arrow-up"></i></div>
+                <div onclick="window.filterTransactions('expense')" class="bg-white dark:bg-gray-800 p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-2 cursor-pointer hover:border-red-200 dark:hover:border-red-700 transition group">
+                    <div class="w-8 h-8 rounded-xl bg-red-50 dark:bg-red-900/40 text-red-500 dark:text-red-400 flex items-center justify-center text-sm group-hover:scale-110 transition"><i class="fa-solid fa-arrow-up"></i></div>
                     <div>
-                        <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Gastos</p>
-                        <p class="text-base font-black text-gray-800 leading-tight" id="dash-expense">$0</p>
+                        <p class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Gastos</p>
+                        <p class="text-base font-black text-gray-800 dark:text-white leading-tight" id="dash-expense">$0</p>
                     </div>
                 </div>
             </div>
 
             <!-- UTILIDAD DEL NEGOCIO -->
             <div class="slide-up" style="animation-delay: 0.15s;">
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-2">
-                            <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-500 flex items-center justify-center text-sm">
+                            <div class="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-900/40 text-purple-500 dark:text-purple-400 flex items-center justify-center text-sm">
                                 <i class="fa-solid fa-chart-line"></i>
                             </div>
                             <div>
-                                <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Utilidad del Negocio</p>
-                                <p class="text-[10px] font-bold text-gray-500" id="profit-status">¿El negocio está dando utilidad?</p>
+                                <p class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Utilidad del Negocio</p>
+                                <p class="text-[10px] font-bold text-gray-500 dark:text-gray-400" id="profit-status">¿El negocio está dando utilidad?</p>
                             </div>
                         </div>
                         <div class="text-2xl" id="profit-emoji">💼</div>
                     </div>
                     <div class="flex items-end justify-between">
                         <div>
-                            <p class="text-2xl font-black leading-none mb-1" id="profit-amount">$0</p>
-                            <p class="text-[10px] font-bold text-gray-400" id="profit-margin">Margen: 0%</p>
+                            <p class="text-2xl font-black leading-none mb-1 text-gray-800 dark:text-white" id="profit-amount">$0</p>
+                            <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500" id="profit-margin">Margen: 0%</p>
                         </div>
-                        <div class="text-right text-[9px] font-bold text-gray-400 leading-tight">
+                        <div class="text-right text-[9px] font-bold text-gray-400 dark:text-gray-500 leading-tight">
                             <p>Ventas - Gastos Negocio</p>
                         </div>
                     </div>
@@ -186,28 +198,28 @@
 
             <!-- COMPARACIÓN MES A MES -->
             <div class="slide-up" style="animation-delay: 0.17s;">
-                <div class="bg-gradient-to-br from-orange-50 to-yellow-50 p-4 rounded-2xl shadow-sm border border-orange-100">
+                <div class="bg-gradient-to-br from-orange-50 to-yellow-50 dark:from-orange-900/30 dark:to-yellow-900/30 p-4 rounded-2xl shadow-sm border border-orange-100 dark:border-orange-800/50">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-2">
                             <div class="w-9 h-9 rounded-xl bg-orange-500 text-white flex items-center justify-center text-sm">
                                 <i class="fa-solid fa-chart-simple"></i>
                             </div>
                             <div>
-                                <p class="text-[9px] font-bold text-orange-600 uppercase tracking-wider">Comparación Mensual</p>
-                                <p class="text-[10px] font-bold text-orange-700" id="growth-status">Crecimiento del negocio</p>
+                                <p class="text-[9px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider">Comparación Mensual</p>
+                                <p class="text-[10px] font-bold text-orange-700 dark:text-orange-300" id="growth-status">Crecimiento del negocio</p>
                             </div>
                         </div>
                         <div class="text-2xl" id="growth-emoji">📊</div>
                     </div>
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-bold text-gray-600 mb-1">Ingresos vs mes anterior</p>
+                            <p class="text-sm font-bold text-gray-600 dark:text-gray-400 mb-1">Ingresos vs mes anterior</p>
                             <div class="flex items-center gap-2">
-                                <p class="text-2xl font-black leading-none" id="growth-percentage">0%</p>
+                                <p class="text-2xl font-black leading-none text-gray-800 dark:text-white" id="growth-percentage">0%</p>
                                 <div class="text-xs font-bold px-2 py-1 rounded-full" id="growth-badge">Sin datos</div>
                             </div>
                         </div>
-                        <div class="text-right text-[9px] font-bold text-gray-500 leading-tight" id="growth-comparison">
+                        <div class="text-right text-[9px] font-bold text-gray-500 dark:text-gray-400 leading-tight" id="growth-comparison">
                             <p>Este mes: <span class="font-black" id="current-month-income">$0</span></p>
                             <p>Mes pasado: <span class="font-black" id="last-month-income">$0</span></p>
                         </div>
@@ -217,15 +229,15 @@
 
             <!-- CONTROL DE PRESUPUESTO -->
             <div class="slide-up" style="animation-delay: 0.19s;">
-                <div id="budget-alert-card" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                <div id="budget-alert-card" class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-2">
-                            <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center text-sm">
+                            <div class="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/40 text-blue-500 dark:text-blue-400 flex items-center justify-center text-sm">
                                 <i class="fa-solid fa-wallet"></i>
                             </div>
                             <div>
-                                <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Control de Presupuesto</p>
-                                <p class="text-[10px] font-bold text-gray-500" id="budget-status-text">Define tu presupuesto mensual</p>
+                                <p class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Control de Presupuesto</p>
+                                <p class="text-[10px] font-bold text-gray-500 dark:text-gray-400" id="budget-status-text">Define tu presupuesto mensual</p>
                             </div>
                         </div>
                         <div class="text-2xl" id="budget-emoji">🎯</div>
@@ -233,15 +245,15 @@
                     
                     <!-- Progress Bar -->
                     <div class="mb-3">
-                        <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                        <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
                             <div id="budget-progress-bar" class="h-full bg-blue-500 transition-all duration-500" style="width: 0%"></div>
                         </div>
                         <div class="flex justify-between mt-1.5">
-                            <p class="text-[9px] font-bold text-gray-400">
+                            <p class="text-[9px] font-bold text-gray-400 dark:text-gray-500">
                                 <span id="budget-percentage">0%</span> usado
                             </p>
-                            <p class="text-[9px] font-bold text-gray-400">
-                                Quedan: <span id="budget-remaining" class="text-gray-700">$0</span>
+                            <p class="text-[9px] font-bold text-gray-400 dark:text-gray-500">
+                                Quedan: <span id="budget-remaining" class="text-gray-700 dark:text-gray-300">$0</span>
                             </p>
                         </div>
                     </div>
@@ -249,12 +261,12 @@
                     <!-- Details -->
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-xs font-bold text-gray-500">Gastos del mes</p>
-                            <p class="text-xl font-black leading-none mt-0.5" id="budget-spent-amount">$0</p>
+                            <p class="text-xs font-bold text-gray-500 dark:text-gray-400">Gastos del mes</p>
+                            <p class="text-xl font-black leading-none mt-0.5 text-gray-800 dark:text-white" id="budget-spent-amount">$0</p>
                         </div>
                         <div class="text-right">
-                            <p class="text-xs font-bold text-gray-500">Presupuesto</p>
-                            <p class="text-xl font-black leading-none mt-0.5" id="budget-total-amount">$0</p>
+                            <p class="text-xs font-bold text-gray-500 dark:text-gray-400">Presupuesto</p>
+                            <p class="text-xl font-black leading-none mt-0.5 text-gray-800 dark:text-white" id="budget-total-amount">$0</p>
                         </div>
                     </div>
                 </div>
@@ -263,12 +275,12 @@
             <!-- Quick Actions & Status -->
             <div class="grid grid-cols-2 gap-2 slide-up" style="animation-delay: 0.2s;">
                 <!-- Budget Setting -->
-                <div class="bg-white p-2.5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                <div class="bg-white dark:bg-gray-800 p-2.5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center justify-between">
                     <div class="flex items-center gap-2">
-                        <div class="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 text-xs"><i class="fa-solid fa-bullseye"></i></div>
+                        <div class="w-7 h-7 rounded-full bg-gray-50 dark:bg-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs"><i class="fa-solid fa-bullseye"></i></div>
                         <div>
-                            <p class="text-[8px] font-bold text-gray-400 uppercase">Presupuesto</p>
-                            <input type="number" id="budget-input" step="0.01" min="0" class="text-xs font-black text-gray-800 w-20 outline-none placeholder-gray-300" placeholder="Definir...">
+                            <p class="text-[8px] font-bold text-gray-400 dark:text-gray-500 uppercase">Presupuesto</p>
+                            <input type="number" id="budget-input" step="0.01" min="0" class="text-xs font-black text-gray-800 dark:text-white w-20 outline-none placeholder-gray-300 dark:placeholder-gray-600 bg-transparent" placeholder="Definir...">
                         </div>
                     </div>
                 </div>
@@ -285,25 +297,25 @@
             <!-- Transactions List -->
             <div class="pt-1">
                 <div class="flex justify-between items-end mb-2.5 px-1 slide-up" style="animation-delay: 0.2s;">
-                    <h3 id="transactions-title" class="font-black text-base text-gray-800">Movimientos</h3>
-                    <button onclick="window.filterTransactions('all')" title="Mostrar todos los movimientos" id="transactions-subtitle" class="text-[9px] font-bold text-gray-400 bg-white border border-gray-100 px-2.5 py-1 rounded-full shadow-sm">Ver Todo</button>
+                    <h3 id="transactions-title" class="font-black text-base text-gray-800 dark:text-white">Movimientos</h3>
+                    <button onclick="window.filterTransactions('all')" title="Mostrar todos los movimientos" id="transactions-subtitle" class="text-[9px] font-bold text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 px-2.5 py-1 rounded-full shadow-sm">Ver Todo</button>
                 </div>
 
                 <!-- Filtros mejorados -->
                 <div class="flex gap-1 mb-3 overflow-x-auto pb-1 px-0.5 slide-up" style="animation-delay: 0.22s; scrollbar-width: none; -ms-overflow-style: none;">
-                    <button onclick="window.filterTransactions('all')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-2 py-1.5 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all">
+                    <button onclick="window.filterTransactions('all')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-2 py-1.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all">
                         📊 Todos
                     </button>
-                    <button onclick="window.filterTransactions('business')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-2 py-1.5 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all">
+                    <button onclick="window.filterTransactions('business')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-2 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800/60 transition-all">
                         💼 Negocio
                     </button>
-                    <button onclick="window.filterTransactions('personal')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-2 py-1.5 rounded-full bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all">
+                    <button onclick="window.filterTransactions('personal')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-2 py-1.5 rounded-full bg-purple-50 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-800/60 transition-all">
                         👤 Personal
                     </button>
-                    <button onclick="window.filterTransactions('income')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-2 py-1.5 rounded-full bg-green-50 text-green-600 hover:bg-green-100 transition-all">
+                    <button onclick="window.filterTransactions('income')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-2 py-1.5 rounded-full bg-green-50 dark:bg-green-900/40 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-800/60 transition-all">
                         ⬇️ Ingresos
                     </button>
-                    <button onclick="window.filterTransactions('expense')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-2 py-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-all">
+                    <button onclick="window.filterTransactions('expense')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-2 py-1.5 rounded-full bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-800/60 transition-all">
                         ⬆️ Gastos
                     </button>
                 </div>
@@ -311,8 +323,8 @@
                 <ul id="movements-list" class="space-y-2 pb-8 slide-up" style="animation-delay: 0.25s;">
                     <li id="empty-state" class="text-center py-6 opacity-40">
                         <div class="text-4xl mb-2 grayscale">👻</div>
-                        <p class="text-xs font-bold text-gray-400">Sin movimientos aún</p>
-                        <p class="text-[10px] text-gray-300 mt-0.5">Usa el botón + para empezar</p>
+                        <p class="text-xs font-bold text-gray-400 dark:text-gray-500">Sin movimientos aún</p>
+                        <p class="text-[10px] text-gray-300 dark:text-gray-600 mt-0.5">Usa el botón + para empezar</p>
                     </li>
                     <!-- Items injected via JS -->
                 </ul>
@@ -321,7 +333,7 @@
         </main>
 
         <!-- Fixed Bottom Elements -->
-        <div class="fixed bottom-0 w-full left-0 p-5 sm:p-6 pointer-events-none flex justify-center bg-gradient-to-t from-gray-100 via-gray-50/90 to-transparent z-20 pt-24">
+        <div class="fixed bottom-0 w-full left-0 p-5 sm:p-6 pointer-events-none flex justify-center bg-gradient-to-t from-gray-100 dark:from-gray-900 via-gray-50/90 dark:via-gray-900/90 to-transparent z-20 pt-24">
             <button onclick="window.openAddModal()" title="Agregar nuevo movimiento" class="add-button fab-gradient pointer-events-auto text-white w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-xl sm:text-2xl shadow-2xl shadow-blue-500/40 hover:scale-110 transition-transform active:scale-95">
                 <i class="fa-solid fa-plus"></i>
             </button>
@@ -331,19 +343,19 @@
 
     <div id="expense-modal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center invisible opacity-0 transition-all duration-300">
         <div onclick="window.toggleModal(false)" class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"></div>
-        <form id="expense-form" novalidate class="bg-white w-full max-w-md sm:rounded-3xl rounded-t-3xl p-5 pb-12 shadow-2xl relative z-10 transform translate-y-full sm:translate-y-0 transition-transform duration-300 overflow-y-auto max-h-[85vh] sm:max-h-[90vh]">
-            <div class="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-4 sm:hidden"></div>
+        <form id="expense-form" novalidate class="bg-white dark:bg-gray-800 w-full max-w-md sm:rounded-3xl rounded-t-3xl p-5 pb-12 shadow-2xl relative z-10 transform translate-y-full sm:translate-y-0 transition-transform duration-300 overflow-y-auto max-h-[85vh] sm:max-h-[90vh]">
+            <div class="w-12 h-1 bg-gray-200 dark:bg-gray-600 rounded-full mx-auto mb-4 sm:hidden"></div>
             
             <div class="flex justify-between items-center mb-4">
                 <!-- TABS TIPO -->
-                <div class="flex bg-gray-100 p-1 rounded-xl">
-                    <button type="button" onclick="window.setTransactionType('expense')" id="btn-type-expense" class="px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-bold shadow-sm bg-red-100 text-red-700 transition-all">Gasto</button>
-                    <button type="button" onclick="window.setTransactionType('income')" id="btn-type-income" class="px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-bold text-gray-500 hover:text-gray-700 transition-all">Ingreso</button>
+                <div class="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl">
+                    <button type="button" onclick="window.setTransactionType('expense')" id="btn-type-expense" class="px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-bold shadow-sm bg-red-100 dark:bg-red-900/60 text-red-700 dark:text-red-300 transition-all">Gasto</button>
+                    <button type="button" onclick="window.setTransactionType('income')" id="btn-type-income" class="px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all">Ingreso</button>
                 </div>
                 <!-- Botón Eliminar (Hidden by default) -->
                 <div class="flex items-center gap-2">
-                    <button type="button" id="btn-delete" onclick="window.deleteTransaction()" title="Eliminar este movimiento" class="hidden text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"><i class="fa-solid fa-trash"></i></button>
-                    <button type="button" onclick="window.toggleModal(false)" title="Cerrar" class="text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center font-bold">✕</button>
+                    <button type="button" id="btn-delete" onclick="window.deleteTransaction()" title="Eliminar este movimiento" class="hidden text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-2 rounded-full transition-colors"><i class="fa-solid fa-trash"></i></button>
+                    <button type="button" onclick="window.toggleModal(false)" title="Cerrar" class="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-full w-8 h-8 flex items-center justify-center font-bold">✕</button>
                 </div>
             </div>
             
@@ -352,12 +364,12 @@
 
             <!-- Cantidad -->
             <div class="mb-4 relative">
-                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xl">$</span>
-                <input type="number" id="amount" required step="0.01" min="0.01" class="w-full bg-gray-50 rounded-2xl py-2 pl-10 pr-4 text-3xl font-black text-gray-900 outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder-gray-300 text-center" placeholder="0">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 font-bold text-xl">$</span>
+                <input type="number" id="amount" required step="0.01" min="0.01" class="w-full bg-gray-50 dark:bg-gray-700 rounded-2xl py-2 pl-10 pr-4 text-3xl font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder-gray-300 dark:placeholder-gray-500 text-center" placeholder="0">
             </div>
 
             <!-- Categoría Grid -->
-            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Categoría</label>
+            <label class="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Categoría</label>
             <div class="grid grid-cols-4 gap-2 mb-4" id="category-grid">
                 <!-- Se inyectan con JS -->
             </div>
@@ -366,18 +378,18 @@
             <!-- Detalles -->
             <div class="space-y-3 mb-5">
                 <div>
-                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Nota</label>
-                    <input type="text" id="concept" class="w-full bg-gray-50 rounded-xl px-3 py-2 font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder-gray-400 text-sm" placeholder="¿En qué lo gastaste?">
+                    <label class="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Nota</label>
+                    <input type="text" id="concept" class="w-full bg-gray-50 dark:bg-gray-700 rounded-xl px-3 py-2 font-bold text-gray-700 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder-gray-400 dark:placeholder-gray-500 text-sm" placeholder="¿En qué lo gastaste?">
                 </div>
                 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Fecha</label>
-                        <input type="date" id="date" required class="w-full bg-gray-50 rounded-xl px-3 py-2 font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm">
+                        <label class="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Fecha</label>
+                        <input type="date" id="date" required class="w-full bg-gray-50 dark:bg-gray-700 rounded-xl px-3 py-2 font-bold text-gray-700 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm">
                     </div>
                     <div>
-                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Método</label>
-                        <select id="method" class="w-full bg-gray-50 rounded-xl px-3 py-2 font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none text-sm">
+                        <label class="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Método</label>
+                        <select id="method" class="w-full bg-gray-50 dark:bg-gray-700 rounded-xl px-3 py-2 font-bold text-gray-700 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none text-sm">
                             <option value="Efectivo">💵 Efectivo</option>
                             <option value="Tarjeta Débito">💳 Tarjeta Débito</option>
                             <option value="Transferencia">🏦 Transferencia</option>
@@ -387,12 +399,12 @@
 
                 <!-- NUEVO: Toggle Personal/Negocio -->
                 <div>
-                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">¿Es gasto personal o de tu negocio?</label>
-                    <div class="flex bg-gray-100 p-1 rounded-xl">
+                    <label class="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">¿Es gasto personal o de tu negocio?</label>
+                    <div class="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl">
                         <button type="button" onclick="window.setBusinessType('business')" id="btn-business" class="flex-1 py-2 rounded-lg text-xs font-bold bg-blue-500 text-white shadow-sm transition-all">
                             <i class="fa-solid fa-briefcase mr-1"></i> Negocio
                         </button>
-                        <button type="button" onclick="window.setBusinessType('personal')" id="btn-personal" class="flex-1 py-2 rounded-lg text-xs font-bold text-gray-500 hover:text-gray-700 transition-all">
+                        <button type="button" onclick="window.setBusinessType('personal')" id="btn-personal" class="flex-1 py-2 rounded-lg text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all">
                             <i class="fa-solid fa-user mr-1"></i> Personal
                         </button>
                     </div>
@@ -400,7 +412,7 @@
                 <input type="hidden" id="business-type" value="business">
             </div>
 
-            <button type="submit" class="w-full bg-black text-white font-bold py-3 rounded-2xl shadow-xl active:scale-95 transition-transform text-sm sm:text-base">
+            <button type="submit" class="w-full bg-black dark:bg-white text-white dark:text-black font-bold py-3 rounded-2xl shadow-xl active:scale-95 transition-transform text-sm sm:text-base">
                 Guardar
             </button>
         </form>
@@ -409,52 +421,52 @@
     <!-- Summary Modal -->
     <div id="summary-modal" class="fixed inset-0 z-50 flex items-end justify-center invisible opacity-0 transition-all duration-300">
         <div onclick="window.toggleSummary(false)" class="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity"></div>
-        <div class="bg-white w-full max-w-md rounded-t-[30px] p-8 shadow-2xl relative z-10 transform translate-y-full transition-transform duration-300 h-[90vh] flex flex-col" id="summary-panel">
+        <div class="bg-white dark:bg-gray-800 w-full max-w-md rounded-t-[30px] p-8 shadow-2xl relative z-10 transform translate-y-full transition-transform duration-300 h-[90vh] flex flex-col" id="summary-panel">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="text-2xl font-black text-gray-900">Tu Resumen</h3>
-                <button onclick="window.toggleSummary(false)" title="Cerrar resumen" class="bg-gray-100 w-10 h-10 rounded-full text-gray-500 hover:bg-gray-200"><i class="fa-solid fa-xmark"></i></button>
+                <h3 class="text-2xl font-black text-gray-900 dark:text-white">Tu Resumen</h3>
+                <button onclick="window.toggleSummary(false)" title="Cerrar resumen" class="bg-gray-100 dark:bg-gray-700 w-10 h-10 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"><i class="fa-solid fa-xmark"></i></button>
             </div>
             
             <div class="flex-1 overflow-y-auto">
-                <div class="bg-blue-50 p-6 rounded-3xl mb-4 border border-blue-100">
-                    <p class="text-blue-500 font-bold text-xs uppercase mb-1">Gasto Total (Mes)</p>
-                    <p class="text-4xl font-black text-blue-900" id="summary-total">$0</p>
+                <div class="bg-blue-50 dark:bg-blue-900/30 p-6 rounded-3xl mb-4 border border-blue-100 dark:border-blue-800/50">
+                    <p class="text-blue-500 dark:text-blue-400 font-bold text-xs uppercase mb-1">Gasto Total (Mes)</p>
+                    <p class="text-4xl font-black text-blue-900 dark:text-blue-100" id="summary-total">$0</p>
                 </div>
                 
                 <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-gray-50 p-5 rounded-3xl">
-                        <p class="text-gray-400 font-bold text-[10px] uppercase mb-1">Promedio Diario</p>
-                        <p class="text-xl font-bold text-gray-800" id="summary-daily">$0</p>
+                    <div class="bg-gray-50 dark:bg-gray-700 p-5 rounded-3xl">
+                        <p class="text-gray-400 dark:text-gray-500 font-bold text-[10px] uppercase mb-1">Promedio Diario</p>
+                        <p class="text-xl font-bold text-gray-800 dark:text-white" id="summary-daily">$0</p>
                     </div>
-                    <div class="bg-gray-50 p-5 rounded-3xl">
-                        <p class="text-gray-400 font-bold text-[10px] uppercase mb-1">Proyección Fin Mes</p>
-                        <p class="text-xl font-bold text-gray-800" id="summary-proj">$0</p>
+                    <div class="bg-gray-50 dark:bg-gray-700 p-5 rounded-3xl">
+                        <p class="text-gray-400 dark:text-gray-500 font-bold text-[10px] uppercase mb-1">Proyección Fin Mes</p>
+                        <p class="text-xl font-bold text-gray-800 dark:text-white" id="summary-proj">$0</p>
                     </div>
                 </div>
 
                 <!-- Sección Ahorros y Finanzas -->
-                <div class="mt-6 border-t border-gray-100 pt-6">
-                    <h4 class="font-extrabold text-gray-900 mb-4 flex items-center gap-2">
-                        <span class="bg-green-100 text-green-600 p-1.5 rounded-lg text-sm">🐷</span> 
+                <div class="mt-6 border-t border-gray-100 dark:border-gray-700 pt-6">
+                    <h4 class="font-extrabold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <span class="bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400 p-1.5 rounded-lg text-sm">🐷</span> 
                         Mis Ahorros & Futuro
                     </h4>
-                    <div class="bg-green-50 p-6 rounded-3xl border border-green-100 mb-4 transition-all">
+                    <div class="bg-green-50 dark:bg-green-900/30 p-6 rounded-3xl border border-green-100 dark:border-green-800/50 mb-4 transition-all">
                         <div class="flex justify-between items-end mb-2">
-                            <p class="text-green-600 font-bold text-xs uppercase">Est. Ahorro Fin de Mes</p>
-                            <span class="text-xs font-bold text-green-700 bg-green-200 px-2 py-1 rounded-full" id="savings-status">---</span>
+                            <p class="text-green-600 dark:text-green-400 font-bold text-xs uppercase">Est. Ahorro Fin de Mes</p>
+                            <span class="text-xs font-bold text-green-700 dark:text-green-300 bg-green-200 dark:bg-green-800/60 px-2 py-1 rounded-full" id="savings-status">---</span>
                         </div>
-                        <p class="text-3xl font-black text-green-800" id="summary-savings">$0</p>
-                        <p class="text-xs font-bold text-green-600 mt-2 opacity-80" id="savings-message">---</p>
+                        <p class="text-3xl font-black text-green-800 dark:text-green-200" id="summary-savings">$0</p>
+                        <p class="text-xs font-bold text-green-600 dark:text-green-400 mt-2 opacity-80" id="savings-message">---</p>
                     </div>
                 </div>
 
                 <!-- Gráfico de Distribución -->
-                <div class="mt-6 border-t border-gray-100 pt-6">
-                    <h4 class="font-extrabold text-gray-900 mb-4 flex items-center gap-2">
-                        <span class="bg-purple-100 text-purple-600 p-1.5 rounded-lg text-sm">📊</span> 
+                <div class="mt-6 border-t border-gray-100 dark:border-gray-700 pt-6">
+                    <h4 class="font-extrabold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <span class="bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 p-1.5 rounded-lg text-sm">📊</span> 
                         Distribución de Gastos
                     </h4>
-                    <div class="bg-white p-4 rounded-3xl border border-gray-100">
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-3xl border border-gray-100 dark:border-gray-700">
                         <canvas id="expense-chart" class="max-h-64"></canvas>
                     </div>
                 </div>
@@ -465,45 +477,45 @@
     <!-- Report Modal -->
     <div id="report-modal" class="fixed inset-0 z-[60] flex items-center justify-center invisible opacity-0 transition-all duration-300">
         <div onclick="window.toggleReportModal(false)" class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"></div>
-        <div class="bg-white w-full max-w-sm rounded-[30px] shadow-2xl relative z-10 transform scale-90 transition-transform duration-300 m-4" id="report-panel">
+        <div class="bg-white dark:bg-gray-800 w-full max-w-sm rounded-[30px] shadow-2xl relative z-10 transform scale-90 transition-transform duration-300 m-4" id="report-panel">
             <!-- Report Content -->
             <div id="report-content" class="p-6">
                 <div class="text-center mb-4">
-                    <div class="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-2xl text-blue-500 mx-auto mb-3">
+                    <div class="w-12 h-12 bg-blue-50 dark:bg-blue-900/40 rounded-full flex items-center justify-center text-2xl text-blue-500 dark:text-blue-400 mx-auto mb-3">
                         <i class="fa-solid fa-chart-simple"></i>
                     </div>
-                    <h3 class="text-xl font-black text-gray-900 mb-1">Reporte Mensual</h3>
-                    <p class="text-xs font-bold text-gray-400" id="report-month">---</p>
+                    <h3 class="text-xl font-black text-gray-900 dark:text-white mb-1">Reporte Mensual</h3>
+                    <p class="text-xs font-bold text-gray-400 dark:text-gray-500" id="report-month">---</p>
                 </div>
 
                 <!-- Stats Grid -->
-                <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 mb-4">
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/40 dark:to-blue-800/40 rounded-2xl p-4 mb-4">
                     <div class="text-center mb-3">
-                        <p class="text-xs font-bold text-blue-600 uppercase mb-1">💰 Saldo Final</p>
-                        <p class="text-2xl font-black text-blue-700" id="report-balance">$0</p>
+                        <p class="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase mb-1">💰 Saldo Final</p>
+                        <p class="text-2xl font-black text-blue-700 dark:text-blue-300" id="report-balance">$0</p>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
-                        <div class="bg-white/60 rounded-xl p-3 text-center">
-                            <p class="text-[9px] font-bold text-gray-500 uppercase mb-1">Ingresos</p>
-                            <p class="text-sm font-black text-green-600" id="report-income">$0</p>
+                        <div class="bg-white/60 dark:bg-white/10 rounded-xl p-3 text-center">
+                            <p class="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Ingresos</p>
+                            <p class="text-sm font-black text-green-600 dark:text-green-400" id="report-income">$0</p>
                         </div>
-                        <div class="bg-white/60 rounded-xl p-3 text-center">
-                            <p class="text-[9px] font-bold text-gray-500 uppercase mb-1">Gastos</p>
-                            <p class="text-sm font-black text-red-600" id="report-expenses">$0</p>
+                        <div class="bg-white/60 dark:bg-white/10 rounded-xl p-3 text-center">
+                            <p class="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Gastos</p>
+                            <p class="text-sm font-black text-red-600 dark:text-red-400" id="report-expenses">$0</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Transactions Count -->
                 <div class="text-center mb-4">
-                    <p class="text-xs font-bold text-gray-400" id="report-count">0 movimientos registrados</p>
+                    <p class="text-xs font-bold text-gray-400 dark:text-gray-500" id="report-count">0 movimientos registrados</p>
                 </div>
 
                 <!-- Mensaje de feedback (oculto por defecto) -->
                 <div id="report-feedback" class="hidden mb-4 p-4 rounded-2xl text-center">
                     <div class="text-3xl mb-2" id="report-feedback-emoji">📭</div>
-                    <p class="text-sm font-bold text-gray-700" id="report-feedback-message">Sin datos disponibles</p>
-                    <p class="text-xs text-gray-500 mt-1" id="report-feedback-hint">Registra movimientos primero</p>
+                    <p class="text-sm font-bold text-gray-700 dark:text-gray-300" id="report-feedback-message">Sin datos disponibles</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" id="report-feedback-hint">Registra movimientos primero</p>
                 </div>
 
                 <!-- Generate PDF Buttons -->
@@ -513,7 +525,7 @@
                 <button onclick="window.downloadReport('personal')" class="w-full py-3 rounded-2xl font-bold text-sm bg-purple-500 text-white hover:bg-purple-600 transition flex items-center justify-center gap-2 mb-3">
                     <i class="fa-solid fa-file-pdf"></i> Descargar PDF Personal
                 </button>
-                <button onclick="window.toggleReportModal(false)" class="w-full py-2.5 rounded-2xl font-bold text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 transition">Cerrar</button>
+                <button onclick="window.toggleReportModal(false)" class="w-full py-2.5 rounded-2xl font-bold text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition">Cerrar</button>
             </div>
         </div>
     </div>
@@ -521,16 +533,16 @@
     <!-- Delete Confirmation Modal (Custom Style) -->
     <div id="delete-modal" class="fixed inset-0 z-[60] flex items-center justify-center invisible opacity-0 transition-all duration-300">
         <div onclick="window.toggleDeleteModal(false)" class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"></div>
-        <div class="bg-white w-full max-w-xs rounded-[30px] p-6 shadow-2xl relative z-10 transform scale-90 transition-transform duration-300 m-4" id="delete-panel">
+        <div class="bg-white dark:bg-gray-800 w-full max-w-xs rounded-[30px] p-6 shadow-2xl relative z-10 transform scale-90 transition-transform duration-300 m-4" id="delete-panel">
             <div class="text-center mb-6">
-                <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center text-2xl text-red-500 mx-auto mb-4">
+                <div class="w-16 h-16 bg-red-50 dark:bg-red-900/40 rounded-full flex items-center justify-center text-2xl text-red-500 dark:text-red-400 mx-auto mb-4">
                     <i class="fa-solid fa-trash-can"></i>
                 </div>
-                <h3 class="text-xl font-black text-gray-900 mb-2">¿Borrar esto?</h3>
-                <p class="text-gray-400 text-xs font-bold leading-relaxed">Si lo borras, desaparecerá de tus registros y estadísticas para siempre.</p>
+                <h3 class="text-xl font-black text-gray-900 dark:text-white mb-2">¿Borrar esto?</h3>
+                <p class="text-gray-400 dark:text-gray-500 text-xs font-bold leading-relaxed">Si lo borras, desaparecerá de tus registros y estadísticas para siempre.</p>
             </div>
             <div class="grid grid-cols-2 gap-3">
-                <button onclick="window.toggleDeleteModal(false)" class="py-2.5 rounded-2xl font-bold text-xs sm:text-sm text-gray-500 bg-gray-100 hover:bg-gray-200 transition">Cancelar</button>
+                <button onclick="window.toggleDeleteModal(false)" class="py-2.5 rounded-2xl font-bold text-xs sm:text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition">Cancelar</button>
                 <button onclick="window.executeDelete()" id="btn-confirm-delete" class="py-2.5 rounded-2xl font-bold text-white bg-red-500 hover:bg-red-600 transition shadow-lg shadow-red-200 text-xs sm:text-sm">Sí, Borrar</button>
             </div>
         </div>

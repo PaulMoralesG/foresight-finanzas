@@ -490,3 +490,38 @@ function handleAuthError(err, authDOM) {
     
     showNotification(msg, 'error');
 }
+
+// --- DARK MODE ---
+function applyDarkMode(isDark) {
+    const html = document.documentElement;
+    const loginIcon = document.getElementById('dark-icon-login');
+    const appIcon = document.getElementById('dark-icon-app');
+
+    if (isDark) {
+        html.classList.add('dark');
+        if (loginIcon) { loginIcon.className = 'fa-solid fa-sun'; }
+        if (appIcon) { appIcon.className = 'fa-solid fa-sun'; }
+    } else {
+        html.classList.remove('dark');
+        if (loginIcon) { loginIcon.className = 'fa-solid fa-moon'; }
+        if (appIcon) { appIcon.className = 'fa-solid fa-moon'; }
+    }
+    localStorage.setItem('darkMode', isDark ? 'true' : 'false');
+}
+
+window.toggleDarkMode = function() {
+    const html = document.documentElement;
+    const isDark = !html.classList.contains('dark');
+    applyDarkMode(isDark);
+};
+
+// Initialize dark mode from localStorage on load
+(function initDarkMode() {
+    const saved = localStorage.getItem('darkMode');
+    if (saved === 'true') {
+        applyDarkMode(true);
+    } else if (saved === null && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        // Auto-detect system preference on first visit
+        applyDarkMode(true);
+    }
+})();

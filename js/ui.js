@@ -402,19 +402,19 @@ function updateFilterHeader() {
 
     if(AppState.currentFilter === 'income') {
         title.textContent = 'Ingresos';
-        title.className = 'font-extrabold text-base text-green-600';
+        title.className = 'font-extrabold text-base text-green-600 dark:text-green-400';
         badge.textContent = 'Ver Todos';
-        badge.classList.add('bg-green-100', 'text-green-600');
+        badge.classList.add('bg-green-100', 'dark:bg-green-900/40', 'text-green-600', 'dark:text-green-400');
     } else if(AppState.currentFilter === 'expense') {
         title.textContent = 'Gastos';
-        title.className = 'font-extrabold text-base text-red-600';
+        title.className = 'font-extrabold text-base text-red-600 dark:text-red-400';
         badge.textContent = 'Ver Todos';
-        badge.classList.add('bg-red-100', 'text-red-600');
+        badge.classList.add('bg-red-100', 'dark:bg-red-900/40', 'text-red-600', 'dark:text-red-400');
     } else {
         title.textContent = 'Transacciones';
-        title.className = 'font-extrabold text-base text-gray-900';
+        title.className = 'font-extrabold text-base text-gray-900 dark:text-white';
         badge.textContent = 'Este Mes';
-        badge.classList.add('text-gray-400', 'bg-gray-100');
+        badge.classList.add('text-gray-400', 'dark:text-gray-500', 'bg-gray-100', 'dark:bg-gray-700');
     }
 }
 
@@ -446,24 +446,24 @@ function renderList(items) {
             }
             
             const li = document.createElement('li');
-            li.className = 'buddy-card p-2.5 flex justify-between items-center slide-up group cursor-pointer hover:bg-gray-50 transition-colors active:scale-95';
+            li.className = 'buddy-card p-2.5 flex justify-between items-center slide-up group cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors active:scale-95';
             li.onclick = () => window.editTransaction(exp.id); 
             
-            const amountClass = isIncome ? 'text-green-600' : 'text-red-600';
+            const amountClass = isIncome ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
             const sign = isIncome ? '+' : '-';
             
             // Indicador de tipo de gasto (Personal/Negocio)
             const businessType = exp.businessType || 'business';
             const businessBadge = businessType === 'personal' 
-                ? '<span class="text-[8px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-600">👤 Personal</span>'
-                : '<span class="text-[8px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">💼 Negocio</span>';
+                ? '<span class="text-[8px] font-bold px-1.5 py-0.5 rounded bg-purple-50 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400">👤 Personal</span>'
+                : '<span class="text-[8px] font-bold px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400">💼 Negocio</span>';
 
             li.innerHTML = `
                 <div class="flex items-center gap-2.5">
-                    <div class="icon-squircle text-xl ${catData.color ?? 'bg-gray-100'}">${catData.icon}</div>
+                    <div class="icon-squircle text-xl ${catData.color ?? 'bg-gray-100 dark:bg-gray-700'}">${catData.icon}</div>
                     <div class="min-w-0 flex-1">
-                        <p class="font-bold text-sm text-gray-800 leading-tight truncate pr-1">${mainTitle}</p>
-                        <p class="text-[10px] font-bold text-gray-400 mt-0.5 truncate">
+                        <p class="font-bold text-sm text-gray-800 dark:text-white leading-tight truncate pr-1">${mainTitle}</p>
+                        <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 mt-0.5 truncate">
                             ${subTitle} • ${exp.method || 'Efectivo'}
                         </p>
                         <div class="mt-1">
@@ -474,9 +474,9 @@ function renderList(items) {
                 <div class="flex items-center gap-2 shrink-0">
                         <div class="text-right">
                             <span class="font-extrabold ${amountClass} text-base block">${sign}${formatMoney(exp.amount)}</span>
-                            <span class="text-[9px] font-bold text-gray-400 opacity-60">${new Date(exp.date).toLocaleDateString()}</span>
+                            <span class="text-[9px] font-bold text-gray-400 dark:text-gray-500 opacity-60">${new Date(exp.date).toLocaleDateString()}</span>
                         </div>
-                        <div class="w-5 h-5 rounded-full bg-gray-50 text-gray-300 flex items-center justify-center text-[9px]"><i class="fa-solid fa-pen"></i></div>
+                        <div class="w-5 h-5 rounded-full bg-gray-50 dark:bg-gray-700 text-gray-300 dark:text-gray-500 flex items-center justify-center text-[9px]"><i class="fa-solid fa-pen"></i></div>
                 </div>
             `;
             DOM.movementsList.appendChild(li);

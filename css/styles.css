@@ -1,4 +1,4 @@
-        body {
+body {
             font-family: 'Nunito', sans-serif;
             background-color: #F2F2F7; /* iOS Light Gray */
             color: #1C1C1E;
@@ -51,7 +51,7 @@
             color: #1C1C1E;
         }
         .buddy-input::placeholder { color: #AEAEB2; }
-        .buddy-input:focus { outline: none; ring: 2px solid #007AFF; background: #fff; }
+        .buddy-input:focus { outline: none; box-shadow: 0 0 0 2px #007AFF; background: #fff; }
 
         .icon-squircle {
             width: 48px;
@@ -76,4 +76,143 @@
         .fab-gradient {
             background: linear-gradient(135deg, #007AFF, #5856D6);
             box-shadow: 0 8px 20px rgba(88, 86, 214, 0.4);
+        }
+
+        /* Dark Mode - Smooth transition for body bg */
+        html.dark body {
+            background-color: #111827;
+            color: #E5E7EB;
+        }
+
+        /* Dark mode scrollable main bg */
+        html.dark .buddy-card {
+            background: #1F2937;
+            border-color: #374151;
+        }
+
+        html.dark .buddy-input {
+            background: #374151;
+            color: #E5E7EB;
+        }
+
+        html.dark .buddy-input::placeholder {
+            color: #6B7280;
+        }
+
+        html.dark .buddy-input:focus {
+            background: #374151;
+            box-shadow: 0 0 0 2px #3B82F6;
+        }
+
+        /* Dark mode for the summary canvas */
+        html.dark #expense-chart {
+            filter: invert(0.9) hue-rotate(180deg);
+        }
+
+        /* Dark mode icon squircle */
+        html.dark .icon-squircle {
+            background: #1F2937;
+        }
+
+        /* Mobile bottom bar gradient */
+        html.dark .bg-gradient-to-t {
+            --tw-gradient-from: #111827;
+        }
+
+        /* Smooth transition for all elements on theme switch */
+        body, 
+        .buddy-card, 
+        .buddy-input,
+        button,
+        input,
+        select,
+        textarea,
+        div,
+        section,
+        span,
+        p,
+        h1, h2, h3, h4, h5, h6 {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* Dark mode - movement list items (JS-generated) */
+        html.dark .buddy-card {
+            background: #1F2937;
+            border: 1px solid #374151;
+        }
+
+        html.dark .buddy-card:hover {
+            background: #374151 !important;
+        }
+
+        html.dark .icon-squircle {
+            background: #374151 !important;
+        }
+
+        /* Dark mode for JS-set dynamic classes (profit, growth, etc.) */
+        html.dark .text-green-600 { color: #4ADE80 !important; }
+        html.dark .text-red-600 { color: #F87171 !important; }
+        html.dark .text-blue-600 { color: #60A5FA !important; }
+        html.dark .text-gray-500 { color: #9CA3AF !important; }
+        html.dark .bg-blue-100 { background-color: #1E3A5F !important; }
+        html.dark .bg-gray-100 { background-color: #374151 !important; }
+        html.dark .bg-green-100 { background-color: #064E3B !important; }
+        html.dark .bg-red-100 { background-color: #7F1D1D !important; }
+
+        /* Dark mode - category grid items in modal (JS-generated) */
+        html.dark #category-grid [class*="bg-"] {
+            border-color: #374151;
+        }
+
+        /* Dark mode - filter active state (set by JS dynamically) */
+        html.dark .filter-btn.bg-gray-900 {
+            background-color: #3B82F6;
+        }
+
+        /* Dark mode - category grid colors (JS-injected) */
+        html.dark [class*="bg-amber-100"] { background-color: #78350F !important; }
+        html.dark [class*="bg-cyan-100"] { background-color: #164E63 !important; }
+        html.dark [class*="bg-emerald-100"] { background-color: #064E3B !important; }
+        html.dark [class*="bg-indigo-100"] { background-color: #312E81 !important; }
+        html.dark [class*="bg-lime-100"] { background-color: #365314 !important; }
+        html.dark [class*="bg-pink-100"] { background-color: #831843 !important; }
+        html.dark [class*="bg-slate-100"] { background-color: #334155 !important; }
+        html.dark [class*="bg-teal-100"] { background-color: #134E4A !important; }
+        html.dark [class*="bg-violet-100"] { background-color: #4C1D95 !important; }
+        html.dark [class*="bg-yellow-100"] { background-color: #713F12 !important; }
+        html.dark [class*="bg-orange-100"] { background-color: #7C2D12 !important; }
+        html.dark [class*="text-amber-600"] { color: #FBBF24 !important; }
+        html.dark [class*="text-cyan-600"] { color: #22D3EE !important; }
+        html.dark [class*="text-emerald-600"] { color: #34D399 !important; }
+        html.dark [class*="text-indigo-600"] { color: #818CF8 !important; }
+        html.dark [class*="text-pink-600"] { color: #F472B6 !important; }
+        html.dark [class*="text-teal-600"] { color: #2DD4BF !important; }
+        html.dark [class*="text-violet-600"] { color: #A78BFA !important; }
+        html.dark [class*="text-yellow-600"] { color: #FACC15 !important; }
+        html.dark [class*="text-orange-600"] { color: #FB923C !important; }
+        html.dark [class*="text-slate-600"] { color: #94A3B8 !important; }
+        html.dark [class*="text-blue-700"] { color: #93C5FD !important; }
+        html.dark [class*="text-green-700"] { color: #4ADE80 !important; }
+
+        /* Dark mode - onboarding tooltip (JS-generated) */
+        html.dark #onboarding-tooltip {
+            background: #1F2937;
+        }
+        html.dark #onboarding-tooltip h3 {
+            color: #F3F4F6;
+        }
+        html.dark #onboarding-tooltip p {
+            color: #D1D5DB;
+        }
+        html.dark #onboarding-tooltip .text-gray-400 {
+            color: #9CA3AF;
+        }
+        html.dark #onboarding-tooltip .text-gray-600 {
+            color: #D1D5DB;
+        }
+        html.dark #onboarding-tooltip .bg-gray-200 {
+            background-color: #4B5563;
+        }
+        html.dark #onboarding-tooltip button.bg-gray-100 {
+            background-color: #374151;
         }
