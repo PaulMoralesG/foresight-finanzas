@@ -1,7 +1,7 @@
 import { AppState, setState, setCurrentUser, setCurrentMonthBudget } from './state.js';
 import * as UI from './ui.js';
 import * as Auth from './auth.js';
-import { showNotification, runAsyncAction } from './utils.js';
+import { showNotification, runAsyncAction, formatMoney } from './utils.js';
 import { startOnboarding, resetOnboarding } from './onboarding.js';
 
 function showView(viewId) {
@@ -130,6 +130,316 @@ function getMonthlyData() {
         const d = new Date(i.date);
         return d.getFullYear() === year && d.getMonth() === month;
     });
+}
+
+// === STATS TAB STATE ===
+let statsState = {
+    mode: 'month',           // 'month' | 'range'
+    month: new Date().getMonth(),
+    year: new Date().getFullYear(),
+    fromDate: null,
+    toDate: null,
+};
+
+function updateStatsTab() {
+    const totalEl = document.getElementById('tab-stats-total');
+    const incomeEl = document.getElementById('tab-stats-income');
+    const expenseEl = document.getElementById('tab-stats-expense');
+    const countEl = document.getElementById('tab-stats-count');
+    if (!totalEl) return;
+
+    const filtered = getStatsFilteredData();
+    const totalIncome = filtered.filter(i => i.type === 'income').reduce((s, i) => s + i.amount, 0);
+    const totalExpense = filtered.filter(i => i.type === 'expense' || !i.type).reduce((s, i) => s + i.amount, 0);
+
+    incomeEl.textContent = formatMoney(totalIncome);
+    expenseEl.textContent = formatMoney(totalExpense);
+    totalEl.textContent = formatMoney(totalIncome - totalExpense);
+    totalEl.className = (totalIncome - totalExpense) >= 0
+        ? 'text-white text-3xl font-black'
+        : 'text-red-200 text-3xl font-black';
+    if (countEl) countEl.textContent = filtered.length;
+
+    // Period label
+    const label = document.getElementById('stats-period-label');
+    if (label) {
+        if (statsState.mode === 'month') {
+            const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+            label.textContent = `${months[statsState.month]} ${statsState.year}`;
+        } else if (statsState.fromDate && statsState.toDate) {
+            label.textContent = `${statsState.fromDate} → ${statsState.toDate}`;
+        }
+    }
+
+    // Sync selectors
+    document.getElementById('stats-month-select').value = statsState.month;
+    const yearSel = document.getElementById('stats-year-select');
+    if (yearSel) yearSel.value = statsState.year;
+
+    // Extra indicators
+    updateStatsIndicators(filtered);
+    updateStatsTopCategories(filtered);
+    updateStatsComparison(filtered);
+}
+
+function getStatsFilteredData() {
+    const data = AppState.expenses || [];
+    if (statsState.mode === 'range' && statsState.fromDate && statsState.toDate) {
+        const from = new Date(statsState.fromDate);
+        const to = new Date(statsState.toDate);
+        to.setHours(23, 59, 59, 999);
+        return data.filter(i => {
+            const d = new Date(i.date);
+            return d >= from && d <= to;
+        });
+    }
+    // month mode
+    return data.filter(i => {
+        const d = new Date(i.date);
+        return d.getFullYear() === statsState.year && d.getMonth() === statsState.month;
+    });
+}
+
+function updateStatsIndicators(filtered) {
+    const avgEl = document.getElementById('stats-avg-daily');
+    const pctEl = document.getElementById('stats-business-pct');
+    if (!avgEl) return;
+
+    if (filtered.length === 0) {
+        avgEl.textContent = '$0';
+        if (pctEl) pctEl.textContent = '0%';
+        return;
+    }
+
+    // Average daily balance
+    const dates = [...new Set(filtered.map(i => i.date))].sort();
+    const dayCount = dates.length || 1;
+    const totalExpense = filtered.filter(i => i.type === 'expense' || !i.type).reduce((s, i) => s + i.amount, 0);
+    avgEl.textContent = formatMoney(totalExpense / dayCount);
+
+    // Business vs Personal
+    if (pctEl) {
+        const totalExpenseItems = filtered.filter(i => i.type === 'expense' || !i.type);
+        const businessExpense = totalExpenseItems.filter(i => i.businessType === 'business' || !i.businessType).reduce((s, i) => s + i.amount, 0);
+        const allExpense = totalExpenseItems.reduce((s, i) => s + i.amount, 0);
+        const pct = allExpense > 0 ? (businessExpense / allExpense) * 100 : 0;
+        pctEl.textContent = `${pct.toFixed(0)}%`;
+    }
+}
+
+function updateStatsTopCategories(filtered) {
+    const container = document.getElementById('stats-top-categories');
+    if (!container) return;
+
+    const expenses = filtered.filter(i => i.type === 'expense' || !i.type);
+    if (expenses.length === 0) {
+        container.innerHTML = '<p class="text-[10px] text-gray-400 font-bold text-center py-2">Sin datos</p>';
+        return;
+    }
+
+    // Group by category
+    const catMap = {};
+    expenses.forEach(i => {
+        const cat = i.category || 'Otros';
+        catMap[cat] = (catMap[cat] || 0) + i.amount;
+    });
+
+    const sorted = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const total = sorted.reduce((s, [, v]) => s + v, 0);
+
+    container.innerHTML = sorted.map(([cat, amount]) => {
+        const pct = total > 0 ? (amount / total) * 100 : 0;
+        return `
+        <div class="flex items-center gap-2">
+            <span class="text-[10px] font-bold text-gray-600 dark:text-gray-300 w-20 truncate">${cat}</span>
+            <div class="flex-1 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div class="h-full bg-blue-500 rounded-full" style="width:${pct}%"></div>
+            </div>
+            <span class="text-[9px] font-bold text-gray-400 w-12 text-right">${pct.toFixed(0)}%</span>
+        </div>`;
+    }).join('');
+}
+
+function updateStatsComparison(filtered) {
+    const incomeEl = document.getElementById('stats-vs-income');
+    const expenseEl = document.getElementById('stats-vs-expense');
+    if (!incomeEl) return;
+
+    const currentIncome = filtered.filter(i => i.type === 'income').reduce((s, i) => s + i.amount, 0);
+    const currentExpense = filtered.filter(i => i.type === 'expense' || !i.type).reduce((s, i) => s + i.amount, 0);
+
+    // Get previous period data
+    const prevData = getPreviousPeriodData();
+    const prevIncome = prevData.filter(i => i.type === 'income').reduce((s, i) => s + i.amount, 0);
+    const prevExpense = prevData.filter(i => i.type === 'expense' || !i.type).reduce((s, i) => s + i.amount, 0);
+
+    incomeEl.textContent = prevIncome > 0 ? `${(((currentIncome - prevIncome) / prevIncome) * 100).toFixed(1)}%` : 'N/A';
+    incomeEl.className = prevIncome > 0
+        ? (currentIncome >= prevIncome ? 'text-sm font-black text-green-600 dark:text-green-400' : 'text-sm font-black text-red-600 dark:text-red-400')
+        : 'text-sm font-black text-gray-400';
+
+    expenseEl.textContent = prevExpense > 0 ? `${(((currentExpense - prevExpense) / prevExpense) * 100).toFixed(1)}%` : 'N/A';
+    expenseEl.className = prevExpense > 0
+        ? (currentExpense <= prevExpense ? 'text-sm font-black text-green-600 dark:text-green-400' : 'text-sm font-black text-red-600 dark:text-red-400')
+        : 'text-sm font-black text-gray-400';
+}
+
+function getPreviousPeriodData() {
+    const data = AppState.expenses || [];
+    if (statsState.mode === 'range' && statsState.fromDate && statsState.toDate) {
+        const from = new Date(statsState.fromDate);
+        const to = new Date(statsState.toDate);
+        const diffMs = to.getTime() - from.getTime();
+        const prevTo = new Date(from.getTime() - 1);
+        const prevFrom = new Date(prevTo.getTime() - diffMs);
+        return data.filter(i => {
+            const d = new Date(i.date);
+            return d >= prevFrom && d <= prevTo;
+        });
+    }
+    // month mode: same month previous year
+    const prevYear = statsState.year - 1;
+    return data.filter(i => {
+        const d = new Date(i.date);
+        return d.getFullYear() === prevYear && d.getMonth() === statsState.month;
+    });
+}
+
+// --- STATS UI CONTROLS ---
+window.setStatsMode = function(mode) {
+    statsState.mode = mode;
+    document.getElementById('stats-mode-month').className = mode === 'month'
+        ? 'flex-1 py-1.5 rounded-lg text-[10px] font-bold bg-blue-500 text-white shadow-sm transition-all'
+        : 'flex-1 py-1.5 rounded-lg text-[10px] font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 transition-all';
+    document.getElementById('stats-mode-range').className = mode === 'range'
+        ? 'flex-1 py-1.5 rounded-lg text-[10px] font-bold bg-blue-500 text-white shadow-sm transition-all'
+        : 'flex-1 py-1.5 rounded-lg text-[10px] font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 transition-all';
+    document.getElementById('stats-month-filters').classList.toggle('hidden', mode !== 'month');
+    document.getElementById('stats-range-filters').classList.toggle('hidden', mode !== 'range');
+    if (mode === 'range') {
+        const now = new Date();
+        document.getElementById('stats-date-from').value = `${now.getFullYear()}-${String(now.getMonth()).padStart(2,'0')}-01`;
+        document.getElementById('stats-date-to').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    }
+    applyStatsFilter();
+};
+
+window.statsChangeMonth = function(step) {
+    statsState.month += step;
+    if (statsState.month < 0) { statsState.month = 11; statsState.year--; }
+    if (statsState.month > 11) { statsState.month = 0; statsState.year++; }
+    document.getElementById('stats-month-select').value = statsState.month;
+    document.getElementById('stats-year-select').value = statsState.year;
+    applyStatsFilter();
+};
+
+window.applyStatsFilter = function() {
+    if (statsState.mode === 'month') {
+        statsState.month = parseInt(document.getElementById('stats-month-select').value);
+        statsState.year = parseInt(document.getElementById('stats-year-select').value);
+    } else {
+        statsState.fromDate = document.getElementById('stats-date-from').value;
+        statsState.toDate = document.getElementById('stats-date-to').value;
+        if (!statsState.fromDate || !statsState.toDate) {
+            showNotification('Selecciona ambas fechas', 'error');
+            return;
+        }
+        if (statsState.fromDate > statsState.toDate) {
+            showNotification('La fecha "desde" debe ser anterior', 'error');
+            return;
+        }
+    }
+    updateStatsTab();
+};
+
+window.downloadStatsReport = async function() {
+    const filtered = getStatsFilteredData();
+    if (filtered.length === 0) {
+        showNotification('No hay datos en este período', 'error');
+        return;
+    }
+    
+    // Reuse report modal logic to generate PDF
+    const { generatePDFReport } = await import('./pdf-generator.js');
+    const label = statsState.mode === 'month'
+        ? `Estadísticas-${statsState.month+1}-${statsState.year}`
+        : `Estadísticas-${statsState.fromDate}-a-${statsState.toDate}`;
+    
+    showNotification('📄 Generando reporte de estadísticas...', 'success');
+
+    try {
+        const pdfResult = await generatePDFReport(filtered, AppState.currentViewDate, label);
+        if (pdfResult) {
+            const { doc } = pdfResult;
+            const fileName = `Reporte-${label}.pdf`;
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (isMobile) {
+                window.open(doc.output('bloburl'), '_blank');
+            } else {
+                doc.save(fileName);
+            }
+            showNotification('✅ Reporte descargado', 'success');
+            return;
+        }
+    } catch (e) {
+        console.error('PDF error:', e);
+    }
+    
+    // Fallback text report
+    const totalIncome = filtered.filter(i => i.type === 'income').reduce((s, i) => s + i.amount, 0);
+    const totalExpense = filtered.filter(i => i.type === 'expense' || !i.type).reduce((s, i) => s + i.amount, 0);
+    
+    let report = `REPORTE DE ESTADÍSTICAS - ${label}\n${'='.repeat(50)}\n\n`;
+    report += `Período: ${document.getElementById('stats-period-label').textContent}\n\n`;
+    report += `RESUMEN:\n`;
+    report += `  Saldo Final: ${formatMoney(totalIncome - totalExpense)}\n`;
+    report += `  Ingresos:    ${formatMoney(totalIncome)}\n`;
+    report += `  Gastos:      ${formatMoney(totalExpense)}\n`;
+    report += `  Movimientos: ${filtered.length}\n`;
+    report += `  Promedio diario: ${formatMoney(totalExpense / (filtered.length || 1))}\n\n`;
+    report += `DETALLE:\n${'-'.repeat(50)}\n`;
+    filtered.forEach(item => {
+        const type = item.type === 'income' ? 'INGRESO' : 'GASTO';
+        report += `${item.date} | ${type} | ${formatMoney(item.amount)} | ${item.category || '—'} | ${item.concept || '—'}\n`;
+    });
+    report += `\n${'-'.repeat(50)}\n`;
+    report += `Generado: ${new Date().toLocaleString('es-ES')}\n`;
+    report += `Foresight Finanzas\n`;
+    
+    const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `reporte-${label}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showNotification('📄 Reporte de texto descargado', 'success');
+};
+
+function initStatsSelectors() {
+    const yearSel = document.getElementById('stats-year-select');
+    if (!yearSel) return;
+    const currentYear = new Date().getFullYear();
+    for (let y = currentYear - 3; y <= currentYear + 1; y++) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        if (y === currentYear) opt.selected = true;
+        yearSel.appendChild(opt);
+    }
+    statsState.month = new Date().getMonth();
+    statsState.year = currentYear;
+    document.getElementById('stats-month-select').value = statsState.month;
+    yearSel.value = statsState.year;
+}
+
+// Initialize stats selectors after DOM
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initStatsSelectors);
+} else {
+    initStatsSelectors();
 }
 
 document.addEventListener('DOMContentLoaded', async () => {

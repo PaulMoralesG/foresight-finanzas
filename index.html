@@ -337,10 +337,47 @@
 
             <!-- TAB: STATS -->
             <div id="tab-stats-content" class="tab-content hidden space-y-3">
-                <div class="pt-4 slide-up">
-                    <!-- Compact summary header -->
-                    <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-4 shadow-lg shadow-blue-500/20 mb-4">
-                        <p class="text-blue-100 text-[9px] font-bold uppercase mb-1">Resumen del Mes</p>
+                <div class="pt-2 slide-up space-y-3">
+                    
+                    <!-- FILTROS -->
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-3 shadow-sm border border-gray-100 dark:border-gray-700">
+                        <div class="flex gap-1 mb-3">
+                            <button onclick="window.setStatsMode('month')" id="stats-mode-month" class="flex-1 py-1.5 rounded-lg text-[10px] font-bold bg-blue-500 text-white shadow-sm transition-all">Por Mes</button>
+                            <button onclick="window.setStatsMode('range')" id="stats-mode-range" class="flex-1 py-1.5 rounded-lg text-[10px] font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 transition-all">Rango Fechas</button>
+                        </div>
+                        <!-- Month selector -->
+                        <div id="stats-month-filters" class="flex items-center gap-2">
+                            <button onclick="window.statsChangeMonth(-1)" class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 transition"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+                            <select id="stats-month-select" class="flex-1 text-center text-xs font-bold bg-gray-50 dark:bg-gray-700 rounded-lg px-2 py-1.5 text-gray-700 dark:text-gray-200 outline-none appearance-none cursor-pointer">
+                                <option value="0">Enero</option><option value="1">Febrero</option><option value="2">Marzo</option><option value="3">Abril</option><option value="4">Mayo</option><option value="5">Junio</option>
+                                <option value="6">Julio</option><option value="7">Agosto</option><option value="8">Septiembre</option><option value="9">Octubre</option><option value="10">Noviembre</option><option value="11">Diciembre</option>
+                            </select>
+                            <select id="stats-year-select" class="text-center text-xs font-bold bg-gray-50 dark:bg-gray-700 rounded-lg px-2 py-1.5 text-gray-700 dark:text-gray-200 outline-none appearance-none cursor-pointer">
+                            </select>
+                            <button onclick="window.statsChangeMonth(1)" class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 transition"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+                        </div>
+                        <!-- Date range (hidden by default) -->
+                        <div id="stats-range-filters" class="hidden flex items-center gap-2">
+                            <div class="flex-1">
+                                <label class="text-[8px] font-bold text-gray-400 uppercase block mb-0.5">Desde</label>
+                                <input type="date" id="stats-date-from" class="w-full text-[11px] font-bold bg-gray-50 dark:bg-gray-700 rounded-lg px-2 py-1.5 text-gray-700 dark:text-gray-200 outline-none">
+                            </div>
+                            <span class="text-gray-300 mt-4">→</span>
+                            <div class="flex-1">
+                                <label class="text-[8px] font-bold text-gray-400 uppercase block mb-0.5">Hasta</label>
+                                <input type="date" id="stats-date-to" class="w-full text-[11px] font-bold bg-gray-50 dark:bg-gray-700 rounded-lg px-2 py-1.5 text-gray-700 dark:text-gray-200 outline-none">
+                            </div>
+                            <button onclick="window.applyStatsFilter()" class="mt-4 w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center text-xs hover:bg-blue-600 transition flex-shrink-0"><i class="fa-solid fa-check"></i></button>
+                        </div>
+                        <div class="mt-2 flex justify-between items-center">
+                            <p class="text-[9px] font-bold text-gray-400" id="stats-period-label">Cargando...</p>
+                            <button onclick="window.applyStatsFilter()" class="text-[9px] font-bold text-blue-500 hover:text-blue-600 transition">Aplicar</button>
+                        </div>
+                    </div>
+
+                    <!-- SUMMARY CARDS -->
+                    <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-4 shadow-lg shadow-blue-500/20">
+                        <p class="text-blue-100 text-[9px] font-bold uppercase mb-1" id="stats-summary-label">Resultado del Período</p>
                         <p class="text-white text-3xl font-black" id="tab-stats-total">$0</p>
                         <div class="flex gap-4 mt-2">
                             <div>
@@ -351,9 +388,59 @@
                                 <p class="text-[9px] font-bold text-blue-200">Gastos</p>
                                 <p class="text-sm font-black text-white" id="tab-stats-expense">$0</p>
                             </div>
+                            <div>
+                                <p class="text-[9px] font-bold text-blue-200">Movimientos</p>
+                                <p class="text-sm font-black text-white" id="tab-stats-count">0</p>
+                            </div>
                         </div>
                     </div>
-                    <!-- Quick actions for stats -->
+
+                    <!-- INDICADORES EXTRAS -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                            <p class="text-[8px] font-bold text-gray-400 uppercase mb-0.5">💰 Balance Diario</p>
+                            <p class="text-lg font-black text-gray-800 dark:text-white" id="stats-avg-daily">$0</p>
+                            <p class="text-[8px] text-gray-400 font-bold">Promedio por día</p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                            <p class="text-[8px] font-bold text-gray-400 uppercase mb-0.5">📊 Negocio vs Personal</p>
+                            <p class="text-lg font-black text-gray-800 dark:text-white" id="stats-business-pct">0%</p>
+                            <p class="text-[8px] text-gray-400 font-bold">Gastos de negocio</p>
+                        </div>
+                    </div>
+
+                    <!-- TOP CATEGORÍAS -->
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <div class="w-7 h-7 rounded-lg bg-orange-50 dark:bg-orange-900/40 text-orange-500 flex items-center justify-center text-xs"><i class="fa-solid fa-tag"></i></div>
+                                <p class="text-xs font-black text-gray-800 dark:text-white">Top Categorías de Gastos</p>
+                            </div>
+                        </div>
+                        <div id="stats-top-categories" class="space-y-2">
+                            <p class="text-[10px] text-gray-400 font-bold text-center py-2">Sin datos</p>
+                        </div>
+                    </div>
+
+                    <!-- COMPARATIVA -->
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-7 h-7 rounded-lg bg-green-50 dark:bg-green-900/40 text-green-500 flex items-center justify-center text-xs"><i class="fa-solid fa-chart-line"></i></div>
+                            <p class="text-xs font-black text-gray-800 dark:text-white">vs Período Anterior</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-center">
+                            <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-2">
+                                <p class="text-[8px] font-bold text-gray-400 uppercase">Ingresos</p>
+                                <p class="text-sm font-black text-green-600 dark:text-green-400" id="stats-vs-income">0%</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-2">
+                                <p class="text-[8px] font-bold text-gray-400 uppercase">Gastos</p>
+                                <p class="text-sm font-black text-red-600 dark:text-red-400" id="stats-vs-expense">0%</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ACTION BUTTONS -->
                     <div class="grid grid-cols-2 gap-2">
                         <button onclick="window.toggleSummary(true)" class="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-2 hover:border-blue-200 transition">
                             <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/40 text-blue-500 flex items-center justify-center text-sm"><i class="fa-solid fa-chart-bar"></i></div>
@@ -362,11 +449,11 @@
                                 <p class="text-xs font-black text-gray-800 dark:text-white leading-none">Resumen</p>
                             </div>
                         </button>
-                        <button onclick="window.openReportModal()" class="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-2 hover:border-blue-200 transition">
+                        <button onclick="window.downloadStatsReport()" class="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-2 hover:border-green-200 transition">
                             <div class="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-900/40 text-green-500 flex items-center justify-center text-sm"><i class="fa-solid fa-file-pdf"></i></div>
                             <div class="text-left">
-                                <p class="text-[8px] font-bold text-gray-400 uppercase">Generar</p>
-                                <p class="text-xs font-black text-gray-800 dark:text-white leading-none">Reporte</p>
+                                <p class="text-[8px] font-bold text-gray-400 uppercase">Descargar</p>
+                                <p class="text-xs font-black text-gray-800 dark:text-white leading-none">Reporte PDF</p>
                             </div>
                         </button>
                     </div>
