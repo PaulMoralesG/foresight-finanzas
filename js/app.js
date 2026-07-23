@@ -62,6 +62,75 @@ window.executeDelete = async function() {
     }, "Borrando...");
 };
 
+// --- TAB BAR NAVIGATION ---
+window.switchTab = function(tab) {
+    const tabs = ['home', 'movements', 'stats', 'profile'];
+    const contentIds = ['tab-home-content', 'tab-movements-content', 'tab-stats-content', 'tab-profile-content'];
+    
+    tabs.forEach((t, i) => {
+        const btn = document.getElementById(`tab-${t}`);
+        const content = document.getElementById(contentIds[i]);
+        
+        if (t === tab) {
+            btn.classList.add('active-tab');
+            btn.classList.remove('text-gray-400', 'dark:text-gray-500');
+            btn.classList.add('text-blue-600', 'dark:text-blue-400');
+            content.classList.remove('hidden');
+        } else {
+            btn.classList.remove('active-tab');
+            btn.classList.remove('text-blue-600', 'dark:text-blue-400');
+            btn.classList.add('text-gray-400', 'dark:text-gray-500');
+            content.classList.add('hidden');
+        }
+    });
+
+    if (tab === 'stats') updateStatsTab();
+    if (tab === 'profile') updateProfileTab();
+};
+
+function updateStatsTab() {
+    const totalEl = document.getElementById('tab-stats-total');
+    const incomeEl = document.getElementById('tab-stats-income');
+    const expenseEl = document.getElementById('tab-stats-expense');
+    if (!totalEl) return;
+    
+    const monthlyData = getMonthlyData();
+    const totalIncome = monthlyData.filter(i => i.type === 'income').reduce((s, i) => s + i.amount, 0);
+    const totalExpense = monthlyData.filter(i => i.type === 'expense').reduce((s, i) => s + i.amount, 0);
+    
+    incomeEl.textContent = `$${totalIncome.toFixed(2)}`;
+    expenseEl.textContent = `$${totalExpense.toFixed(2)}`;
+    totalEl.textContent = `$${(totalIncome - totalExpense).toFixed(2)}`;
+}
+
+function updateProfileTab() {
+    const avatar = document.getElementById('profile-avatar-letter');
+    const nameEl = document.getElementById('profile-name');
+    const emailEl = document.getElementById('profile-email');
+    const darkIcon = document.getElementById('profile-dark-icon');
+    
+    if (nameEl && AppState.currentUser) {
+        const firstName = AppState.currentUser.firstName || AppState.currentUser.email?.charAt(0).toUpperCase() || 'U';
+        const lastName = AppState.currentUser.lastName || '';
+        nameEl.textContent = `${firstName} ${lastName}`.trim();
+        if (avatar) avatar.textContent = firstName.charAt(0).toUpperCase();
+        if (emailEl) emailEl.textContent = AppState.currentUser.email || '';
+    }
+    if (darkIcon) {
+        const isDark = document.documentElement.classList.contains('dark');
+        darkIcon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+    }
+}
+
+function getMonthlyData() {
+    const data = AppState.expenses || [];
+    const year = AppState.currentViewDate.getFullYear();
+    const month = AppState.currentViewDate.getMonth();
+    return data.filter(i => {
+        const d = new Date(i.date);
+        return d.getFullYear() === year && d.getMonth() === month;
+    });
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
     await Auth.initSupabase();
@@ -496,15 +565,18 @@ function applyDarkMode(isDark) {
     const html = document.documentElement;
     const loginIcon = document.getElementById('dark-icon-login');
     const appIcon = document.getElementById('dark-icon-app');
+    const profileIcon = document.getElementById('profile-dark-icon');
 
     if (isDark) {
         html.classList.add('dark');
         if (loginIcon) { loginIcon.className = 'fa-solid fa-sun'; }
         if (appIcon) { appIcon.className = 'fa-solid fa-sun'; }
+        if (profileIcon) { profileIcon.className = 'fa-solid fa-sun'; }
     } else {
         html.classList.remove('dark');
         if (loginIcon) { loginIcon.className = 'fa-solid fa-moon'; }
         if (appIcon) { appIcon.className = 'fa-solid fa-moon'; }
+        if (profileIcon) { profileIcon.className = 'fa-solid fa-moon'; }
     }
     localStorage.setItem('darkMode', isDark ? 'true' : 'false');
 }

@@ -117,8 +117,11 @@
         </div>
 
         <!-- MAIN SCROLLABLE -->
-        <main class="px-5 max-w-md mx-auto space-y-3">
+        <main class="px-5 max-w-md mx-auto space-y-3 pb-36">
             
+            <!-- TAB: HOME / INICIO -->
+            <div id="tab-home-content" class="tab-content space-y-3">
+
             <!-- Month Navigator (Capsule Style) -->
             <div class="flex justify-center slide-up">
                 <div class="flex items-center bg-white dark:bg-gray-800 rounded-full p-1 pl-2 pr-2 shadow-sm border border-gray-100 dark:border-gray-700">
@@ -292,52 +295,165 @@
                         <p class="text-xs font-black leading-none">Reporte</p>
                     </div>
                 </button>
+            </div><!-- /quick-actions -->
+
+            </div><!-- /tab-home-content -->
+
+            <!-- TAB: MOVEMENTS -->
+            <div id="tab-movements-content" class="tab-content hidden space-y-3">
+                <div class="pt-4 slide-up">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 id="transactions-title" class="font-black text-lg text-gray-800 dark:text-white">Movimientos</h3>
+                        <button onclick="window.filterTransactions('all')" id="transactions-subtitle" class="text-[9px] font-bold text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 px-2.5 py-1 rounded-full shadow-sm">Ver Todo</button>
+                    </div>
+                    <div class="flex gap-1 mb-4 overflow-x-auto pb-1" style="scrollbar-width: none; -ms-overflow-style: none;">
+                        <button onclick="window.filterTransactions('all')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-2 py-1.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all">
+                            📊 Todos
+                        </button>
+                        <button onclick="window.filterTransactions('business')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-2 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800/60 transition-all">
+                            💼 Negocio
+                        </button>
+                        <button onclick="window.filterTransactions('personal')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-2 py-1.5 rounded-full bg-purple-50 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-800/60 transition-all">
+                            👤 Personal
+                        </button>
+                        <button onclick="window.filterTransactions('income')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-2 py-1.5 rounded-full bg-green-50 dark:bg-green-900/40 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-800/60 transition-all">
+                            ⬇️ Ingresos
+                        </button>
+                        <button onclick="window.filterTransactions('expense')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-2 py-1.5 rounded-full bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-800/60 transition-all">
+                            ⬆️ Gastos
+                        </button>
+                    </div>
+                    <div id="movements-list-full" class="space-y-2">
+                        <ul id="movements-list" class="space-y-2">
+                            <li id="empty-state" class="text-center py-6 opacity-40">
+                                <div class="text-4xl mb-2 grayscale">👻</div>
+                                <p class="text-xs font-bold text-gray-400 dark:text-gray-500">Sin movimientos aún</p>
+                                <p class="text-[10px] text-gray-300 dark:text-gray-600 mt-0.5">Usa el botón + para empezar</p>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
             </div>
 
-            <!-- Transactions List -->
-            <div class="pt-1">
-                <div class="flex justify-between items-end mb-2.5 px-1 slide-up" style="animation-delay: 0.2s;">
-                    <h3 id="transactions-title" class="font-black text-base text-gray-800 dark:text-white">Movimientos</h3>
-                    <button onclick="window.filterTransactions('all')" title="Mostrar todos los movimientos" id="transactions-subtitle" class="text-[9px] font-bold text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 px-2.5 py-1 rounded-full shadow-sm">Ver Todo</button>
+            <!-- TAB: STATS -->
+            <div id="tab-stats-content" class="tab-content hidden space-y-3">
+                <div class="pt-4 slide-up">
+                    <!-- Compact summary header -->
+                    <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-4 shadow-lg shadow-blue-500/20 mb-4">
+                        <p class="text-blue-100 text-[9px] font-bold uppercase mb-1">Resumen del Mes</p>
+                        <p class="text-white text-3xl font-black" id="tab-stats-total">$0</p>
+                        <div class="flex gap-4 mt-2">
+                            <div>
+                                <p class="text-[9px] font-bold text-blue-200">Ingresos</p>
+                                <p class="text-sm font-black text-white" id="tab-stats-income">$0</p>
+                            </div>
+                            <div>
+                                <p class="text-[9px] font-bold text-blue-200">Gastos</p>
+                                <p class="text-sm font-black text-white" id="tab-stats-expense">$0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Quick actions for stats -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="window.toggleSummary(true)" class="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-2 hover:border-blue-200 transition">
+                            <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/40 text-blue-500 flex items-center justify-center text-sm"><i class="fa-solid fa-chart-bar"></i></div>
+                            <div class="text-left">
+                                <p class="text-[8px] font-bold text-gray-400 uppercase">Ver</p>
+                                <p class="text-xs font-black text-gray-800 dark:text-white leading-none">Resumen</p>
+                            </div>
+                        </button>
+                        <button onclick="window.openReportModal()" class="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-2 hover:border-blue-200 transition">
+                            <div class="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-900/40 text-green-500 flex items-center justify-center text-sm"><i class="fa-solid fa-file-pdf"></i></div>
+                            <div class="text-left">
+                                <p class="text-[8px] font-bold text-gray-400 uppercase">Generar</p>
+                                <p class="text-xs font-black text-gray-800 dark:text-white leading-none">Reporte</p>
+                            </div>
+                        </button>
+                    </div>
                 </div>
+            </div>
 
-                <!-- Filtros mejorados -->
-                <div class="flex gap-1 mb-3 overflow-x-auto pb-1 px-0.5 slide-up" style="animation-delay: 0.22s; scrollbar-width: none; -ms-overflow-style: none;">
-                    <button onclick="window.filterTransactions('all')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-2 py-1.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all">
-                        📊 Todos
-                    </button>
-                    <button onclick="window.filterTransactions('business')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-2 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800/60 transition-all">
-                        💼 Negocio
-                    </button>
-                    <button onclick="window.filterTransactions('personal')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-2 py-1.5 rounded-full bg-purple-50 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-800/60 transition-all">
-                        👤 Personal
-                    </button>
-                    <button onclick="window.filterTransactions('income')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-2 py-1.5 rounded-full bg-green-50 dark:bg-green-900/40 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-800/60 transition-all">
-                        ⬇️ Ingresos
-                    </button>
-                    <button onclick="window.filterTransactions('expense')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-2 py-1.5 rounded-full bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-800/60 transition-all">
-                        ⬆️ Gastos
-                    </button>
+            <!-- TAB: PROFILE -->
+            <div id="tab-profile-content" class="tab-content hidden space-y-3">
+                <div class="pt-4 slide-up">
+                    <!-- User card -->
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 text-center">
+                        <div class="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-2xl font-black mx-auto mb-3 shadow-lg shadow-blue-500/30">
+                            <span id="profile-avatar-letter">U</span>
+                        </div>
+                        <p class="font-black text-lg text-gray-800 dark:text-white" id="profile-name">Usuario</p>
+                        <p class="text-xs font-bold text-gray-400" id="profile-email">---</p>
+                    </div>
+                    <!-- Settings -->
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 overflow-hidden">
+                        <button onclick="window.showTutorial()" class="w-full flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition text-left">
+                            <div class="w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-900/40 text-purple-500 flex items-center justify-center"><i class="fa-solid fa-question"></i></div>
+                            <div class="flex-1">
+                                <p class="text-sm font-bold text-gray-800 dark:text-white">Tutorial</p>
+                                <p class="text-[10px] font-bold text-gray-400">Aprende a usar la app</p>
+                            </div>
+                            <i class="fa-solid fa-chevron-right text-gray-300 text-xs"></i>
+                        </button>
+                        <button onclick="window.toggleDarkMode()" class="w-full flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition text-left">
+                            <div class="w-9 h-9 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-500 flex items-center justify-center"><i class="fa-solid fa-moon" id="profile-dark-icon"></i></div>
+                            <div class="flex-1">
+                                <p class="text-sm font-bold text-gray-800 dark:text-white">Modo Oscuro</p>
+                                <p class="text-[10px] font-bold text-gray-400">Activar/desactivar</p>
+                            </div>
+                            <i class="fa-solid fa-chevron-right text-gray-300 text-xs"></i>
+                        </button>
+                        <button onclick="window.logout()" class="w-full flex items-center gap-3 p-4 hover:bg-red-50 dark:hover:bg-red-900/20 transition text-left">
+                            <div class="w-9 h-9 rounded-lg bg-red-50 dark:bg-red-900/40 text-red-500 flex items-center justify-center"><i class="fa-solid fa-power-off"></i></div>
+                            <div class="flex-1">
+                                <p class="text-sm font-bold text-red-600 dark:text-red-400">Cerrar Sesión</p>
+                                <p class="text-[10px] font-bold text-red-400/70">Salir de tu cuenta</p>
+                            </div>
+                            <i class="fa-solid fa-chevron-right text-red-300 text-xs"></i>
+                        </button>
+                    </div>
                 </div>
-
-                <ul id="movements-list" class="space-y-2 pb-8 slide-up" style="animation-delay: 0.25s;">
-                    <li id="empty-state" class="text-center py-6 opacity-40">
-                        <div class="text-4xl mb-2 grayscale">👻</div>
-                        <p class="text-xs font-bold text-gray-400 dark:text-gray-500">Sin movimientos aún</p>
-                        <p class="text-[10px] text-gray-300 dark:text-gray-600 mt-0.5">Usa el botón + para empezar</p>
-                    </li>
-                    <!-- Items injected via JS -->
-                </ul>
             </div>
 
         </main>
 
-        <!-- Fixed Bottom Elements -->
-        <div class="fixed bottom-0 w-full left-0 p-5 sm:p-6 pointer-events-none flex justify-center bg-gradient-to-t from-gray-100 dark:from-gray-900 via-gray-50/90 dark:via-gray-900/90 to-transparent z-20 pt-24">
-            <button onclick="window.openAddModal()" title="Agregar nuevo movimiento" class="add-button fab-gradient pointer-events-auto text-white w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-xl sm:text-2xl shadow-2xl shadow-blue-500/40 hover:scale-110 transition-transform active:scale-95">
-                <i class="fa-solid fa-plus"></i>
-            </button>
-        </div>
+        <!-- TAB BAR (WhatsApp-style) -->
+        <nav id="tab-bar" class="fixed bottom-0 left-0 right-0 z-40 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-t border-gray-200/70 dark:border-gray-700/70 safe-area-inset-bottom-tab">
+            <div class="flex items-center justify-around max-w-lg mx-auto relative">
+                <!-- FAB over tab bar (centered, floating) -->
+                <div class="absolute -top-7 left-1/2 -translate-x-1/2 z-10">
+                    <button onclick="window.openAddModal()" title="Agregar nuevo movimiento" class="add-button w-14 h-14 rounded-full flex items-center justify-center text-xl shadow-xl shadow-blue-500/40 hover:scale-110 transition-transform active:scale-95 fab-gradient">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
+
+                <!-- Tab 1: Inicio -->
+                <button onclick="window.switchTab('home')" id="tab-home" class="tab-btn flex-1 flex flex-col items-center justify-center py-2 pt-3 gap-0.5 text-gray-400 dark:text-gray-500 transition-colors relative active-tab">
+                    <i class="fa-solid fa-house text-xl"></i>
+                    <span class="text-[9px] font-bold uppercase tracking-wider">Inicio</span>
+                </button>
+
+                <!-- Tab 2: Movimientos -->
+                <button onclick="window.switchTab('movements')" id="tab-movements" class="tab-btn flex-1 flex flex-col items-center justify-center py-2 pt-3 gap-0.5 text-gray-400 dark:text-gray-500 transition-colors relative">
+                    <i class="fa-solid fa-arrow-trend-up text-xl"></i>
+                    <span class="text-[9px] font-bold uppercase tracking-wider">Movimientos</span>
+                </button>
+
+                <!-- Spacer for FAB -->
+                <div class="flex-1"></div>
+
+                <!-- Tab 3: Stats -->
+                <button onclick="window.switchTab('stats')" id="tab-stats" class="tab-btn flex-1 flex flex-col items-center justify-center py-2 pt-3 gap-0.5 text-gray-400 dark:text-gray-500 transition-colors relative">
+                    <i class="fa-solid fa-chart-pie text-xl"></i>
+                    <span class="text-[9px] font-bold uppercase tracking-wider">Estadísticas</span>
+                </button>
+
+                <!-- Tab 4: Perfil -->
+                <button onclick="window.switchTab('profile')" id="tab-profile" class="tab-btn flex-1 flex flex-col items-center justify-center py-2 pt-3 gap-0.5 text-gray-400 dark:text-gray-500 transition-colors relative">
+                    <i class="fa-solid fa-user text-xl"></i>
+                    <span class="text-[9px] font-bold uppercase tracking-wider">Perfil</span>
+                </button>
+            </div>
+        </nav>
 
     </section>
 

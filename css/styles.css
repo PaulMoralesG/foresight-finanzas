@@ -78,6 +78,17 @@ body {
             box-shadow: 0 8px 20px rgba(88, 86, 214, 0.4);
         }
 
+        /* Tab bar FAB - centered and floating */
+        #tab-bar .fab-gradient {
+            width: 52px;
+            height: 52px;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
+        }
+
+        html.dark #tab-bar .fab-gradient {
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.5);
+        }
+
         /* Dark Mode - Smooth transition for body bg */
         html.dark body {
             background-color: #111827;
@@ -216,3 +227,67 @@ body {
         html.dark #onboarding-tooltip button.bg-gray-100 {
             background-color: #374151;
         }
+
+        /* === TAB BAR === */
+        #tab-bar {
+            padding-bottom: max(env(safe-area-inset-bottom, 0px), 4px);
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
+        }
+
+        html.dark #tab-bar {
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .tab-btn {
+            position: relative;
+            transition: color 0.2s ease, transform 0.2s ease;
+        }
+
+        .tab-btn:active {
+            transform: scale(0.92);
+        }
+
+        .tab-btn.active-tab {
+            color: #2563EB;
+        }
+
+        html.dark .tab-btn.active-tab {
+            color: #60A5FA;
+        }
+
+        .tab-btn.active-tab i {
+            transform: scale(1.05);
+        }
+
+        .tab-btn.active-tab::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 3px;
+            background: #2563EB;
+            border-radius: 0 0 3px 3px;
+        }
+
+        html.dark .tab-btn.active-tab::before {
+            background: #60A5FA;
+        }
+
+        /* Tab content transitions */
+        .tab-content {
+            transition: opacity 0.25s ease, transform 0.25s ease;
+        }
+
+        .tab-content.hidden {
+            display: none;
+        }
+
+        /* Adjust main padding for tab bar */
+        .safe-area-inset-bottom-tab {
+            padding-bottom: max(env(safe-area-inset-bottom, 0px), 4px);
+        }
+
+        /* Keep existing FAB but ensure it's above the tab bar */
+        /* Defined above in the tab bar section */
