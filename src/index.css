@@ -1,0 +1,346 @@
+/* Google Font: Inter — loaded via <link> in index.html (non-blocking) */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Checkbox indeterminate state — visual dash for partial selections */
+input[type="checkbox"]:indeterminate {
+  @apply bg-blue-500 border-blue-500;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='white'%3E%3Crect x='4' y='9' width='12' height='2' rx='1'/%3E%3C/svg%3E");
+}
+
+/* ================================================================
+   Foresight Finanzas v2 — SaaS Design System
+   ================================================================ */
+
+:root {
+  --color-income: #059669;
+  --color-income-soft: #ecfdf5;
+  --color-expense: #dc2626;
+  --color-expense-soft: #fef2f2;
+  --color-balance: #2563eb;
+  --color-balance-soft: #eff6ff;
+  --color-business: #7c3aed;
+  --color-business-soft: #f5f3ff;
+}
+
+.dark {
+  --color-income: #34d399;
+  --color-income-soft: #022c22;
+  --color-expense: #f87171;
+  --color-expense-soft: #450a0a;
+  --color-balance: #60a5fa;
+  --color-balance-soft: #172554;
+  --color-business: #a78bfa;
+  --color-business-soft: #2e1065;
+}
+
+@layer base {
+  html {
+    /* dvh = dynamic viewport height — se ajusta cuando la barra de Safari aparece/desaparece */
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
+    overflow-x: hidden;
+    overflow-y: auto;
+    /* Previene el bounce de iOS que descubre espacio blanco bajo el TabBar */
+    overscroll-behavior-y: none;
+    /* Fija el fondo para que no haya parpadeo al hacer scroll */
+    background-color: theme('colors.slate.50');
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
+    @apply bg-slate-50 text-slate-900 antialiased;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-overflow-scrolling: touch;
+    /* Previene pinch-to-zoom y double-tap zoom (refuerzo del meta viewport) */
+    touch-action: pan-x pan-y;
+    -ms-touch-action: pan-x pan-y;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  /* El contenedor raíz de React debe llenar todo el viewport */
+  #root {
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
+  }
+
+  html.dark {
+    background-color: theme('colors.slate.950');
+  }
+
+  html.dark body {
+    @apply bg-slate-950 text-slate-100;
+  }
+
+  html.dark #root {
+    background-color: theme('colors.slate.950');
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 dark:bg-slate-700 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-400 dark:bg-slate-600;
+  }
+
+  ::selection {
+    background-color: rgb(37 99 235 / 0.2);
+    @apply text-brand-900 dark:text-brand-100;
+  }
+
+  /* ── Mobile: espacio para el TabBar fijo (padding-bottom uniforme para todas las páginas) ── */
+  /*    !important necesario: Tailwind p-4 (utilities) gana en especificidad a main (base) */
+  @media (max-width: 1023px) {
+    main {
+      padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px)) !important;
+    }
+  }
+
+  /* ── Safe-area como variables CSS para reuso ── */
+  :root {
+    --sat: env(safe-area-inset-top, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+  }
+}
+
+/* ================================================================
+   Componentes reutilizables
+   ================================================================ */
+
+@layer components {
+  .saas-card {
+    @apply bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800;
+    @apply shadow-sm hover:shadow-md transition-shadow duration-200;
+  }
+
+  .saas-input {
+    @apply w-full rounded-lg border border-slate-300 dark:border-slate-700;
+    @apply bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100;
+    @apply px-2.5 py-1.5 text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500;
+    @apply focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500;
+    @apply transition-all duration-150;
+  }
+
+  .saas-input-sm { @apply saas-input px-2 py-1 text-xs; }
+
+  .saas-btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg font-medium text-sm;
+    @apply px-3 py-1.5 transition-all duration-150;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-900;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98];
+  }
+
+  .saas-btn-primary {
+    @apply saas-btn bg-brand-600 hover:bg-brand-700 text-white;
+    @apply focus:ring-brand-500 shadow-sm shadow-brand-500/20;
+  }
+
+  .saas-btn-secondary {
+    @apply saas-btn bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300;
+    @apply hover:bg-slate-200 dark:hover:bg-slate-700 focus:ring-slate-400;
+  }
+
+  .saas-btn-ghost {
+    @apply saas-btn bg-transparent text-slate-600 dark:text-slate-400;
+    @apply hover:bg-slate-100 dark:hover:bg-slate-800 focus:ring-slate-400;
+  }
+
+  .saas-btn-danger {
+    @apply saas-btn bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400;
+    @apply hover:bg-red-100 dark:hover:bg-red-900 focus:ring-red-500;
+  }
+
+  .saas-btn-sm { @apply px-2 py-1 text-xs gap-1; }
+  .saas-btn-icon { @apply saas-btn p-1.5 w-8 h-8; }
+
+  /* Toggle pill: dark / light mode */
+  .dark-mode-pill {
+    @apply inline-flex items-center gap-1 p-1 rounded-full;
+    @apply bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700;
+    @apply transition-all duration-300 cursor-pointer;
+    @apply focus:outline-none focus:ring-2 focus:ring-brand-500/40;
+  }
+  .dark-mode-pill-option {
+    @apply w-7 h-7 rounded-full flex items-center justify-center text-xs;
+    @apply transition-all duration-300;
+  }
+  .dark-mode-pill-option.active {
+    @apply bg-white dark:bg-slate-700 shadow-sm text-amber-500;
+  }
+  .dark-mode-pill-option:not(.active) {
+    @apply text-slate-400 dark:text-slate-300;
+  }
+
+  .saas-badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+  .saas-badge-green  { @apply saas-badge bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400; }
+  .saas-badge-red    { @apply saas-badge bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400; }
+  .saas-badge-blue   { @apply saas-badge bg-brand-50 dark:bg-brand-950 text-brand-700 dark:text-brand-400; }
+  .saas-badge-slate  { @apply saas-badge bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400; }
+  .saas-badge-violet { @apply saas-badge bg-violet-50 dark:bg-violet-950 text-violet-700 dark:text-violet-400; }
+
+  /* Chip de filtro activo (removible) */
+  .saas-chip-filter {
+    @apply inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full;
+    @apply bg-brand-50 dark:bg-brand-950 text-brand-700 dark:text-brand-400;
+    @apply border border-brand-200 dark:border-brand-800;
+    @apply hover:bg-brand-100 dark:hover:bg-brand-900 transition-colors cursor-pointer;
+  }
+  .saas-chip-filter-category {
+    @apply saas-chip-filter bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800;
+  }
+
+  /* Celda clickeable para filtrar */
+  .saas-cell-filter {
+    @apply cursor-pointer rounded-md px-1.5 py-0.5 -mx-1.5 -my-0.5;
+    @apply hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors;
+  }
+
+  .saas-table {
+    @apply w-full text-sm;
+  }
+  .saas-table thead th {
+    @apply text-left px-4 py-2.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider;
+    @apply border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50;
+  }
+  .saas-table tbody td {
+    @apply px-4 py-2.5 border-b border-slate-100 dark:border-slate-800/50;
+  }
+  .saas-table tbody tr {
+    @apply hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors;
+  }
+
+  .saas-skeleton {
+    @apply rounded-lg bg-slate-200 dark:bg-slate-800 animate-skeleton;
+  }
+
+  .saas-divider {
+    @apply border-t border-slate-200 dark:border-slate-800;
+  }
+}
+
+/* ================================================================
+   Animaciones
+   ================================================================ */
+
+.animate-slide-up {
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.animate-fade-in {
+  animation: fadeIn 0.3s ease forwards;
+}
+.animate-scale-in {
+  animation: scaleIn 0.2s ease forwards;
+}
+
+/* ================================================================
+   Keyframes
+   ================================================================ */
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes skeleton {
+  0%   { opacity: 1; }
+  50%  { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
+/* ================================================================
+   Transiciones de dark mode
+   ================================================================ */
+
+body,
+.saas-card,
+.saas-input,
+.saas-btn,
+.saas-badge,
+button,
+input,
+select,
+textarea {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Hide scrollbar for filter pills */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+  /* Safe-area utilities for notched iPhones */
+  .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .pl-safe { padding-left: env(safe-area-inset-left, 0px); }
+  .pr-safe { padding-right: env(safe-area-inset-right, 0px); }
+  .min-h-safe { min-height: -webkit-fill-available; }
+
+  /* Smooth momentum scrolling on iOS */
+  .ios-scroll {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+  }
+
+  /* Prevent iOS zoom on input focus — covers all touch devices (phones + tablets) */
+  @media screen and (max-width: 1023px) {
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="password"],
+    input[type="tel"],
+    input[type="search"],
+    input[type="date"],
+    input[type="month"],
+    select,
+    textarea {
+      font-size: 16px !important; /* Prevents iOS auto-zoom (triggers when font-size < 16px) */
+    }
+  }
+
+  /* ── Cross-browser backdrop-filter fallback ── */
+  .backdrop-blur-lg,
+  .backdrop-blur-2xl {
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+  }
+  .backdrop-blur-2xl {
+    -webkit-backdrop-filter: blur(40px);
+    backdrop-filter: blur(40px);
+  }

@@ -1,0 +1,17 @@
+node_modules
+dist
+*.png
+*.jpg
+*.jpeg
+.env
+*.local
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+.continue/
+.vscode/
+
+.vercel
+.env*
+
+.vercel

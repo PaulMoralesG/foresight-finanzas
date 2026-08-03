@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Previene flicker de dark mode: aplica la clase 'dark' antes de que React monte -->
+    <script>
+      (function() {
+        var saved = localStorage.getItem('foresight-dark-mode');
+        if (saved === 'true') {
+          document.documentElement.classList.add('dark');
+        } else if (saved === null) {
+          // Sin preferencia guardada: usar preferencia del sistema
+          if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+          }
+        }
+      })();
+    </script>
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/17856/17856040.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#2563eb" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f172a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="description" content="Control financiero simple para emprendedores. Separa tus finanzas personales de tu negocio, ve tu crecimiento mes a mes." />
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/17856/17856040.png" />
+
+    <!-- Open Graph (WhatsApp, Facebook, Twitter preview) -->
+    <meta property="og:title" content="Foresight Finanzas" />
+    <meta property="og:description" content="Control financiero simple para emprendedores. Separa tus finanzas personales de tu negocio, ve tu crecimiento mes a mes." />
+    <meta property="og:image" content="https://cdn-icons-png.flaticon.com/512/17856/17856040.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:image" content="https://cdn-icons-png.flaticon.com/512/17856/17856040.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <title>Foresight Finanzas - Tus finanzas personales y de negocio</title>
+  </head>
+  <body style="overscroll-behavior-x: none;">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
