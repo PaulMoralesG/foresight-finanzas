@@ -138,26 +138,6 @@ export function formatDateLong(iso: string): string {
 }
 
 /**
- * Detecta si la app se ejecuta como PWA standalone (instalada en pantalla de inicio).
- */
-export function isPWAStandalone(): boolean {
-  return window.matchMedia('(display-mode: standalone)').matches;
-}
-
-/**
- * Convierte un Blob a data URL (base64). Útil para PWA donde las blob URLs
- * no funcionan cross-origin al abrir en el navegador del sistema.
- */
-function blobToDataURL(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(blob);
-  });
-}
-
-/**
  * Descarga un archivo.
  * - Móviles (iOS Safari, Android Chrome): Web Share API → menú nativo de
  *   compartir/guardar (WhatsApp, Archivos, AirDrop, etc.).
@@ -183,20 +163,4 @@ export async function downloadBlob(blob: Blob, filename: string): Promise<void> 
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 5000);
-}
-
-/**
- * Abre un blob para previsualización.
- * - Navegador normal: blob URL + window.open.
- * - PWA standalone: data URL + window.open (las blob URLs no funcionan cross-origin).
- */
-export async function previewBlob(blob: Blob): Promise<void> {
-  if (isPWAStandalone()) {
-    const dataUrl = await blobToDataURL(blob);
-    window.open(dataUrl, '_blank');
-  } else {
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
-  }
 }

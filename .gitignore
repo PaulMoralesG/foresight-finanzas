@@ -1,5 +1,6 @@
 node_modules
 dist
+coverage
 *.png
 *.jpg
 *.jpeg
@@ -10,8 +11,5 @@ vite.config.js
 vite.config.d.ts
 .continue/
 .vscode/
-
 .vercel
 .env*
-
-.vercel

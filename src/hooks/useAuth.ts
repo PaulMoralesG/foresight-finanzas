@@ -251,7 +251,7 @@ export function useAuth() {
     if (supabase) {
       await supabase.auth.signOut();
     }
-    // Limpiar TODO: auth + finanzas (evita cross-contamination entre cuentas)
+    // Limpiar todo: auth + finanzas (evita cross-contamination entre cuentas)
     clearUser();
     financeStore.getState().reset();
   }

@@ -11,8 +11,7 @@ import { useMonthlyData } from '@/hooks/useFinance';
 import { formatMoney, safeParseDate, syncToCloud, parseMoneyInput } from '@/lib/utils';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/config/categories';
 import { MonthNav } from '@/components/layout/MonthNav';
-import type { Transaction } from '@/types';
-import type { TabId } from '@/types';
+import type { Transaction, TabId } from '@/types';
 
 /* ─── KPI Card ─── */
 function KpiCard({
