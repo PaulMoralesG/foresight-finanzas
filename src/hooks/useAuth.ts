@@ -10,6 +10,7 @@ import { useDebouncedCallback } from '@/hooks/useDebounce';
 import type { User, Transaction, MonthlyBudget, PaymentReminder, Category } from '@/types';
 
 interface SupabaseProfileRow {
+  id: string;
   email: string;
   first_name: string;
   last_name: string;
@@ -44,11 +45,24 @@ export function useAuth() {
     let cancelled = false;
 
     async function loadProfile(email: string, id: string, metadataFirstName?: string, metadataLastName?: string) {
-      const { data, error } = await supabase!
+      // Buscar perfil por ID (UUID de auth) — arquitectura canónica.
+      // Fallback a email para perfiles creados antes de la migración id-based.
+      let { data, error } = await supabase!
         .from('profiles')
         .select('*')
-        .eq('email', email)
+        .eq('id', id)
         .maybeSingle();
+
+      // Backward compat: perfiles viejos sin columna id aún
+      if (!data && !error) {
+        const fb = await supabase!
+          .from('profiles')
+          .select('*')
+          .eq('email', email)
+          .maybeSingle();
+        if (!fb.error) data = fb.data;
+        error = fb.error;
+      }
 
       if (cancelled) return;
 
@@ -70,6 +84,7 @@ export function useAuth() {
         const { data: createdProfile, error: insertError } = await supabase!
           .from('profiles')
           .insert([{
+            id,
             email,
             first_name: firstName,
             last_name: lastName,
@@ -224,7 +239,7 @@ export function useAuth() {
           await supabase!
             .from('profiles')
             .update({ email: newEmail })
-            .eq('email', currentUser.email);
+            .eq('id', currentUser.id);
           setUser({ ...currentUser, email: newEmail });
         }
         return;
@@ -269,6 +284,7 @@ export function useAuth() {
     if (data?.session) {
       await supabase.from('profiles').insert([
         {
+          id: data.session.user.id,
           email,
           first_name: firstName,
           last_name: lastName,
@@ -340,7 +356,7 @@ export function useAuth() {
         const { error: updateError } = await supabase
           .from('profiles')
           .update(payload)
-          .eq('email', user.email);
+          .eq('id', user.id);
 
         if (!updateError) {
           return true;
@@ -357,6 +373,7 @@ export function useAuth() {
           const { error: insertError } = await supabase
             .from('profiles')
             .insert({
+              id: user.id,
               email: user.email,
               first_name: user.firstName,
               last_name: user.lastName,
@@ -424,7 +441,7 @@ export function useAuth() {
     const { error: dbError } = await supabase
       .from('profiles')
       .update({ first_name: firstName, last_name: lastName })
-      .eq('email', user.email);
+      .eq('id', user.id);
     if (dbError) throw dbError;
 
     // Actualizar store local
