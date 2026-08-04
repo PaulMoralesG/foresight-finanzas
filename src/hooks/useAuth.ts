@@ -330,8 +330,8 @@ export function useAuth() {
     let lastError: unknown;
 
     // Notificar al header que estamos sincronizando
-    if (typeof window !== 'undefined' && (window as any).__setSyncStatus) {
-      (window as any).__setSyncStatus();
+    if (typeof window !== 'undefined' && window.__setSyncStatus) {
+      window.__setSyncStatus();
     }
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {

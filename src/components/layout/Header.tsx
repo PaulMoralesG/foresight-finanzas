@@ -61,8 +61,8 @@ export function Header() {
 
   // Guardar en window para acceso desde saveDataImmediate
   useEffect(() => {
-    (window as any).__setSyncStatus = setSyncing;
-    return () => { delete (window as any).__setSyncStatus; };
+    window.__setSyncStatus = setSyncing;
+    return () => { delete window.__setSyncStatus; };
   }, [setSyncing]);
 
   // Cerrar dropdown al hacer clic fuera

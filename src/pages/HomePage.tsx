@@ -316,7 +316,7 @@ function BudgetWidget() {
   const getMonthlyData = useFinanceStore((s) => s.getMonthlyData);
   const setBudget = useFinanceStore((s) => s.setBudget);
   const addToast = useUiStore((s) => s.addToast);
-  const { saveData } = useAuth();
+  const { saveDataImmediate } = useAuth();
 
   const monthKey = (() => {
     const d = new Date(currentViewDate);
@@ -387,7 +387,7 @@ function BudgetWidget() {
       setBudget(monthKey, v);
       setIsEditing(false);
       setEditValue('');
-      syncToCloud(saveData, addToast);
+      syncToCloud(saveDataImmediate, addToast);
     }
   };
 
@@ -455,7 +455,7 @@ function BudgetWidget() {
                   const v = parseMoneyInput((e.target as HTMLInputElement).value);
                   if (!isNaN(v) && v >= 0) {
                     setBudget(monthKey, v);
-                    syncToCloud(saveData, addToast);
+                    syncToCloud(saveDataImmediate, addToast);
                   }
                 }
               }}
@@ -467,7 +467,7 @@ function BudgetWidget() {
                 const v = parseMoneyInput(input.value);
                 if (!isNaN(v) && v >= 0) {
                   setBudget(monthKey, v);
-                  syncToCloud(saveData, addToast);
+                  syncToCloud(saveDataImmediate, addToast);
                 }
               }}
               aria-label="Guardar presupuesto"

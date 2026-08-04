@@ -119,10 +119,10 @@ export function StatsPage() {
     const income = filteredData.filter((i) => i.type === 'income').reduce((s, i) => s + i.amount, 0);
     const spent = filteredData.filter((i) => i.type === 'expense').reduce((s, i) => s + i.amount, 0);
     const businessInc = filteredData
-      .filter((i) => i.type === 'income' && (i.businessType === 'business' || !i.businessType))
+      .filter((i) => i.type === 'income' && i.businessType === 'business')
       .reduce((s, i) => s + i.amount, 0);
     const businessSpent = filteredData
-      .filter((i) => i.type === 'expense' && (i.businessType === 'business' || !i.businessType))
+      .filter((i) => i.type === 'expense' && i.businessType === 'business')
       .reduce((s, i) => s + i.amount, 0);
     return { income, spent, balance: income - spent, businessProfit: businessInc - businessSpent, count: filteredData.length };
   }, [filteredData]);
@@ -202,7 +202,7 @@ export function StatsPage() {
       ? filteredData
       : filteredData.filter((i) => {
           if (exportFilter === 'personal') return i.businessType === 'personal';
-          return i.businessType === 'business' || !i.businessType;
+          return i.businessType === 'business';
         });
   }, [filteredData, exportFilter]);
 

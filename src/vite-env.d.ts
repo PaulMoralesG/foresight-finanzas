@@ -8,3 +8,8 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+// Globales para comunicación entre módulos (ej: estado de sincronización)
+interface Window {
+  __setSyncStatus?: () => void;
+}
