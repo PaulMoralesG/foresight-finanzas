@@ -27,18 +27,24 @@ WHERE id IS NULL;
 ALTER TABLE public.profiles
 ALTER COLUMN id SET NOT NULL;
 
--- Paso 5: Agregar restricción UNIQUE en id
-ALTER TABLE public.profiles
-ADD CONSTRAINT IF NOT EXISTS profiles_id_unique UNIQUE (id);
-
--- Paso 6: Crear índice en id
-CREATE INDEX IF NOT EXISTS profiles_id_idx ON public.profiles (id);
-
--- Paso 7: Establecer id como PRIMARY KEY
--- (Primero dropeamos la PK vieja si existe — típicamente es email)
+-- Paso 5: UNIQUE en id (solo si no existe ya)
 DO $$
 BEGIN
-  -- Intentar dropear PK vieja (puede llamarse de varias formas)
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'profiles_id_unique' AND conrelid = 'public.profiles'::regclass
+  ) THEN
+    ALTER TABLE public.profiles ADD CONSTRAINT profiles_id_unique UNIQUE (id);
+  END IF;
+END $$;
+
+-- Paso 6: Índice en id
+CREATE INDEX IF NOT EXISTS profiles_id_idx ON public.profiles (id);
+
+-- Paso 7: Migrar PRIMARY KEY de email → id
+DO $$
+BEGIN
+  -- Dropear PK vieja basada en email si existe
   IF EXISTS (
     SELECT 1 FROM pg_constraint
     WHERE conname = 'profiles_pkey' AND conrelid = 'public.profiles'::regclass
@@ -46,34 +52,40 @@ BEGIN
     ALTER TABLE public.profiles DROP CONSTRAINT profiles_pkey;
   END IF;
 
-  -- Si había una PK basada en email, eliminarla
+  -- Dropear unique constraint viejo en email si existe (nombrado como PK)
   IF EXISTS (
     SELECT 1 FROM pg_constraint
     WHERE conname = 'profiles_email_key' AND conrelid = 'public.profiles'::regclass
   ) THEN
     ALTER TABLE public.profiles DROP CONSTRAINT profiles_email_key;
   END IF;
+
+  -- Crear nueva PK en id (solo si no existe ya)
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'profiles_pkey' AND conrelid = 'public.profiles'::regclass
+  ) THEN
+    ALTER TABLE public.profiles ADD CONSTRAINT profiles_pkey PRIMARY KEY (id);
+  END IF;
 END $$;
 
--- Crear nueva PK en id
-ALTER TABLE public.profiles
-ADD CONSTRAINT profiles_pkey PRIMARY KEY (id);
+-- Paso 8: UNIQUE en email (solo si no existe ya)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'profiles_email_unique' AND conrelid = 'public.profiles'::regclass
+  ) THEN
+    ALTER TABLE public.profiles ADD CONSTRAINT profiles_email_unique UNIQUE (email);
+  END IF;
+END $$;
 
--- Paso 8: Asegurar que email siga siendo único (no duplicados)
--- Mantenemos el constraint unique en email para prevenir registros duplicados
-ALTER TABLE public.profiles
-ADD CONSTRAINT IF NOT EXISTS profiles_email_unique UNIQUE (email);
-
--- Paso 9: Política RLS — actualizar para usar auth.uid() = id
--- Si ya tienes políticas RLS, ajústalas. Ejemplo:
---   USING (auth.uid() = id)
---   WITH CHECK (auth.uid() = id)
--- Recreamos las políticas básicas:
+-- Paso 9: Políticas RLS — recrear usando auth.uid() = id
 
 -- Habilitar RLS si no está habilitado
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
--- Dropear políticas viejas (por nombre común)
+-- Dropear políticas viejas
 DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
@@ -81,18 +93,16 @@ DROP POLICY IF EXISTS "Enable read access for users" ON public.profiles;
 DROP POLICY IF EXISTS "Enable update for users based on email" ON public.profiles;
 DROP POLICY IF EXISTS "Enable insert for authenticated users only" ON public.profiles;
 
--- Política: ver tu propio perfil
+-- Crear políticas nuevas basadas en id
 CREATE POLICY "view_own_profile"
 ON public.profiles FOR SELECT
 USING (auth.uid() = id);
 
--- Política: actualizar tu propio perfil
 CREATE POLICY "update_own_profile"
 ON public.profiles FOR UPDATE
 USING (auth.uid() = id)
 WITH CHECK (auth.uid() = id);
 
--- Política: insertar tu propio perfil
 CREATE POLICY "insert_own_profile"
 ON public.profiles FOR INSERT
 WITH CHECK (auth.uid() = id);
