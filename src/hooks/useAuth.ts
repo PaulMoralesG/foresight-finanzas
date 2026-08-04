@@ -3,7 +3,7 @@
 // ================================================================
 
 import { useEffect, useCallback } from 'react';
-import { supabase, supabaseAvailable } from '@/config/supabase';
+import { supabase, supabaseAvailable, supabaseUrl } from '@/config/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useDebouncedCallback } from '@/hooks/useDebounce';
@@ -379,8 +379,12 @@ export function useAuth() {
       }
     }
 
-    const finalMsg = lastError instanceof Error ? lastError.message : String(lastError);
-    console.error('[saveData] Todos los reintentos fallaron:', lastError);
+    const finalMsg = lastError instanceof Error
+      ? lastError.message
+      : (lastError && typeof lastError === 'object'
+        ? JSON.stringify(lastError)
+        : String(lastError));
+    console.error('[saveData] Todos los reintentos fallaron. URL:', supabaseUrl, 'Error:', lastError);
     throw new Error(`Sin conexión con Supabase tras ${MAX_RETRIES + 1} intentos: ${finalMsg}`);
   }, [user]);
 
