@@ -105,14 +105,46 @@ export function useAuth() {
         const supabaseCustomExpenseCats = parseJsonField<Category[]>(profile.custom_expense_categories, []);
         const supabaseCustomIncomeCats = parseJsonField<Category[]>(profile.custom_income_categories, []);
 
-        // Si ya sincronizó antes → Supabase es la verdad.
-        // Si es nuevo → usar datos de Supabase vacíos (NO localStorage, que puede tener datos de otro usuario).
-        let mergedExpenses: Transaction[] = hasSyncedBefore ? supabaseExpenses : [];
-        const mergedBudgets = hasSyncedBefore ? supabaseBudgets : {};
-        let mergedReminders = hasSyncedBefore ? supabaseReminders : [];
-        const mergedSavingsGoals = hasSyncedBefore ? supabaseSavingsGoals : [];
-        const mergedCustomExpenseCats = hasSyncedBefore ? supabaseCustomExpenseCats : [];
-        const mergedCustomIncomeCats = hasSyncedBefore ? supabaseCustomIncomeCats : [];
+        let mergedExpenses: Transaction[];
+        let mergedBudgets: MonthlyBudget;
+        let mergedReminders: PaymentReminder[];
+        let mergedSavingsGoals: { concept: string; target: number }[];
+        let mergedCustomExpenseCats: Category[];
+        let mergedCustomIncomeCats: Category[];
+
+        // MERGE: Supabase es la base, pero preservamos datos locales aún no sincronizados.
+        // Esto evita que transacciones recién creadas se pierdan si el sync falló
+        // o si el usuario recarga la página antes de que el debounce de 800ms dispare el guardado.
+        // Si es un perfil nuevo (nunca sincronizado) → empezar con datos de Supabase vacíos
+        // (NO usar localStorage, que podría tener datos de otro usuario).
+        if (hasSyncedBefore) {
+          // Obtener datos locales actuales (hidratados por Zustand persist desde localStorage)
+          const localExpenses = financeStore.getState().expenses;
+          const localReminders = financeStore.getState().reminders;
+          const localSavingsGoals = financeStore.getState().savingsGoals;
+
+          // IDs que ya existen en Supabase
+          const supabaseExpenseIds = new Set(supabaseExpenses.map((e: Transaction) => e.id));
+          const supabaseReminderIds = new Set(supabaseReminders.map((r: PaymentReminder) => r.id));
+
+          // Preservar transacciones/recordatorios locales que NO están en Supabase (aún no sincronizados)
+          const unsyncedLocalExpenses = localExpenses.filter((e: Transaction) => !supabaseExpenseIds.has(e.id));
+          const unsyncedLocalReminders = localReminders.filter((r: PaymentReminder) => !supabaseReminderIds.has(r.id));
+
+          mergedExpenses = [...supabaseExpenses, ...unsyncedLocalExpenses];
+          mergedReminders = [...supabaseReminders, ...unsyncedLocalReminders];
+          mergedBudgets = supabaseBudgets;
+          mergedSavingsGoals = supabaseSavingsGoals.length > 0 ? supabaseSavingsGoals : localSavingsGoals;
+          mergedCustomExpenseCats = supabaseCustomExpenseCats;
+          mergedCustomIncomeCats = supabaseCustomIncomeCats;
+        } else {
+          mergedExpenses = [];
+          mergedBudgets = {};
+          mergedReminders = [];
+          mergedSavingsGoals = [];
+          mergedCustomExpenseCats = [];
+          mergedCustomIncomeCats = [];
+        }
 
         // Limpiar campos obsoletos de recordatorios (isRecurring, paidMonths) que
         // pudieron quedar en Supabase de versiones anteriores del código.
@@ -389,7 +421,7 @@ export function useAuth() {
     return { success: true, message: 'Revisa tu correo para restablecer la contraseña 📧' };
   }
 
-  return { user, isLoading, signIn, signUp, signOut, saveData, updateProfile, updateEmail, updatePassword, resetPassword };
+  return { user, isLoading, signIn, signUp, signOut, saveData, saveDataImmediate, updateProfile, updateEmail, updatePassword, resetPassword };
 }
 
 function basicUser(email: string, id: string, firstName?: string, lastName?: string): User {

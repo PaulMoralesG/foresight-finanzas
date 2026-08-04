@@ -17,7 +17,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 export function App() {
-  const { user, isLoading, saveData } = useAuth();
+  const { user, isLoading, saveDataImmediate } = useAuth();
   const activeTab = useUiStore((s) => s.activeTab);
   const isModalOpen = useUiStore((s) => s.isModalOpen);
   const isReportModalOpen = useUiStore((s) => s.isReportModalOpen);
@@ -59,7 +59,7 @@ export function App() {
     <ErrorBoundary>
       <AppLayout>
         {renderPage()}
-        {isModalOpen && <TransactionModal onSave={saveData} />}
+        {isModalOpen && <TransactionModal onSave={saveDataImmediate} />}
         {isReportModalOpen && <ReportModal />}
       </AppLayout>
     </ErrorBoundary>
