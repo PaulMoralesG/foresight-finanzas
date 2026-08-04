@@ -297,13 +297,14 @@ export function useAuth() {
 
   /** Guardar datos financieros en Supabase (no-op en modo offline)
    *  Incluye 3 reintentos con backoff exponencial en caso de fallo de red.
-   *  Si el perfil no existe aún en Supabase, lo crea automáticamente. */
+   *  Si el perfil no existe aún en Supabase, lo crea automáticamente.
+   *  Lanza Error con el mensaje de Supabase si falla definitivamente. */
   const saveDataImmediate = useCallback(async (): Promise<boolean> => {
-    if (!user) return false;
+    if (!user) throw new Error('No hay sesión activa');
     if (!supabase) return true; // modo offline: siempre "éxito"
 
     const MAX_RETRIES = 3;
-    const BASE_DELAY_MS = 1000; // 1s → 2s → 4s
+    const BASE_DELAY_MS = 1000;
 
     const state = financeStore.getState();
     const payload = {
@@ -320,7 +321,6 @@ export function useAuth() {
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       try {
-        // Intentar UPDATE — incluye .select() para verificar si afectó filas
         const { data: updatedRows, error: updateError } = await supabase
           .from('profiles')
           .update(payload)
@@ -328,7 +328,6 @@ export function useAuth() {
           .select('email');
 
         if (!updateError) {
-          // Si no se actualizó ninguna fila, el perfil no existe aún → crearlo
           if (!updatedRows || updatedRows.length === 0) {
             console.warn('[saveData] Perfil no encontrado, creando...');
             const { error: insertError } = await supabase
@@ -343,11 +342,12 @@ export function useAuth() {
             if (insertError) {
               console.error('[saveData] Error al crear perfil:', insertError);
               lastError = insertError;
-              continue; // reintentar
+              throw new Error(
+                `Error al crear perfil en Supabase: ${insertError.message} (${insertError.code})`
+              );
             }
 
             // Perfil creado, datos ya guardados en el INSERT
-            // Actualizar last_synced_at para marcar que ya sincronizó
             await supabase
               .from('profiles')
               .update({ last_synced_at: new Date().toISOString() })
@@ -356,15 +356,20 @@ export function useAuth() {
           return true;
         }
 
-        // Error de Supabase (ej: RLS, columna inválida) — no reintentar
+        // Error de Supabase
         console.error('[saveData] Error de Supabase:', JSON.stringify(updateError));
-        lastError = updateError;
-        // Si es error de permisos (42501) o columna (42703), no reintentar
-        if (updateError.code === '42501' || updateError.code === '42703') {
-          return false;
+        const msg = updateError.message || 'Error desconocido';
+        const code = updateError.code || 'unknown';
+        // No reintentar errores de permisos o esquema
+        if (code === '42501' || code === '42703' || code === '42P01') {
+          throw new Error(`Supabase: ${msg} (${code})`);
         }
-        continue;
+        lastError = updateError;
       } catch (err) {
+        // Si ya es un Error lanzado por nosotros, propagarlo
+        if (err instanceof Error && err.message.startsWith('Supabase:') || err instanceof Error && err.message.startsWith('Error al crear perfil')) {
+          throw err;
+        }
         lastError = err;
         if (attempt < MAX_RETRIES) {
           const delay = BASE_DELAY_MS * Math.pow(2, attempt);
@@ -374,8 +379,9 @@ export function useAuth() {
       }
     }
 
+    const finalMsg = lastError instanceof Error ? lastError.message : String(lastError);
     console.error('[saveData] Todos los reintentos fallaron:', lastError);
-    return false;
+    throw new Error(`Sin conexión con Supabase tras ${MAX_RETRIES + 1} intentos: ${finalMsg}`);
   }, [user]);
 
   /** Versión debounced de saveData — evita ráfagas de escritura */

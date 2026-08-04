@@ -91,7 +91,12 @@ export function TransactionModal({
     setShowNewCat(false);
     addToast('Categoría creada ✅', 'success');
     // Sincronizar con Supabase para que la categoría persista al recargar
-    onSave().then((ok) => { if (!ok) addToast('Error al guardar categoría en la nube', 'error'); });
+    onSave()
+      .then(() => { /* éxito */ })
+      .catch((err: Error) => {
+        console.error('[TransactionModal] Error al guardar categoría:', err);
+        addToast(err.message || 'Error al guardar categoría en la nube', 'error');
+      });
   }
 
   // Cargar datos si estamos editando
@@ -161,7 +166,12 @@ export function TransactionModal({
     closeModal();
     addToast(isEditing ? 'Movimiento actualizado ✅' : 'Movimiento registrado ✅', 'success');
     // Sync a Supabase en background (no bloquea la UI)
-    onSave().then((ok) => { if (!ok) addToast('Error al sincronizar con la nube', 'error'); });
+    onSave()
+      .then(() => { /* éxito, no mostrar nada extra */ })
+      .catch((err: Error) => {
+        console.error('[TransactionModal] Error al sincronizar:', err);
+        addToast(err.message || 'Error al sincronizar con la nube', 'error');
+      });
   }
 
   async function handleDelete() {
@@ -172,7 +182,12 @@ export function TransactionModal({
     closeModal();
     addToast('Movimiento eliminado 🗑️', 'success');
     // Sync a Supabase en background
-    onSave().then((ok) => { if (!ok) addToast('Error al sincronizar con la nube', 'error'); });
+    onSave()
+      .then(() => { /* éxito */ })
+      .catch((err: Error) => {
+        console.error('[TransactionModal] Error al eliminar:', err);
+        addToast(err.message || 'Error al sincronizar con la nube', 'error');
+      });
   }
 
   return (

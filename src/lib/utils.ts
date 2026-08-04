@@ -98,12 +98,12 @@ export function syncToCloud(
   addToast: (msg: string, type: 'success' | 'error' | 'info') => void,
 ): void {
   saveData()
-    .then((ok) => {
-      if (!ok) addToast('Error al sincronizar con la nube', 'error');
+    .then(() => {
+      /* éxito silencioso */
     })
-    .catch((err) => {
-      console.error('[syncToCloud] Error de red al sincronizar:', err);
-      addToast('Sin conexión — los cambios se guardarán localmente', 'error');
+    .catch((err: Error) => {
+      console.error('[syncToCloud] Error al sincronizar:', err);
+      addToast(err.message || 'Error al sincronizar con la nube', 'error');
     });
 }
 
