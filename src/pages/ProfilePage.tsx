@@ -10,6 +10,7 @@ import { useUiStore } from '@/stores/uiStore';
 import { useFinanceStore } from '@/stores/financeStore';
 import { CATEGORY_COLORS } from '@/config/categories';
 import { syncToCloud } from '@/lib/utils';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 type Section = 'profile' | 'email' | 'password' | 'categories' | null;
 
@@ -46,6 +47,7 @@ export function ProfilePage() {
   const [newCatLabel, setNewCatLabel] = useState('');
   const [newCatIcon, setNewCatIcon] = useState('📌');
   const [newCatColor, setNewCatColor] = useState(CATEGORY_COLORS[0]);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   // ── Edición de categoría ──
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
@@ -614,7 +616,7 @@ export function ProfilePage() {
 
         {/* Sign Out */}
         <button
-          onClick={signOut}
+          onClick={() => setShowSignOutConfirm(true)}
           className="w-full flex items-center gap-4 p-4 text-left hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors rounded-lg"
         >
           <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-950 flex items-center justify-center text-red-500 flex-shrink-0">
@@ -632,6 +634,15 @@ export function ProfilePage() {
       <p className="text-center text-xs text-slate-400 dark:text-slate-500">
         Foresight Finanzas v2.0 · SaaS Edition
       </p>
+
+      <ConfirmDialog
+        open={showSignOutConfirm}
+        title="Cerrar sesión"
+        message="¿Estás seguro? Los datos no sincronizados se guardarán localmente y se enviarán cuando vuelvas a iniciar sesión."
+        confirmLabel="Cerrar sesión"
+        onConfirm={() => { setShowSignOutConfirm(false); signOut(); }}
+        onCancel={() => setShowSignOutConfirm(false)}
+      />
     </div>
   );
 }

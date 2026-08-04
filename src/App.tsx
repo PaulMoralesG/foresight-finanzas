@@ -2,19 +2,21 @@
 // App.tsx — Componente raíz: autenticación, routing por tabs, layout SaaS
 // ================================================================
 
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUiStore } from '@/stores/uiStore';
-import { LoginPage } from '@/pages/LoginPage';
 import { HomePage } from '@/pages/HomePage';
 import { MovementsPage } from '@/pages/MovementsPage';
-import { StatsPage } from '@/pages/StatsPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { TransactionModal } from '@/components/features/movements/TransactionModal';
 import { ReportModal } from '@/components/features/report/ReportModal';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { AppLoadingSkeleton, PageSkeleton } from '@/components/ui/Skeleton';
+
+// Lazy-load: páginas pesadas que no se necesitan en la carga inicial
+const StatsPage = lazy(() => import('@/pages/StatsPage').then(m => ({ default: m.StatsPage })));
+const LoginPage = lazy(() => import('@/pages/LoginPage').then(m => ({ default: m.LoginPage })));
 
 export function App() {
   const { user, isLoading, saveDataImmediate } = useAuth();
@@ -39,18 +41,22 @@ export function App() {
   }, [isDark]);
 
   if (isLoading) {
-    return <LoadingSpinner text="Cargando tu cuenta..." />;
+    return <AppLoadingSkeleton />;
   }
 
   if (!user) {
-    return <LoginPage />;
+    return (
+      <Suspense fallback={<AppLoadingSkeleton />}>
+        <LoginPage />
+      </Suspense>
+    );
   }
 
   const renderPage = () => {
     switch (activeTab) {
       case 'home':      return <HomePage />;
       case 'movements': return <MovementsPage />;
-      case 'stats':     return <StatsPage />;
+      case 'stats':     return <Suspense fallback={<PageSkeleton />}><StatsPage /></Suspense>;
       case 'profile':   return <ProfilePage />;
       default:          return <HomePage />;
     }

@@ -245,9 +245,9 @@ export function TransactionModal({
                 placeholder="0.00"
                 value={amount}
                 onChange={(e) => {
-                  // Permitir dígitos, coma o punto decimal, y signo negativo opcional
+                  // Permitir solo dígitos, coma o punto decimal (sin signo negativo)
                   const raw = e.target.value;
-                  if (/^-?\d*[.,]?\d*$/.test(raw)) {
+                  if (/^\d*[.,]?\d*$/.test(raw)) {
                     setAmount(raw);
                   }
                 }}

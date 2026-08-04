@@ -2,7 +2,7 @@
 // LoginForm - Formulario de inicio de sesión
 // ================================================================
 
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, useRef } from 'react';
 import { Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -36,6 +36,8 @@ export function LoginForm({ onSwitchToSignUp, onForgotPassword }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const attemptRef = useRef(0);
+  const lockoutRef = useRef(false);
 
   function clearError() { setError(''); }
 
@@ -52,11 +54,36 @@ export function LoginForm({ onSwitchToSignUp, onForgotPassword }: Props) {
       return;
     }
 
+    // Rate limiting: delay progresivo tras intentos fallidos (1s → 2s → 4s → 8s)
+    if (lockoutRef.current) {
+      setError('Demasiados intentos. Espera unos segundos.');
+      return;
+    }
+    const delay = Math.pow(2, attemptRef.current) * 1000;
+    if (attemptRef.current > 0) {
+      setError(`Verificando... (intento ${attemptRef.current + 1})`);
+      await new Promise(r => setTimeout(r, delay));
+    }
+
     setLoading(true);
     try {
       await signIn(email.trim(), password);
+      attemptRef.current = 0; // reset on success
     } catch (err: unknown) {
+      attemptRef.current++;
       setError(authErrorToSpanish(err));
+      // Bloquear temporalmente tras 4+ intentos fallidos
+      if (attemptRef.current >= 4) {
+        lockoutRef.current = true;
+        setError('Demasiados intentos fallidos. Espera 30 segundos.');
+        setTimeout(() => {
+          lockoutRef.current = false;
+          attemptRef.current = 0;
+          if (error === 'Demasiados intentos fallidos. Espera 30 segundos.') {
+            setError('');
+          }
+        }, 30000);
+      }
     } finally {
       setLoading(false);
     }
