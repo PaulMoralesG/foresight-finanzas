@@ -307,11 +307,21 @@ export function useAuth() {
     const BASE_DELAY_MS = 1000;
 
     const state = financeStore.getState();
+
+    // savings_goal en Supabase es tipo NUMERIC (herencia de versión antigua).
+    // El store lo migró a SavingsGoal[] pero la DB no. Convertir a número o null.
+    const savingsGoalValue: number | null = (() => {
+      const goals = state.savingsGoals;
+      if (!Array.isArray(goals) || goals.length === 0) return null;
+      // Si hay metas, tomar la suma (o el primer target si prefieres)
+      return goals.reduce((sum, g) => sum + (g.target || 0), 0);
+    })();
+
     const payload = {
       budgets: state.budgets,
       expenses: state.expenses,
       reminders: state.reminders,
-      savings_goal: state.savingsGoals,
+      savings_goal: savingsGoalValue,
       custom_expense_categories: state.customExpenseCategories,
       custom_income_categories: state.customIncomeCategories,
       last_synced_at: new Date().toISOString(),
