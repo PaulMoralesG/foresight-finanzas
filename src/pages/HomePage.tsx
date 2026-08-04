@@ -537,7 +537,7 @@ export function HomePage() {
     const overdue: string[] = [];
     const today: string[] = [];
     upcoming.forEach((r) => {
-      const due = new Date(r.dueDate); due.setHours(0, 0, 0, 0);
+      const due = safeParseDate(r.dueDate);
       const diff = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
       if (diff < 0) overdue.push(r.concept);
       else if (diff === 0) today.push(r.concept);

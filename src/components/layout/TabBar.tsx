@@ -7,6 +7,7 @@ import { useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 import { Home, ArrowLeftRight, BarChart3, User, Plus } from 'lucide-react';
 import { useUiStore } from '@/stores/uiStore';
 import { useFinanceStore } from '@/stores/financeStore';
+import { safeParseDate } from '@/lib/utils';
 import type { TabId } from '@/types';
 
 const TABS: { id: TabId; icon: typeof Home; label: string }[] = [
@@ -85,8 +86,7 @@ export function TabBar() {
 
     return reminders.filter((r) => {
       if (r.isPaid) return false;
-      const due = new Date(r.dueDate);
-      due.setHours(0, 0, 0, 0);
+      const due = safeParseDate(r.dueDate);
       return due <= now;
     }).length;
   }, [reminders]);

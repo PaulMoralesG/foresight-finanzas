@@ -177,12 +177,11 @@ export const useFinanceStore = create<FinanceState>()(
         return reminders
           .filter((r) => {
             if (r.isPaid) return false;
-            const due = new Date(r.dueDate);
-            due.setHours(0, 0, 0, 0);
+            const due = safeParseDate(r.dueDate);
             const diffDays = (due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
             return diffDays <= 30;
           })
-          .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+          .sort((a, b) => safeParseDate(a.dueDate).getTime() - safeParseDate(b.dueDate).getTime());
       },
 
       // ── Categorías personalizadas ──
