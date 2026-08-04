@@ -2,8 +2,8 @@
 // SignUpForm - Formulario de registro
 // ================================================================
 
-import { useState, type FormEvent } from 'react';
-import { Eye, EyeOff, MailCheck, AlertCircle, Loader2 } from 'lucide-react';
+import { useState, type FormEvent, useRef } from 'react';
+import { Eye, EyeOff, MailCheck, AlertCircle, Loader2, UserPlus } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 /** Traduce errores de Supabase a español amigable */
@@ -58,6 +58,8 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const attemptRef = useRef(0);
+  const lockoutRef = useRef(false);
 
   const pwStrength = passwordStrength(password);
   const showStrength = password.length > 0;
@@ -111,20 +113,40 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
       return;
     }
 
+    // Rate limiting
+    if (lockoutRef.current) {
+      setError('Demasiados intentos. Espera unos segundos.');
+      return;
+    }
+    const delay = Math.pow(2, attemptRef.current) * 1000;
+    if (attemptRef.current > 0) {
+      setError(`Verificando... (intento ${attemptRef.current + 1})`);
+      await new Promise(r => setTimeout(r, delay));
+    }
+
     setLoading(true);
     try {
       const data = await signUp(email.trim(), password, firstName.trim(), lastName.trim());
+      attemptRef.current = 0;
       if (data?.session) {
-        // Registro inmediato (sin confirmación de email)
         onSuccess?.();
       } else if (data?.user) {
-        // Registro con confirmación de email requerida
         setSuccessMsg(`Te enviamos un enlace de confirmación a ${email.trim()}. Revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta.`);
       } else {
         setError('No se pudo crear la cuenta. Intenta de nuevo.');
       }
     } catch (err: unknown) {
-      setError(signUpErrorToSpanish(err));
+      attemptRef.current++;
+      const msg = signUpErrorToSpanish(err);
+      setError(msg);
+      if (attemptRef.current >= 4) {
+        lockoutRef.current = true;
+        setError('Demasiados intentos. Espera 30 segundos.');
+        setTimeout(() => {
+          lockoutRef.current = false;
+          attemptRef.current = 0;
+        }, 30000);
+      }
     } finally {
       setLoading(false);
     }
@@ -259,7 +281,10 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
             Creando cuenta...
           </span>
         ) : (
-          'Crear Cuenta'
+          <span className="inline-flex items-center gap-2">
+            <UserPlus className="w-4 h-4" />
+            Crear Cuenta
+          </span>
         )}
       </button>
 
