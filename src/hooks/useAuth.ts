@@ -321,49 +321,48 @@ export function useAuth() {
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       try {
-        const { data: updatedRows, error: updateError } = await supabase
+        // Intentar UPDATE sin .select() primero (compatible con todas las versiones de Supabase)
+        const { error: updateError } = await supabase
           .from('profiles')
           .update(payload)
-          .eq('email', user.email)
-          .select('email');
+          .eq('email', user.email);
 
         if (!updateError) {
-          if (!updatedRows || updatedRows.length === 0) {
-            console.warn('[saveData] Perfil no encontrado, creando...');
-            const { error: insertError } = await supabase
-              .from('profiles')
-              .insert({
-                email: user.email,
-                first_name: user.firstName,
-                last_name: user.lastName,
-                ...payload,
-              });
-
-            if (insertError) {
-              console.error('[saveData] Error al crear perfil:', insertError);
-              lastError = insertError;
-              throw new Error(
-                `Error al crear perfil en Supabase: ${insertError.message} (${insertError.code})`
-              );
-            }
-
-            // Perfil creado, datos ya guardados en el INSERT
-            await supabase
-              .from('profiles')
-              .update({ last_synced_at: new Date().toISOString() })
-              .eq('email', user.email);
-          }
           return true;
         }
 
-        // Error de Supabase
+        // Error de Supabase (ej: RLS, columna inválida, perfil no existe)
         console.error('[saveData] Error de Supabase:', JSON.stringify(updateError));
         const msg = updateError.message || 'Error desconocido';
         const code = updateError.code || 'unknown';
-        // No reintentar errores de permisos o esquema
+
+        // Si el perfil no existe (404 o similar), intentar crearlo
+        if (code === 'PGRST116' || msg.includes('not found') || msg.includes('0 rows')) {
+          console.warn('[saveData] Perfil no encontrado, creando...');
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              email: user.email,
+              first_name: user.firstName,
+              last_name: user.lastName,
+              ...payload,
+            });
+
+          if (!insertError) {
+            return true; // perfil creado con datos
+          }
+
+          console.error('[saveData] Error al crear perfil:', JSON.stringify(insertError));
+          throw new Error(
+            `Error al crear perfil en Supabase: ${insertError.message || 'desconocido'} (${insertError.code || 'unknown'})`
+          );
+        }
+
+        // Errores de permisos o esquema: no reintentar
         if (code === '42501' || code === '42703' || code === '42P01') {
           throw new Error(`Supabase: ${msg} (${code})`);
         }
+
         lastError = updateError;
       } catch (err) {
         // Si ya es un Error lanzado por nosotros, propagarlo
