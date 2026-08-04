@@ -20,7 +20,6 @@ export function TransactionModal({
   const isOpen = useUiStore((s) => s.isModalOpen);
   const editingId = useUiStore((s) => s.editingId);
   const closeModal = useUiStore((s) => s.closeModal);
-  const expenses = useFinanceStore((s) => s.expenses);
   const addTransaction = useFinanceStore((s) => s.addTransaction);
   const updateTransaction = useFinanceStore((s) => s.updateTransaction);
   const deleteTransaction = useFinanceStore((s) => s.deleteTransaction);
@@ -99,10 +98,14 @@ export function TransactionModal({
       });
   }
 
-  // Cargar datos si estamos editando
+  // Cargar datos si estamos editando.
+  // ⚠️ NO depende de `expenses` ni `defaultDate` — si lo hiciera, cualquier cambio
+  // en el store (incluso por persistencia de Zustand) re-ejecutaría este efecto y
+  // sobrescribiría los campos que el usuario está editando, haciendo el formulario
+  // "no interactivo".
   useEffect(() => {
     if (editingId !== null && isOpen) {
-      const item = expenses.find((e) => e.id === editingId);
+      const item = useFinanceStore.getState().expenses.find((e) => e.id === editingId);
       if (item) {
         setType(item.type);
         setAmount(String(item.amount));
@@ -113,7 +116,7 @@ export function TransactionModal({
         setBusinessType(item.businessType);
       }
     } else if (!isOpen) {
-      // Reset al cerrar — usar defaultDate (mes visto, no necesariamente hoy real)
+      // Reset al cerrar
       setType('expense');
       setAmount('');
       setConcept('');
@@ -122,7 +125,8 @@ export function TransactionModal({
       setMethod('cash');
       setBusinessType('business');
     }
-  }, [editingId, isOpen, expenses, defaultDate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps — solo montar al abrir/cerrar o cambiar item
+  }, [editingId, isOpen]);
 
   // Scroll lock para iOS PWA
   useScrollLock(isOpen);
