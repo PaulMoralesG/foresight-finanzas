@@ -49,7 +49,7 @@ export function PageSkeleton() {
   );
 }
 
-/** Lightweight inline skeleton for LoadingSpinner replacement */
+/** App-level loading skeleton — full screen placeholder */
 export function AppLoadingSkeleton() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-950">
