@@ -437,16 +437,33 @@ export function useAuth() {
     return true;
   }
 
-  /** Cambiar correo electrónico — envía verificación al nuevo email */
+  /** Cambiar correo electrónico — envía verificación al nuevo email.
+   *  Traduce errores comunes de Supabase a español para mejor UX. */
   async function updateEmail(newEmail: string): Promise<{ success: boolean; message: string }> {
     if (!user) return { success: false, message: 'No hay sesión activa' };
     if (!supabase) return { success: false, message: 'No disponible en modo offline' };
+
+    // Validación temprana: no permitir cambiar al mismo email
+    if (newEmail.toLowerCase().trim() === user.email.toLowerCase().trim()) {
+      return { success: false, message: 'El nuevo correo es igual al actual' };
+    }
 
     const { error } = await supabase.auth.updateUser(
       { email: newEmail },
       { emailRedirectTo: `${window.location.origin}/profile` }
     );
     if (error) {
+      // Traducir errores comunes de Supabase a español
+      const msg = error.message || '';
+      if (msg.includes('already been registered') || msg.includes('already exists') || msg.includes('already registered')) {
+        return { success: false, message: 'Este correo ya está registrado. Usa otro o inicia sesión con él.' };
+      }
+      if (msg.includes('different from the old') || msg.includes('same as')) {
+        return { success: false, message: 'El nuevo correo debe ser diferente al actual.' };
+      }
+      if (msg.includes('rate limit') || msg.includes('Too many requests')) {
+        return { success: false, message: 'Demasiados intentos. Espera unos minutos antes de volver a intentarlo.' };
+      }
       return { success: false, message: error.message };
     }
 
