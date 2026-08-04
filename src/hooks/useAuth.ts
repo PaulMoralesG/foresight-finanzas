@@ -236,11 +236,20 @@ export function useAuth() {
         const newEmail = session.user.email;
         const currentUser = useAuthStore.getState().user;
         if (newEmail && currentUser && newEmail !== currentUser.email) {
-          await supabase!
+          // Intentar por id; si la columna no existe aún, fallback a email
+          let result = await supabase!
             .from('profiles')
             .update({ email: newEmail })
             .eq('id', currentUser.id);
-          setUser({ ...currentUser, email: newEmail });
+          if (result.error?.code === '42703') {
+            result = await supabase!
+              .from('profiles')
+              .update({ email: newEmail })
+              .eq('email', currentUser.email);
+          }
+          if (!result.error) {
+            setUser({ ...currentUser, email: newEmail });
+          }
         }
         return;
       }
@@ -352,15 +361,26 @@ export function useAuth() {
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       try {
-        // Intentar UPDATE sin .select() primero (compatible con todas las versiones de Supabase)
-        const { error: updateError } = await supabase
+        // Intentar UPDATE por id (arquitectura canónica).
+        // Si la columna id no existe aún (migración pendiente), fallback a email.
+        let updateResult = await supabase
           .from('profiles')
           .update(payload)
           .eq('id', user.id);
 
-        if (!updateError) {
+        if (updateResult.error?.code === '42703') {
+          // Columna 'id' no existe → migración pendiente, usar email
+          updateResult = await supabase
+            .from('profiles')
+            .update(payload)
+            .eq('email', user.email);
+        }
+
+        if (!updateResult.error) {
           return true;
         }
+
+        const updateError = updateResult.error;
 
         // Error de Supabase (ej: RLS, columna inválida, perfil no existe)
         console.error('[saveData] Error de Supabase:', JSON.stringify(updateError));
@@ -437,12 +457,20 @@ export function useAuth() {
     });
     if (authError) throw authError;
 
-    // Actualizar tabla profiles
-    const { error: dbError } = await supabase
+    // Actualizar tabla profiles — por id (fallback a email si migración pendiente)
+    let dbResult = await supabase
       .from('profiles')
       .update({ first_name: firstName, last_name: lastName })
       .eq('id', user.id);
-    if (dbError) throw dbError;
+
+    if (dbResult.error?.code === '42703') {
+      dbResult = await supabase
+        .from('profiles')
+        .update({ first_name: firstName, last_name: lastName })
+        .eq('email', user.email);
+    }
+
+    if (dbResult.error) throw dbResult.error;
 
     // Actualizar store local
     useAuthStore.getState().setUser({
