@@ -21,15 +21,16 @@ export function App() {
   const activeTab = useUiStore((s) => s.activeTab);
   const isModalOpen = useUiStore((s) => s.isModalOpen);
   const isReportModalOpen = useUiStore((s) => s.isReportModalOpen);
+
   const isDark = useUiStore((s) => s.isDark);
-  const toggleDarkMode = useUiStore((s) => s.toggleDarkMode);
 
   // Restaurar preferencia de dark mode al montar
   useEffect(() => {
     const saved = localStorage.getItem('foresight-dark-mode');
-    if (saved === 'true' && !isDark) toggleDarkMode();
-    else if (saved === 'false' && isDark) toggleDarkMode();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    const state = useUiStore.getState();
+    if (saved === 'true' && !state.isDark) state.toggleDarkMode();
+    else if (saved === 'false' && state.isDark) state.toggleDarkMode();
+  }, []);
 
   // Aplicar clase 'dark' al <html> cuando cambia isDark
   useEffect(() => {

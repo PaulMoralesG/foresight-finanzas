@@ -382,7 +382,7 @@ export function useAuth() {
         lastError = err;
         if (attempt < MAX_RETRIES) {
           const delay = BASE_DELAY_MS * Math.pow(2, attempt);
-          console.warn(`[saveData] Intento ${attempt + 1}/${MAX_RETRIES} fallido, reintentando en ${delay}ms...`);
+          console.debug(`[saveData] Intento ${attempt + 1}/${MAX_RETRIES} fallido, reintentando en ${delay}ms...`);
           await new Promise((r) => setTimeout(r, delay));
         }
       }

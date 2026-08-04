@@ -224,14 +224,14 @@ export const useFinanceStore = create<FinanceState>()(
     {
       name: 'foresight-finance-storage',
       version: 7,
-      migrate: (persistedState: any, _version: number) => {
-        const state = persistedState as any;
+      migrate: (persistedState: unknown, _version: number) => {
+        const state = persistedState as Record<string, unknown>;
         // Migración v5 → v6: savingsGoal (number) → savingsGoals (array)
         // Migración v6 → v7: dedup IDs duplicados + recalcular nextId
         if (state.expenses && Array.isArray(state.expenses)) {
           // Eliminar duplicados por ID (conserva la primera ocurrencia)
           const seen = new Set<number>();
-          state.expenses = state.expenses.filter((e: any) => {
+          state.expenses = (state.expenses as Array<{ id: number }>).filter((e) => {
             if (seen.has(e.id)) return false;
             seen.add(e.id);
             return true;
@@ -243,11 +243,11 @@ export const useFinanceStore = create<FinanceState>()(
         // Limpiar key vieja
         delete state.savingsGoal;
         // Recalcular nextId/nextReminderId desde los datos reales
-        const maxExpId = (state.expenses || []).reduce((max: number, e: any) => Math.max(max, e.id || 0), 0);
-        const maxRemId = (state.reminders || []).reduce((max: number, r: any) => Math.max(max, r.id || 0), 0);
+        const maxExpId = ((state.expenses as Array<{ id: number }>) || []).reduce((max, e) => Math.max(max, e.id || 0), 0);
+        const maxRemId = ((state.reminders as Array<{ id: number }>) || []).reduce((max, r) => Math.max(max, r.id || 0), 0);
         state.nextId = maxExpId + 1;
         state.nextReminderId = maxRemId + 1;
-        return state;
+        return state as Record<string, unknown>;
       },
       partialize: (state) => ({
         expenses: state.expenses,
