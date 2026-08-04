@@ -177,6 +177,13 @@ export function useAuth() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // TOKEN_REFRESHED y PASSWORD_RECOVERY no deben recargar datos de Supabase:
+      // hacerlo sobrescribiría cambios locales aún no sincronizados.
+      // Solo actúan sobre el estado de auth, no sobre los datos financieros.
+      if (event === 'TOKEN_REFRESHED' || event === 'PASSWORD_RECOVERY') {
+        return;
+      }
+
       // Email change: el token de verificación ya fue procesado, actualizar profile
       if (event === 'USER_UPDATED' && session?.user) {
         const newEmail = session.user.email;
