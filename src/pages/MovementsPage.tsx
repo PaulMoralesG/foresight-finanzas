@@ -347,23 +347,24 @@ export function MovementsPage() {
               return (
                 <div
                   key={tx.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => openModal(tx.id)}
-                  className={`saas-card p-2.5 active:scale-[0.98] transition-transform cursor-pointer ${isSelected ? 'ring-2 ring-brand-500 bg-brand-50 dark:bg-brand-950/30' : ''}`}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal(tx.id); } }}
+                  className={`saas-card p-2.5 cursor-pointer relative touch-manipulation ${isSelected ? 'ring-2 ring-brand-500 bg-brand-50 dark:bg-brand-950/30' : 'active:bg-slate-50 dark:active:bg-slate-800/50'}`}
                 >
-                  {/* Row 0: checkbox select */}
-                  <div className="flex items-center justify-end mb-0.5" onClick={(e) => e.stopPropagation()}>
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleSelect(tx.id)}
-                        className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-600 text-brand-600 focus:ring-brand-500"
-                      />
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500 select-none">Seleccionar</span>
-                    </label>
+                  {/* Checkbox en esquina superior derecha — mínimo, no roba el tap */}
+                  <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleSelect(tx.id)}
+                      className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-brand-600 focus:ring-brand-500"
+                      aria-label={`Seleccionar ${tx.concept}`}
+                    />
                   </div>
                   {/* Row 1: icon + concept + amount */}
-                  <div className="flex items-center justify-between gap-1.5 mb-1">
+                  <div className="flex items-center justify-between gap-1.5 mb-1 pr-6">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span className="text-lg flex-shrink-0 leading-none">{category?.icon || '📌'}</span>
                       <div className="min-w-0">
