@@ -105,15 +105,23 @@ export function TransactionModal({
   // "no interactivo".
   useEffect(() => {
     if (editingId !== null && isOpen) {
-      const item = useFinanceStore.getState().expenses.find((e) => e.id === editingId);
-      if (item) {
-        setType(item.type);
-        setAmount(String(item.amount));
-        setConcept(item.concept);
-        setDate(item.date.slice(0, 10));
-        setCategory(item.category);
-        setMethod(item.method);
-        setBusinessType(item.businessType);
+      try {
+        const item = useFinanceStore.getState().expenses.find((e) => e.id === editingId);
+        if (item) {
+          setType(item.type);
+          setAmount(String(item.amount ?? ''));
+          setConcept(item.concept ?? '');
+          // date puede venir como ISO completo o YYYY-MM-DD; slice seguro
+          setDate(typeof item.date === 'string' ? item.date.slice(0, 10) : defaultDate);
+          setCategory(item.category ?? '');
+          setMethod(item.method ?? 'cash');
+          setBusinessType(item.businessType ?? 'personal');
+        } else {
+          console.error('[TransactionModal] No se encontró transacción con id:', editingId);
+        }
+      } catch (err) {
+        console.error('[TransactionModal] Error al cargar datos:', err);
+        addToast('Error al cargar la transacción. Verifica los datos.', 'error');
       }
     } else if (!isOpen) {
       // Reset al cerrar
@@ -126,7 +134,7 @@ export function TransactionModal({
       setBusinessType('business');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps — solo montar al abrir/cerrar o cambiar item
-  }, [editingId, isOpen]);
+  }, [editingId, isOpen, defaultDate, addToast]);
 
   // Scroll lock para iOS PWA
   useScrollLock(isOpen);

@@ -121,6 +121,7 @@ export const MONTH_NAMES = [
  */
 export function safeParseDate(iso: string): Date {
   // Tomar solo YYYY-MM-DD (soporta ISO completo: 2026-02-13T17:00:00.000Z)
+  if (!iso || typeof iso !== 'string') return new Date();
   const datePart = iso.substring(0, 10);
   const [y, m, d] = datePart.split('-').map(Number);
   return new Date(y, m - 1, d);
