@@ -110,9 +110,10 @@ export function syncToCloud(
 /**
  * Nombres de meses en español.
  */
-export const MONTH_NAMES = Array.from({ length: 12 }, (_, i) =>
-  new Intl.DateTimeFormat('es-MX', { month: 'long' }).format(new Date(2024, i, 1))
-);
+export const MONTH_NAMES = Array.from({ length: 12 }, (_, i) => {
+  const name = new Intl.DateTimeFormat('es-MX', { month: 'long' }).format(new Date(2024, i, 1));
+  return name.charAt(0).toUpperCase() + name.slice(1);
+});
 
 /**
  * Parsea una fecha ISO (YYYY-MM-DD) de forma segura en todos los navegadores.
