@@ -9,7 +9,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useFinanceStore } from '@/stores/financeStore';
 import { CATEGORY_COLORS } from '@/config/categories';
-import { useCategories, CATEGORY_EMOJIS } from '@/hooks/useCategories';
+import { CATEGORY_EMOJIS } from '@/hooks/useCategories';
 import { syncToCloud } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
