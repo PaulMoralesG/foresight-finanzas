@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useFinanceStore } from '@/stores/financeStore';
 import { CATEGORY_COLORS } from '@/config/categories';
+import { useCategories, CATEGORY_EMOJIS } from '@/hooks/useCategories';
 import { syncToCloud } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
@@ -458,7 +459,7 @@ export function ProfilePage() {
                         /* ── Inline edit form ── */
                         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-brand-300 dark:border-brand-700">
                           <div className="flex gap-0.5 flex-wrap">
-                            {['📌', '🛒', '🍴', '💊', '📚', '🎉', '💼', '🏠', '🚗', '💻', '💰', '🎁', '🔧', '🐾', '✈️', '📱', '⛪'].map((emoji) => (
+                            {CATEGORY_EMOJIS.map((emoji) => (
                               <button
                                 key={emoji}
                                 type="button"
@@ -544,7 +545,7 @@ export function ProfilePage() {
                 <div className="flex gap-2 items-center">
                   <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Ícono:</span>
                   <div className="flex gap-1 flex-wrap">
-                    {['📌', '🛒', '🍴', '💊', '📚', '🎉', '💼', '🏠', '🚗', '💻', '💰', '🎁', '🔧', '🐾', '✈️', '📱', '⛪'].map((emoji) => (
+                    {CATEGORY_EMOJIS.map((emoji) => (
                       <button
                         key={emoji}
                         type="button"
