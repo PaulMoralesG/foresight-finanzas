@@ -2,7 +2,7 @@
 // Header — Barra superior SaaS: título de página + acciones globales
 // ================================================================
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Sun, Moon, Settings, LogOut, Wifi, WifiOff, Loader2 } from 'lucide-react';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -18,20 +18,17 @@ const PAGE_TITLES: Record<TabId, string> = {
   profile: 'Perfil',
 };
 
-type SyncStatus = 'online' | 'syncing' | 'offline';
-
 export function Header() {
   const activeTab = useUiStore((s) => s.activeTab);
   const isDark = useUiStore((s) => s.isDark);
   const toggleDarkMode = useUiStore((s) => s.toggleDarkMode);
+  const syncStatus = useUiStore((s) => s.syncStatus);
+  const setSyncStatus = useUiStore((s) => s.setSyncStatus);
   const user = useAuthStore((s) => s.user);
   const { signOut } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>(
-    supabaseAvailable ? 'online' : 'offline'
-  );
 
   // Detectar cambios de conectividad
   useEffect(() => {
@@ -49,21 +46,7 @@ export function Header() {
       window.removeEventListener('online', updateStatus);
       window.removeEventListener('offline', updateStatus);
     };
-  }, []);
-
-  // Exponer setSyncStatus para que saveDataImmediate pueda llamarlo
-  const setSyncing = useCallback(() => {
-    setSyncStatus('syncing');
-    setTimeout(() => {
-      setSyncStatus(navigator.onLine ? 'online' : 'offline');
-    }, 1500);
-  }, []);
-
-  // Guardar en window para acceso desde saveDataImmediate
-  useEffect(() => {
-    window.__setSyncStatus = setSyncing;
-    return () => { delete window.__setSyncStatus; };
-  }, [setSyncing]);
+  }, [setSyncStatus]);
 
   // Cerrar dropdown al hacer clic fuera
   useEffect(() => {

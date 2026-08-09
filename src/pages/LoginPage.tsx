@@ -70,7 +70,7 @@ export function LoginPage() {
       : 'Recuperar contraseña';
 
   return (
-    <div className="h-dvh flex bg-white dark:bg-slate-950">
+    <div className="min-h-dvh flex bg-white dark:bg-slate-950" style={{minHeight:"100dvh"}}>
       {/* Left Panel — Branding */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-slate-950">
         {/* Gradient base */}

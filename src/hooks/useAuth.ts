@@ -6,6 +6,7 @@ import { useEffect, useCallback } from 'react';
 import { supabase, supabaseAvailable, supabaseUrl } from '@/config/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useFinanceStore } from '@/stores/financeStore';
+import { useUiStore } from '@/stores/uiStore';
 import { useDebouncedCallback } from '@/hooks/useDebounce';
 import type { User, Transaction, MonthlyBudget, PaymentReminder, Category } from '@/types';
 
@@ -355,9 +356,14 @@ export function useAuth() {
     let lastError: unknown;
 
     // Notificar al header que estamos sincronizando
-    if (typeof window !== 'undefined' && window.__setSyncStatus) {
-      window.__setSyncStatus();
-    }
+    useUiStore.getState().setSyncStatus('syncing');
+    // Restaurar estado después de 2s como fallback
+    const restoreTimer = setTimeout(() => {
+      const s = useUiStore.getState();
+      if (s.syncStatus === 'syncing') {
+        s.setSyncStatus(typeof navigator !== 'undefined' && navigator.onLine ? 'online' : 'offline');
+      }
+    }, 2000);
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       try {
@@ -377,6 +383,8 @@ export function useAuth() {
         }
 
         if (!updateResult.error) {
+          clearTimeout(restoreTimer);
+          useUiStore.getState().setSyncStatus('online');
           return true;
         }
 
@@ -401,6 +409,8 @@ export function useAuth() {
             });
 
           if (!insertError) {
+            clearTimeout(restoreTimer);
+            useUiStore.getState().setSyncStatus('online');
             return true; // perfil creado con datos
           }
 

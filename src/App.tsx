@@ -3,7 +3,9 @@
 // ================================================================
 
 import { useEffect, lazy, Suspense } from 'react';
+import { Download, RefreshCw, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { usePWA } from '@/hooks/usePWA';
 import { useUiStore } from '@/stores/uiStore';
 import { HomePage } from '@/pages/HomePage';
 import { MovementsPage } from '@/pages/MovementsPage';
@@ -23,8 +25,10 @@ export function App() {
   const activeTab = useUiStore((s) => s.activeTab);
   const isModalOpen = useUiStore((s) => s.isModalOpen);
   const isReportModalOpen = useUiStore((s) => s.isReportModalOpen);
-
   const isDark = useUiStore((s) => s.isDark);
+
+  // PWA
+  const { showInstallBanner, handleInstall, swUpdateReady, handleUpdate, dismissInstallBanner } = usePWA();
 
   // Restaurar preferencia de dark mode al montar
   useEffect(() => {
@@ -64,6 +68,48 @@ export function App() {
 
   return (
     <ErrorBoundary>
+      {/* ── PWA Install Banner ── */}
+      {showInstallBanner && (
+        <div className="fixed bottom-20 left-4 right-4 z-[250] sm:left-auto sm:right-4 sm:bottom-20 sm:w-80 animate-slide-up">
+          <div className="saas-card p-4 shadow-2xl border-brand-500/30">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-brand-100 dark:bg-brand-900 flex items-center justify-center flex-shrink-0">
+                <Download className="text-brand-600 dark:text-brand-400 w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">Instalar aplicación</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Accede rápido desde tu pantalla de inicio</p>
+                <div className="flex gap-2 mt-3">
+                  <button onClick={handleInstall} className="saas-btn-primary saas-btn-sm text-xs">Instalar</button>
+                  <button onClick={dismissInstallBanner} className="saas-btn-ghost saas-btn-sm text-xs">Ahora no</button>
+                </div>
+              </div>
+              <button onClick={dismissInstallBanner} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex-shrink-0">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Service Worker Update Banner ── */}
+      {swUpdateReady && (
+        <div className="fixed top-16 left-4 right-4 z-[250] sm:left-auto sm:right-4 sm:w-80 animate-slide-up">
+          <div className="saas-card p-4 shadow-2xl border-amber-500/30">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900 flex items-center justify-center flex-shrink-0">
+                <RefreshCw className="text-amber-600 dark:text-amber-400 w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">Nueva versión disponible</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Actualiza para ver las últimas mejoras</p>
+                <button onClick={handleUpdate} className="saas-btn-primary saas-btn-sm text-xs mt-3">Actualizar ahora</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <AppLayout>
         {renderPage()}
         {isModalOpen && <TransactionModal onSave={saveDataImmediate} />}

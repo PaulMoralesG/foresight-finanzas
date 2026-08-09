@@ -9,7 +9,8 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
-// Globales para comunicación entre módulos (ej: estado de sincronización)
-interface Window {
-  __setSyncStatus?: () => void;
+// PWA install prompt event
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
