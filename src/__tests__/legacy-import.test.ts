@@ -3,7 +3,7 @@
 // ================================================================
 
 import { describe, it, expect } from 'vitest';
-import { shouldImportLegacy, buildImportRows, type LegacyProfileRow } from '@/lib/legacy-import';
+import { shouldImportLegacy, hasLegacyBlobs, buildImportRows, type LegacyProfileRow } from '@/lib/legacy-import';
 import type { Transaction } from '@/types';
 
 // Los blobs legacy tienen ids NUMÉRICOS (así los dejó la versión vieja)
@@ -34,27 +34,41 @@ function makeProfile(overrides: Partial<LegacyProfileRow> = {}): LegacyProfileRo
   };
 }
 
-describe('shouldImportLegacy', () => {
-  it('true: flag pendiente + blobs + tablas vacías', () => {
-    expect(shouldImportLegacy(makeProfile(), true)).toBe(true);
+function emptyProfile(): LegacyProfileRow {
+  return makeProfile({
+    expenses: [],
+    reminders: [],
+    budgets: {},
+    savings_goal: [],
+    custom_expense_categories: [],
+    custom_income_categories: [],
   });
+}
 
-  it('false: tablas no vacías', () => {
-    expect(shouldImportLegacy(makeProfile(), false)).toBe(false);
+describe('shouldImportLegacy / hasLegacyBlobs', () => {
+  it('true: flag pendiente + blobs con datos (aunque las tablas ya tengan filas)', () => {
+    // El import es idempotente por clave: puede re-correr sin duplicar
+    expect(shouldImportLegacy(makeProfile())).toBe(true);
   });
 
   it('false: flag legacy_imported completado', () => {
-    expect(shouldImportLegacy(makeProfile({ legacy_imported: true }), true)).toBe(false);
+    expect(shouldImportLegacy(makeProfile({ legacy_imported: true }))).toBe(false);
   });
 
   it('false: sin blobs que importar', () => {
-    expect(shouldImportLegacy(makeProfile({
+    expect(shouldImportLegacy(emptyProfile())).toBe(false);
+  });
+
+  it('hasLegacyBlobs detecta cualquier entidad con datos', () => {
+    expect(hasLegacyBlobs(makeProfile())).toBe(true);
+    expect(hasLegacyBlobs(makeProfile({
       expenses: [],
-      budgets: {},
+      budgets: { '2026-07': 100 },
       savings_goal: [],
       custom_expense_categories: [],
       custom_income_categories: [],
-    }), true)).toBe(false);
+    }))).toBe(true);
+    expect(hasLegacyBlobs(emptyProfile())).toBe(false);
   });
 });
 
