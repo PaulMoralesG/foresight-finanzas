@@ -32,10 +32,14 @@ export function ReportModal() {
   // Scroll lock para iOS PWA
   useScrollLock(isOpen);
 
-  if (!isOpen) return null;
-
   // ── Usar getMonthlyData() que ya hace dedup de templates recurrentes ──
+  // (hook incondicional: no puede ir después del early return).
+  // Deps "innecesarias" a propósito: getMonthlyData lee el store por dentro,
+  // sin ellas el memo quedaría stale.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const monthData = useMemo(() => getMonthlyData(), [getMonthlyData, expenses, currentViewDate]);
+
+  if (!isOpen) return null;
 
   const viewDate = new Date(currentViewDate);
   const monthLabel = `${MONTH_NAMES[viewDate.getMonth()]} ${viewDate.getFullYear()}`;

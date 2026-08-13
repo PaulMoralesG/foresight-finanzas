@@ -13,6 +13,7 @@ const PAGE_TITLES: Record<TabId, string> = {
   home: 'Dashboard',
   movements: 'Movimientos',
   stats: 'Estadísticas',
+  savings: 'Metas',
   profile: 'Perfil',
 };
 

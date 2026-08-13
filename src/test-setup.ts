@@ -35,3 +35,17 @@ Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 
 // Mock de scrollTo
 window.scrollTo = () => {};
+
+// Polyfill de crypto.randomUUID (jsdom no siempre lo expone).
+// Secuencia determinista para que los tests sean estables.
+if (!globalThis.crypto?.randomUUID) {
+  let seq = 0;
+  const uuidMock = {
+    randomUUID: () =>
+      `00000000-0000-4000-8000-${String(++seq).padStart(12, '0')}`,
+  };
+  Object.defineProperty(globalThis, 'crypto', {
+    value: uuidMock,
+    configurable: true,
+  });
+}

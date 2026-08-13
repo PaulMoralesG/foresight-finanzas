@@ -1,26 +1,14 @@
 // ================================================================
 // useAuth - Hook de autenticación con Supabase (modo offline soportado)
+// El sync (pull-then-push con merge) vive en src/lib/sync.ts.
 // ================================================================
 
 import { useEffect, useCallback } from 'react';
 import { supabase, supabaseAvailable } from '@/config/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useFinanceStore } from '@/stores/financeStore';
-import { useDebouncedCallback } from '@/hooks/useDebounce';
-import type { User, Transaction, MonthlyBudget, PaymentReminder, Category } from '@/types';
-
-interface SupabaseProfileRow {
-  email: string;
-  first_name: string;
-  last_name: string;
-  budgets: MonthlyBudget | string;
-  expenses: Transaction[] | string;
-  reminders: PaymentReminder[] | string;
-  savings_goal: { concept: string; target: number }[] | string;
-  custom_expense_categories: Category[] | string;
-  custom_income_categories: Category[] | string;
-  last_synced_at: string | null;
-}
+import { syncService, isSchemaError } from '@/lib/sync';
+import type { User } from '@/types';
 
 /** Usuario offline por defecto cuando no hay Supabase configurado */
 const OFFLINE_USER: User = {
@@ -30,136 +18,104 @@ const OFFLINE_USER: User = {
   lastName: 'Local',
 };
 
+function basicUser(id: string, email: string, firstName?: string, lastName?: string): User {
+  return { id, email, firstName: firstName || '', lastName: lastName || '' };
+}
+
 export function useAuth() {
   const { user, isLoading, setUser, setLoading, logout: clearUser } = useAuthStore();
   const financeStore = useFinanceStore;
 
+  // Listeners de ciclo de vida + suscripción al store (una sola vez, guard de módulo)
+  syncService.init();
+
   useEffect(() => {
     // === MODO OFFLINE: Sin Supabase configurado ===
     if (!supabaseAvailable || !supabase) {
+      financeStore.getState().reset();
       setUser(OFFLINE_USER);
       return;
     }
 
     let cancelled = false;
 
-    async function loadProfile(email: string, id: string, metadataFirstName?: string, metadataLastName?: string) {
-      const { data, error } = await supabase!
-        .from('profiles')
-        .select('*')
-        .eq('email', email)
-        .maybeSingle();
-
-      if (cancelled) return;
-
-      if (error) {
-        console.error('Error loading profile:', error);
-        setUser(basicUser(email, id));
-        return;
-      }
-
-      let profile = data as SupabaseProfileRow | null;
-
-      // Si el perfil no existe aún (ej: registro con confirmación de email,
-      // donde el INSERT del signUp no se ejecutó porque data.session era null),
-      // crearlo ahora con los nombres del metadata de Supabase Auth.
-      if (!profile) {
-        const firstName = metadataFirstName || '';
-        const lastName = metadataLastName || '';
-
-        const { data: createdProfile, error: insertError } = await supabase!
+    async function loadProfile(uid: string, email: string, metaFirst?: string, metaLast?: string) {
+      try {
+        // 1) Perfil por uid (PK nueva). Fallback: adoptar fila legacy por email
+        //    o crear una nueva si no existe.
+        let profile: { first_name?: string | null; last_name?: string | null } | null;
+        const { data, error } = await supabase!
           .from('profiles')
-          .insert([{
-            email,
-            first_name: firstName,
-            last_name: lastName,
-            budgets: {},
-            expenses: [],
-            reminders: [],
-            savings_goal: [],
-            custom_expense_categories: [],
-            custom_income_categories: [],
-            last_synced_at: null,
-          }])
           .select('*')
-          .single();
+          .eq('id', uid)
+          .maybeSingle();
+        if (error) throw error;
+        profile = data as typeof profile;
 
-        if (insertError) {
-          console.error('Error creating profile on first login:', insertError);
-          setUser(basicUser(email, id, firstName, lastName));
+        if (!profile) {
+          const { data: legacy, error: legacyError } = await supabase!
+            .from('profiles')
+            .select('*')
+            .eq('email', email)
+            .maybeSingle();
+          if (legacyError) throw legacyError;
+
+          if (legacy) {
+            const { data: adopted, error: adoptError } = await supabase!
+              .from('profiles')
+              .update({ id: uid })
+              .eq('email', email)
+              .select('*')
+              .single();
+            if (adoptError) throw adoptError;
+            profile = adopted as typeof profile;
+          } else {
+            const { data: created, error: createError } = await supabase!
+              .from('profiles')
+              .insert({ id: uid, email })
+              .select('*')
+              .single();
+            if (createError) throw createError;
+            profile = created as typeof profile;
+          }
+        }
+
+        if (cancelled) return;
+
+        // 2) Sync: import legacy (si aplica) → pull → merge → push
+        await syncService.attach(uid);
+
+        if (cancelled) return;
+
+        // 3) Sesión lista
+        setUser({
+          id: uid,
+          email,
+          // Prioridad: perfil DB → metadata Auth → vacío
+          firstName: profile?.first_name || metaFirst || '',
+          lastName: profile?.last_name || metaLast || '',
+        });
+        setLoading(false);
+      } catch (err) {
+        // ALT-1: nunca dejar datos de otra cuenta en el store
+        console.error('[useAuth] Error al cargar perfil:', err);
+        syncService.detach();
+        financeStore.getState().reset();
+
+        if (isSchemaError(err)) {
+          // SQL de migración no ejecutado: operar en modo local-only
+          console.warn(
+            '[useAuth] Esquema de Supabase no migrado — ejecutá supabase/migrations/0001_entities_and_rls.sql en el SQL Editor. Modo local-only.',
+          );
+          syncService.disable();
+          setUser(basicUser(uid, email, metaFirst, metaLast));
+          setLoading(false);
           return;
         }
 
-        profile = createdProfile as SupabaseProfileRow | null;
+        setUser(null);
+        setLoading(false);
       }
-
-      // Sincronizar datos de Supabase → store local.
-      // Si el perfil ya fue sincronizado (last_synced_at existe), Supabase es la verdad ABSOLUTA.
-      // Si no: es un perfil nuevo (primer login), iniciar con datos vacíos de Supabase.
-      if (profile) {
-        const hasSyncedBefore = !!profile.last_synced_at;
-        const supabaseExpenses = parseJsonField<Transaction[]>(profile.expenses, []);
-        const supabaseBudgets = parseJsonField<MonthlyBudget>(profile.budgets, {});
-        const supabaseReminders = parseJsonField<PaymentReminder[]>(profile.reminders, []);
-        const supabaseSavingsGoals = parseJsonField<{ concept: string; target: number }[]>(profile.savings_goal, []);
-        const supabaseCustomExpenseCats = parseJsonField<Category[]>(profile.custom_expense_categories, []);
-        const supabaseCustomIncomeCats = parseJsonField<Category[]>(profile.custom_income_categories, []);
-
-        // Si ya sincronizó antes → Supabase es la verdad.
-        // Si es nuevo → usar datos de Supabase vacíos (NO localStorage, que puede tener datos de otro usuario).
-        let mergedExpenses: Transaction[] = hasSyncedBefore ? supabaseExpenses : [];
-        const mergedBudgets = hasSyncedBefore ? supabaseBudgets : {};
-        let mergedReminders = hasSyncedBefore ? supabaseReminders : [];
-        const mergedSavingsGoals = hasSyncedBefore ? supabaseSavingsGoals : [];
-        const mergedCustomExpenseCats = hasSyncedBefore ? supabaseCustomExpenseCats : [];
-        const mergedCustomIncomeCats = hasSyncedBefore ? supabaseCustomIncomeCats : [];
-
-        // Limpiar campos obsoletos de recordatorios (isRecurring, paidMonths) que
-        // pudieron quedar en Supabase de versiones anteriores del código.
-        // Esto rompe el ciclo: Supabase viejo → Zustand → saveData → Supabase.
-        mergedReminders = mergedReminders.map((r: PaymentReminder) => {
-          const cleaned = { ...r } as any;
-          delete cleaned.isRecurring;
-          delete cleaned.paidMonths;
-          return cleaned as PaymentReminder;
-        });
-
-        // Dedup de IDs duplicados (conserva la primera ocurrencia)
-        if (hasSyncedBefore && mergedExpenses.length > 0) {
-          const seen = new Set<number>();
-          mergedExpenses = mergedExpenses
-            .filter((e: Transaction) => {
-              if (seen.has(e.id)) return false;
-              seen.add(e.id);
-              return true;
-            });
-        }
-
-        // Calcular nextId/nextReminderId a partir del máximo real, no resetear a 1
-        const maxExpenseId = mergedExpenses.reduce((max: number, e: { id: number }) => Math.max(max, e.id), 0);
-        const maxReminderId = mergedReminders.reduce((max: number, r: { id: number }) => Math.max(max, r.id), 0);
-
-        financeStore.setState({
-          budgets: mergedBudgets,
-          expenses: mergedExpenses,
-          reminders: mergedReminders,
-          savingsGoals: mergedSavingsGoals,
-          customExpenseCategories: mergedCustomExpenseCats,
-          customIncomeCategories: mergedCustomIncomeCats,
-          nextId: maxExpenseId + 1,
-          nextReminderId: maxReminderId + 1,
-        });
-      }
-
-      const userObj: User = {
-        id,
-        email,
-        // Prioridad: perfil DB → metadata Auth → vacío
-        firstName: profile?.first_name || metadataFirstName || '',
-        lastName: profile?.last_name || metadataLastName || '',
-      };
-
-      setUser(userObj);
     }
 
     // Intentar restaurar sesión al montar
@@ -167,7 +123,7 @@ export function useAuth() {
       if (cancelled) return;
       if (session?.user) {
         const meta = session.user.user_metadata as Record<string, string> | undefined;
-        loadProfile(session.user.email!, session.user.id, meta?.first_name, meta?.last_name);
+        loadProfile(session.user.id, session.user.email!, meta?.first_name, meta?.last_name);
       } else {
         setLoading(false);
       }
@@ -182,10 +138,14 @@ export function useAuth() {
         const newEmail = session.user.email;
         const currentUser = useAuthStore.getState().user;
         if (newEmail && currentUser && newEmail !== currentUser.email) {
-          await supabase!
-            .from('profiles')
-            .update({ email: newEmail })
-            .eq('email', currentUser.email);
+          try {
+            await supabase!
+              .from('profiles')
+              .update({ email: newEmail })
+              .eq('id', currentUser.id);
+          } catch (err) {
+            console.warn('[useAuth] No se pudo actualizar el email en profiles:', err);
+          }
           setUser({ ...currentUser, email: newEmail });
         }
         return;
@@ -193,9 +153,13 @@ export function useAuth() {
 
       if (session?.user) {
         const meta = session.user.user_metadata as Record<string, string> | undefined;
-        loadProfile(session.user.email!, session.user.id, meta?.first_name, meta?.last_name);
+        loadProfile(session.user.id, session.user.email!, meta?.first_name, meta?.last_name);
       } else {
+        // ALT-1: sin sesión → limpiar todo (evita contaminación entre cuentas)
+        syncService.detach();
+        financeStore.getState().reset();
         setUser(null);
+        setLoading(false);
       }
     });
 
@@ -203,7 +167,9 @@ export function useAuth() {
       cancelled = true;
       subscription.unsubscribe();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps — solo montar/desmontar
+  // Solo montar/desmontar
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function signIn(email: string, password: string) {
     if (!supabase) throw new Error('Supabase no disponible (modo offline)');
@@ -226,22 +192,18 @@ export function useAuth() {
 
     if (error) throw error;
 
-    // Si hay sesión inmediata (sin verificación de email), crear perfil
-    if (data?.session) {
-      await supabase.from('profiles').insert([
-        {
-          email,
-          first_name: firstName,
-          last_name: lastName,
-          budgets: {},
-          expenses: [],
-          reminders: [],
-          savings_goal: [],
-          custom_expense_categories: [],
-          custom_income_categories: [],
-          last_synced_at: null,
-        },
-      ]);
+    // Si hay sesión inmediata (sin verificación de email), crear/actualizar perfil.
+    // Defensivo: el trigger de la migración suele crearlo; si el SQL aún no corrió,
+    // el error se ignora (loadProfile lo resuelve al loguear).
+    if (data?.session && data.user) {
+      try {
+        await supabase.from('profiles').upsert(
+          { id: data.user.id, email, first_name: firstName, last_name: lastName },
+          { onConflict: 'id' },
+        );
+      } catch (err) {
+        console.warn('[useAuth] Perfil no creado en signUp (probablemente el trigger lo maneja):', err);
+      }
     }
 
     return data;
@@ -249,64 +211,18 @@ export function useAuth() {
 
   async function signOut() {
     if (supabase) {
+      // ALT-3: flush del último cambio ANTES de invalidar el token
+      await syncService.flush();
       await supabase.auth.signOut();
     }
     // Limpiar todo: auth + finanzas (evita cross-contamination entre cuentas)
+    syncService.detach();
     clearUser();
     financeStore.getState().reset();
   }
 
-  /** Guardar datos financieros en Supabase (no-op en modo offline)
-   *  ⚠️ Internamente sin debounce — usado por useDebouncedCallback
-   *  Incluye 3 reintentos con backoff exponencial en caso de fallo de red. */
-  const saveDataImmediate = useCallback(async (): Promise<boolean> => {
-    if (!user) return false;
-    if (!supabase) return true; // modo offline: siempre "éxito"
-
-    const MAX_RETRIES = 3;
-    const BASE_DELAY_MS = 1000; // 1s → 2s → 4s
-
-    const payload = (() => {
-      const { budgets, expenses, reminders, savingsGoals, customExpenseCategories, customIncomeCategories } = financeStore.getState();
-      return { budgets, expenses, reminders, savingsGoals, customExpenseCategories, customIncomeCategories };
-    })();
-
-    let lastError: unknown;
-
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            ...payload,
-            savings_goal: payload.savingsGoals,
-            custom_expense_categories: payload.customExpenseCategories,
-            custom_income_categories: payload.customIncomeCategories,
-            last_synced_at: new Date().toISOString(),
-          })
-          .eq('email', user.email);
-
-        if (!error) return true;
-
-        // Error de Supabase (no de red) — no reintentar
-        console.error('[saveData] Error al guardar en Supabase:', error);
-        return false;
-      } catch (err) {
-        lastError = err;
-        if (attempt < MAX_RETRIES) {
-          const delay = BASE_DELAY_MS * Math.pow(2, attempt);
-          console.warn(`[saveData] Intento ${attempt + 1}/${MAX_RETRIES} fallido, reintentando en ${delay}ms...`);
-          await new Promise((r) => setTimeout(r, delay));
-        }
-      }
-    }
-
-    console.error('[saveData] Todos los reintentos fallaron:', lastError);
-    return false;
-  }, [user]);
-
-  /** Versión debounced de saveData — evita ráfagas de escritura */
-  const saveData = useDebouncedCallback(saveDataImmediate, 800);
+  /** Guardar datos financieros (no-op en modo offline). Debounced dentro del sync service. */
+  const saveData = useCallback(() => syncService.schedule(), []);
 
   /** Actualizar nombre y apellido en Supabase + metadata */
   async function updateProfile(firstName: string, lastName: string): Promise<boolean> {
@@ -319,15 +235,15 @@ export function useAuth() {
 
     // Actualizar metadata de auth
     const { error: authError } = await supabase.auth.updateUser({
-      data: { first_name: firstName, last_name: lastName },
+      data: { first_name: firstName, lastName: lastName },
     });
     if (authError) throw authError;
 
-    // Actualizar tabla profiles
+    // Actualizar tabla profiles (por uid — PK nueva)
     const { error: dbError } = await supabase
       .from('profiles')
       .update({ first_name: firstName, last_name: lastName })
-      .eq('email', user.email);
+      .eq('id', user.id);
     if (dbError) throw dbError;
 
     // Actualizar store local
@@ -383,19 +299,4 @@ export function useAuth() {
   }
 
   return { user, isLoading, signIn, signUp, signOut, saveData, updateProfile, updateEmail, updatePassword, resetPassword };
-}
-
-function basicUser(email: string, id: string, firstName?: string, lastName?: string): User {
-  return { id, email, firstName: firstName || '', lastName: lastName || '' };
-}
-
-function parseJsonField<T>(field: unknown, fallback: T): T {
-  if (typeof field === 'string') {
-    try {
-      return JSON.parse(field) as T;
-    } catch {
-      return fallback;
-    }
-  }
-  return (field as T) ?? fallback;
 }

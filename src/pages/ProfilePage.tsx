@@ -84,8 +84,8 @@ export function ProfilePage() {
       await updateProfile(editFirstName.trim(), editLastName.trim());
       addToast('Perfil actualizado ✅', 'success');
       setExpanded(null);
-    } catch (e: any) {
-      addToast(e?.message || 'Error al actualizar perfil', 'error');
+    } catch (e) {
+      addToast(e instanceof Error ? e.message :'Error al actualizar perfil', 'error');
     } finally {
       setSavingProfile(false);
     }
@@ -105,8 +105,8 @@ export function ProfilePage() {
       } else {
         addToast(result.message, 'error');
       }
-    } catch (e: any) {
-      addToast(e?.message || 'Error al cambiar correo', 'error');
+    } catch (e) {
+      addToast(e instanceof Error ? e.message :'Error al cambiar correo', 'error');
     } finally {
       setSavingEmail(false);
     }
@@ -130,8 +130,8 @@ export function ProfilePage() {
       } else {
         addToast(result.message, 'error');
       }
-    } catch (e: any) {
-      addToast(e?.message || 'Error al cambiar contraseña', 'error');
+    } catch (e) {
+      addToast(e instanceof Error ? e.message :'Error al cambiar contraseña', 'error');
     } finally {
       setSavingPassword(false);
     }

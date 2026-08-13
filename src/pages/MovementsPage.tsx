@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatMoney, safeParseDate, syncToCloud } from '@/lib/utils';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/config/categories';
 import { MonthNav } from '@/components/layout/MonthNav';
-import type { FilterType, Transaction } from '@/types';
+import type { FilterType } from '@/types';
 
 const FILTERS: { id: FilterType; label: string; icon: React.ElementType }[] = [
   { id: 'all', label: 'Todos', icon: Layers },
@@ -41,9 +41,9 @@ export function MovementsPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   // ── Selección múltiple ──
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const toggleSelect = (id: number) => {
+  const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -77,11 +77,8 @@ export function MovementsPage() {
         `${count} transacci\u00f3n${count > 1 ? 'es' : ''} eliminada${count > 1 ? 's' : ''}`,
         'info',
         () => {
-          // Undo: restaurar las transacciones eliminadas
-          deletedItems.forEach((item) => {
-            const { id, created_at, ...rest } = item;
-            useFinanceStore.getState().addTransaction(rest as Omit<Transaction, 'id' | 'created_at'>);
-          });
+          // Undo: restaurar las transacciones eliminadas (conserva ids y timestamps)
+          useFinanceStore.getState().restoreTransactions(deletedItems);
         }
       );
     } catch (err) {
@@ -120,6 +117,8 @@ export function MovementsPage() {
     return map;
   }, [customExpenseCategories, customIncomeCategories]);
 
+  // Deps "innecesarias" a propósito: getMonthlyData lee el store por dentro
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const monthlyData = useMemo(() => getMonthlyData(), [getMonthlyData, expenses, currentViewDate]);
 
   // Todas las categorías (default + personalizadas) para el dropdown

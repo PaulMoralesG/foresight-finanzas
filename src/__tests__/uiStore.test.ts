@@ -94,13 +94,13 @@ describe('uiStore', () => {
   });
 
   it('openModal con id abre en modo edición', () => {
-    useUiStore.getState().openModal(42);
+    useUiStore.getState().openModal('tx-42');
     expect(useUiStore.getState().isModalOpen).toBe(true);
-    expect(useUiStore.getState().editingId).toBe(42);
+    expect(useUiStore.getState().editingId).toBe('tx-42');
   });
 
   it('closeModal cierra el modal y limpia editingId', () => {
-    useUiStore.getState().openModal(42);
+    useUiStore.getState().openModal('tx-42');
     useUiStore.getState().closeModal();
     expect(useUiStore.getState().isModalOpen).toBe(false);
     expect(useUiStore.getState().editingId).toBeNull();
@@ -109,9 +109,9 @@ describe('uiStore', () => {
   // ─── Modal de confirmación de borrado ─────────────────────────
 
   it('openDeleteModal/closeDeleteModal funcionan', () => {
-    useUiStore.getState().openDeleteModal(99);
+    useUiStore.getState().openDeleteModal('rem-99');
     expect(useUiStore.getState().isDeleteModalOpen).toBe(true);
-    expect(useUiStore.getState().deletingId).toBe(99);
+    expect(useUiStore.getState().deletingId).toBe('rem-99');
 
     useUiStore.getState().closeDeleteModal();
     expect(useUiStore.getState().isDeleteModalOpen).toBe(false);

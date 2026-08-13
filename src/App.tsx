@@ -9,6 +9,7 @@ import { LoginPage } from '@/pages/LoginPage';
 import { HomePage } from '@/pages/HomePage';
 import { MovementsPage } from '@/pages/MovementsPage';
 import { StatsPage } from '@/pages/StatsPage';
+import { SavingsPage } from '@/pages/SavingsPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { TransactionModal } from '@/components/features/movements/TransactionModal';
@@ -50,6 +51,7 @@ export function App() {
       case 'home':      return <HomePage />;
       case 'movements': return <MovementsPage />;
       case 'stats':     return <StatsPage />;
+      case 'savings':   return <SavingsPage />;
       case 'profile':   return <ProfilePage />;
       default:          return <HomePage />;
     }

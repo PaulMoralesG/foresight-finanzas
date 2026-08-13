@@ -3,7 +3,7 @@
 // En móvil se usa TabBar (barra flotante inferior)
 // ================================================================
 
-import { LayoutGrid, ArrowLeftRight, BarChart3, User, TrendingUp, ChevronsRight, ChevronsLeft } from 'lucide-react';
+import { LayoutGrid, ArrowLeftRight, BarChart3, User, TrendingUp, PiggyBank, ChevronsRight, ChevronsLeft } from 'lucide-react';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
 import type { TabId } from '@/types';
@@ -12,6 +12,7 @@ const NAV_ITEMS: { id: TabId; icon: typeof LayoutGrid; label: string }[] = [
   { id: 'home', icon: LayoutGrid, label: 'Dashboard' },
   { id: 'movements', icon: ArrowLeftRight, label: 'Movimientos' },
   { id: 'stats', icon: BarChart3, label: 'Estadísticas' },
+  { id: 'savings', icon: PiggyBank, label: 'Metas' },
   { id: 'profile', icon: User, label: 'Perfil' },
 ];
 
