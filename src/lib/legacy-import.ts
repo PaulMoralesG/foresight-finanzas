@@ -6,7 +6,17 @@
 // ================================================================
 
 import { uuidv5 } from '@/lib/ids';
-import type { Transaction, PaymentReminder, MonthlyBudget, Category, SavingsGoal } from '@/types';
+import { getTodayISO } from '@/lib/utils';
+import type {
+  Transaction,
+  PaymentReminder,
+  MonthlyBudget,
+  Category,
+  SavingsGoal,
+  TransactionType,
+  PaymentMethod,
+  BusinessType,
+} from '@/types';
 
 /** Fila de profiles con las columnas legacy (todas opcionales). */
 export interface LegacyProfileRow {
@@ -95,6 +105,10 @@ export function shouldImportLegacy(profile: LegacyProfileRow, tablesEmpty: boole
  * Los ids de expenses/reminders/goals son UUID v5 deterministas;
  * las categorías conservan su slug (clave de merge). Los presupuestos
  * se expanden a filas (month, amount).
+ *
+ * Tolerante a datos malformados de versiones viejas: normaliza montos,
+ * enums (CHECK de Postgres), fechas y deduplica ids repetidos — así el
+ * import no aborta por una sola fila sucia.
  */
 export async function buildImportRows(
   profile: LegacyProfileRow,
@@ -108,20 +122,54 @@ export async function buildImportRows(
   const num = (value: unknown): number =>
     typeof value === 'number' ? value : (Number(value) || 0);
 
+  // Los CHECK de las tablas nuevas exigen valores del enum; blobs viejos
+  // pueden traer cualquier cosa.
+  const txType = (v: unknown): TransactionType =>
+    v === 'income' || v === 'expense' ? v : 'expense';
+  const txMethod = (v: unknown): PaymentMethod =>
+    v === 'cash' || v === 'card' || v === 'transfer' ? v : 'cash';
+  const txBusiness = (v: unknown): BusinessType =>
+    v === 'business' || v === 'personal' ? v : 'personal';
+
+  // date column de Postgres: quedarse con YYYY-MM-DD, fallback hoy si no es fecha
+  const normalizeDate = (v: unknown): string => {
+    if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10);
+    return getTodayISO();
+  };
+
+  // Ids numéricos repetidos (collisiones de la versión vieja) generarían el
+  // mismo uuid v5 → PK duplicada en el upsert → aborta el import. Deduplicar.
+  const dedupeById = <T extends { id?: unknown }>(rows: T[]): T[] => {
+    const seen = new Set<string>();
+    return rows.filter((r) => {
+      const key = String(r.id ?? '');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
   const expenses = await Promise.all(
-    blobs.expenses.map(async (t) => ({
+    dedupeById(blobs.expenses).map(async (t) => ({
       ...t,
       id: await uuidv5(`${userId}:expense:${t.id}`),
       amount: num(t.amount),
+      type: txType(t.type),
+      method: txMethod(t.method),
+      businessType: txBusiness(t.businessType),
+      date: normalizeDate(t.date),
       updated_at: t.updated_at ?? fallbackStamp,
     })),
   );
 
   const reminders = await Promise.all(
-    blobs.reminders.map(async (r) => ({
+    dedupeById(blobs.reminders).map(async (r) => ({
       ...r,
       id: await uuidv5(`${userId}:reminder:${r.id}`),
       amount: num(r.amount),
+      method: txMethod(r.method),
+      businessType: txBusiness(r.businessType),
+      dueDate: normalizeDate(r.dueDate),
       updated_at: r.updated_at ?? fallbackStamp,
     })),
   );
@@ -136,14 +184,19 @@ export async function buildImportRows(
     })),
   );
 
-  const expenseCategories = blobs.expenseCategories.map((c) => ({
+  // Categorías: solo items con slug válido (id string no vacío)
+  const cleanCategory = (c: Category) => ({
     ...c,
+    id: typeof c.id === 'string' && c.id ? c.id : '',
+    label: typeof c.label === 'string' ? c.label : String(c.label ?? ''),
     updated_at: c.updated_at ?? fallbackStamp,
-  }));
-  const incomeCategories = blobs.incomeCategories.map((c) => ({
-    ...c,
-    updated_at: c.updated_at ?? fallbackStamp,
-  }));
+  });
+  const expenseCategories = dedupeById(blobs.expenseCategories)
+    .map(cleanCategory)
+    .filter((c) => c.id);
+  const incomeCategories = dedupeById(blobs.incomeCategories)
+    .map(cleanCategory)
+    .filter((c) => c.id);
 
   const budgets = Object.entries(blobs.budgets).map(([month, amount]) => ({
     month,

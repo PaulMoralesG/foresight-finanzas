@@ -129,4 +129,50 @@ describe('buildImportRows', () => {
     const rows = await buildImportRows(profile, 'user-1');
     expect(rows.expenses[0].amount).toBe(250.5);
   });
+
+  it('normaliza enums y fechas inválidas (CHECK de Postgres)', async () => {
+    const base = (makeProfile().expenses as unknown[])[0] as Record<string, unknown>;
+    const profile = makeProfile({
+      expenses: [{
+        ...base,
+        id: 1,
+        type: 'cualquier-cosa',
+        method: 'cheque',
+        businessType: null,
+        date: '15/07/2026',
+      }] as unknown as LegacyProfileRow['expenses'],
+    });
+    const rows = await buildImportRows(profile, 'user-1');
+    expect(rows.expenses[0].type).toBe('expense');
+    expect(rows.expenses[0].method).toBe('cash');
+    expect(rows.expenses[0].businessType).toBe('personal');
+    expect(rows.expenses[0].date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('deduplica ids numéricos repetidos (no genera PKs uuid duplicadas)', async () => {
+    const base = (makeProfile().expenses as unknown[])[0] as Record<string, unknown>;
+    const profile = makeProfile({
+      expenses: [
+        { ...base, id: 7, concept: 'A' },
+        { ...base, id: 7, concept: 'B' },
+        { ...base, id: 8, concept: 'C' },
+      ] as unknown as LegacyProfileRow['expenses'],
+    });
+    const rows = await buildImportRows(profile, 'user-1');
+    expect(rows.expenses).toHaveLength(2);
+    const ids = new Set(rows.expenses.map((e) => e.id));
+    expect(ids.size).toBe(2);
+  });
+
+  it('descarta categorías sin slug válido', async () => {
+    const profile = makeProfile({
+      custom_expense_categories: [
+        { id: 42, label: 'Sin slug', icon: 'x', color: 'y' },
+        { id: 'custom_ok', label: 'Con slug', icon: 'x', color: 'y' },
+      ] as unknown as LegacyProfileRow['custom_expense_categories'],
+    });
+    const rows = await buildImportRows(profile, 'user-1');
+    expect(rows.expenseCategories).toHaveLength(1);
+    expect(rows.expenseCategories[0].id).toBe('custom_ok');
+  });
 });
