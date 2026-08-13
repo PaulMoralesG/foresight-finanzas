@@ -486,7 +486,14 @@ async function maybeImportLegacy(uid: string): Promise<boolean> {
 
   if (!shouldImportLegacy(profile as LegacyProfileRow, tablesEmpty)) return false;
 
-  const rows = await buildImportRows(profile as LegacyProfileRow, uid);
+  let rows: Awaited<ReturnType<typeof buildImportRows>>;
+  try {
+    rows = await buildImportRows(profile as LegacyProfileRow, uid);
+  } catch (err) {
+    // Nunca limpiar blobs si el import no completó: se reintenta en el próximo login
+    console.error('[sync] Import legacy falló — los blobs NO se limpiaron (se reintentará):', err);
+    return false;
+  }
   await upsert('expenses', rows.expenses.map((t) => expenseToRow(t, uid)), 'id');
   await upsert('reminders', rows.reminders.map((r) => reminderToRow(r, uid)), 'id');
   await upsert('categories', [

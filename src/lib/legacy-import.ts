@@ -31,15 +31,15 @@ export interface LegacyImportRows {
   budgets: Array<{ month: string; amount: number; updated_at: string }>;
 }
 
-function parseJsonField<T>(field: unknown, fallback: T): T {
+function parseJsonField<T>(field: unknown, fallback: T): unknown {
   if (typeof field === 'string') {
     try {
-      return JSON.parse(field) as T;
+      return JSON.parse(field) as unknown;
     } catch {
       return fallback;
     }
   }
-  return (field as T) ?? fallback;
+  return field ?? fallback;
 }
 
 interface ParsedBlobs {
@@ -51,14 +51,27 @@ interface ParsedBlobs {
   incomeCategories: Category[];
 }
 
+/** Solo arrays pasan; cualquier otra forma (null, number, objeto) → []. */
+function asArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+/** Solo objetos planos pasan; cualquier otra forma → {}. */
+function asRecord(value: unknown): MonthlyBudget {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as MonthlyBudget)
+    : {};
+}
+
 function parseBlobs(profile: LegacyProfileRow): ParsedBlobs {
   return {
-    expenses: parseJsonField<Transaction[]>(profile.expenses, []),
-    budgets: parseJsonField<MonthlyBudget>(profile.budgets, {}),
-    reminders: parseJsonField<PaymentReminder[]>(profile.reminders, []),
-    goals: parseJsonField<SavingsGoal[]>(profile.savings_goal, []),
-    expenseCategories: parseJsonField<Category[]>(profile.custom_expense_categories, []),
-    incomeCategories: parseJsonField<Category[]>(profile.custom_income_categories, []),
+    expenses: asArray<Transaction>(parseJsonField(profile.expenses, [])),
+    budgets: asRecord(parseJsonField(profile.budgets, {})),
+    reminders: asArray<PaymentReminder>(parseJsonField(profile.reminders, [])),
+    // savings_goal es NUMERIC en la DB real (herencia de v5): el guard lo descarta
+    goals: asArray<SavingsGoal>(parseJsonField(profile.savings_goal, [])),
+    expenseCategories: asArray<Category>(parseJsonField(profile.custom_expense_categories, [])),
+    incomeCategories: asArray<Category>(parseJsonField(profile.custom_income_categories, [])),
   };
 }
 
@@ -90,10 +103,16 @@ export async function buildImportRows(
   const blobs = parseBlobs(profile);
   const fallbackStamp = profile.last_synced_at ?? new Date().toISOString();
 
+  // Montos pueden venir como string en blobs viejos — normalizar a number
+  // para que el CHECK/numeric de Postgres no rechace la fila.
+  const num = (value: unknown): number =>
+    typeof value === 'number' ? value : (Number(value) || 0);
+
   const expenses = await Promise.all(
     blobs.expenses.map(async (t) => ({
       ...t,
       id: await uuidv5(`${userId}:expense:${t.id}`),
+      amount: num(t.amount),
       updated_at: t.updated_at ?? fallbackStamp,
     })),
   );
@@ -102,6 +121,7 @@ export async function buildImportRows(
     blobs.reminders.map(async (r) => ({
       ...r,
       id: await uuidv5(`${userId}:reminder:${r.id}`),
+      amount: num(r.amount),
       updated_at: r.updated_at ?? fallbackStamp,
     })),
   );
@@ -111,6 +131,7 @@ export async function buildImportRows(
     blobs.goals.map(async (g, i) => ({
       ...g,
       id: await uuidv5(`${userId}:goal:${i}`),
+      target: num(g.target),
       updated_at: g.updated_at ?? fallbackStamp,
     })),
   );
@@ -126,7 +147,7 @@ export async function buildImportRows(
 
   const budgets = Object.entries(blobs.budgets).map(([month, amount]) => ({
     month,
-    amount,
+    amount: num(amount),
     updated_at: fallbackStamp,
   }));
 

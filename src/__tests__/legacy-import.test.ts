@@ -95,4 +95,38 @@ describe('buildImportRows', () => {
     expect(rows.expenses[0].amount).toBe(100);
     expect(rows.expenses[0].date).toBe('2026-07-15');
   });
+
+  it('no crashea con savings_goal NUMERIC (columna real de Supabase, herencia v5)', async () => {
+    const rows = await buildImportRows(
+      makeProfile({ savings_goal: 50000 as unknown as LegacyProfileRow['savings_goal'] }),
+      'user-1',
+    );
+    expect(rows.goals).toEqual([]);
+    expect(rows.expenses).toHaveLength(1); // el resto del import sigue intacto
+  });
+
+  it('no crashea con campos null o malformados', async () => {
+    const rows = await buildImportRows(
+      makeProfile({
+        expenses: null as unknown as LegacyProfileRow['expenses'],
+        budgets: null as unknown as LegacyProfileRow['budgets'],
+        reminders: 'no-es-json' as unknown as LegacyProfileRow['reminders'],
+        custom_expense_categories: 42 as unknown as LegacyProfileRow['custom_expense_categories'],
+      }),
+      'user-1',
+    );
+    expect(rows.expenses).toEqual([]);
+    expect(rows.budgets).toEqual([]);
+    expect(rows.reminders).toEqual([]);
+    expect(rows.expenseCategories).toEqual([]);
+  });
+
+  it('normaliza montos string a number', async () => {
+    const base = (makeProfile().expenses as unknown[])[0] as Record<string, unknown>;
+    const profile = makeProfile({
+      expenses: [{ ...base, amount: '250.50' }] as unknown as LegacyProfileRow['expenses'],
+    });
+    const rows = await buildImportRows(profile, 'user-1');
+    expect(rows.expenses[0].amount).toBe(250.5);
+  });
 });
