@@ -508,12 +508,13 @@ async function maybeImportLegacy(uid: string): Promise<boolean> {
     updated_at: b.updated_at,
   })), 'user_id,month');
 
-  // Marcar completado y limpiar blobs SOLO al final (el import es idempotente)
+  // Marcar completado y limpiar blobs SOLO al final (el import es idempotente).
+  // savings_goal es columna NUMERIC en la DB real (herencia de v5) → null, no [].
   const { error: updateError } = await supabase!.from('profiles').update({
     legacy_imported: true,
     expenses: [],
     reminders: [],
-    savings_goal: [],
+    savings_goal: null,
     custom_expense_categories: [],
     custom_income_categories: [],
     budgets: {},
