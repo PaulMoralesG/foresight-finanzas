@@ -182,6 +182,47 @@ describe('syncService', () => {
     expect(expenses[0].concept).toBe('Remoto');
   });
 
+  it('completa la limpieza pendiente si la data ya está en las tablas (flag false)', async () => {
+    const update = vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) }));
+    mockFrom.mockImplementation((table: string) => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          data: table === 'expenses'
+            ? [{
+                id: 'e1',
+                user_id: 'user-1',
+                type: 'expense',
+                amount: 10,
+                concept: 'Ya importado',
+                date: '2026-07-15',
+                category: 'food',
+                method: 'cash',
+                business_type: 'personal',
+                created_at: null,
+                updated_at: '2026-08-01T00:00:00.000Z',
+                deleted_at: null,
+              }]
+            : [],
+          error: null,
+          maybeSingle: vi.fn(() => Promise.resolve({
+            data: table === 'profiles' ? { legacy_imported: false } : null,
+            error: null,
+          })),
+        })),
+      })),
+      upsert: vi.fn(() => Promise.resolve({ error: null })),
+      update,
+    }));
+
+    await syncService.attach('user-1');
+
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({
+      legacy_imported: true,
+      savings_goal: null,
+    }));
+  });
+
   it('single-flight: flush durante un push en vuelo no duplica el push', async () => {
     let release!: () => void;
     const gate = new Promise<void>((res) => {

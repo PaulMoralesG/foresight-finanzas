@@ -471,6 +471,24 @@ async function pushWithRetry(uid: string): Promise<boolean> {
 
 // ── Import legacy ──
 
+/** Marca el import como completado y limpia los blobs legacy del perfil.
+ *  savings_goal es columna NUMERIC en la DB real (herencia de v5) → null, no []. */
+async function clearLegacyBlobs(uid: string): Promise<void> {
+  const { error: updateError } = await supabase!.from('profiles').update({
+    legacy_imported: true,
+    expenses: [],
+    reminders: [],
+    savings_goal: null,
+    custom_expense_categories: [],
+    custom_income_categories: [],
+    budgets: {},
+    last_synced_at: null,
+  }).eq('id', uid);
+  if (updateError) {
+    console.warn('[sync] No se pudo limpiar profiles:', updateError);
+  }
+}
+
 async function maybeImportLegacy(uid: string): Promise<boolean> {
   const { data: profile, error } = await supabase!.from('profiles').select('*').eq('id', uid).maybeSingle();
   if (error) throw error;
@@ -484,7 +502,15 @@ async function maybeImportLegacy(uid: string): Promise<boolean> {
     snapshot.goals.length === 0 &&
     snapshot.budgets.length === 0;
 
-  if (!shouldImportLegacy(profile as LegacyProfileRow, tablesEmpty)) return false;
+  if (!shouldImportLegacy(profile as LegacyProfileRow, tablesEmpty)) {
+    // ¿La data ya está en las tablas pero la limpieza quedó pendiente?
+    // (caso del import cuya fase de datos completó pero el update de perfiles
+    // falló antes del fix de savings_goal null). Limpiar SIN re-importar.
+    if (!profile.legacy_imported && !tablesEmpty) {
+      await clearLegacyBlobs(uid);
+    }
+    return false;
+  }
 
   let rows: Awaited<ReturnType<typeof buildImportRows>>;
   try {
@@ -508,21 +534,8 @@ async function maybeImportLegacy(uid: string): Promise<boolean> {
     updated_at: b.updated_at,
   })), 'user_id,month');
 
-  // Marcar completado y limpiar blobs SOLO al final (el import es idempotente).
-  // savings_goal es columna NUMERIC en la DB real (herencia de v5) → null, no [].
-  const { error: updateError } = await supabase!.from('profiles').update({
-    legacy_imported: true,
-    expenses: [],
-    reminders: [],
-    savings_goal: null,
-    custom_expense_categories: [],
-    custom_income_categories: [],
-    budgets: {},
-    last_synced_at: null,
-  }).eq('id', uid);
-  if (updateError) {
-    console.warn('[sync] Import legacy OK pero no se pudo limpiar profiles:', updateError);
-  }
+  // Marcar completado y limpiar blobs SOLO al final (el import es idempotente)
+  await clearLegacyBlobs(uid);
   return true;
 }
 
