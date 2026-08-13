@@ -24,10 +24,10 @@ export async function generatePDFReport(
 
   // ── Sanitizar label: reemplazar caracteres no-latinos y símbolos no soportados por helvetica ──
   const safeLabel = label
-    .replace(/[^\x00-\x7F\u00C0-\u00FF\u0100-\u017F\u2013\u2014\u2018\u2019\u201C\u201D\u2026]/g, '')
+    .replace(/[^ -~\u00A0-\u017F\u2013\u2014\u2018\u2019\u201C\u201D\u2026]/g, '')
     .replace(/[→←↑↓↔⇒⇐⇑⇓⟹⟸]/g, '-')
-    .replace(/[🎉✅🔥⚠️👀👍🎯🏆💪🌱🚨⏰📅]/g, '')
-    .replace(/[^\w\sáéíóúñÁÉÍÓÚÑ\-.,;:()\[\]{}¿?¡!@#$%&/=+ –—]/g, '')
+    .replace(/[🎉✅🔥⚠👀👍🎯🏆💪🌱🚨⏰📅]/gu, '')
+    .replace(/[^\w\sáéíóúñÁÉÍÓÚÑ\-.,;:()\x5B\x5D{}¿?¡!@#$%&/=+ –—]/g, '')
     .trim();
 
   // ── Configurar fuente explícita (evita espaciado de caracteres) ──

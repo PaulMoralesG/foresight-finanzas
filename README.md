@@ -27,6 +27,27 @@ Todo desde una sola app, instalable en tu celular, que funciona incluso sin cone
 
 React · TypeScript · Vite · TailwindCSS · Zustand · Supabase · Recharts
 
+## Migración de Supabase (v2.1)
+
+La v2.1 reemplaza el almacenamiento en blobs JSON de `profiles` por **tablas por entidad**
+(`expenses`, `reminders`, `categories`, `savings_goals`, `budgets`) con RLS por fila
+(`user_id = auth.uid()`) y `profiles` claveado por `id` (auth.uid).
+
+**Orden de deploy (importante):**
+
+1. Ejecutar `supabase/migrations/0001_entities_and_rls.sql` en el **SQL Editor** de Supabase (una sola vez).
+   Crea las tablas, habilita RLS, migra `profiles` a `id uuid` y agrega el trigger de perfil automático.
+2. Desplegar el código nuevo.
+
+**Migración de datos automática:** en el primer login post-migración, el cliente importa
+los blobs JSON legacy a las tablas nuevas **una sola vez** (ids UUID v5 deterministas — el
+import es idempotente) y limpia los blobs. Si el SQL no se ejecutó, la app sigue funcionando
+en modo local-only y lo indica en consola.
+
+**Sync:** pull-then-push con merge determinista por fila (`updated_at` más nuevo gana;
+borrados lógicos con `deleted_at` para propagar eliminaciones sin resurrecciones).
+Flush automático en `pagehide` / `visibilitychange` / `online` y antes de cerrar sesión.
+
 ## Licencia
 
 MIT

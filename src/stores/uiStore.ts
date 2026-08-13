@@ -31,14 +31,14 @@ interface UiState {
 
   // --- Modal de transacción ---
   isModalOpen: boolean;
-  editingId: number | null;
-  openModal: (id?: number) => void;
+  editingId: string | null;
+  openModal: (id?: string) => void;
   closeModal: () => void;
 
   // --- Modal de confirmación de borrado ---
   isDeleteModalOpen: boolean;
-  deletingId: number | null;
-  openDeleteModal: (id: number) => void;
+  deletingId: string | null;
+  openDeleteModal: (id: string) => void;
   closeDeleteModal: () => void;
 
   // --- Toast notifications ---
@@ -110,8 +110,8 @@ export const useUiStore = create<UiState>((set) => ({
 
   // Modal transacción
   isModalOpen: false,
-  editingId: null as number | null,
-  openModal: (id?: number) => set({ isModalOpen: true, editingId: id ?? null }),
+  editingId: null as string | null,
+  openModal: (id?: string) => set({ isModalOpen: true, editingId: id ?? null }),
   closeModal: () => set({ isModalOpen: false, editingId: null }),
 
   // Modal confirmación de borrado

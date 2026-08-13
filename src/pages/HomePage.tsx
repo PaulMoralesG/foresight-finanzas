@@ -9,6 +9,7 @@ import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useMonthlyData } from '@/hooks/useFinance';
 import { formatMoney, safeParseDate, syncToCloud, parseMoneyInput } from '@/lib/utils';
+import { computeSavingsByConcept } from '@/lib/savings';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/config/categories';
 import { MonthNav } from '@/components/layout/MonthNav';
 import type { Transaction, TabId } from '@/types';
@@ -337,6 +338,8 @@ function BudgetWidget() {
   // ¿Es un presupuesto heredado de un mes anterior?
   const isCarriedOver = budget > 0 && !budgets[monthKey];
 
+  // Deps "innecesarias" a propósito: getMonthlyData lee el store por dentro
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const monthlyData = useMemo(() => getMonthlyData(), [getMonthlyData, expenses, currentViewDate]);
 
   const monthSpent = useMemo(
@@ -619,20 +622,11 @@ function SavingsGoalWidget({ totalIncome }: { totalIncome: number }) {
   // Agrupar ahorros del mes por concepto
   const savingsByConcept = useMemo(() => {
     const d = new Date(currentViewDate);
-    const month = d.getMonth();
-    const year = d.getFullYear();
-    const map = new Map<string, number>();
-    expenses
-      .filter((e) => {
-        if (e.type !== 'expense' || e.category !== 'ahorro') return false;
-        const ed = safeParseDate(e.date);
-        return ed.getMonth() === month && ed.getFullYear() === year;
-      })
-      .forEach((e) => {
-        const concept = e.concept.trim() || 'Sin concepto';
-        map.set(concept, (map.get(concept) || 0) + e.amount);
-      });
-    return Array.from(map.entries())
+    const byConcept = computeSavingsByConcept(expenses, {
+      year: d.getFullYear(),
+      month: d.getMonth(),
+    });
+    return Array.from(byConcept.entries())
       .map(([concept, saved]) => ({ concept, saved }))
       .sort((a, b) => b.saved - a.saved);
   }, [expenses, currentViewDate]);

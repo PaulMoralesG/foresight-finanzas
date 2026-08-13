@@ -12,11 +12,11 @@ export interface User {
 export type TransactionType = 'income' | 'expense';
 export type PaymentMethod = 'cash' | 'card' | 'transfer';
 export type BusinessType = 'business' | 'personal';
-export type TabId = 'home' | 'movements' | 'stats' | 'profile';
+export type TabId = 'home' | 'movements' | 'stats' | 'savings' | 'profile';
 export type FilterType = 'all' | 'income' | 'expense' | 'business' | 'personal';
 
 export interface Transaction {
-  id: number;
+  id: string; // UUID
   type: TransactionType;
   amount: number;
   concept: string;
@@ -25,10 +25,11 @@ export interface Transaction {
   method: PaymentMethod;
   businessType: BusinessType;
   created_at?: string;
+  updated_at: string; // ISO — usado por el merge de sync
 }
 
 export interface PaymentReminder {
-  id: number;
+  id: string; // UUID
   concept: string;
   amount: number;
   dueDate: string; // ISO format "YYYY-MM-DD"
@@ -38,6 +39,7 @@ export interface PaymentReminder {
   isPaid: boolean;
   notes?: string;
   createdAt: string;
+  updated_at: string; // ISO — usado por el merge de sync
 }
 
 export interface MonthlyBudget {
@@ -49,9 +51,13 @@ export interface Category {
   label: string;
   icon: string;
   color: string;
+  /** ISO — usado por el merge de sync. Las categorías por defecto no lo tienen. */
+  updated_at?: string;
 }
 
 export interface SavingsGoal {
+  id: string; // UUID
   concept: string;
   target: number;
+  updated_at: string; // ISO — usado por el merge de sync
 }

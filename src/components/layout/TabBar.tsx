@@ -4,7 +4,7 @@
 // ================================================================
 
 import { useMemo, useRef, useEffect, useLayoutEffect } from 'react';
-import { Home, ArrowLeftRight, BarChart3, User, Plus } from 'lucide-react';
+import { Home, ArrowLeftRight, BarChart3, User, PiggyBank, Plus } from 'lucide-react';
 import { useUiStore } from '@/stores/uiStore';
 import { useFinanceStore } from '@/stores/financeStore';
 import type { TabId } from '@/types';
@@ -13,6 +13,7 @@ const TABS: { id: TabId; icon: typeof Home; label: string }[] = [
   { id: 'home', icon: Home, label: 'Inicio' },
   { id: 'movements', icon: ArrowLeftRight, label: 'Movimientos' },
   { id: 'stats', icon: BarChart3, label: 'Estadísticas' },
+  { id: 'savings', icon: PiggyBank, label: 'Metas' },
   { id: 'profile', icon: User, label: 'Perfil' },
 ];
 

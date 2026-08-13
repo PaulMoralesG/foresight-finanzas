@@ -4,10 +4,10 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useFinanceStore } from '@/stores/financeStore';
-import type { Transaction, Category } from '@/types';
+import type { Transaction, Category, PaymentReminder } from '@/types';
 
 // Helper: crear una transacción de prueba
-function makeTx(overrides: Partial<Transaction> = {}): Omit<Transaction, 'id' | 'created_at'> {
+function makeTx(overrides: Partial<Transaction> = {}): Omit<Transaction, 'id' | 'created_at' | 'updated_at'> {
   return {
     type: 'expense',
     amount: 500,
@@ -31,6 +31,17 @@ function makeCat(overrides: Partial<Category> = {}): Category {
   };
 }
 
+function makeReminder(): Omit<PaymentReminder, 'id' | 'createdAt' | 'isPaid' | 'updated_at'> {
+  return {
+    concept: 'Renta',
+    amount: 8000,
+    dueDate: '2026-08-01',
+    category: 'rent',
+    businessType: 'personal',
+    method: 'transfer',
+  };
+}
+
 describe('financeStore', () => {
   beforeEach(() => {
     useFinanceStore.getState().reset();
@@ -43,34 +54,40 @@ describe('financeStore', () => {
     expect(s.expenses).toEqual([]);
     expect(s.budgets).toEqual({});
     expect(s.reminders).toEqual([]);
+    expect(s.savingsGoals).toEqual([]);
+    expect(s.tombstones).toEqual({});
+    expect(s.budgetUpdatedAt).toEqual({});
     expect(s.currentFilter).toBe('all');
-    expect(s.nextId).toBe(1);
-    expect(s.nextReminderId).toBe(1);
   });
 
   // ─── CRUD de transacciones ────────────────────────────────────
 
-  it('addTransaction agrega y auto-incrementa id', () => {
-    useFinanceStore.getState().addTransaction(makeTx());
-    useFinanceStore.getState().addTransaction(makeTx({ concept: 'Gasolina' }));
+  it('addTransaction genera ids únicos', () => {
+    const id1 = useFinanceStore.getState().addTransaction(makeTx());
+    const id2 = useFinanceStore.getState().addTransaction(makeTx({ concept: 'Gasolina' }));
 
     const expenses = useFinanceStore.getState().expenses;
     expect(expenses).toHaveLength(2);
-    expect(expenses[0].id).toBe(1);
-    expect(expenses[1].id).toBe(2);
+    expect(id1).toBeTruthy();
+    expect(id2).toBeTruthy();
+    expect(id1).not.toBe(id2);
+    expect(expenses[0].id).toBe(id1);
+    expect(expenses[1].id).toBe(id2);
     expect(expenses[0].concept).toBe('Supermercado');
   });
 
-  it('addTransaction asigna created_at', () => {
+  it('addTransaction asigna created_at y updated_at', () => {
     useFinanceStore.getState().addTransaction(makeTx());
     const exp = useFinanceStore.getState().expenses[0];
     expect(exp.created_at).toBeDefined();
     expect(new Date(exp.created_at!).getTime()).toBeGreaterThan(0);
+    expect(exp.updated_at).toBeDefined();
+    expect(new Date(exp.updated_at).getTime()).toBeGreaterThan(0);
   });
 
   it('updateTransaction actualiza campos parciales', () => {
-    useFinanceStore.getState().addTransaction(makeTx());
-    useFinanceStore.getState().updateTransaction(1, { amount: 750, concept: 'Walmart' });
+    const id = useFinanceStore.getState().addTransaction(makeTx());
+    useFinanceStore.getState().updateTransaction(id, { amount: 750, concept: 'Walmart' });
 
     const exp = useFinanceStore.getState().expenses[0];
     expect(exp.amount).toBe(750);
@@ -79,34 +96,67 @@ describe('financeStore', () => {
   });
 
   it('updateTransaction no afecta otros items', () => {
-    useFinanceStore.getState().addTransaction(makeTx({ concept: 'A' }));
+    const id1 = useFinanceStore.getState().addTransaction(makeTx({ concept: 'A' }));
     useFinanceStore.getState().addTransaction(makeTx({ concept: 'B' }));
-    useFinanceStore.getState().updateTransaction(1, { concept: 'A-mod' });
+    useFinanceStore.getState().updateTransaction(id1, { concept: 'A-mod' });
 
     const expenses = useFinanceStore.getState().expenses;
     expect(expenses[0].concept).toBe('A-mod');
     expect(expenses[1].concept).toBe('B');
   });
 
-  it('deleteTransaction elimina por id', () => {
-    useFinanceStore.getState().addTransaction(makeTx({ concept: 'A' }));
-    useFinanceStore.getState().addTransaction(makeTx({ concept: 'B' }));
-    useFinanceStore.getState().deleteTransaction(1);
+  it('deleteTransaction elimina por id y registra tombstone', () => {
+    const id1 = useFinanceStore.getState().addTransaction(makeTx({ concept: 'A' }));
+    const id2 = useFinanceStore.getState().addTransaction(makeTx({ concept: 'B' }));
+    useFinanceStore.getState().deleteTransaction(id1);
 
-    const expenses = useFinanceStore.getState().expenses;
-    expect(expenses).toHaveLength(1);
-    expect(expenses[0].id).toBe(2);
+    const s = useFinanceStore.getState();
+    expect(s.expenses).toHaveLength(1);
+    expect(s.expenses[0].id).toBe(id2);
+    expect(s.tombstones[id1]).toBeDefined();
+    expect(s.tombstones[id2]).toBeUndefined();
+  });
+
+  it('updateTransaction limpia el tombstone del id (resurrección local)', () => {
+    const id = useFinanceStore.getState().addTransaction(makeTx());
+    const item = useFinanceStore.getState().expenses[0];
+    useFinanceStore.getState().deleteTransaction(id);
+    expect(useFinanceStore.getState().tombstones[id]).toBeDefined();
+
+    // Undo (restore) y luego update → el tombstone debe limpiarse
+    useFinanceStore.getState().restoreTransactions([item]);
+    useFinanceStore.getState().updateTransaction(id, { concept: 'X' });
+    expect(useFinanceStore.getState().tombstones[id]).toBeUndefined();
+    expect(useFinanceStore.getState().expenses[0].concept).toBe('X');
   });
 
   it('deleteTransactions elimina múltiples ids', () => {
-    useFinanceStore.getState().addTransaction(makeTx({ concept: 'A' }));
-    useFinanceStore.getState().addTransaction(makeTx({ concept: 'B' }));
-    useFinanceStore.getState().addTransaction(makeTx({ concept: 'C' }));
-    useFinanceStore.getState().deleteTransactions([1, 3]);
+    const id1 = useFinanceStore.getState().addTransaction(makeTx({ concept: 'A' }));
+    const id2 = useFinanceStore.getState().addTransaction(makeTx({ concept: 'B' }));
+    const id3 = useFinanceStore.getState().addTransaction(makeTx({ concept: 'C' }));
+    useFinanceStore.getState().deleteTransactions([id1, id3]);
 
-    const expenses = useFinanceStore.getState().expenses;
-    expect(expenses).toHaveLength(1);
-    expect(expenses[0].id).toBe(2);
+    const s = useFinanceStore.getState();
+    expect(s.expenses).toHaveLength(1);
+    expect(s.expenses[0].id).toBe(id2);
+    expect(s.tombstones[id1]).toBeDefined();
+    expect(s.tombstones[id3]).toBeDefined();
+  });
+
+  it('restoreTransactions restaura items conservando ids y tombstones limpios', () => {
+    const id1 = useFinanceStore.getState().addTransaction(makeTx({ concept: 'A' }));
+    const id2 = useFinanceStore.getState().addTransaction(makeTx({ concept: 'B' }));
+    const deleted = useFinanceStore.getState().expenses.filter((e) => e.id === id1 || e.id === id2);
+    useFinanceStore.getState().deleteTransactions([id1, id2]);
+    expect(useFinanceStore.getState().expenses).toHaveLength(0);
+
+    useFinanceStore.getState().restoreTransactions(deleted);
+
+    const s = useFinanceStore.getState();
+    expect(s.expenses).toHaveLength(2);
+    expect(s.expenses.map((e) => e.id).sort()).toEqual([id1, id2].sort());
+    expect(s.tombstones[id1]).toBeUndefined();
+    expect(s.tombstones[id2]).toBeUndefined();
   });
 
   // ─── Navegación de mes ────────────────────────────────────────
@@ -157,6 +207,12 @@ describe('financeStore', () => {
     expect(useFinanceStore.getState().budgets['2026-07']).toBe(10000);
   });
 
+  it('setBudget registra budgetUpdatedAt por mes', () => {
+    useFinanceStore.getState().setBudget('2026-07', 10000);
+    expect(useFinanceStore.getState().budgetUpdatedAt['2026-07']).toBeDefined();
+    expect(new Date(useFinanceStore.getState().budgetUpdatedAt['2026-07']).getTime()).toBeGreaterThan(0);
+  });
+
   it('setBudget sobreescribe y no borra otras keys', () => {
     useFinanceStore.getState().setBudget('2026-07', 5000);
     useFinanceStore.getState().setBudget('2026-08', 8000);
@@ -170,61 +226,35 @@ describe('financeStore', () => {
   // ─── Recordatorios de pago ────────────────────────────────────
 
   it('addReminder agrega recordatorio con isPaid=false', () => {
-    useFinanceStore.getState().addReminder({
-      concept: 'Renta',
-      amount: 8000,
-      dueDate: '2026-08-01',
-      category: 'rent',
-      businessType: 'personal',
-      method: 'transfer',
-    });
+    const id = useFinanceStore.getState().addReminder(makeReminder());
 
     const reminders = useFinanceStore.getState().reminders;
     expect(reminders).toHaveLength(1);
     expect(reminders[0].concept).toBe('Renta');
     expect(reminders[0].isPaid).toBe(false);
-    expect(reminders[0].id).toBe(1);
+    expect(reminders[0].id).toBe(id);
+    expect(reminders[0].updated_at).toBeDefined();
   });
 
   it('toggleReminderPaid alterna isPaid', () => {
-    useFinanceStore.getState().addReminder({
-      concept: 'Renta',
-      amount: 8000,
-      dueDate: '2026-08-01',
-      category: 'rent',
-      businessType: 'personal',
-      method: 'transfer',
-    });
-    useFinanceStore.getState().toggleReminderPaid(1);
+    const id = useFinanceStore.getState().addReminder(makeReminder());
+    useFinanceStore.getState().toggleReminderPaid(id);
     expect(useFinanceStore.getState().reminders[0].isPaid).toBe(true);
 
-    useFinanceStore.getState().toggleReminderPaid(1);
+    useFinanceStore.getState().toggleReminderPaid(id);
     expect(useFinanceStore.getState().reminders[0].isPaid).toBe(false);
   });
 
-  it('deleteReminder elimina recordatorio', () => {
-    useFinanceStore.getState().addReminder({
-      concept: 'Renta',
-      amount: 8000,
-      dueDate: '2026-08-01',
-      category: 'rent',
-      businessType: 'personal',
-      method: 'transfer',
-    });
-    useFinanceStore.getState().deleteReminder(1);
+  it('deleteReminder elimina recordatorio y registra tombstone', () => {
+    const id = useFinanceStore.getState().addReminder(makeReminder());
+    useFinanceStore.getState().deleteReminder(id);
     expect(useFinanceStore.getState().reminders).toHaveLength(0);
+    expect(useFinanceStore.getState().tombstones[id]).toBeDefined();
   });
 
   it('updateReminder actualiza campos de recordatorio', () => {
-    useFinanceStore.getState().addReminder({
-      concept: 'Renta',
-      amount: 8000,
-      dueDate: '2026-08-01',
-      category: 'rent',
-      businessType: 'personal',
-      method: 'transfer',
-    });
-    useFinanceStore.getState().updateReminder(1, { amount: 9000, notes: 'Subió' });
+    const id = useFinanceStore.getState().addReminder(makeReminder());
+    useFinanceStore.getState().updateReminder(id, { amount: 9000, notes: 'Subió' });
     const r = useFinanceStore.getState().reminders[0];
     expect(r.amount).toBe(9000);
     expect(r.notes).toBe('Subió');
@@ -238,20 +268,14 @@ describe('financeStore', () => {
     in60Days.setDate(today.getDate() + 60);
 
     useFinanceStore.getState().addReminder({
+      ...makeReminder(),
       concept: 'Próximo',
-      amount: 1000,
       dueDate: in7Days.toISOString().substring(0, 10),
-      category: 'rent',
-      businessType: 'personal',
-      method: 'transfer',
     });
     useFinanceStore.getState().addReminder({
+      ...makeReminder(),
       concept: 'Lejano',
-      amount: 2000,
       dueDate: in60Days.toISOString().substring(0, 10),
-      category: 'rent',
-      businessType: 'personal',
-      method: 'transfer',
     });
 
     const upcoming = useFinanceStore.getState().getUpcomingReminders();
@@ -265,6 +289,7 @@ describe('financeStore', () => {
     useFinanceStore.getState().addCustomCategory('expense', makeCat({ id: 'cat-1', label: 'Mascotas' }));
     expect(useFinanceStore.getState().customExpenseCategories).toHaveLength(1);
     expect(useFinanceStore.getState().customExpenseCategories[0].label).toBe('Mascotas');
+    expect(useFinanceStore.getState().customExpenseCategories[0].updated_at).toBeDefined();
   });
 
   it('addCustomCategory agrega categoría de ingreso', () => {
@@ -272,10 +297,44 @@ describe('financeStore', () => {
     expect(useFinanceStore.getState().customIncomeCategories).toHaveLength(1);
   });
 
-  it('deleteCustomCategory elimina categoría por id', () => {
+  it('deleteCustomCategory elimina categoría por id y registra tombstone', () => {
     useFinanceStore.getState().addCustomCategory('expense', makeCat({ id: 'cat-x' }));
     useFinanceStore.getState().deleteCustomCategory('expense', 'cat-x');
     expect(useFinanceStore.getState().customExpenseCategories).toHaveLength(0);
+    expect(useFinanceStore.getState().tombstones['cat-x']).toBeDefined();
+  });
+
+  it('updateCustomCategory actualiza y limpia tombstone', () => {
+    useFinanceStore.getState().addCustomCategory('expense', makeCat({ id: 'cat-x' }));
+    useFinanceStore.getState().deleteCustomCategory('expense', 'cat-x');
+    useFinanceStore.getState().addCustomCategory('expense', makeCat({ id: 'cat-x' }));
+    expect(useFinanceStore.getState().tombstones['cat-x']).toBeUndefined();
+  });
+
+  // ─── Metas de ahorro ──────────────────────────────────────────
+
+  it('addSavingsGoal agrega meta con id y updated_at', () => {
+    const id = useFinanceStore.getState().addSavingsGoal({ concept: 'Casa', target: 100000 });
+    const goals = useFinanceStore.getState().savingsGoals;
+    expect(goals).toHaveLength(1);
+    expect(goals[0].id).toBe(id);
+    expect(goals[0].concept).toBe('Casa');
+    expect(goals[0].target).toBe(100000);
+    expect(goals[0].updated_at).toBeDefined();
+  });
+
+  it('updateSavingsGoal actualiza campos parciales', () => {
+    const id = useFinanceStore.getState().addSavingsGoal({ concept: 'Casa', target: 100000 });
+    useFinanceStore.getState().updateSavingsGoal(id, { target: 150000 });
+    expect(useFinanceStore.getState().savingsGoals[0].target).toBe(150000);
+    expect(useFinanceStore.getState().savingsGoals[0].concept).toBe('Casa');
+  });
+
+  it('deleteSavingsGoal elimina y registra tombstone', () => {
+    const id = useFinanceStore.getState().addSavingsGoal({ concept: 'Casa', target: 100000 });
+    useFinanceStore.getState().deleteSavingsGoal(id);
+    expect(useFinanceStore.getState().savingsGoals).toHaveLength(0);
+    expect(useFinanceStore.getState().tombstones[id]).toBeDefined();
   });
 
   // ─── Reset ────────────────────────────────────────────────────
@@ -284,6 +343,7 @@ describe('financeStore', () => {
     useFinanceStore.getState().addTransaction(makeTx());
     useFinanceStore.getState().setBudget('2026-07', 5000);
     useFinanceStore.getState().addCustomCategory('expense', makeCat());
+    useFinanceStore.getState().addSavingsGoal({ concept: 'Casa', target: 100000 });
     useFinanceStore.getState().setFilter('income');
 
     useFinanceStore.getState().reset();
@@ -292,7 +352,9 @@ describe('financeStore', () => {
     expect(s.expenses).toEqual([]);
     expect(s.budgets).toEqual({});
     expect(s.customExpenseCategories).toEqual([]);
+    expect(s.savingsGoals).toEqual([]);
+    expect(s.tombstones).toEqual({});
+    expect(s.budgetUpdatedAt).toEqual({});
     expect(s.currentFilter).toBe('all');
-    expect(s.nextId).toBe(1);
   });
 });
