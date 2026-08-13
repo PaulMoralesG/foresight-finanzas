@@ -394,9 +394,14 @@ function applyMerge(snapshot: Snapshot): MergeResult {
 
 type TableName = 'expenses' | 'reminders' | 'categories' | 'savings_goals' | 'budgets';
 
-async function upsert(table: TableName, rows: object[], onConflict: string): Promise<void> {
+async function upsert(
+  table: TableName,
+  rows: object[],
+  onConflict: string,
+  ignoreDuplicates = false,
+): Promise<void> {
   if (rows.length === 0) return;
-  const { error } = await supabase!.from(table).upsert(rows, { onConflict });
+  const { error } = await supabase!.from(table).upsert(rows, { onConflict, ignoreDuplicates });
   if (error) throw error;
 }
 
@@ -494,19 +499,9 @@ async function maybeImportLegacy(uid: string): Promise<boolean> {
   if (error) throw error;
   if (!profile) return false;
 
-  const snapshot = await pullAll(uid);
-  const tablesEmpty =
-    snapshot.expenses.length === 0 &&
-    snapshot.reminders.length === 0 &&
-    snapshot.categories.length === 0 &&
-    snapshot.goals.length === 0 &&
-    snapshot.budgets.length === 0;
-
-  if (!shouldImportLegacy(profile as LegacyProfileRow, tablesEmpty)) {
-    // ¿La data ya está en las tablas pero la limpieza quedó pendiente?
-    // (caso del import cuya fase de datos completó pero el update de perfiles
-    // falló antes del fix de savings_goal null). Limpiar SIN re-importar.
-    if (!profile.legacy_imported && !tablesEmpty) {
+  if (!shouldImportLegacy(profile as LegacyProfileRow)) {
+    // Nada que migrar (o ya migrado): si el flag quedó pendiente, marcarlo
+    if (!profile.legacy_imported) {
       await clearLegacyBlobs(uid);
     }
     return false;
@@ -520,19 +515,23 @@ async function maybeImportLegacy(uid: string): Promise<boolean> {
     console.error('[sync] Import legacy falló — los blobs NO se limpiaron (se reintentará):', err);
     return false;
   }
-  await upsert('expenses', rows.expenses.map((t) => expenseToRow(t, uid)), 'id');
-  await upsert('reminders', rows.reminders.map((r) => reminderToRow(r, uid)), 'id');
+
+  // Idempotente por clave: los ids son UUID v5 deterministas y los upserts usan
+  // ignoreDuplicates — filas existentes (vivas o tombstone) NO se pisan ni se
+  // resucitan; solo se inserta lo que falta (cubre imports parciales fallidos).
+  await upsert('expenses', rows.expenses.map((t) => expenseToRow(t, uid)), 'id', true);
+  await upsert('reminders', rows.reminders.map((r) => reminderToRow(r, uid)), 'id', true);
   await upsert('categories', [
     ...rows.expenseCategories.map((c) => categoryToRow(c, uid, 'expense')),
     ...rows.incomeCategories.map((c) => categoryToRow(c, uid, 'income')),
-  ], 'id');
-  await upsert('savings_goals', rows.goals.map((g) => goalToRow(g, uid)), 'id');
+  ], 'id', true);
+  await upsert('savings_goals', rows.goals.map((g) => goalToRow(g, uid)), 'id', true);
   await upsert('budgets', rows.budgets.map((b) => ({
     user_id: uid,
     month: b.month,
     amount: b.amount,
     updated_at: b.updated_at,
-  })), 'user_id,month');
+  })), 'user_id,month', true);
 
   // Marcar completado y limpiar blobs SOLO al final (el import es idempotente)
   await clearLegacyBlobs(uid);

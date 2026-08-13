@@ -85,10 +85,8 @@ function parseBlobs(profile: LegacyProfileRow): ParsedBlobs {
   };
 }
 
-/** ¿Hay que importar? Solo si el flag está pendiente, hay blobs y las tablas están vacías. */
-export function shouldImportLegacy(profile: LegacyProfileRow, tablesEmpty: boolean): boolean {
-  if (!tablesEmpty) return false;
-  if (profile.legacy_imported) return false;
+/** ¿El perfil tiene blobs legacy con datos que migrar? */
+export function hasLegacyBlobs(profile: LegacyProfileRow): boolean {
   const blobs = parseBlobs(profile);
   return (
     blobs.expenses.length > 0 ||
@@ -98,6 +96,14 @@ export function shouldImportLegacy(profile: LegacyProfileRow, tablesEmpty: boole
     blobs.expenseCategories.length > 0 ||
     blobs.incomeCategories.length > 0
   );
+}
+
+/** ¿Hay que importar? Flag pendiente + blobs con datos.
+ *  El import es idempotente por clave (uuid v5 + upsert ignoreDuplicates),
+ *  así que re-ejecutarlo NO duplica ni pisa filas existentes — solo
+ *  inserta lo que falte (útil si un import anterior falló parcialmente). */
+export function shouldImportLegacy(profile: LegacyProfileRow): boolean {
+  return !profile.legacy_imported && hasLegacyBlobs(profile);
 }
 
 /**
