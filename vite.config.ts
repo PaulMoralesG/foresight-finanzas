@@ -9,7 +9,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: false,
-      includeAssets: [],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {
         name: 'Foresight Finanzas',
         short_name: 'Foresight',
@@ -23,9 +23,15 @@ export default defineConfig({
         icons: [
           {
             src: 'https://cdn-icons-png.flaticon.com/512/17856/17856040.png',
-            sizes: '512x512',
+            sizes: '192x192',
             type: 'image/png',
             purpose: 'any',
+          },
+          {
+            src: 'https://cdn-icons-png.flaticon.com/512/17856/17856040.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable',
           },
         ],
         categories: ['finance', 'productivity'],

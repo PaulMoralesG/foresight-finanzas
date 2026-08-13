@@ -11,6 +11,7 @@ import { TabBar } from './TabBar';
 import { Toast } from '@/components/ui/Toast';
 import { useUiStore } from '@/stores/uiStore';
 import { useFinanceStore } from '@/stores/financeStore';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -19,6 +20,9 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
   const ensureCurrentMonth = useFinanceStore((s) => s.ensureCurrentMonth);
+
+  // Atajos de teclado: Ctrl+N nueva transacción, Ctrl+K buscar
+  useKeyboardShortcuts();
 
   // Al montar: avanzar al mes actual si la fecha guardada es antigua
   useEffect(() => {

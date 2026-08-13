@@ -76,8 +76,8 @@ export function StatsPage() {
   // Filtered data
   const filteredData = useMemo(() => {
     if (statsMode === 'range' && statsFromDate && statsToDate) {
-      const from = new Date(statsFromDate);
-      const to = new Date(statsToDate);
+      const from = safeParseDate(statsFromDate);
+      const to = safeParseDate(statsToDate);
       to.setHours(23, 59, 59, 999);
       return expenses.filter((i) => {
         const d = safeParseDate(i.date);
@@ -94,8 +94,8 @@ export function StatsPage() {
   // Previous period data (for comparison)
   const previousData = useMemo(() => {
     if (statsMode === 'range' && statsFromDate && statsToDate) {
-      const from = new Date(statsFromDate);
-      const to = new Date(statsToDate);
+      const from = safeParseDate(statsFromDate);
+      const to = safeParseDate(statsToDate);
       const diff = to.getTime() - from.getTime();
       const prevFrom = new Date(from.getTime() - diff);
       const prevTo = new Date(to.getTime() - diff);
@@ -119,10 +119,10 @@ export function StatsPage() {
     const income = filteredData.filter((i) => i.type === 'income').reduce((s, i) => s + i.amount, 0);
     const spent = filteredData.filter((i) => i.type === 'expense').reduce((s, i) => s + i.amount, 0);
     const businessInc = filteredData
-      .filter((i) => i.type === 'income' && (i.businessType === 'business' || !i.businessType))
+      .filter((i) => i.type === 'income' && i.businessType === 'business')
       .reduce((s, i) => s + i.amount, 0);
     const businessSpent = filteredData
-      .filter((i) => i.type === 'expense' && (i.businessType === 'business' || !i.businessType))
+      .filter((i) => i.type === 'expense' && i.businessType === 'business')
       .reduce((s, i) => s + i.amount, 0);
     return { income, spent, balance: income - spent, businessProfit: businessInc - businessSpent, count: filteredData.length };
   }, [filteredData]);
@@ -189,8 +189,8 @@ export function StatsPage() {
   const avgDaily =
     statsMode === 'range' && statsFromDate && statsToDate
       ? (() => {
-          const from = new Date(statsFromDate);
-          const to = new Date(statsToDate);
+          const from = safeParseDate(statsFromDate);
+          const to = safeParseDate(statsToDate);
           const days = Math.max(1, Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1);
           return totals.balance / days;
         })()
@@ -202,7 +202,7 @@ export function StatsPage() {
       ? filteredData
       : filteredData.filter((i) => {
           if (exportFilter === 'personal') return i.businessType === 'personal';
-          return i.businessType === 'business' || !i.businessType;
+          return i.businessType === 'business';
         });
   }, [filteredData, exportFilter]);
 
@@ -213,7 +213,7 @@ export function StatsPage() {
   const getViewDate = useCallback(() => {
     return statsMode === 'month'
       ? new Date(statsYear, statsMonth, 1)
-      : new Date(statsFromDate!);
+      : safeParseDate(statsFromDate!);
   }, [statsMode, statsYear, statsMonth, statsFromDate]);
 
   // ── Label con rango de fechas para el reporte ──
