@@ -98,22 +98,22 @@ export function syncToCloud(
   addToast: (msg: string, type: 'success' | 'error' | 'info') => void,
 ): void {
   saveData()
-    .then((ok) => {
-      if (!ok) addToast('Error al sincronizar con la nube', 'error');
+    .then(() => {
+      /* éxito silencioso */
     })
-    .catch((err) => {
-      console.error('[syncToCloud] Error de red al sincronizar:', err);
-      addToast('Sin conexión — los cambios se guardarán localmente', 'error');
+    .catch((err: Error) => {
+      console.error('[syncToCloud] Error al sincronizar:', err);
+      addToast(err.message || 'Error al sincronizar con la nube', 'error');
     });
 }
 
 /**
  * Nombres de meses en español.
  */
-export const MONTH_NAMES = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
-];
+export const MONTH_NAMES = Array.from({ length: 12 }, (_, i) => {
+  const name = new Intl.DateTimeFormat('es-MX', { month: 'long' }).format(new Date(2024, i, 1));
+  return name.charAt(0).toUpperCase() + name.slice(1);
+});
 
 /**
  * Parsea una fecha ISO (YYYY-MM-DD) de forma segura en todos los navegadores.
@@ -121,6 +121,7 @@ export const MONTH_NAMES = [
  */
 export function safeParseDate(iso: string): Date {
   // Tomar solo YYYY-MM-DD (soporta ISO completo: 2026-02-13T17:00:00.000Z)
+  if (!iso || typeof iso !== 'string') return new Date();
   const datePart = iso.substring(0, 10);
   const [y, m, d] = datePart.split('-').map(Number);
   return new Date(y, m - 1, d);

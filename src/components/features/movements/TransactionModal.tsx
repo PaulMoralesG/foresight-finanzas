@@ -20,7 +20,6 @@ export function TransactionModal({
   const isOpen = useUiStore((s) => s.isModalOpen);
   const editingId = useUiStore((s) => s.editingId);
   const closeModal = useUiStore((s) => s.closeModal);
-  const expenses = useFinanceStore((s) => s.expenses);
   const addTransaction = useFinanceStore((s) => s.addTransaction);
   const updateTransaction = useFinanceStore((s) => s.updateTransaction);
   const deleteTransaction = useFinanceStore((s) => s.deleteTransaction);
@@ -91,24 +90,41 @@ export function TransactionModal({
     setShowNewCat(false);
     addToast('Categoría creada ✅', 'success');
     // Sincronizar con Supabase para que la categoría persista al recargar
-    onSave().then((ok) => { if (!ok) addToast('Error al guardar categoría en la nube', 'error'); });
+    onSave()
+      .then(() => { /* éxito */ })
+      .catch((err: Error) => {
+        console.error('[TransactionModal] Error al guardar categoría:', err);
+        addToast(err.message || 'Error al guardar categoría en la nube', 'error');
+      });
   }
 
-  // Cargar datos si estamos editando
+  // Cargar datos si estamos editando.
+  // ⚠️ NO depende de `expenses` ni `defaultDate` — si lo hiciera, cualquier cambio
+  // en el store (incluso por persistencia de Zustand) re-ejecutaría este efecto y
+  // sobrescribiría los campos que el usuario está editando, haciendo el formulario
+  // "no interactivo".
   useEffect(() => {
     if (editingId !== null && isOpen) {
-      const item = expenses.find((e) => e.id === editingId);
-      if (item) {
-        setType(item.type);
-        setAmount(String(item.amount));
-        setConcept(item.concept);
-        setDate(item.date.slice(0, 10));
-        setCategory(item.category);
-        setMethod(item.method);
-        setBusinessType(item.businessType);
+      try {
+        const item = useFinanceStore.getState().expenses.find((e) => e.id === editingId);
+        if (item) {
+          setType(item.type);
+          setAmount(String(item.amount ?? ''));
+          setConcept(item.concept ?? '');
+          // date puede venir como ISO completo o YYYY-MM-DD; slice seguro
+          setDate(typeof item.date === 'string' ? item.date.slice(0, 10) : defaultDate);
+          setCategory(item.category ?? '');
+          setMethod(item.method ?? 'cash');
+          setBusinessType(item.businessType ?? 'personal');
+        } else {
+          console.error('[TransactionModal] No se encontró transacción con id:', editingId);
+        }
+      } catch (err) {
+        console.error('[TransactionModal] Error al cargar datos:', err);
+        addToast('Error al cargar la transacción. Verifica los datos.', 'error');
       }
     } else if (!isOpen) {
-      // Reset al cerrar — usar defaultDate (mes visto, no necesariamente hoy real)
+      // Reset al cerrar
       setType('expense');
       setAmount('');
       setConcept('');
@@ -117,7 +133,8 @@ export function TransactionModal({
       setMethod('cash');
       setBusinessType('business');
     }
-  }, [editingId, isOpen, expenses, defaultDate]);
+    // Solo montar al abrir/cerrar o cambiar item
+  }, [editingId, isOpen, defaultDate, addToast]);
 
   // Scroll lock para iOS PWA
   useScrollLock(isOpen);
@@ -161,7 +178,12 @@ export function TransactionModal({
     closeModal();
     addToast(isEditing ? 'Movimiento actualizado ✅' : 'Movimiento registrado ✅', 'success');
     // Sync a Supabase en background (no bloquea la UI)
-    onSave().then((ok) => { if (!ok) addToast('Error al sincronizar con la nube', 'error'); });
+    onSave()
+      .then(() => { /* éxito, no mostrar nada extra */ })
+      .catch((err: Error) => {
+        console.error('[TransactionModal] Error al sincronizar:', err);
+        addToast(err.message || 'Error al sincronizar con la nube', 'error');
+      });
   }
 
   async function handleDelete() {
@@ -172,7 +194,12 @@ export function TransactionModal({
     closeModal();
     addToast('Movimiento eliminado 🗑️', 'success');
     // Sync a Supabase en background
-    onSave().then((ok) => { if (!ok) addToast('Error al sincronizar con la nube', 'error'); });
+    onSave()
+      .then(() => { /* éxito */ })
+      .catch((err: Error) => {
+        console.error('[TransactionModal] Error al eliminar:', err);
+        addToast(err.message || 'Error al sincronizar con la nube', 'error');
+      });
   }
 
   return (
@@ -230,9 +257,9 @@ export function TransactionModal({
                 placeholder="0.00"
                 value={amount}
                 onChange={(e) => {
-                  // Permitir dígitos, coma o punto decimal, y signo negativo opcional
+                  // Permitir solo dígitos, coma o punto decimal (sin signo negativo)
                   const raw = e.target.value;
-                  if (/^-?\d*[.,]?\d*$/.test(raw)) {
+                  if (/^\d*[.,]?\d*$/.test(raw)) {
                     setAmount(raw);
                   }
                 }}

@@ -51,6 +51,10 @@ interface UiState {
   openReportModal: () => void;
   closeReportModal: () => void;
 
+  // --- Sync status (reemplaza window.__setSyncStatus) ---
+  syncStatus: 'online' | 'syncing' | 'offline';
+  setSyncStatus: (status: 'online' | 'syncing' | 'offline') => void;
+
   // --- Filtros de estadísticas ---
   statsMode: 'month' | 'range';
   statsMonth: number;
@@ -136,6 +140,10 @@ export const useUiStore = create<UiState>((set) => ({
   isReportModalOpen: false,
   openReportModal: () => set({ isReportModalOpen: true }),
   closeReportModal: () => set({ isReportModalOpen: false }),
+
+  // Sync status
+  syncStatus: 'offline',
+  setSyncStatus: (status) => set({ syncStatus: status }),
 
   // Stats filters
   statsMode: 'month',
