@@ -51,8 +51,6 @@ export default defineConfig({
         // hacía que el SW descargara ~2.2 MB en cada visita nueva y compitiera
         // con los assets críticos por ancho de banda (FCP/LCP peores en móvil).
         globIgnores: [
-          '**/vendor-pdf-*.js',
-          '**/vendor-charts-*.js',
           '**/vendor-monitoring-*.js',
           '**/html2canvas*.js',
           '**/index.es-*.js',
@@ -102,15 +100,15 @@ export default defineConfig({
     target: 'ES2020',
     outDir: 'dist',
     sourcemap: false,
-    // Code-splitting: separa vendors pesados del bundle principal.
-    // El main pasó de ~1 MB a ~450 KB → parse/ejecución mucho más rápida en móvil.
+    // Code-splitting: separa vendors estables del bundle principal.
+    // NOTA: NO poner jspdf/recharts en manualChunks — Rollup los hoistea como
+    // imports estáticos al entry (rompe el lazy de ReportModal/StatsPage).
+    // Con esos módulos lazy, jspdf/recharts quedan en sus chunks dinámicos.
     rollupOptions: {
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'zustand'],
           'vendor-supabase': ['@supabase/supabase-js'],
-          'vendor-charts': ['recharts'],
-          'vendor-pdf': ['jspdf', 'jspdf-autotable'],
           'vendor-monitoring': ['@sentry/react'],
         },
       },
