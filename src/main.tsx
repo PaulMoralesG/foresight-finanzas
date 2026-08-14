@@ -1,31 +1,44 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import * as Sentry from '@sentry/react';
 import { App } from './App';
 import './index.css';
-
-// ================================================================
-// SENTRY — Monitoreo de errores en producción
-// ================================================================
-if (import.meta.env.PROD) {
-  Sentry.init({
-    dsn: import.meta.env.VITE_SENTRY_DSN || '',
-    environment: import.meta.env.VITE_SENTRY_ENV || 'production',
-    tracesSampleRate: 0.1,
-    replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1.0,
-    integrations: [
-      Sentry.browserTracingIntegration(),
-      Sentry.replayIntegration(),
-    ],
-  });
-}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
   </StrictMode>
 );
+
+// ================================================================
+// SENTRY — Monitoreo de errores en producción
+// Carga diferida: el chunk de Sentry (~276 KB con Replay) se descarga
+// e inicializa DESPUÉS del primer render para no bloquear FCP/LCP.
+// ================================================================
+if (import.meta.env.PROD) {
+  const initSentry = () => {
+    import('@sentry/react')
+      .then((Sentry) => {
+        Sentry.init({
+          dsn: import.meta.env.VITE_SENTRY_DSN || '',
+          environment: import.meta.env.VITE_SENTRY_ENV || 'production',
+          tracesSampleRate: 0.1,
+          replaysSessionSampleRate: 0.1,
+          replaysOnErrorSampleRate: 1.0,
+          integrations: [
+            Sentry.browserTracingIntegration(),
+            Sentry.replayIntegration(),
+          ],
+        });
+      })
+      .catch(() => {});
+  };
+
+  if ('requestIdleCallback' in window) {
+    (window as Window & typeof globalThis).requestIdleCallback(initSentry, { timeout: 3000 });
+  } else {
+    setTimeout(initSentry, 2000);
+  }
+}
 
 // Prevenir gestos de navegación izquierda/derecha en iOS (tanto Safari como PWA)
 document.documentElement.style.overscrollBehaviorX = 'none';
