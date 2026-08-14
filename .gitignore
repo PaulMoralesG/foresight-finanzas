@@ -4,6 +4,9 @@ coverage
 *.png
 *.jpg
 *.jpeg
+# Excepción: iconos PWA y favicon self-hosted (necesarios en el repo)
+!public/icons/*.png
+!public/favicon.png
 .env
 *.local
 *.tsbuildinfo
