@@ -14,7 +14,7 @@ const TABS: { id: TabId; icon: typeof Home; label: string }[] = [
   { id: 'home', icon: Home, label: 'Inicio' },
   { id: 'movements', icon: ArrowLeftRight, label: 'Movimientos' },
   { id: 'stats', icon: BarChart3, label: 'Estadísticas' },
-  { id: 'savings', icon: PiggyBank, label: 'Metas' },
+  { id: 'savings', icon: PiggyBank, label: 'Planes' },
   { id: 'profile', icon: User, label: 'Perfil' },
 ];
 
@@ -154,12 +154,14 @@ export function TabBar() {
           top: '-28px',
           left: '50%',
           transform: 'translateX(-50%)',
-          // Solo en Movimientos: en Home el hero ya tiene su botón "+" propio
-          opacity: activeTab === 'movements' ? 1 : 0,
-          pointerEvents: activeTab === 'movements' ? 'auto' : 'none',
+          // FAB global: registrar un movimiento es LA acción principal de la app.
+          // Visible en Inicio (donde empieza la sesión) y Movimientos.
+          // Estadísticas/Planes/Perfil son vistas de lectura/configuración.
+          opacity: activeTab === 'movements' || activeTab === 'home' ? 1 : 0,
+          pointerEvents: activeTab === 'movements' || activeTab === 'home' ? 'auto' : 'none',
         }}
         aria-label="Agregar transacción"
-        tabIndex={activeTab === 'movements' ? 0 : -1}
+        tabIndex={activeTab === 'movements' || activeTab === 'home' ? 0 : -1}
       >
         <Plus className="w-6 h-6 sm:w-7 sm:h-7" strokeWidth={2.5} />
       </button>

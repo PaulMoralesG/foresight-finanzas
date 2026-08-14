@@ -3,7 +3,7 @@
 // ================================================================
 
 import { create } from 'zustand';
-import type { TabId } from '@/types';
+import type { TabId, TransactionType, BusinessType } from '@/types';
 
 interface Toast {
   id: number;
@@ -32,7 +32,13 @@ interface UiState {
   // --- Modal de transacción ---
   isModalOpen: boolean;
   editingId: string | null;
-  openModal: (id?: string) => void;
+  modalPrefill: Partial<{
+    type: TransactionType;
+    concept: string;
+    category: string;
+    businessType: BusinessType;
+  }> | null;
+  openModal: (id?: string, prefill?: UiState['modalPrefill']) => void;
   closeModal: () => void;
 
   // --- Modal de confirmación de borrado ---
@@ -115,8 +121,9 @@ export const useUiStore = create<UiState>((set) => ({
   // Modal transacción
   isModalOpen: false,
   editingId: null as string | null,
-  openModal: (id?: string) => set({ isModalOpen: true, editingId: id ?? null }),
-  closeModal: () => set({ isModalOpen: false, editingId: null }),
+  modalPrefill: null,
+  openModal: (id, prefill = null) => set({ isModalOpen: true, editingId: id ?? null, modalPrefill: prefill }),
+  closeModal: () => set({ isModalOpen: false, editingId: null, modalPrefill: null }),
 
   // Modal confirmación de borrado
   isDeleteModalOpen: false,

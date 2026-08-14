@@ -19,6 +19,7 @@ export function TransactionModal({
 }) {
   const isOpen = useUiStore((s) => s.isModalOpen);
   const editingId = useUiStore((s) => s.editingId);
+  const modalPrefill = useUiStore((s) => s.modalPrefill);
   const closeModal = useUiStore((s) => s.closeModal);
   const addTransaction = useFinanceStore((s) => s.addTransaction);
   const updateTransaction = useFinanceStore((s) => s.updateTransaction);
@@ -123,6 +124,15 @@ export function TransactionModal({
         console.error('[TransactionModal] Error al cargar datos:', err);
         addToast('Error al cargar la transacción. Verifica los datos.', 'error');
       }
+    } else if (isOpen && modalPrefill) {
+      // Nuevo movimiento con prefill (ej. "Aportar" desde una meta de ahorro)
+      setType(modalPrefill.type ?? 'expense');
+      setAmount('');
+      setConcept(modalPrefill.concept ?? '');
+      setDate(defaultDate);
+      setCategory(modalPrefill.category ?? '');
+      setMethod('cash');
+      setBusinessType(modalPrefill.businessType ?? 'personal');
     } else if (!isOpen) {
       // Reset al cerrar
       setType('expense');
@@ -134,7 +144,7 @@ export function TransactionModal({
       setBusinessType('business');
     }
     // Solo montar al abrir/cerrar o cambiar item
-  }, [editingId, isOpen, defaultDate, addToast]);
+  }, [editingId, isOpen, modalPrefill, defaultDate, addToast]);
 
   // Scroll lock para iOS PWA
   useScrollLock(isOpen);
