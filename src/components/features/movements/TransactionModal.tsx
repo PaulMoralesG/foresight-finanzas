@@ -3,7 +3,7 @@
 // ================================================================
 
 import { useState, useEffect, useMemo, type FormEvent } from 'react';
-import { X, Plus, Trash2 } from 'lucide-react';
+import { X, Plus, Trash2, ArrowDown, ArrowUp, Building2, User, Banknote, CreditCard, Landmark } from 'lucide-react';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_COLORS } from '@/config/categories';
@@ -234,7 +234,7 @@ export function TransactionModal({
                     key={t}
                     type="button"
                     onClick={() => { setType(t); setCategory(''); }}
-                    className={`flex-1 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                    className={`flex-1 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center justify-center gap-1 ${
                       type === t
                         ? t === 'expense'
                           ? 'bg-red-600 text-white'
@@ -242,7 +242,11 @@ export function TransactionModal({
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                     }`}
                   >
-                    {t === 'income' ? '💰 Ingreso' : '💸 Gasto'}
+                    {t === 'income' ? (
+                      <><ArrowDown className="w-3 h-3" /> Ingreso</>
+                    ) : (
+                      <><ArrowUp className="w-3 h-3" /> Gasto</>
+                    )}
                   </button>
                 ))}
               </div>
@@ -303,13 +307,17 @@ export function TransactionModal({
                     key={bt}
                     type="button"
                     onClick={() => setBusinessType(bt)}
-                    className={`flex-1 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                    className={`flex-1 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center justify-center gap-1 ${
                       businessType === bt
                         ? 'bg-brand-600 text-white'
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                     }`}
                   >
-                    {bt === 'business' ? '🏢 Negocio' : '👤 Personal'}
+                    {bt === 'business' ? (
+                      <><Building2 className="w-3 h-3" /> Negocio</>
+                    ) : (
+                      <><User className="w-3 h-3" /> Personal</>
+                    )}
                   </button>
                 ))}
               </div>
@@ -318,20 +326,21 @@ export function TransactionModal({
               <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Método</label>
               <div className="flex gap-1">
                 {([
-                  { id: 'cash', label: '💵 Efectivo' },
-                  { id: 'card', label: '💳 Tarjeta' },
-                  { id: 'transfer', label: '🏦 Transf.' },
-                ] as { id: PaymentMethod; label: string }[]).map((m) => (
+                  { id: 'cash', label: 'Efectivo', icon: Banknote },
+                  { id: 'card', label: 'Tarjeta', icon: CreditCard },
+                  { id: 'transfer', label: 'Transf.', icon: Landmark },
+                ] as { id: PaymentMethod; label: string; icon: React.ElementType }[]).map((m) => (
                   <button
                     key={m.id}
                     type="button"
                     onClick={() => setMethod(m.id)}
-                    className={`flex-1 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                    className={`flex-1 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center justify-center gap-1 ${
                       method === m.id
                         ? 'bg-slate-900 dark:bg-brand-600 text-white'
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                     }`}
                   >
+                    <m.icon className="w-3 h-3" />
                     {m.label}
                   </button>
                 ))}
@@ -377,7 +386,9 @@ export function TransactionModal({
                     : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-transparent'
                 }`}
               >
-                <span className="text-xl leading-none">{showNewCat ? '✕' : '+'}</span>
+                <span className="text-xl leading-none flex items-center justify-center h-6">
+                  {showNewCat ? <X className="w-4 h-4 text-brand-600 dark:text-brand-400" /> : <Plus className="w-4 h-4 text-slate-400" />}
+                </span>
                 <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 leading-tight text-center">
                   {showNewCat ? 'Cancelar' : 'Nueva'}
                 </span>
@@ -477,7 +488,9 @@ export function TransactionModal({
           <div className="absolute inset-0 bg-black/60 z-[210] animate-fade-in" onClick={closeDeleteModal} />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[211] w-[calc(100%-2rem)] max-w-xs">
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-4 text-center animate-scale-in">
-              <div className="text-3xl mb-2">🗑️</div>
+              <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-red-50 dark:bg-red-950 flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </div>
               <h3 className="font-bold text-sm text-slate-900 dark:text-white mb-1">¿Eliminar movimiento?</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">Esta acción no se puede deshacer.</p>
               <div className="flex gap-2">

@@ -154,6 +154,7 @@ export function TabBar() {
           top: '-28px',
           left: '50%',
           transform: 'translateX(-50%)',
+          // Solo en Movimientos: en Home el hero ya tiene su botón "+" propio
           opacity: activeTab === 'movements' ? 1 : 0,
           pointerEvents: activeTab === 'movements' ? 'auto' : 'none',
         }}

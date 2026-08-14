@@ -3,7 +3,7 @@
 // ================================================================
 
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { ChartNoAxesColumn, Plus, Receipt, Pencil, Check, X, AlertCircle, Scale, ArrowDown, ArrowUp, Store, PiggyBank } from 'lucide-react';
+import { ChartNoAxesColumn, Plus, Receipt, Pencil, Check, X, AlertCircle, ArrowDown, ArrowUp, Store, PiggyBank } from 'lucide-react';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
@@ -13,49 +13,6 @@ import { computeSavingsByConcept } from '@/lib/savings';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/config/categories';
 import { MonthNav } from '@/components/layout/MonthNav';
 import type { Transaction, TabId } from '@/types';
-
-/* ─── KPI Card ─── */
-function KpiCard({
-  label,
-  value,
-  icon: Icon,
-  trend,
-  colorClass,
-  onClick,
-}: {
-  label: string;
-  value: string;
-  icon: React.ElementType;
-  trend?: string;
-  colorClass: string;
-  onClick?: () => void;
-}) {
-  return (
-    <div className="animate-slide-up">
-    <div
-      className={`saas-card p-4 transition-all duration-200 ${onClick ? 'cursor-pointer hover:shadow-lg hover:-translate-y-0.5' : 'cursor-default'}`}
-      onClick={onClick}
-      title={onClick ? `Ver ${label.toLowerCase()}` : undefined}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onKeyDown={onClick ? (e) => { if (e.key === 'Enter') onClick(); } : undefined}
-    >
-      <div className="flex items-start justify-between mb-2">
-        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-          {label}
-        </span>
-        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm ${colorClass}`}>
-          <Icon />
-        </div>
-      </div>
-      <p className="text-xl font-bold text-slate-900 dark:text-white mb-0.5">{value}</p>
-      {trend && (
-        <span className="text-xs font-medium text-slate-400 dark:text-slate-500">{trend}</span>
-      )}
-    </div>
-    </div>
-  );
-}
 
 /* ─── Category Bar (simple, no recharts dependency for now) ─── */
 function CategoryBreakdown({ expenses }: { expenses: Transaction[] }) {
@@ -526,8 +483,10 @@ function BudgetWidget() {
 export function HomePage() {
   const { summary, monthlyData } = useMonthlyData();
   const navigateTo = useUiStore((s) => s.navigateTo);
+  const openModal = useUiStore((s) => s.openModal);
   const getUpcomingReminders = useFinanceStore((s) => s.getUpcomingReminders);
   const reminders = useFinanceStore((s) => s.reminders);
+  const currentViewDate = useFinanceStore((s) => s.currentViewDate);
   const addToast = useUiStore((s) => s.addToast);
   const hasShownReminderToast = useRef(false);
 
@@ -561,40 +520,78 @@ export function HomePage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <MonthNav showReport />
       </div>
-      {/* KPI Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard
-          label="Balance"
-          value={formatMoney(summary.available)}
-          icon={Scale}
-          colorClass="bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400"
-          trend={`${summary.available >= 0 ? '+' : ''}${summary.totalIncome > 0 ? Math.round((summary.available / summary.totalIncome) * 100) : 0}% del ingreso`}
-          onClick={() => { navigateTo('stats' as TabId); }}
-        />
-        <KpiCard
-          label="Ingresos"
-          value={formatMoney(summary.totalIncome)}
-          icon={ArrowDown}
-          colorClass="bg-income-50 dark:bg-income-950 text-income-600 dark:text-income-400"
-          trend={`${monthlyData.filter((i) => i.type === 'income').length} ${monthlyData.filter((i) => i.type === 'income').length === 1 ? 'transacción' : 'transacciones'}`}
-          onClick={() => { navigateTo('movements' as TabId, 'income'); }}
-        />
-        <KpiCard
-          label="Gastos"
-          value={formatMoney(summary.totalSpent)}
-          icon={ArrowUp}
-          colorClass="bg-expense-50 dark:bg-expense-950 text-expense-600 dark:text-expense-400"
-          trend={`${monthlyData.filter((i) => i.type === 'expense').length} ${monthlyData.filter((i) => i.type === 'expense').length === 1 ? 'transacción' : 'transacciones'}`}
-          onClick={() => { navigateTo('movements' as TabId, 'expense'); }}
-        />
-        <KpiCard
-          label="Beneficio negocio"
-          value={formatMoney(summary.businessProfit)}
-          icon={Store}
-          colorClass="bg-business-50 dark:bg-business-950 text-business-600 dark:text-business-400"
-          trend={`Margen: ${summary.profitMargin.toFixed(1)}%`}
-          onClick={() => { navigateTo('movements' as TabId, 'business'); }}
-        />
+      {/* KPI Row → Hero de saldo con gradiente (fintech) + sub-KPIs clicables */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 via-brand-700 to-brand-900 text-white p-4 sm:p-5 shadow-lg shadow-brand-600/25 animate-slide-up">
+        {/* Decoración de fondo */}
+        <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+        <div className="absolute -bottom-20 -left-10 w-56 h-56 rounded-full bg-brand-400/20 blur-3xl pointer-events-none" />
+
+        <div className="relative">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-200">
+                Saldo de {(() => { const d = new Date(currentViewDate); return `${d.toLocaleDateString('es-EC', { month: 'long' })} ${d.getFullYear()}`; })()}
+              </p>
+              <p className="text-3xl sm:text-4xl font-extrabold tabular-nums mt-1 truncate">
+                {formatMoney(summary.available)}
+              </p>
+              <p className="text-xs text-brand-200 mt-0.5">
+                Ingresos − gastos del mes
+              </p>
+            </div>
+            <button
+              onClick={() => openModal()}
+              className="flex-shrink-0 w-11 h-11 rounded-2xl bg-white/15 hover:bg-white/25 backdrop-blur-sm flex items-center justify-center transition-all active:scale-90 ring-1 ring-white/30 shadow-lg"
+              aria-label="Agregar movimiento"
+              title="Agregar movimiento"
+            >
+              <Plus className="w-5 h-5" strokeWidth={2.5} />
+            </button>
+          </div>
+
+          {/* Columnas de detalle — clicables para filtrar */}
+          <div className="mt-4 pt-4 border-t border-white/15 grid grid-cols-3 gap-2">
+            <button
+              onClick={() => { navigateTo('movements' as TabId, 'income'); }}
+              className="text-left rounded-xl p-2 -m-1 hover:bg-white/10 active:bg-white/15 transition-colors group"
+              title="Ver ingresos"
+            >
+              <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-brand-200">
+                <ArrowDown className="w-3 h-3" /> Ingresos
+              </span>
+              <span className="block text-sm sm:text-base font-bold tabular-nums mt-0.5 truncate">
+                +{formatMoney(summary.totalIncome)}
+              </span>
+            </button>
+            <button
+              onClick={() => { navigateTo('movements' as TabId, 'expense'); }}
+              className="text-left rounded-xl p-2 -m-1 hover:bg-white/10 active:bg-white/15 transition-colors"
+              title="Ver gastos"
+            >
+              <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-brand-200">
+                <ArrowUp className="w-3 h-3" /> Gastos
+              </span>
+              <span className="block text-sm sm:text-base font-bold tabular-nums mt-0.5 truncate">
+                −{formatMoney(summary.totalSpent)}
+              </span>
+            </button>
+            <button
+              onClick={() => { navigateTo('movements' as TabId, 'business'); }}
+              className="text-left rounded-xl p-2 -m-1 hover:bg-white/10 active:bg-white/15 transition-colors"
+              title="Ver movimientos de negocio"
+            >
+              <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-brand-200">
+                <Store className="w-3 h-3" /> Negocio
+              </span>
+              <span className="block text-sm sm:text-base font-bold tabular-nums mt-0.5 truncate">
+                {formatMoney(summary.businessProfit)}
+              </span>
+              <span className="block text-[10px] text-brand-200/90 tabular-nums">
+                margen {summary.profitMargin.toFixed(1)}%
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Chart + Budget row */}

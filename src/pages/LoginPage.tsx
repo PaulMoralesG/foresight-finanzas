@@ -126,7 +126,7 @@ export function LoginPage() {
       </div>
 
       {/* Right Panel — Auth Form */}
-      <div
+      <main
         className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12 pt-safe pb-safe"
       >
         <div className="w-full max-w-sm">
@@ -233,7 +233,7 @@ export function LoginPage() {
             />
           )}
         </div>
-      </div>
+      </main>
 
       <Toast />
     </div>

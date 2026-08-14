@@ -3,7 +3,7 @@
 // ================================================================
 
 import { useMemo, useState, useCallback, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, FileText, FileSpreadsheet, Loader2, TrendingUp, ArrowUp, ArrowDown, PieChart } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, FileText, FileSpreadsheet, Loader2, TrendingUp, ArrowUp, ArrowDown, PieChart, User, Building2, ClipboardList, CalendarClock } from 'lucide-react';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { formatMoney, MONTH_NAMES, formatDateLong, safeParseDate, downloadBlob } from '@/lib/utils';
@@ -68,6 +68,8 @@ export function StatsPage() {
 
   // Populate year options: 3 years back to 1 forward
   const currentYear = new Date().getFullYear();
+  const currentYearMonth = new Date().getMonth();
+  const currentYearYear = currentYear;
   const yearOptions = useMemo(
     () => Array.from({ length: 5 }, (_, i) => currentYear - 3 + i),
     [currentYear]
@@ -389,6 +391,17 @@ export function StatsPage() {
               >
                 <ChevronRight className="text-[10px]" />
               </button>
+              {/* Volver al mes actual */}
+              {(statsMonth !== currentYearMonth || statsYear !== currentYearYear) && (
+                <button
+                  onClick={() => { setStatsMonth(currentYearMonth); setStatsYear(currentYearYear); }}
+                  className="saas-btn-secondary saas-btn-sm flex items-center gap-1 text-[10px]"
+                  title="Volver al mes actual"
+                >
+                  <CalendarClock className="w-3 h-3" />
+                  Hoy
+                </button>
+              )}
             </div>
           )}
 
@@ -454,21 +467,22 @@ export function StatsPage() {
           {/* Tipo: Personal / Negocio / Todo */}
           <div className="flex rounded-lg bg-slate-100 dark:bg-slate-800 p-0.5">
             {([
-              { key: 'personal', icon: '👤', label: 'Personal' },
-              { key: 'business', icon: '🏢', label: 'Negocio' },
-              { key: 'all', icon: '📋', label: 'Todo' },
-            ] as const).map(({ key, icon, label }) => (
+              { key: 'personal', Icon: User, label: 'Personal' },
+              { key: 'business', Icon: Building2, label: 'Negocio' },
+              { key: 'all', Icon: ClipboardList, label: 'Todo' },
+            ] as const).map(({ key, Icon, label }) => (
               <button
                 key={key}
                 onClick={() => setExportFilter(key)}
                 title={label}
-                className={`px-1.5 md:px-2.5 py-1 rounded-md text-[10px] md:text-[11px] font-semibold transition-all whitespace-nowrap ${
+                className={`px-1.5 md:px-2.5 py-1 rounded-md text-[10px] md:text-[11px] font-semibold transition-all whitespace-nowrap flex items-center gap-1 ${
                   exportFilter === key
                     ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
               >
-                {icon}&nbsp;{label}
+                <Icon className="w-3 h-3" />
+                {label}
               </button>
             ))}
           </div>
