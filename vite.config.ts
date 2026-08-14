@@ -46,7 +46,33 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Precache solo el shell esencial. Los chunks pesados (PDF, charts, Sentry,
+        // páginas lazy) se cachean on-demand vía runtimeCaching — precachearlos
+        // hacía que el SW descargara ~2.2 MB en cada visita nueva y compitiera
+        // con los assets críticos por ancho de banda (FCP/LCP peores en móvil).
+        globIgnores: [
+          '**/vendor-pdf-*.js',
+          '**/vendor-charts-*.js',
+          '**/vendor-monitoring-*.js',
+          '**/html2canvas*.js',
+          '**/index.es-*.js',
+          '**/purify*.js',
+          '**/ReportModal-*.js',
+          '**/StatsPage-*.js',
+          '**/SavingsPage-*.js',
+          '**/LoginPage-*.js',
+          '**/pdf-generator-*.js',
+        ],
         runtimeCaching: [
+          {
+            // Chunks con hash (inmutables): CacheFirst, seguros para cachear siempre
+            urlPattern: ({ url }) => url.pathname.startsWith('/assets/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'assets-cache',
+              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
