@@ -26,7 +26,12 @@ if (import.meta.env.PROD) {
           replaysOnErrorSampleRate: 1.0,
           integrations: [
             Sentry.browserTracingIntegration(),
-            Sentry.replayIntegration(),
+            Sentry.replayIntegration({
+              // Privacidad financiera: el replay NO captura textos ni montos.
+              // Se ve el flujo de clicks/pantallas (suficiente para debug),
+              // pero los datos sensibles quedan enmascarados.
+              maskAllText: true,
+            }),
           ],
         });
       })
