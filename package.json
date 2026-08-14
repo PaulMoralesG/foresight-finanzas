@@ -6,9 +6,7 @@
   "description": "Tus finanzas personales y de negocio, claras y en un solo lugar.",
   "scripts": {
     "dev": "vite",
-    "dev:doppler": "doppler run -- vite",
     "build": "vite build",
-    "build:doppler": "doppler run -- tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run",
