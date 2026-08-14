@@ -12,7 +12,6 @@ import { MovementsPage } from '@/pages/MovementsPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { TransactionModal } from '@/components/features/movements/TransactionModal';
-import { ReportModal } from '@/components/features/report/ReportModal';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { AppLoadingSkeleton, PageSkeleton } from '@/components/ui/Skeleton';
 
@@ -20,6 +19,8 @@ import { AppLoadingSkeleton, PageSkeleton } from '@/components/ui/Skeleton';
 const StatsPage = lazy(() => import('@/pages/StatsPage').then(m => ({ default: m.StatsPage })));
 const SavingsPage = lazy(() => import('@/pages/SavingsPage').then(m => ({ default: m.SavingsPage })));
 const LoginPage = lazy(() => import('@/pages/LoginPage').then(m => ({ default: m.LoginPage })));
+// Lazy: jspdf + html2canvas (~400 KB) solo se descargan al abrir el reporte
+const ReportModal = lazy(() => import('@/components/features/report/ReportModal').then(m => ({ default: m.ReportModal })));
 
 export function App() {
   const { user, isLoading, saveData } = useAuth();
@@ -115,7 +116,11 @@ export function App() {
       <AppLayout>
         {renderPage()}
         {isModalOpen && <TransactionModal onSave={saveData} />}
-        {isReportModalOpen && <ReportModal />}
+        {isReportModalOpen && (
+          <Suspense fallback={null}>
+            <ReportModal />
+          </Suspense>
+        )}
       </AppLayout>
     </ErrorBoundary>
   );
