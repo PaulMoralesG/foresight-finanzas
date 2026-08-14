@@ -16,3 +16,5 @@ vite.config.d.ts
 .vscode/
 .vercel
 .env*
+# .env.example documenta las variables SIN valores — debe versionarse
+!.env.example
