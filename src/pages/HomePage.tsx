@@ -2,13 +2,13 @@
 // HomePage — Dashboard SaaS unificado
 // ================================================================
 
-import { useMemo, useState, useEffect, useRef } from 'react';
-import { ChartNoAxesColumn, Plus, Receipt, Pencil, Check, X, AlertCircle, ArrowDown, ArrowUp, Store, PiggyBank } from 'lucide-react';
+import { useMemo, useEffect, useRef } from 'react';
+import { ChartNoAxesColumn, Plus, Receipt, AlertCircle, ArrowDown, ArrowUp, Store, PiggyBank } from 'lucide-react';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { useAuth } from '@/hooks/useAuth';
 import { useMonthlyData } from '@/hooks/useFinance';
-import { formatMoney, safeParseDate, syncToCloud, parseMoneyInput } from '@/lib/utils';
+import { useBudget } from '@/hooks/useBudget';
+import { formatMoney, safeParseDate } from '@/lib/utils';
 import { computeSavingsByConcept } from '@/lib/savings';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/config/categories';
 import { MonthNav } from '@/components/layout/MonthNav';
@@ -264,46 +264,20 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
   );
 }
 
-/* ─── Budget Alert ─── */
+/* ─── Budget Card (solo lectura) ───
+   El dashboard es un status board: muestra el estado y navega a la sección
+   Planes para editar. Nada de inputs inline (principio monitor ≠ editor). */
 function BudgetWidget() {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState('');
+  const navigateTo = useUiStore((s) => s.navigateTo);
   const currentViewDate = useFinanceStore((s) => s.currentViewDate);
-  const budgets = useFinanceStore((s) => s.budgets);
-  const expenses = useFinanceStore((s) => s.expenses);
-  const getMonthlyData = useFinanceStore((s) => s.getMonthlyData);
-  const setBudget = useFinanceStore((s) => s.setBudget);
   const addToast = useUiStore((s) => s.addToast);
-  const { saveData } = useAuth();
 
   const monthKey = (() => {
     const d = new Date(currentViewDate);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   })();
 
-  // Carry-forward: si no hay presupuesto para el mes actual, usar el más reciente del pasado
-  const budget = (() => {
-    if (budgets[monthKey]) return budgets[monthKey];
-    // Buscar el presupuesto más reciente de meses pasados
-    const keys = Object.keys(budgets).sort().reverse();
-    for (const k of keys) {
-      if (k < monthKey && budgets[k] > 0) return budgets[k];
-    }
-    return 0;
-  })();
-
-  // ¿Es un presupuesto heredado de un mes anterior?
-  const isCarriedOver = budget > 0 && !budgets[monthKey];
-
-  // Deps "innecesarias" a propósito: getMonthlyData lee el store por dentro
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const monthlyData = useMemo(() => getMonthlyData(), [getMonthlyData, expenses, currentViewDate]);
-
-  const monthSpent = useMemo(
-    () => monthlyData.filter((e) => e.type === 'expense').reduce((s, e) => s + e.amount, 0),
-    [monthlyData]
-  );
-  const pct = budget > 0 ? Math.round((monthSpent / budget) * 100) : 0;
+  const { budget, monthSpent, pct, isCarriedOver, colorBar, emoji, message } = useBudget(monthKey);
 
   // Toast cuando se excede el presupuesto (solo una vez por mes)
   const exceededNotifiedRef = useRef(false);
@@ -316,131 +290,36 @@ function BudgetWidget() {
     if (pct <= 100) exceededNotifiedRef.current = false;
   }, [pct, budget, monthSpent, addToast]);
 
-  const colorBar =
-    pct > 100 ? 'bg-red-500' :
-    pct === 100 ? 'bg-orange-600' :
-    pct > 90 ? 'bg-orange-500' :
-    pct > 75 ? 'bg-yellow-500' :
-    pct > 50 ? 'bg-brand-500' :
-    'bg-emerald-500';
-
-  const emoji =
-    pct > 100 ? '🔥' :
-    pct === 100 ? '🎯' :
-    pct > 90 ? '⚠️' :
-    pct > 75 ? '👀' :
-    pct > 50 ? '👍' :
-    '🎉';
-
-  const message =
-    pct > 100 ? 'Te pasaste del presupuesto' :
-    pct === 100 ? '¡Alcanzaste el límite!' :
-    pct > 90 ? 'Casi llegas al límite' :
-    pct > 75 ? 'Vas a buen ritmo' :
-    pct > 50 ? 'Todo bajo control' :
-    budget > 0 ? 'Excelente control' :
-    'Define tu presupuesto';
-
-  const handleSaveEdit = () => {
-    const v = parseMoneyInput(editValue);
-    if (!isNaN(v) && v >= 0) {
-      setBudget(monthKey, v);
-      setIsEditing(false);
-      setEditValue('');
-      syncToCloud(saveData, addToast);
-    }
-  };
-
   return (
     <div className="saas-card p-4 animate-slide-up">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-bold text-slate-900 dark:text-white">Presupuesto mensual</h3>
         <div className="flex items-center gap-1.5">
-          {budget > 0 && !isEditing && (
+          {budget > 0 && (
             <button
-              onClick={() => { setIsEditing(true); setEditValue(String(budget)); }}
-              className="w-6 h-6 rounded-md flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-950 transition-all"
-              title="Editar presupuesto"
+              onClick={() => navigateTo('savings' as TabId)}
+              className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
+              title="Ajustar presupuesto en Planes"
             >
-              <Pencil className="inline w-3 h-3" />
+              Ajustar
             </button>
           )}
           <span className="text-lg">{emoji}</span>
         </div>
       </div>
 
-      {/* ── Modo edición ── */}
-      {isEditing && (
-        <div className="space-y-3">
-          <p className="text-xs text-slate-500 dark:text-slate-400">Ajusta el límite mensual</p>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              inputMode="decimal"
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              className="saas-input flex-1"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSaveEdit();
-                if (e.key === 'Escape') { setIsEditing(false); setEditValue(''); }
-              }}
-            />
-            <button onClick={handleSaveEdit} className="saas-btn-primary" aria-label="Guardar presupuesto">
-              <Check className="text-xs" />
-            </button>
-            <button
-              onClick={() => { setIsEditing(false); setEditValue(''); }}
-              className="saas-btn-secondary"
-              aria-label="Cancelar edición"
-            >
-              <X className="text-xs" />
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* ── Sin presupuesto ── */}
-      {!isEditing && budget === 0 && (
+      {budget === 0 ? (
         <div className="space-y-3">
           <p className="text-sm text-slate-500 dark:text-slate-400">Define cuánto quieres gastar este mes</p>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              inputMode="decimal"
-              placeholder="Ej: 15000"
-              className="saas-input flex-1"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  const v = parseMoneyInput((e.target as HTMLInputElement).value);
-                  if (!isNaN(v) && v >= 0) {
-                    setBudget(monthKey, v);
-                    syncToCloud(saveData, addToast);
-                  }
-                }
-              }}
-            />
-            <button
-              className="saas-btn-primary"
-              onClick={(e) => {
-                const input = (e.currentTarget as HTMLButtonElement).previousElementSibling as HTMLInputElement;
-                const v = parseMoneyInput(input.value);
-                if (!isNaN(v) && v >= 0) {
-                  setBudget(monthKey, v);
-                  syncToCloud(saveData, addToast);
-                }
-              }}
-              aria-label="Guardar presupuesto"
-            >
-              <Check className="text-xs mr-1" />
-              Guardar
-            </button>
-          </div>
+          <button
+            onClick={() => navigateTo('savings' as TabId)}
+            className="saas-btn-primary saas-btn-sm"
+          >
+            Definir presupuesto →
+          </button>
         </div>
-      )}
-
-      {/* ── Presupuesto activo ── */}
-      {!isEditing && budget > 0 && (
+      ) : (
         <div className="space-y-3">
           {isCarriedOver && (
             <p className="text-[10px] text-slate-400 dark:text-slate-500 italic">
@@ -483,7 +362,6 @@ function BudgetWidget() {
 export function HomePage() {
   const { summary, monthlyData } = useMonthlyData();
   const navigateTo = useUiStore((s) => s.navigateTo);
-  const openModal = useUiStore((s) => s.openModal);
   const getUpcomingReminders = useFinanceStore((s) => s.getUpcomingReminders);
   const reminders = useFinanceStore((s) => s.reminders);
   const currentViewDate = useFinanceStore((s) => s.currentViewDate);
@@ -515,7 +393,7 @@ export function HomePage() {
 
   // For now, we always show data since Zustand starts with defaults
   return (
-    <div className="space-y-4 animate-fade-in">
+    <div className="space-y-4 animate-fade-in pb-14 md:pb-0">
       {/* Month navigation */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <MonthNav showReport />
@@ -539,14 +417,6 @@ export function HomePage() {
                 Ingresos − gastos del mes
               </p>
             </div>
-            <button
-              onClick={() => openModal()}
-              className="flex-shrink-0 w-11 h-11 rounded-2xl bg-white/15 hover:bg-white/25 backdrop-blur-sm flex items-center justify-center transition-all active:scale-90 ring-1 ring-white/30 shadow-lg"
-              aria-label="Agregar movimiento"
-              title="Agregar movimiento"
-            >
-              <Plus className="w-5 h-5" strokeWidth={2.5} />
-            </button>
           </div>
 
           {/* Columnas de detalle — clicables para filtrar */}
@@ -611,10 +481,11 @@ export function HomePage() {
   );
 }
 
-/* ─── Ahorro del Mes Widget ─── */
+/* ─── Ahorro del Mes Widget (solo lectura + CTA a Planes) ─── */
 function SavingsGoalWidget({ totalIncome }: { totalIncome: number }) {
   const currentViewDate = useFinanceStore((s) => s.currentViewDate);
   const expenses = useFinanceStore((s) => s.expenses);
+  const navigateTo = useUiStore((s) => s.navigateTo);
 
   // Agrupar ahorros del mes por concepto
   const savingsByConcept = useMemo(() => {
@@ -641,13 +512,19 @@ function SavingsGoalWidget({ totalIncome }: { totalIncome: number }) {
             <PiggyBank className="text-brand-500 mr-2" />
             Ahorro del mes
           </h3>
-          <span className="text-lg">💤</span>
+          <button
+            onClick={() => navigateTo('savings' as TabId)}
+            className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
+            title="Ver metas en Planes"
+          >
+            Ver metas →
+          </button>
         </div>
         <p className="text-sm text-slate-500 dark:text-slate-400">
           Sin movimientos de ahorro este mes
         </p>
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-          Agrega un gasto con categoría <strong>"Ahorro"</strong> y un concepto como <strong>"Casa"</strong> o <strong>"Vacaciones"</strong>
+          Crea una meta en Planes y aporta con el botón <strong>Aportar</strong>
         </p>
       </div>
     );
@@ -666,6 +543,13 @@ function SavingsGoalWidget({ totalIncome }: { totalIncome: number }) {
               {savingsPct}% del ingreso
             </span>
           )}
+          <button
+            onClick={() => navigateTo('savings' as TabId)}
+            className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
+            title="Ver metas en Planes"
+          >
+            Ver metas →
+          </button>
           <span className="text-lg">{emoji}</span>
         </div>
       </div>
