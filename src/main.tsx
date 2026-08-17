@@ -1,7 +1,11 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { syncService } from './lib/sync';
 import './index.css';
+
+// Inicializar listeners de ciclo de vida del servicio de sincronización
+syncService.init();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

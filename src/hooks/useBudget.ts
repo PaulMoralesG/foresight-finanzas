@@ -7,6 +7,7 @@
 
 import { useMemo } from 'react';
 import { useFinanceStore } from '@/stores/financeStore';
+import { roundMoney } from '@/lib/utils';
 
 export interface BudgetStatus {
   /** Presupuesto vigente (propio del mes o heredado) */
@@ -56,13 +57,15 @@ export function useBudget(monthKey: string): BudgetStatus {
 
     // Gastos del mes
     const [y, m] = monthKey.split('-').map(Number);
-    const monthSpent = expenses
-      .filter((e) => {
-        if (e.type !== 'expense') return false;
-        const d = new Date(e.date);
-        return d.getFullYear() === y && d.getMonth() === m - 1;
-      })
-      .reduce((s, e) => s + e.amount, 0);
+    const monthSpent = roundMoney(
+      expenses
+        .filter((e) => {
+          if (e.type !== 'expense') return false;
+          const d = new Date(e.date);
+          return d.getFullYear() === y && d.getMonth() === m - 1;
+        })
+        .reduce((s, e) => s + e.amount, 0)
+    );
 
     const pct = budget > 0 ? Math.round((monthSpent / budget) * 100) : 0;
 

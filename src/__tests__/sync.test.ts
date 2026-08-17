@@ -276,6 +276,36 @@ describe('syncService', () => {
     // 2 upserts de expenses en total: el original + el encolado (no más)
     expect(upsertCalls.length).toBe(2);
   });
+
+  it('upsert de categories usa onConflict compuesto user_id,id', async () => {
+    const upsertSpy = vi.fn(() => Promise.resolve({ error: null }));
+    mockFrom.mockImplementation((_table: string) => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          data: [],
+          error: null,
+          maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        })),
+      })),
+      upsert: upsertSpy,
+      update: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) })),
+    }));
+
+    useFinanceStore.getState().addCustomCategory('expense', {
+      id: 'custom_test',
+      label: 'Test',
+      icon: '📌',
+      color: 'bg-slate-100 text-slate-600',
+    });
+
+    await syncService.attach('user-1');
+    await syncService.flush();
+
+    expect(upsertSpy).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({ onConflict: 'user_id,id' }),
+    );
+  });
 });
 
 describe('isSchemaError', () => {

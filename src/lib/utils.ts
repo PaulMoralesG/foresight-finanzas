@@ -11,7 +11,14 @@ export function formatMoney(amount: number): string {
     currency: 'MXN',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(amount);
+  }).format(roundMoney(amount));
+}
+
+/**
+ * Redondeo aritmético seguro a 2 decimales para operaciones financieras (evita float drift IEEE 754).
+ */
+export function roundMoney(amount: number): number {
+  return Math.round((amount + Number.EPSILON) * 100) / 100;
 }
 
 /**

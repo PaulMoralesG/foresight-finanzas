@@ -5,7 +5,7 @@
 
 import { useMemo } from 'react';
 import { useFinanceStore } from '@/stores/financeStore';
-import { safeParseDate } from '@/lib/utils';
+import { safeParseDate, roundMoney } from '@/lib/utils';
 import type { Transaction } from '@/types';
 
 interface MonthlySummary {
@@ -34,9 +34,9 @@ export function useMonthlyData(): {
     const incomeItems = monthlyData.filter((i) => i.type === 'income');
     const expenseItems = monthlyData.filter((i) => i.type === 'expense');
 
-    const totalIncome = incomeItems.reduce((s, i) => s + i.amount, 0);
-    const totalSpent = expenseItems.reduce((s, i) => s + i.amount, 0);
-    const available = totalIncome - totalSpent;
+    const totalIncome = roundMoney(incomeItems.reduce((s, i) => s + i.amount, 0));
+    const totalSpent = roundMoney(expenseItems.reduce((s, i) => s + i.amount, 0));
+    const available = roundMoney(totalIncome - totalSpent);
 
     const businessIncomeItems = incomeItems.filter(
       (i) => i.businessType === 'business'
@@ -44,10 +44,10 @@ export function useMonthlyData(): {
     const businessExpenseItems = expenseItems.filter(
       (i) => i.businessType === 'business'
     );
-    const businessIncome = businessIncomeItems.reduce((s, i) => s + i.amount, 0);
-    const businessSpent = businessExpenseItems.reduce((s, i) => s + i.amount, 0);
-    const businessProfit = businessIncome - businessSpent;
-    const profitMargin = businessIncome > 0 ? (businessProfit / businessIncome) * 100 : 0;
+    const businessIncome = roundMoney(businessIncomeItems.reduce((s, i) => s + i.amount, 0));
+    const businessSpent = roundMoney(businessExpenseItems.reduce((s, i) => s + i.amount, 0));
+    const businessProfit = roundMoney(businessIncome - businessSpent);
+    const profitMargin = businessIncome > 0 ? roundMoney((businessProfit / businessIncome) * 100) : 0;
 
     // Ingresos de negocio del mes anterior
     const d = new Date(currentViewDate);

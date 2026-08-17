@@ -52,9 +52,16 @@ returns trigger language plpgsql
 security definer set search_path = public
 as $$
 begin
-  insert into public.profiles (id, email)
-  values (new.id, new.email)
-  on conflict (id) do nothing;
+  insert into public.profiles (id, email, first_name, last_name)
+  values (
+    new.id,
+    new.email,
+    new.raw_user_meta_data->>'first_name',
+    new.raw_user_meta_data->>'last_name'
+  )
+  on conflict (id) do update set
+    first_name = coalesce(public.profiles.first_name, excluded.first_name),
+    last_name  = coalesce(public.profiles.last_name, excluded.last_name);
   return new;
 end $$;
 
@@ -100,16 +107,17 @@ create table if not exists public.reminders (
 );
 create index if not exists reminders_user_updated_idx on public.reminders (user_id, updated_at desc);
 
--- ── 4) CATEGORIES (id text = slug del cliente; es la clave de merge) ──
+-- ── 4) CATEGORIES (id text = slug del cliente; PK compuesta con user_id) ──
 create table if not exists public.categories (
-  id         text primary key,
+  id         text not null,
   user_id    uuid not null references auth.users (id) on delete cascade,
   kind       text check (kind in ('expense','income')),
   label      text,
   icon       text,
   color      text,
   updated_at timestamptz not null default now(),
-  deleted_at timestamptz
+  deleted_at timestamptz,
+  primary key (user_id, id)
 );
 create index if not exists categories_user_updated_idx on public.categories (user_id, updated_at desc);
 
