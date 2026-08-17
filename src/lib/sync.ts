@@ -517,21 +517,14 @@ async function pushWithRetry(uid: string): Promise<boolean> {
 
 // ── Import legacy ──
 
-/** Marca el import como completado y limpia los blobs legacy del perfil.
- *  savings_goal es columna NUMERIC en la DB real (herencia de v5) → null, no []. */
+/** Marca el import como completado. Las columnas de blobs legacy se
+ *  eliminaron en la migración 0003: solo queda fijar el flag. */
 async function clearLegacyBlobs(uid: string): Promise<void> {
   const { error: updateError } = await supabase!.from('profiles').update({
     legacy_imported: true,
-    expenses: [],
-    reminders: [],
-    savings_goal: null,
-    custom_expense_categories: [],
-    custom_income_categories: [],
-    budgets: {},
-    last_synced_at: null,
   }).eq('id', uid);
   if (updateError) {
-    console.warn('[sync] No se pudo limpiar profiles:', updateError);
+    console.warn('[sync] No se pudo marcar el import en profiles:', updateError);
   }
 }
 
