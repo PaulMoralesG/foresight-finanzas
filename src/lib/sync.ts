@@ -362,6 +362,15 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     incomeCategories.tombstones,
   );
 
+  // Poda de tombstones antiguos (> 30 días) para evitar acumulación infinita
+  const PRUNE_THRESHOLD_MS = 30 * 24 * 60 * 60 * 1000;
+  const pruneBeforeIso = new Date(Date.now() - PRUNE_THRESHOLD_MS).toISOString();
+  for (const [id, deletedAt] of Object.entries(flatTombstones)) {
+    if (deletedAt < pruneBeforeIso) {
+      delete flatTombstones[id];
+    }
+  }
+
   // Solo notificar si algo cambió (evita loops de sync subscribe→push)
   const next = {
     expenses: expenses.live,
@@ -384,7 +393,39 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     budgetUpdatedAt: state.budgetUpdatedAt,
   };
   if (JSON.stringify(next) !== JSON.stringify(current)) {
-    useFinanceStore.setState(next);
+    useFinanceStore.setState((currentState) => {
+      // Preservar mutaciones locales que pudieron haber ocurrido mientras se procesaba el merge
+      const liveTxMap = new Map(next.expenses.map((e) => [e.id, e]));
+      const safeExpenses = [...next.expenses];
+      for (const localTx of currentState.expenses) {
+        if (!liveTxMap.has(localTx.id) && !next.tombstones[localTx.id]) {
+          safeExpenses.push(localTx);
+        }
+      }
+
+      const liveRemMap = new Map(next.reminders.map((r) => [r.id, r]));
+      const safeReminders = [...next.reminders];
+      for (const localRem of currentState.reminders) {
+        if (!liveRemMap.has(localRem.id) && !next.tombstones[localRem.id]) {
+          safeReminders.push(localRem);
+        }
+      }
+
+      const liveGoalMap = new Map(next.savingsGoals.map((g) => [g.id, g]));
+      const safeGoals = [...next.savingsGoals];
+      for (const localGoal of currentState.savingsGoals) {
+        if (!liveGoalMap.has(localGoal.id) && !next.tombstones[localGoal.id]) {
+          safeGoals.push(localGoal);
+        }
+      }
+
+      return {
+        ...next,
+        expenses: safeExpenses,
+        reminders: safeReminders,
+        savingsGoals: safeGoals,
+      };
+    });
   }
 
   return { expenses, reminders, goals, expenseCategories, incomeCategories, budgets, flatTombstones };
@@ -429,7 +470,7 @@ async function pushAll(uid: string, merged: MergeResult): Promise<void> {
     ...merged.incomeCategories.live.map((c) => categoryToRow(c, uid, 'income')),
     ...tombstoneRows(merged.expenseCategories.tombstones),
     ...tombstoneRows(merged.incomeCategories.tombstones),
-  ], 'id');
+  ], 'user_id,id');
 
   await upsert('savings_goals', [
     ...merged.goals.live.map((g) => goalToRow(g, uid)),
@@ -524,7 +565,7 @@ async function maybeImportLegacy(uid: string): Promise<boolean> {
   await upsert('categories', [
     ...rows.expenseCategories.map((c) => categoryToRow(c, uid, 'expense')),
     ...rows.incomeCategories.map((c) => categoryToRow(c, uid, 'income')),
-  ], 'id', true);
+  ], 'user_id,id', true);
   await upsert('savings_goals', rows.goals.map((g) => goalToRow(g, uid)), 'id', true);
   await upsert('budgets', rows.budgets.map((b) => ({
     user_id: uid,

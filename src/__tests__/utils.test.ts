@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   formatMoney,
+  roundMoney,
   parseMoneyInput,
   getTodayISO,
   MONTH_NAMES,
@@ -12,7 +13,15 @@ import {
   formatDateLong,
 } from '@/lib/utils';
 
-// ─── formatMoney ────────────────────────────────────────────────
+// ─── formatMoney & roundMoney ───────────────────────────────────
+
+describe('roundMoney', () => {
+  it('redondea sumas con precisión float a 2 decimales', () => {
+    expect(roundMoney(0.1 + 0.2)).toBe(0.3);
+    expect(roundMoney(10.005)).toBe(10.01);
+    expect(roundMoney(123.456)).toBe(123.46);
+  });
+});
 
 describe('formatMoney', () => {
   it('formatea números positivos en MXN', () => {

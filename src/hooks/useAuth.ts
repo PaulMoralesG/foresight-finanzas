@@ -26,9 +26,6 @@ export function useAuth() {
   const { user, isLoading, setUser, setLoading, logout: clearUser } = useAuthStore();
   const financeStore = useFinanceStore;
 
-  // Listeners de ciclo de vida + suscripción al store (una sola vez, guard de módulo)
-  syncService.init();
-
   useEffect(() => {
     // === MODO OFFLINE: Sin Supabase configurado ===
     if (!supabaseAvailable || !supabase) {
@@ -41,42 +38,26 @@ export function useAuth() {
 
     async function loadProfile(uid: string, email: string, metaFirst?: string, metaLast?: string) {
       try {
-        // 1) Perfil por uid (PK nueva). Fallback: adoptar fila legacy por email
-        //    o crear una nueva si no existe.
-        let profile: { first_name?: string | null; last_name?: string | null } | null;
+        // 1) Perfil por uid (PK nueva). Si no existe, inicializarlo con metadata.
+        let profile: { first_name?: string | null; last_name?: string | null } | null = null;
         const { data, error } = await supabase!
           .from('profiles')
-          .select('*')
+          .select('first_name, last_name')
           .eq('id', uid)
           .maybeSingle();
         if (error) throw error;
-        profile = data as typeof profile;
+        if (data) {
+          profile = data as { first_name?: string | null; last_name?: string | null };
+        }
 
         if (!profile) {
-          const { data: legacy, error: legacyError } = await supabase!
+          const { data: created, error: createError } = await supabase!
             .from('profiles')
-            .select('*')
-            .eq('email', email)
+            .upsert({ id: uid, email, first_name: metaFirst || '', last_name: metaLast || '' }, { onConflict: 'id' })
+            .select('first_name, last_name')
             .maybeSingle();
-          if (legacyError) throw legacyError;
-
-          if (legacy) {
-            const { data: adopted, error: adoptError } = await supabase!
-              .from('profiles')
-              .update({ id: uid })
-              .eq('email', email)
-              .select('*')
-              .single();
-            if (adoptError) throw adoptError;
-            profile = adopted as typeof profile;
-          } else {
-            const { data: created, error: createError } = await supabase!
-              .from('profiles')
-              .insert({ id: uid, email })
-              .select('*')
-              .single();
-            if (createError) throw createError;
-            profile = created as typeof profile;
+          if (!createError && created) {
+            profile = created as { first_name?: string | null; last_name?: string | null };
           }
         }
 
