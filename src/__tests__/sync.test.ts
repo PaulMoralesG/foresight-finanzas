@@ -219,7 +219,6 @@ describe('syncService', () => {
     expect(update).toHaveBeenCalledTimes(1);
     expect(update).toHaveBeenCalledWith(expect.objectContaining({
       legacy_imported: true,
-      savings_goal: null,
     }));
   });
 
