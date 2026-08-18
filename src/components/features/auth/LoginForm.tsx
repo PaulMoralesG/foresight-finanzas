@@ -35,12 +35,19 @@ export function LoginForm({ onSwitchToSignUp, onForgotPassword }: Props) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const attemptRef = useRef(0);
   const lockoutRef = useRef(false);
   const errorRef = useRef('');
+  const noticeRef = useRef('');
 
-  function clearError() { setError(''); errorRef.current = ''; }
+  function clearError() {
+    setError('');
+    errorRef.current = '';
+    setNotice('');
+    noticeRef.current = '';
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -68,9 +75,10 @@ export function LoginForm({ onSwitchToSignUp, onForgotPassword }: Props) {
     }
     const delay = Math.pow(2, attemptRef.current) * 1000;
     if (attemptRef.current > 0) {
+      // Estado "procesando" NEUTRAL — nunca pintado como error
       const msg = `Verificando... (intento ${attemptRef.current + 1})`;
-      setError(msg);
-      errorRef.current = msg;
+      setNotice(msg);
+      noticeRef.current = msg;
       await new Promise(r => setTimeout(r, delay));
     }
 
@@ -79,7 +87,11 @@ export function LoginForm({ onSwitchToSignUp, onForgotPassword }: Props) {
       await signIn(email.trim(), password);
       attemptRef.current = 0;
       errorRef.current = '';
+      setNotice('');
+      noticeRef.current = '';
     } catch (err: unknown) {
+      setNotice('');
+      noticeRef.current = '';
       attemptRef.current++;
       const msg = authErrorToSpanish(err);
       setError(msg);
@@ -146,8 +158,21 @@ export function LoginForm({ onSwitchToSignUp, onForgotPassword }: Props) {
         </button>
       </div>
 
+      {notice && (
+        <p
+          role="status"
+          className="text-xs text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/30 rounded-md px-3 py-2 border border-brand-200 dark:border-brand-800/50"
+        >
+          <Loader2 className="inline w-3.5 h-3.5 mr-1.5 animate-spin" />
+          {notice}
+        </p>
+      )}
+
       {error && (
-        <p className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 rounded-md px-3 py-2 border border-red-200 dark:border-red-800/50">
+        <p
+          role="alert"
+          className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 rounded-md px-3 py-2 border border-red-200 dark:border-red-800/50"
+        >
           <AlertCircle className="inline w-3.5 h-3.5 mr-1.5" />
           {error}
         </p>
