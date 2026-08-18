@@ -39,25 +39,39 @@ export function useAuth() {
     async function loadProfile(uid: string, email: string, metaFirst?: string, metaLast?: string) {
       try {
         // 1) Perfil por uid (PK nueva). Si no existe, inicializarlo con metadata.
-        let profile: { first_name?: string | null; last_name?: string | null } | null = null;
+        type ProfileRow = { email?: string | null; first_name?: string | null; last_name?: string | null };
+        let profile: ProfileRow | null = null;
         const { data, error } = await supabase!
           .from('profiles')
-          .select('first_name, last_name')
+          .select('email, first_name, last_name')
           .eq('id', uid)
           .maybeSingle();
         if (error) throw error;
         if (data) {
-          profile = data as { first_name?: string | null; last_name?: string | null };
+          profile = data as ProfileRow;
+        }
+
+        // Self-heal del email: si el cambio de correo se confirmó desde otro
+        // dispositivo (o el evento USER_UPDATED no llegó a esta sesión),
+        // sincronizar el email actual de la sesión en profiles.
+        if (profile && profile.email !== email) {
+          const { error: emailSyncError } = await supabase!
+            .from('profiles')
+            .update({ email })
+            .eq('id', uid);
+          if (!emailSyncError) {
+            profile = { ...profile, email };
+          }
         }
 
         if (!profile) {
           const { data: created, error: createError } = await supabase!
             .from('profiles')
             .upsert({ id: uid, email, first_name: metaFirst || '', last_name: metaLast || '' }, { onConflict: 'id' })
-            .select('first_name, last_name')
+            .select('email, first_name, last_name')
             .maybeSingle();
           if (!createError && created) {
-            profile = created as { first_name?: string | null; last_name?: string | null };
+            profile = created as ProfileRow;
           }
         }
 
