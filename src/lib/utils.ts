@@ -99,14 +99,22 @@ export function getTodayISO(): string {
 /**
  * Helper para sincronizar datos con el backend.
  * Muestra un toast de error si falla la sincronización.
+ *
+ * `saveData()` (syncService.schedule/flush) NUNCA rechaza — atrapa sus
+ * propios errores de red/reintento y resuelve `false` en caso de fallo.
+ * Antes este helper solo miraba `.catch()`, así que un push fallido tras
+ * agotar los reintentos quedaba en silencio total. Ahora se revisa el
+ * resultado booleano explícitamente.
  */
 export function syncToCloud(
   saveData: () => Promise<boolean>,
   addToast: (msg: string, type: 'success' | 'error' | 'info') => void,
 ): void {
   saveData()
-    .then(() => {
-      /* éxito silencioso */
+    .then((ok) => {
+      if (!ok) {
+        addToast('No se pudo guardar en la nube. Tus cambios quedaron solo en este dispositivo.', 'error');
+      }
     })
     .catch((err: Error) => {
       console.error('[syncToCloud] Error al sincronizar:', err);

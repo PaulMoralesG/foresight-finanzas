@@ -13,6 +13,9 @@ export function Toast() {
 
   return (
     <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="false"
       className="fixed right-4 left-4 sm:left-auto sm:right-6 z-[9999] flex flex-col gap-2 sm:w-[380px] sm:max-w-[calc(100%-2rem)]"
       style={{ bottom: `calc(80px + env(safe-area-inset-bottom, 0px))` }}
     >

@@ -434,9 +434,14 @@ export function SavingsPage() {
       {isModalOpen && (
         <>
           <div className="fixed inset-0 bg-black/50 z-[200] animate-fade-in" onClick={() => setIsModalOpen(false)} />
-          <div className="fixed inset-0 z-[201] bg-white dark:bg-gray-950 md:rounded-2xl shadow-2xl flex flex-col w-full max-w-full md:max-w-md mx-auto overflow-hidden animate-scale-in md:inset-y-6 md:mx-auto pt-safe">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="savings-goal-modal-title"
+            className="fixed inset-0 z-[201] bg-white dark:bg-slate-950 md:rounded-2xl shadow-2xl flex flex-col w-full max-w-full md:max-w-md mx-auto overflow-hidden animate-scale-in md:inset-y-6 md:mx-auto pt-safe"
+          >
             <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-800">
-              <h2 className="font-bold text-sm text-slate-900 dark:text-white">
+              <h2 id="savings-goal-modal-title" className="font-bold text-sm text-slate-900 dark:text-white">
                 {editingGoal ? 'Editar meta' : 'Nueva meta'}
               </h2>
               <button
@@ -494,8 +499,13 @@ export function SavingsPage() {
       {confirmDelete && (
         <>
           <div className="fixed inset-0 bg-black/50 z-[200] animate-fade-in" onClick={() => setConfirmDelete(null)} />
-          <div className="fixed inset-x-0 top-1/2 -translate-y-1/2 z-[201] mx-auto w-[90%] max-w-sm bg-white dark:bg-gray-950 rounded-2xl shadow-2xl p-5 animate-scale-in">
-            <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="savings-delete-modal-title"
+            className="fixed inset-x-0 top-1/2 -translate-y-1/2 z-[201] mx-auto w-[90%] max-w-sm bg-white dark:bg-slate-950 rounded-2xl shadow-2xl p-5 animate-scale-in"
+          >
+            <h3 id="savings-delete-modal-title" className="font-bold text-sm text-slate-900 dark:text-white">
               ¿Eliminar meta "{confirmDelete.concept}"?
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">

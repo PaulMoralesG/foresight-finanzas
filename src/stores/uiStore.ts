@@ -57,9 +57,14 @@ interface UiState {
   openReportModal: () => void;
   closeReportModal: () => void;
 
-  // --- Sync status (reemplaza window.__setSyncStatus) ---
-  syncStatus: 'online' | 'syncing' | 'offline';
-  setSyncStatus: (status: 'online' | 'syncing' | 'offline') => void;
+  // --- Conectividad de red (navigator.onLine) ---
+  isOnline: boolean;
+  setOnline: (online: boolean) => void;
+
+  // --- Estado real de sincronización con Supabase (lo controla syncService,
+  //     no un componente — refleja si el último push realmente tuvo éxito) ---
+  syncState: 'idle' | 'syncing' | 'error' | 'local-only';
+  setSyncState: (state: UiState['syncState']) => void;
 
   // --- Filtros de estadísticas ---
   statsMode: 'month' | 'range';
@@ -148,9 +153,13 @@ export const useUiStore = create<UiState>((set) => ({
   openReportModal: () => set({ isReportModalOpen: true }),
   closeReportModal: () => set({ isReportModalOpen: false }),
 
-  // Sync status
-  syncStatus: 'offline',
-  setSyncStatus: (status) => set({ syncStatus: status }),
+  // Conectividad de red
+  isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
+  setOnline: (online) => set({ isOnline: online }),
+
+  // Estado de sincronización real (idle/syncing/error/local-only)
+  syncState: 'idle',
+  setSyncState: (state) => set({ syncState: state }),
 
   // Stats filters
   statsMode: 'month',
