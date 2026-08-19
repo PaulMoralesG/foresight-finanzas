@@ -3,7 +3,7 @@
 // ================================================================
 
 import { useState, useEffect, useRef } from 'react';
-import { Sun, Moon, Settings, LogOut, Wifi, WifiOff, Loader2 } from 'lucide-react';
+import { Sun, Moon, Settings, LogOut, Wifi, WifiOff, Loader2, CloudOff } from 'lucide-react';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useAuth } from '@/hooks/useAuth';
@@ -23,31 +23,31 @@ export function Header() {
   const activeTab = useUiStore((s) => s.activeTab);
   const isDark = useUiStore((s) => s.isDark);
   const toggleDarkMode = useUiStore((s) => s.toggleDarkMode);
-  const syncStatus = useUiStore((s) => s.syncStatus);
-  const setSyncStatus = useUiStore((s) => s.setSyncStatus);
+  // isOnline = conectividad de red (navigator.onLine).
+  // syncState = resultado REAL del último push a Supabase (lo controla
+  // syncService, no este componente). Antes el indicador solo miraba
+  // navigator.onLine, así que un usuario "en línea" con el sync fallando
+  // en silencio tras agotar los reintentos veía un ícono verde igual.
+  const isOnline = useUiStore((s) => s.isOnline);
+  const setOnline = useUiStore((s) => s.setOnline);
+  const syncState = useUiStore((s) => s.syncState);
   const user = useAuthStore((s) => s.user);
   const { signOut } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
-  // Detectar cambios de conectividad
+  // Detectar cambios de conectividad de red (independiente del estado de sync)
   useEffect(() => {
-    if (!supabaseAvailable) {
-      setSyncStatus('offline');
-      return;
-    }
-    const updateStatus = () => {
-      setSyncStatus(navigator.onLine ? 'online' : 'offline');
-    };
-    window.addEventListener('online', updateStatus);
-    window.addEventListener('offline', updateStatus);
-    updateStatus();
+    const updateOnline = () => setOnline(navigator.onLine);
+    window.addEventListener('online', updateOnline);
+    window.addEventListener('offline', updateOnline);
+    updateOnline();
     return () => {
-      window.removeEventListener('online', updateStatus);
-      window.removeEventListener('offline', updateStatus);
+      window.removeEventListener('online', updateOnline);
+      window.removeEventListener('offline', updateOnline);
     };
-  }, [setSyncStatus]);
+  }, [setOnline]);
 
   // Cerrar dropdown al hacer clic fuera
   useEffect(() => {
@@ -92,21 +92,37 @@ export function Header() {
 
           {/* Right: Sync status + Global actions */}
           <div className="flex items-center gap-2">
-            {/* Sync status indicator */}
-            {syncStatus === 'syncing' && (
-              <span className="flex items-center gap-1 text-[11px] text-amber-500" title="Sincronizando...">
-                <Loader2 className="w-3 h-3 animate-spin" />
-              </span>
-            )}
-            {syncStatus === 'online' && (
-              <span className="flex items-center gap-1 text-[11px] text-emerald-500" title="Conectado">
-                <Wifi className="w-3 h-3" />
-              </span>
-            )}
-            {syncStatus === 'offline' && (
-              <span className="flex items-center gap-1 text-[11px] text-slate-400" title="Sin conexión">
-                <WifiOff className="w-3 h-3" />
-              </span>
+            {/* Sync status indicator — combina red real + resultado real del push */}
+            {supabaseAvailable && (
+              <>
+                {!isOnline ? (
+                  <span className="flex items-center gap-1 text-[11px] text-slate-400" title="Sin conexión">
+                    <WifiOff className="w-3 h-3" />
+                  </span>
+                ) : syncState === 'syncing' ? (
+                  <span className="flex items-center gap-1 text-[11px] text-amber-500" title="Sincronizando...">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  </span>
+                ) : syncState === 'error' ? (
+                  <span
+                    className="flex items-center gap-1 text-[11px] text-red-500"
+                    title="No se pudo sincronizar con la nube. Tus cambios están guardados solo en este dispositivo."
+                  >
+                    <CloudOff className="w-3 h-3" />
+                  </span>
+                ) : syncState === 'local-only' ? (
+                  <span
+                    className="flex items-center gap-1 text-[11px] text-amber-600"
+                    title="Sincronización desactivada (falta migrar el esquema de Supabase)"
+                  >
+                    <CloudOff className="w-3 h-3" />
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-[11px] text-emerald-500" title="Sincronizado">
+                    <Wifi className="w-3 h-3" />
+                  </span>
+                )}
+              </>
             )}
 
             {/* Dark mode toggle pill */}

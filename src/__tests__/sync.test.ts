@@ -16,20 +16,29 @@ vi.mock('@/config/supabase', () => ({
   supabaseAvailable: true,
 }));
 
-import { syncService, isSchemaError } from '@/lib/sync';
+import { syncService, isSchemaError, isTransientSchemaError } from '@/lib/sync';
 import { useFinanceStore } from '@/stores/financeStore';
 
 const mockFrom = (mocks.supabase as { from: ReturnType<typeof vi.fn> }).from;
 
-/** Builder por tabla: select→eq devuelve las filas configuradas. */
+/**
+ * Builder por tabla: select→eq expone tanto `.maybeSingle()` (lookups de
+ * fila única, ej. profiles) como `.order().order().range()` (el pull
+ * paginado de fetchAllRows para las 5 tablas de entidades). `.range()`
+ * siempre resuelve la página completa configurada — los datos de test usan
+ * < PAGE_SIZE filas, así que una sola página cubre el caso.
+ */
 function makeBuilder(resultByTable: Record<string, unknown[]> = {}) {
   return (table: string) => ({
     select: vi.fn(() => ({
-      eq: vi.fn(() => ({
-        data: resultByTable[table] ?? [],
-        error: null,
-        maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
-      })),
+      eq: vi.fn(() => {
+        const chain = {
+          maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
+          order: vi.fn(() => chain),
+          range: vi.fn(() => Promise.resolve({ data: resultByTable[table] ?? [], error: null })),
+        };
+        return chain;
+      }),
     })),
     upsert: vi.fn(() => Promise.resolve({ error: null })),
     update: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) })),
@@ -182,12 +191,61 @@ describe('syncService', () => {
     expect(expenses[0].concept).toBe('Remoto');
   });
 
+  // C-2 de la auditoría: PostgREST corta cualquier select sin `range` en
+  // 1000 filas. Sin paginar, una cuenta con más de 1000 movimientos perdía
+  // el resto del historial en silencio, sin error visible. Este test
+  // verifica que fetchAllRows/pullAll efectivamente encadenan páginas.
+  it('pagina pullAll cuando una tabla supera PAGE_SIZE (1000 filas)', async () => {
+    const makeRow = (id: string) => ({
+      id,
+      user_id: 'user-1',
+      type: 'expense',
+      amount: 1,
+      concept: `Gasto ${id}`,
+      date: '2026-07-15',
+      category: 'food',
+      method: 'cash',
+      business_type: 'personal',
+      created_at: null,
+      updated_at: '2026-08-01T00:00:00.000Z',
+      deleted_at: null,
+    });
+    const page1 = Array.from({ length: 1000 }, (_, i) => makeRow(`e-${i}`));
+    const page2 = [makeRow('e-1000')];
+    const rangeCalls: Array<[number, number]> = [];
+
+    mockFrom.mockImplementation((table: string) => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => {
+          const chain = {
+            maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
+            order: vi.fn(() => chain),
+            range: vi.fn((from: number, to: number) => {
+              if (table !== 'expenses') return Promise.resolve({ data: [], error: null });
+              rangeCalls.push([from, to]);
+              return Promise.resolve({ data: from === 0 ? page1 : page2, error: null });
+            }),
+          };
+          return chain;
+        }),
+      })),
+      upsert: vi.fn(() => Promise.resolve({ error: null })),
+      update: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) })),
+    }));
+
+    await syncService.attach('user-1');
+
+    // Dos páginas: [0,999] (llena, 1000 filas → sigue) y [1000,1999] (1 fila → corta)
+    expect(rangeCalls).toEqual([[0, 999], [1000, 1999]]);
+    expect(useFinanceStore.getState().expenses).toHaveLength(1001);
+  }, 15000);
+
   it('completa la limpieza pendiente si la data ya está en las tablas (flag false)', async () => {
     const update = vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) }));
     mockFrom.mockImplementation((table: string) => ({
       select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          data: table === 'expenses'
+        eq: vi.fn(() => {
+          const rows = table === 'expenses'
             ? [{
                 id: 'e1',
                 user_id: 'user-1',
@@ -202,13 +260,17 @@ describe('syncService', () => {
                 updated_at: '2026-08-01T00:00:00.000Z',
                 deleted_at: null,
               }]
-            : [],
-          error: null,
-          maybeSingle: vi.fn(() => Promise.resolve({
-            data: table === 'profiles' ? { legacy_imported: false } : null,
-            error: null,
-          })),
-        })),
+            : [];
+          const chain = {
+            maybeSingle: vi.fn(() => Promise.resolve({
+              data: table === 'profiles' ? { legacy_imported: false } : null,
+              error: null,
+            })),
+            order: vi.fn(() => chain),
+            range: vi.fn(() => Promise.resolve({ data: rows, error: null })),
+          };
+          return chain;
+        }),
       })),
       upsert: vi.fn(() => Promise.resolve({ error: null })),
       update,
@@ -231,8 +293,8 @@ describe('syncService', () => {
 
     mockFrom.mockImplementation((table: string) => ({
       select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          data: table === 'expenses'
+        eq: vi.fn(() => {
+          const rows = table === 'expenses'
             ? [{
                 id: 'e1',
                 user_id: 'user-1',
@@ -247,10 +309,14 @@ describe('syncService', () => {
                 updated_at: '2026-08-01T00:00:00.000Z',
                 deleted_at: null,
               }]
-            : [],
-          error: null,
-          maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
-        })),
+            : [];
+          const chain = {
+            maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
+            order: vi.fn(() => chain),
+            range: vi.fn(() => Promise.resolve({ data: rows, error: null })),
+          };
+          return chain;
+        }),
       })),
       upsert: vi.fn((rows: unknown[]) => {
         upsertCalls.push(rows as unknown[]);
@@ -280,11 +346,14 @@ describe('syncService', () => {
     const upsertSpy = vi.fn(() => Promise.resolve({ error: null }));
     mockFrom.mockImplementation((_table: string) => ({
       select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          data: [],
-          error: null,
-          maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
-        })),
+        eq: vi.fn(() => {
+          const chain = {
+            maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
+            order: vi.fn(() => chain),
+            range: vi.fn(() => Promise.resolve({ data: [], error: null })),
+          };
+          return chain;
+        }),
       })),
       upsert: upsertSpy,
       update: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) })),
@@ -308,11 +377,27 @@ describe('syncService', () => {
 });
 
 describe('isSchemaError', () => {
-  it('reconoce los códigos de esquema faltante', () => {
+  it('reconoce los códigos de esquema PERMANENTE (SQL de migración no ejecutado)', () => {
     expect(isSchemaError({ code: '42P01' })).toBe(true);
     expect(isSchemaError({ code: '42703' })).toBe(true);
-    expect(isSchemaError({ code: 'PGRST205' })).toBe(true);
     expect(isSchemaError({ code: '23505' })).toBe(false);
     expect(isSchemaError(new Error('red caída'))).toBe(false);
+  });
+
+  // PGRST205 (caché de esquema de PostgREST) es TRANSITORIO — un redeploy o
+  // DDL reciente lo dispara y se resuelve solo. Antes isSchemaError() lo
+  // trataba igual que un esquema sin migrar y desactivaba el sync para
+  // siempre (bug C-4 de la auditoría); ahora tiene su propio chequeo.
+  it('NO trata PGRST205 como esquema faltante permanente', () => {
+    expect(isSchemaError({ code: 'PGRST205' })).toBe(false);
+  });
+});
+
+describe('isTransientSchemaError', () => {
+  it('reconoce PGRST205 como transitorio y todo lo demás como no-transitorio', () => {
+    expect(isTransientSchemaError({ code: 'PGRST205' })).toBe(true);
+    expect(isTransientSchemaError({ code: '42P01' })).toBe(false);
+    expect(isTransientSchemaError({ code: '23505' })).toBe(false);
+    expect(isTransientSchemaError(new Error('red caída'))).toBe(false);
   });
 });

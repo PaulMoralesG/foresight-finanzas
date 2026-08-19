@@ -7,6 +7,7 @@
 
 import { supabase } from '@/config/supabase';
 import { useFinanceStore } from '@/stores/financeStore';
+import { useUiStore } from '@/stores/uiStore';
 import { mergeById, mergeBudgets, type MergeSet } from '@/lib/merge';
 import { nowIso } from '@/lib/ids';
 import { getTodayISO } from '@/lib/utils';
@@ -221,40 +222,72 @@ let dirtyDuringSync = false; // el usuario editó mientras sincronizábamos
 let syncDisabled = false; // esquema no migrado → modo local-only
 let initialized = false;
 
-/** ¿Error de esquema faltante? (SQL de migración no ejecutado) */
+/** ¿Error de esquema PERMANENTE? (tabla/columna inexistente — SQL de migración
+ *  no ejecutado). Estos sí deben desactivar el sync hasta que se corrija a mano. */
 export function isSchemaError(err: unknown): boolean {
   const e = err as { code?: string } | null;
   if (!e?.code) return false;
-  return e.code === '42P01' || e.code === '42703' || e.code === 'PGRST205';
+  return e.code === '42P01' || e.code === '42703';
+}
+
+/** ¿Caché de esquema de PostgREST desactualizada? (PGRST205). Es TRANSITORIO:
+ *  ocurre tras cualquier DDL, redeploy o reinicio del proyecto Supabase y se
+ *  resuelve solo en segundos/minutos. NUNCA debe desactivar el sync de forma
+ *  permanente — antes lo hacía (bug), lo que dejaba a un usuario en modo
+ *  local-only para siempre por un solo golpe transitorio. */
+export function isTransientSchemaError(err: unknown): boolean {
+  return (err as { code?: string } | null)?.code === 'PGRST205';
 }
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+type TableName = 'expenses' | 'reminders' | 'categories' | 'savings_goals' | 'budgets';
+
 // ── Pull ──
 
-async function pullAll(uid: string): Promise<Snapshot> {
-  const [exp, rem, cats, goals, buds] = await Promise.all([
-    supabase!.from('expenses').select('*').eq('user_id', uid),
-    supabase!.from('reminders').select('*').eq('user_id', uid),
-    supabase!.from('categories').select('*').eq('user_id', uid),
-    supabase!.from('savings_goals').select('*').eq('user_id', uid),
-    supabase!.from('budgets').select('*').eq('user_id', uid),
-  ]);
-  if (exp.error) throw exp.error;
-  if (rem.error) throw rem.error;
-  if (cats.error) throw cats.error;
-  if (goals.error) throw goals.error;
-  if (buds.error) throw buds.error;
+// PostgREST (Supabase) limita cualquier select sin `range` a 1000 filas por
+// defecto. Sin paginar, una cuenta con más de 1000 movimientos pierde
+// silenciosamente el resto del historial en cada pull — y sin `order by`
+// estable, ni siquiera es determinista CUÁLES 1000 filas llegan entre un
+// pull y el siguiente.
+const PAGE_SIZE = 1000;
 
-  return {
-    expenses: (exp.data ?? []) as ExpenseRow[],
-    reminders: (rem.data ?? []) as ReminderRow[],
-    categories: (cats.data ?? []) as CategoryRow[],
-    goals: (goals.data ?? []) as GoalRow[],
-    budgets: (buds.data ?? []) as BudgetRow[],
-  };
+/** Trae TODAS las filas de una tabla para un usuario, paginando en bloques
+ *  de PAGE_SIZE con un orden estable (para que el corte entre páginas sea
+ *  siempre el mismo, incluso si hay escrituras concurrentes). */
+async function fetchAllRows<T>(
+  table: TableName,
+  uid: string,
+  orderColumns: string[],
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    let query = supabase!.from(table).select('*').eq('user_id', uid);
+    for (const col of orderColumns) {
+      query = query.order(col, { ascending: true });
+    }
+    const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    const page = (data ?? []) as T[];
+    out.push(...page);
+    if (page.length < PAGE_SIZE) return out;
+  }
+}
+
+async function pullAll(uid: string): Promise<Snapshot> {
+  const [expenses, reminders, categories, goals, budgets] = await Promise.all([
+    fetchAllRows<ExpenseRow>('expenses', uid, ['updated_at', 'id']),
+    fetchAllRows<ReminderRow>('reminders', uid, ['updated_at', 'id']),
+    fetchAllRows<CategoryRow>('categories', uid, ['updated_at', 'id']),
+    fetchAllRows<GoalRow>('savings_goals', uid, ['updated_at', 'id']),
+    // budgets no tiene columna `id` (PK compuesta user_id+month) — `month`
+    // ya es único por usuario, así que sirve como desempate estable.
+    fetchAllRows<BudgetRow>('budgets', uid, ['month']),
+  ]);
+
+  return { expenses, reminders, categories, goals, budgets };
 }
 
 // ── Merge ──
@@ -362,11 +395,23 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     incomeCategories.tombstones,
   );
 
-  // Poda de tombstones antiguos (> 30 días) para evitar acumulación infinita
+  // Poda de tombstones antiguos (> 30 días) para evitar acumulación infinita.
+  // Solo se podan los que el SERVIDOR ya confirmó como borrados (aparecen en
+  // el snapshot remoto). Antes se podaba por antigüedad ciega: un dispositivo
+  // que borra offline y no sincroniza en 30+ días perdía su tombstone local,
+  // y al reconectar la fila viva del servidor ganaba el merge — el gasto
+  // borrado resucitaba en silencio.
+  const remoteTombstoneIds = new Set<string>([
+    ...Object.keys(remoteExpenses.tombstones),
+    ...Object.keys(remoteReminders.tombstones),
+    ...Object.keys(remoteGoals.tombstones),
+    ...Object.keys(remoteExpCats.tombstones),
+    ...Object.keys(remoteIncCats.tombstones),
+  ]);
   const PRUNE_THRESHOLD_MS = 30 * 24 * 60 * 60 * 1000;
   const pruneBeforeIso = new Date(Date.now() - PRUNE_THRESHOLD_MS).toISOString();
   for (const [id, deletedAt] of Object.entries(flatTombstones)) {
-    if (deletedAt < pruneBeforeIso) {
+    if (deletedAt < pruneBeforeIso && remoteTombstoneIds.has(id)) {
       delete flatTombstones[id];
     }
   }
@@ -432,8 +477,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
 }
 
 // ── Push ──
-
-type TableName = 'expenses' | 'reminders' | 'categories' | 'savings_goals' | 'budgets';
+// (TableName está definido arriba, junto a fetchAllRows/pullAll — se reutiliza acá)
 
 async function upsert(
   table: TableName,
@@ -501,9 +545,15 @@ async function pushWithRetry(uid: string): Promise<boolean> {
           '[sync] Esquema de Supabase no migrado — ejecutá supabase/migrations/0001_entities_and_rls.sql. Modo local-only activado.',
         );
         syncDisabled = true;
+        useUiStore.getState().setSyncState('local-only');
         return true;
       }
       lastError = err;
+      if (isTransientSchemaError(err)) {
+        // Caché de esquema de PostgREST desactualizada: NO se desactiva el
+        // sync, solo se reintenta como cualquier otro error de red.
+        console.warn(`[sync] Caché de esquema desactualizada (transitorio), reintento ${attempt + 1}/${MAX_RETRIES}...`);
+      }
       if (attempt < MAX_RETRIES) {
         const delay = BASE_DELAY_MS * Math.pow(2, attempt);
         console.warn(`[sync] Intento ${attempt + 1}/${MAX_RETRIES} fallido, reintentando en ${delay}ms...`);
@@ -626,6 +676,12 @@ export const syncService = {
           '[sync] Esquema de Supabase no migrado — ejecutá supabase/migrations/0001_entities_and_rls.sql. Modo local-only activado.',
         );
         syncDisabled = true;
+        useUiStore.getState().setSyncState('local-only');
+      } else if (isTransientSchemaError(err)) {
+        console.warn('[sync] Caché de esquema desactualizada (transitorio) al adjuntar — se reintentará en el próximo cambio.');
+        useUiStore.getState().setSyncState('error');
+      } else {
+        useUiStore.getState().setSyncState('error');
       }
     }
   },
@@ -661,18 +717,23 @@ export const syncService = {
   },
 
   /** Logout: cancela pendientes y suelta el usuario. NO pushea (el flush
-   *  explícito va antes en signOut). */
+   *  explícito va antes en signOut). Resetea syncDisabled: es un flag por
+   *  SESIÓN — antes sobrevivía al logout y contaminaba la cuenta siguiente
+   *  que iniciara sesión en la misma pestaña. */
   detach(): void {
     syncService.cancel();
     queuedAfterPush = false;
     dirtyDuringSync = false;
     userId = null;
+    syncDisabled = false;
+    useUiStore.getState().setSyncState('idle');
   },
 
   /** Desactiva el sync definitivamente (esquema no migrado). */
   disable(): void {
     syncDisabled = true;
     syncService.cancel();
+    useUiStore.getState().setSyncState('local-only');
   },
 };
 
@@ -687,6 +748,7 @@ async function performPush(): Promise<boolean> {
 
   pushInFlight = (async (): Promise<boolean> => {
     let ok = false;
+    useUiStore.getState().setSyncState('syncing');
     try {
       isSyncing = true;
       ok = await pushWithRetry(uid);
@@ -695,6 +757,11 @@ async function performPush(): Promise<boolean> {
     } finally {
       isSyncing = false;
       pushInFlight = null;
+      // pushWithRetry ya dejó 'local-only' si el esquema no está migrado —
+      // no pisarlo con 'idle'/'error' en ese caso.
+      if (!syncDisabled) {
+        useUiStore.getState().setSyncState(ok ? 'idle' : 'error');
+      }
       if (queuedAfterPush) {
         queuedAfterPush = false;
         void performPush();

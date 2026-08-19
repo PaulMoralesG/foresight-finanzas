@@ -7,7 +7,7 @@ import { X, Plus, Trash2, ArrowDown, ArrowUp, Building2, User, Banknote, CreditC
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_COLORS } from '@/config/categories';
-import { getTodayISO, parseMoneyInput } from '@/lib/utils';
+import { getTodayISO, parseMoneyInput, syncToCloud } from '@/lib/utils';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import type { TransactionType, BusinessType, PaymentMethod, Category } from '@/types';
@@ -91,12 +91,7 @@ export function TransactionModal({
     setShowNewCat(false);
     addToast('Categoría creada ✅', 'success');
     // Sincronizar con Supabase para que la categoría persista al recargar
-    onSave()
-      .then(() => { /* éxito */ })
-      .catch((err: Error) => {
-        console.error('[TransactionModal] Error al guardar categoría:', err);
-        addToast(err.message || 'Error al guardar categoría en la nube', 'error');
-      });
+    syncToCloud(onSave, addToast);
   }
 
   // Cargar datos si estamos editando.
@@ -188,12 +183,7 @@ export function TransactionModal({
     closeModal();
     addToast(isEditing ? 'Movimiento actualizado ✅' : 'Movimiento registrado ✅', 'success');
     // Sync a Supabase en background (no bloquea la UI)
-    onSave()
-      .then(() => { /* éxito, no mostrar nada extra */ })
-      .catch((err: Error) => {
-        console.error('[TransactionModal] Error al sincronizar:', err);
-        addToast(err.message || 'Error al sincronizar con la nube', 'error');
-      });
+    syncToCloud(onSave, addToast);
   }
 
   async function handleDelete() {
@@ -204,12 +194,7 @@ export function TransactionModal({
     closeModal();
     addToast('Movimiento eliminado 🗑️', 'success');
     // Sync a Supabase en background
-    onSave()
-      .then(() => { /* éxito */ })
-      .catch((err: Error) => {
-        console.error('[TransactionModal] Error al eliminar:', err);
-        addToast(err.message || 'Error al sincronizar con la nube', 'error');
-      });
+    syncToCloud(onSave, addToast);
   }
 
   return (
@@ -219,12 +204,15 @@ export function TransactionModal({
 
       {/* Modal */}
       <div
-        className="fixed inset-0 z-[201] bg-white dark:bg-gray-950 md:rounded-2xl shadow-2xl flex flex-col w-full max-w-full md:max-w-md mx-auto overflow-hidden animate-scale-in md:inset-y-6 md:mx-auto pt-safe"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="transaction-modal-title"
+        className="fixed inset-0 z-[201] bg-white dark:bg-slate-950 md:rounded-2xl shadow-2xl flex flex-col w-full max-w-full md:max-w-md mx-auto overflow-hidden animate-scale-in md:inset-y-6 md:mx-auto pt-safe"
         style={{ touchAction: 'pan-y', overscrollBehaviorX: 'none' }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-800">
-          <h2 className="font-bold text-sm text-slate-900 dark:text-white">
+          <h2 id="transaction-modal-title" className="font-bold text-sm text-slate-900 dark:text-white">
             {isEditing ? 'Editar Movimiento' : 'Nuevo Movimiento'}
           </h2>
           <button onClick={closeModal} aria-label="Cerrar" className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">

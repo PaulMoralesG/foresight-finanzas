@@ -7,7 +7,7 @@ import { useEffect, useCallback } from 'react';
 import { supabase, supabaseAvailable } from '@/config/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useFinanceStore } from '@/stores/financeStore';
-import { syncService, isSchemaError } from '@/lib/sync';
+import { syncService, isSchemaError, isTransientSchemaError } from '@/lib/sync';
 import type { User } from '@/types';
 
 /** Usuario offline por defecto cuando no hay Supabase configurado */
@@ -108,6 +108,17 @@ export function useAuth() {
           return;
         }
 
+        if (isTransientSchemaError(err)) {
+          // Caché de esquema de PostgREST desactualizada (redeploy/DDL reciente).
+          // Es pasajero: NO desactivar el sync ni desloguear al usuario — antes
+          // isSchemaError() trataba esto igual que un esquema sin migrar y
+          // dejaba la cuenta en modo local-only permanente por un solo golpe.
+          console.warn('[useAuth] Caché de esquema desactualizada (transitorio) al cargar perfil — reintentará solo.');
+          setUser(basicUser(uid, email, metaFirst, metaLast));
+          setLoading(false);
+          return;
+        }
+
         setUser(null);
         setLoading(false);
       }
@@ -120,6 +131,13 @@ export function useAuth() {
         const meta = session.user.user_metadata as Record<string, string> | undefined;
         loadProfile(session.user.id, session.user.email!, meta?.first_name, meta?.last_name);
       } else {
+        // ALT-1: sin sesión → limpiar todo. Simétrico con la rama equivalente
+        // de onAuthStateChange (línea ~165) — antes esta rama solo hacía
+        // setLoading(false) y dejaba datos rehidratados de localStorage de
+        // una cuenta anterior en el store hasta que algo más lo pisara.
+        syncService.detach();
+        financeStore.getState().reset();
+        setUser(null);
         setLoading(false);
       }
     });
@@ -214,6 +232,11 @@ export function useAuth() {
     syncService.detach();
     clearUser();
     financeStore.getState().reset();
+    // Borra también la copia persistida en localStorage — reset() solo
+    // limpia el estado en memoria; sin esto, el historial financiero
+    // completo de la cuenta queda en el navegador en texto plano bajo la
+    // misma clave que usaría la siguiente cuenta que inicie sesión ahí.
+    financeStore.persist.clearStorage();
   }
 
   /** Guardar datos financieros (no-op en modo offline). Debounced dentro del sync service. */
@@ -229,8 +252,11 @@ export function useAuth() {
     }
 
     // Actualizar metadata de auth
+    // (bug: era `lastName`, no `last_name` — el trigger SQL y loadProfile()
+    // leen `raw_user_meta_data->>'last_name'`, así que el apellido en la
+    // metadata de Auth quedaba desincronizado para siempre)
     const { error: authError } = await supabase.auth.updateUser({
-      data: { first_name: firstName, lastName: lastName },
+      data: { first_name: firstName, last_name: lastName },
     });
     if (authError) throw authError;
 
