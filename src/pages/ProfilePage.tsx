@@ -12,7 +12,7 @@ import { CATEGORY_COLORS } from '@/config/categories';
 import { CATEGORY_EMOJIS } from '@/hooks/useCategories';
 import { syncToCloud } from '@/lib/utils';
 import { makeCategoryId } from '@/lib/category-id';
-import { MIN_PASSWORD_LENGTH, passwordStrength, validateNewPassword } from '@/lib/password';
+import { MIN_PASSWORD_LENGTH, STRENGTH_TRACK_CLASS, passwordStrength, validateNewPassword } from '@/lib/password';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 type Section = 'profile' | 'email' | 'password' | 'categories' | null;
@@ -420,15 +420,13 @@ export function ProfilePage() {
                       {[0, 1, 2, 3].map((i) => (
                         <div
                           key={i}
-                          className="h-1 flex-1 rounded-full transition-all duration-300"
-                          style={{
-                            backgroundColor: i <= pwStrength.score ? pwStrength.color : '#e2e8f0',
-                            opacity: i <= pwStrength.score ? 1 : 0.5,
-                          }}
+                          className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+                            i <= pwStrength.score ? pwStrength.barClass : STRENGTH_TRACK_CLASS
+                          }`}
                         />
                       ))}
                     </div>
-                    <p className="text-[11px] mt-1 font-medium" style={{ color: pwStrength.textColor }}>
+                    <p className={`text-[11px] mt-1 font-medium ${pwStrength.textClass}`}>
                       {pwStrength.label}
                     </p>
                   </div>
@@ -490,7 +488,11 @@ export function ProfilePage() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Categorías personalizadas</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {customExpenseCategories.length + customIncomeCategories.length} categorías creadas
+                {(() => {
+                  const n = customExpenseCategories.length + customIncomeCategories.length;
+                  if (n === 0) return 'Ninguna todavía';
+                  return n === 1 ? '1 categoría creada' : `${n} categorías creadas`;
+                })()}
               </p>
             </div>
             {expanded === 'categories' ? <ChevronUp className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" />}

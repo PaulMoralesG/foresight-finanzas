@@ -146,18 +146,22 @@ export function TabBar() {
           Solo visible en Inicio y Movimientos (donde el contexto es "añadir transacción").
           Responsive: 56px default, 64px en sm+.
 
-          ⚠️ Antes iba en top:-28px, lo que dejaba la mitad inferior del botón
+          ⚠️ Antes iba centrado en top:-28px, lo que dejaba su mitad inferior
           superpuesta sobre la barra — justo encima del tercero de los cinco
-          tabs, "Estadísticas", tapándole el ícono. Con `bottom-full` el FAB se
-          apoya en el borde superior de la barra y `mb-2` le da 8px de aire, así
-          que ningún tab queda cubierto a ningún tamaño de pantalla.
+          tabs, "Estadísticas", tapándole el ícono.
 
-          (Para recuperar el look "notch" del patrón fintech —el FAB encajado en
-          un hueco de la barra— haría falta un número PAR de tabs: centrar un
-          hueco entre cinco elementos es geométricamente imposible.) */}
+          Se probó despegarlo hacia arriba manteniéndolo centrado, pero un botón
+          flotante en el centro se come el texto de las tarjetas al hacer
+          scroll: se cambió un solape por otro peor. Ahora va abajo a la
+          derecha —la posición canónica de un FAB—, donde nunca toca la barra y
+          apenas invade el contenido.
+
+          (Para el look "notch" del patrón fintech —el FAB encajado en un hueco
+          de la barra— haría falta un número PAR de tabs: centrar un hueco entre
+          cinco elementos es geométricamente imposible.) */}
       <button
         onClick={() => openModal()}
-        className="absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2
+        className="absolute z-40 bottom-full mb-3 right-4
           w-14 h-14 sm:w-16 sm:h-16 rounded-2xl sm:rounded-[18px]
           bg-brand-600 hover:bg-brand-700
           text-white

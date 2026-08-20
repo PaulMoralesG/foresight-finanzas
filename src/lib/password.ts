@@ -15,19 +15,28 @@ export const MIN_PASSWORD_LENGTH = 8;
 export interface PasswordStrength {
   score: number;
   label: string;
-  /** Color del medidor (elemento gráfico: WCAG pide 3:1) */
-  color: string;
-  /** Color de la etiqueta (texto sobre fondo claro: WCAG pide 4.5:1) */
-  textColor: string;
+  /** Clases del segmento del medidor (elemento gráfico: WCAG pide 3:1) */
+  barClass: string;
+  /** Clases de la etiqueta (texto: WCAG pide 4.5:1) */
+  textClass: string;
 }
 
+/**
+ * Clases de Tailwind, no colores literales: el color va inline en un `style` no
+ * puede reaccionar al tema, y las variantes pensadas para fondo claro (700)
+ * fallaban todas sobre el fondo oscuro — entre 3.12:1 y 4.10:1, por debajo del
+ * 4.5:1 que pide AA. Las variantes 400 rinden entre 7:1 y 13:1 en oscuro.
+ */
 const LEVELS: Omit<PasswordStrength, 'score'>[] = [
-  { label: 'Muy débil', color: '#ef4444', textColor: '#b91c1c' },
-  { label: 'Débil',     color: '#f97316', textColor: '#c2410c' },
-  { label: 'Aceptable', color: '#eab308', textColor: '#a16207' },
-  { label: 'Buena',     color: '#22c55e', textColor: '#15803d' },
-  { label: 'Excelente', color: '#10b981', textColor: '#047857' },
+  { label: 'Muy débil', barClass: 'bg-red-500 dark:bg-red-400',         textClass: 'text-red-700 dark:text-red-400' },
+  { label: 'Débil',     barClass: 'bg-orange-500 dark:bg-orange-400',   textClass: 'text-orange-700 dark:text-orange-400' },
+  { label: 'Aceptable', barClass: 'bg-yellow-500 dark:bg-yellow-400',   textClass: 'text-yellow-700 dark:text-yellow-400' },
+  { label: 'Buena',     barClass: 'bg-green-500 dark:bg-green-400',     textClass: 'text-green-700 dark:text-green-400' },
+  { label: 'Excelente', barClass: 'bg-emerald-500 dark:bg-emerald-400', textClass: 'text-emerald-700 dark:text-emerald-400' },
 ];
+
+/** Clases del segmento aún no alcanzado por la puntuación. */
+export const STRENGTH_TRACK_CLASS = 'bg-slate-200 dark:bg-slate-700';
 
 /** Evalúa la fortaleza de una contraseña (0-4). */
 export function passwordStrength(pw: string): PasswordStrength {

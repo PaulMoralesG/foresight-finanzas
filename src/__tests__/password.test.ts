@@ -30,15 +30,17 @@ describe('passwordStrength', () => {
     expect(passwordStrength('abcdefH1!').score).toBe(4);      // + símbolo
   });
 
-  it('da un color de etiqueta con contraste suficiente sobre blanco', () => {
-    // El color del medidor (gráfico) puede ser más claro que el del texto:
-    // WCAG pide 3:1 para gráficos y 4.5:1 para texto. Deben ser distintos.
-    for (let i = 0; i <= 4; i++) {
-      const pw = ['a', 'abcdefgh', 'abcdefgH', 'abcdefH1', 'abcdefH1!'][i];
+  it('los colores se adaptan al tema, no van fijos en un style inline', () => {
+    // Las variantes pensadas para fondo claro (700) fallan todas sobre el
+    // fondo oscuro: entre 3.12:1 y 4.10:1, por debajo del 4.5:1 de AA. Por eso
+    // cada nivel tiene que traer su variante dark:.
+    for (const pw of ['a', 'abcdefgh', 'abcdefgH', 'abcdefH1', 'abcdefH1!']) {
       const s = passwordStrength(pw);
-      expect(s.textColor).toBeDefined();
-      expect(s.color).toBeDefined();
-      expect(s.textColor).not.toBe(s.color);
+      expect(s.textClass).toMatch(/dark:/);
+      expect(s.barClass).toMatch(/dark:/);
+      // Texto en variante 700 (contraste de texto), medidor en 500 (gráfico)
+      expect(s.textClass).toMatch(/text-[a-z]+-700/);
+      expect(s.barClass).toMatch(/bg-[a-z]+-500/);
     }
   });
 });
