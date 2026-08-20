@@ -160,7 +160,7 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
             className={inputClass(!!fieldErrors.firstName && touched.firstName)}
           />
           {touched.firstName && fieldErrors.firstName && (
-            <p className="text-[11px] text-red-500 mt-1 ml-1">{fieldErrors.firstName}</p>
+            <p className="text-[11px] text-red-600 dark:text-red-400 mt-1 ml-1">{fieldErrors.firstName}</p>
           )}
         </div>
         <div className="flex-1">
@@ -197,7 +197,7 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
           autoComplete="email"
         />
         {touched.email && fieldErrors.email && (
-          <p className="text-[11px] text-red-500 mt-1 ml-1">{fieldErrors.email}</p>
+          <p className="text-[11px] text-red-600 dark:text-red-400 mt-1 ml-1">{fieldErrors.email}</p>
         )}
       </div>
 
@@ -229,7 +229,7 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
           </button>
         </div>
         {touched.password && fieldErrors.password && (
-          <p className="text-[11px] text-red-500 mt-1 ml-1">{fieldErrors.password}</p>
+          <p className="text-[11px] text-red-600 dark:text-red-400 mt-1 ml-1">{fieldErrors.password}</p>
         )}
         {/* Barra de fortaleza */}
         {showStrength && (

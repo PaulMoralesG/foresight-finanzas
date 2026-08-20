@@ -131,7 +131,7 @@ function BudgetPlanner() {
           {hasOwn && (
             <button
               onClick={() => { setEditValue('0'); }}
-              className="text-[11px] text-slate-400 hover:text-red-500 dark:hover:text-red-400 underline"
+              className="text-[11px] text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 underline"
             >
               Quitar presupuesto de este mes (guardar 0)
             </button>
@@ -167,7 +167,7 @@ function BudgetPlanner() {
         /* ── Presupuesto vigente: estado ── */
         <div className="space-y-2.5">
           {isCarriedOver && (
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 italic">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">
               Heredado de {carriedFrom ? monthKeyLabel(carriedFrom) : 'un mes anterior'} — define uno propio para {monthKeyLabel(monthKey)}
             </p>
           )}
@@ -312,10 +312,10 @@ export function SavingsPage() {
           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
             Ahorrado total
           </span>
-          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums mt-1">
+          <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400 tabular-nums mt-1">
             {formatMoney(totalSaved)}
           </p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Histórico, todos los conceptos</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Histórico, todos los conceptos</p>
         </div>
         <div className="saas-card p-4 animate-slide-up">
           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -324,7 +324,7 @@ export function SavingsPage() {
           <p className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums mt-1">
             {formatMoney(totalTarget)}
           </p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{savingsGoals.length} meta{savingsGoals.length === 1 ? '' : 's'}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{savingsGoals.length} meta{savingsGoals.length === 1 ? '' : 's'}</p>
         </div>
         <div className="saas-card p-4 animate-slide-up">
           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -369,7 +369,7 @@ export function SavingsPage() {
               <div key={goal.id} className="saas-card p-4 animate-slide-up">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <PiggyBank className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                    <PiggyBank className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                     <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                       {goal.concept}
                     </span>
@@ -385,7 +385,7 @@ export function SavingsPage() {
                     <button
                       onClick={() => setConfirmDelete(goal)}
                       aria-label={`Eliminar meta ${goal.concept}`}
-                      className="saas-btn saas-btn-ghost saas-btn-icon text-red-500 hover:text-red-600"
+                      className="saas-btn saas-btn-ghost saas-btn-icon text-red-600 dark:text-red-400 hover:text-red-600"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -406,7 +406,7 @@ export function SavingsPage() {
                     style={{ width: `${pct}%` }}
                   />
                 </div>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 flex items-center justify-between gap-2 flex-wrap">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex items-center justify-between gap-2 flex-wrap">
                   <span>
                     {remaining > 0 ? `Te falta ${formatMoney(remaining)} para cumplirla` : '🎉 ¡Meta cumplida!'}
                   </span>
@@ -447,7 +447,7 @@ export function SavingsPage() {
               <button
                 onClick={() => setIsModalOpen(false)}
                 aria-label="Cerrar"
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
                 <X className="w-3.5 h-3.5" />
               </button>

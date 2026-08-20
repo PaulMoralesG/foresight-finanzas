@@ -47,10 +47,10 @@ export class ErrorBoundary extends Component<Props, State> {
               Ocurrió un error inesperado. No te preocupes, tus datos están a salvo.
             </p>
             <details className="text-left mb-6">
-              <summary className="text-xs text-slate-400 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300">
+              <summary className="text-xs text-slate-500 dark:text-slate-400 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300">
                 Detalles técnicos
               </summary>
-              <pre className="mt-2 text-xs text-red-500 bg-red-50 dark:bg-red-950/20 p-3 rounded-lg overflow-auto max-h-32">
+              <pre className="mt-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 p-3 rounded-lg overflow-auto max-h-32">
                 {this.state.error?.message}
               </pre>
             </details>

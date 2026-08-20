@@ -95,9 +95,11 @@ input[type="checkbox"]:indeterminate {
     overflow-x: hidden;
     -webkit-tap-highlight-color: transparent;
     -webkit-overflow-scrolling: touch;
-    /* Previene pinch-to-zoom y double-tap zoom (refuerzo del meta viewport) */
-    touch-action: pan-x pan-y;
-    -ms-touch-action: pan-x pan-y;
+    /* ⚠️ NO poner `touch-action: pan-x pan-y` aquí: bloquea el pinch-to-zoom
+       en todo el documento (WCAG 1.4.4) y contradecía al meta viewport de
+       index.html, que sí lo permite a propósito. Quien necesite ampliar un
+       monto para leerlo tiene que poder hacerlo. Si algún contenedor concreto
+       necesita restringir gestos, se le aplica a ÉL, no al body. */
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
@@ -163,7 +165,8 @@ input[type="checkbox"]:indeterminate {
   .saas-input {
     @apply w-full rounded-lg border border-slate-300 dark:border-slate-700;
     @apply bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100;
-    @apply px-2.5 py-1.5 text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500;
+    /* placeholder a slate-500/400: slate-400 sobre blanco daba 2.56:1 (WCAG AA pide 4.5:1) */
+    @apply px-2.5 py-1.5 text-sm placeholder:text-slate-500 dark:placeholder:text-slate-400;
     @apply focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500;
     @apply transition-all duration-150;
   }
@@ -173,28 +176,30 @@ input[type="checkbox"]:indeterminate {
   .saas-btn {
     @apply inline-flex items-center justify-center gap-1.5 rounded-lg font-medium text-sm;
     @apply px-3 py-1.5 transition-all duration-150;
-    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-900;
+    /* focus-visible en vez de focus: el anillo aparece al navegar con teclado,
+       no al hacer clic con el ratón (que ya da retroalimentación por sí solo) */
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900;
     @apply disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98];
   }
 
   .saas-btn-primary {
     @apply saas-btn bg-brand-600 hover:bg-brand-700 text-white;
-    @apply focus:ring-brand-500 shadow-sm shadow-brand-500/20;
+    @apply focus-visible:ring-brand-500 shadow-sm shadow-brand-500/20;
   }
 
   .saas-btn-secondary {
     @apply saas-btn bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300;
-    @apply hover:bg-slate-200 dark:hover:bg-slate-700 focus:ring-slate-400;
+    @apply hover:bg-slate-200 dark:hover:bg-slate-700 focus-visible:ring-slate-400;
   }
 
   .saas-btn-ghost {
     @apply saas-btn bg-transparent text-slate-600 dark:text-slate-400;
-    @apply hover:bg-slate-100 dark:hover:bg-slate-800 focus:ring-slate-400;
+    @apply hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:ring-slate-400;
   }
 
   .saas-btn-danger {
     @apply saas-btn bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400;
-    @apply hover:bg-red-100 dark:hover:bg-red-900 focus:ring-red-500;
+    @apply hover:bg-red-100 dark:hover:bg-red-900 focus-visible:ring-red-500;
   }
 
   .saas-btn-sm { @apply px-2 py-1 text-xs gap-1; }
@@ -205,7 +210,7 @@ input[type="checkbox"]:indeterminate {
     @apply inline-flex items-center gap-1 p-1 rounded-full;
     @apply bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700;
     @apply transition-all duration-300 cursor-pointer;
-    @apply focus:outline-none focus:ring-2 focus:ring-brand-500/40;
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40;
   }
   .dark-mode-pill-option {
     @apply w-7 h-7 rounded-full flex items-center justify-center text-xs;
@@ -215,7 +220,7 @@ input[type="checkbox"]:indeterminate {
     @apply bg-white dark:bg-slate-700 shadow-sm text-amber-500;
   }
   .dark-mode-pill-option:not(.active) {
-    @apply text-slate-400 dark:text-slate-300;
+    @apply text-slate-500 dark:text-slate-300;
   }
 
   .saas-badge {
@@ -334,3 +339,46 @@ textarea {
     -webkit-backdrop-filter: blur(40px);
     backdrop-filter: blur(40px);
   }
+
+/* ================================================================
+   Movimiento reducido (WCAG 2.3.3)
+   Quien lo pide al sistema suele hacerlo por trastornos vestibulares o
+   migraña. Antes no había ni una sola consulta de este tipo en el proyecto:
+   las cuatro animaciones de tailwind.config, la píldora elástica del TabBar
+   y las transiciones globales se ejecutaban siempre.
+   ================================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* El esqueleto de carga sí conserva su pulso: comunica "esto está cargando"
+     y es una atenuación suave, no un desplazamiento. */
+  .saas-skeleton {
+    animation-duration: 1.5s !important;
+    animation-iteration-count: infinite !important;
+  }
+}
+
+/* ================================================================
+   Objetivos táctiles (WCAG 2.5.8 / Apple HIG)
+   En pantallas táctiles, todo control interactivo llega a 44px de alto
+   mínimo. Se aplica solo bajo (pointer: coarse) para no engordar la interfaz
+   densa de escritorio, donde el ratón apunta con precisión.
+   ================================================================ */
+
+@media (pointer: coarse) {
+  .saas-btn,
+  .saas-btn-sm,
+  .saas-btn-icon {
+    min-height: 44px;
+  }
+  .saas-btn-icon {
+    min-width: 44px;
+  }
+}

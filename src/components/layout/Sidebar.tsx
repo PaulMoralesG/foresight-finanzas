@@ -132,7 +132,7 @@ export function Sidebar() {
           {/* Collapse toggle (desktop) */}
           <button
             onClick={toggleSidebar}
-            className="hidden lg:flex w-full items-center justify-center rounded-lg p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+            className="hidden lg:flex w-full items-center justify-center rounded-lg p-2 text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
             title={collapsed ? 'Expandir menú' : 'Colapsar menú'}
           >
             {collapsed ? <ChevronsRight className="w-3.5 h-3.5" /> : <ChevronsLeft className="w-3.5 h-3.5" />}

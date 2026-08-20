@@ -215,7 +215,7 @@ export function TransactionModal({
           <h2 id="transaction-modal-title" className="font-bold text-sm text-slate-900 dark:text-white">
             {isEditing ? 'Editar Movimiento' : 'Nuevo Movimiento'}
           </h2>
-          <button onClick={closeModal} aria-label="Cerrar" className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+          <button onClick={closeModal} aria-label="Cerrar" className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -351,7 +351,7 @@ export function TransactionModal({
             <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">
               Categoría
               {categories.length > 0 && (
-                <span className="ml-1 font-normal normal-case text-slate-400">
+                <span className="ml-1 font-normal normal-case text-slate-500 dark:text-slate-400">
                   ({categories.length})
                 </span>
               )}
@@ -369,7 +369,7 @@ export function TransactionModal({
                   }`}
                 >
                   <span className="text-xl leading-none">{cat.icon || '📌'}</span>
-                  <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400 leading-tight text-center line-clamp-1">
+                  <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400 leading-tight text-center line-clamp-1">
                     {cat.label}
                   </span>
                 </button>
@@ -385,9 +385,9 @@ export function TransactionModal({
                 }`}
               >
                 <span className="text-xl leading-none flex items-center justify-center h-6">
-                  {showNewCat ? <X className="w-4 h-4 text-brand-600 dark:text-brand-400" /> : <Plus className="w-4 h-4 text-slate-400" />}
+                  {showNewCat ? <X className="w-4 h-4 text-brand-600 dark:text-brand-400" /> : <Plus className="w-4 h-4 text-slate-500 dark:text-slate-400" />}
                 </span>
-                <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 leading-tight text-center">
+                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-tight text-center">
                   {showNewCat ? 'Cancelar' : 'Nueva'}
                 </span>
               </button>
@@ -415,13 +415,15 @@ export function TransactionModal({
                   </button>
                 </div>
                 <div className="flex gap-1.5 items-center">
-                  <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 flex-shrink-0">Ícono:</span>
+                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex-shrink-0">Ícono:</span>
                   <div className="flex gap-1 flex-wrap">
                     {['📌', '🛒', '🍴', '💊', '📚', '🎉', '💼', '🏠', '🚗', '💻', '💰', '🎁', '🔧', '🐾', '✈️', '📱', '⛪'].map((emoji) => (
                       <button
                         key={emoji}
                         type="button"
                         onClick={() => setNewCatIcon(emoji)}
+                        aria-label={`Usar el ícono ${emoji}`}
+                        aria-pressed={newCatIcon === emoji}
                         className={`w-7 h-7 flex items-center justify-center rounded text-base leading-none transition-all ${
                           newCatIcon === emoji
                             ? 'ring-2 ring-brand-500 bg-white dark:bg-slate-700'
@@ -434,12 +436,14 @@ export function TransactionModal({
                   </div>
                 </div>
                 <div className="flex gap-1.5 items-center flex-wrap">
-                  <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">Color:</span>
-                  {CATEGORY_COLORS.slice(0, 8).map((c) => (
+                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Color:</span>
+                  {CATEGORY_COLORS.slice(0, 8).map((c, i) => (
                     <button
                       key={c}
                       type="button"
                       onClick={() => setNewCatColor(c)}
+                      aria-label={`Usar el color ${i + 1} de ${CATEGORY_COLORS.slice(0, 8).length}`}
+                      aria-pressed={newCatColor === c}
                       className={`w-5 h-5 rounded-full border-2 transition-all ${c.split(' ')[0]} ${
                         newCatColor === c ? 'ring-2 ring-brand-500 scale-110 border-white dark:border-slate-900' : 'border-transparent'
                       }`}

@@ -119,7 +119,7 @@ export function LoginPage() {
           </div>
 
           {/* Bottom */}
-          <p className="text-slate-400 text-xs">
+          <p className="text-slate-500 dark:text-slate-400 text-xs">
             © {new Date().getFullYear()} Foresight Finanzas. Todos los derechos reservados.
           </p>
         </div>
@@ -167,7 +167,7 @@ export function LoginPage() {
               /* ── Éxito: correo enviado ── */
               <div className="text-center space-y-4">
                 <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                  <MailCheck className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                  <MailCheck className="w-6 h-6 text-emerald-700 dark:text-emerald-400" />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">¡Correo enviado!</h3>
