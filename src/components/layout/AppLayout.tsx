@@ -4,7 +4,7 @@
 //   Mobile  (<lg): TabBar inferior flotante + contenido completo
 // ================================================================
 
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, type CSSProperties, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { TabBar } from './TabBar';
@@ -19,7 +19,12 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
+  const activeTab = useUiStore((s) => s.activeTab);
   const ensureCurrentMonth = useFinanceStore((s) => s.ensureCurrentMonth);
+
+  // Mismo criterio que el TabBar: el FAB solo se muestra donde registrar un
+  // movimiento es la acción esperada.
+  const showFab = activeTab === 'home' || activeTab === 'movements';
 
   // Atajos de teclado: Ctrl+N nueva transacción, Ctrl+K buscar
   useKeyboardShortcuts();
@@ -47,9 +52,14 @@ export function AppLayout({ children }: AppLayoutProps) {
         {/* Sin `pt-safe`: el Header ya aplica env(safe-area-inset-top) y está
             encima. Tenerlo en ambos sitios metía ~47px de vacío entre la
             cabecera y el contenido en cada pantalla de un iPhone con muesca
-            (en Android y escritorio el inset es 0, por eso no se notaba). */}
+            (en Android y escritorio el inset es 0, por eso no se notaba).
+
+            --fab-clearance: el FAB flota sobre la barra en Inicio y
+            Movimientos; sin este hueco tapaba el final del contenido. Las
+            demás pestañas no lo muestran y no pagan el espacio. */}
         <main
           className="flex-1 p-4 md:p-5 lg:p-6 w-full lg:pb-6 bg-slate-50 dark:bg-slate-950"
+          style={{ '--fab-clearance': showFab ? '4.5rem' : '0px' } as CSSProperties}
         >
           {children}
         </main>

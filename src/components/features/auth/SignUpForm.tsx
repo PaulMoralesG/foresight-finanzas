@@ -5,7 +5,7 @@
 import { useState, type FormEvent, useRef } from 'react';
 import { Eye, EyeOff, MailCheck, AlertCircle, Loader2, UserPlus } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { MIN_PASSWORD_LENGTH, passwordStrength, validateNewPassword } from '@/lib/password';
+import { MIN_PASSWORD_LENGTH, STRENGTH_TRACK_CLASS, passwordStrength, validateNewPassword } from '@/lib/password';
 
 /** Traduce errores de Supabase a español amigable */
 function signUpErrorToSpanish(err: unknown): string {
@@ -238,15 +238,13 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
               {[0, 1, 2, 3].map((i) => (
                 <div
                   key={i}
-                  className="h-1 flex-1 rounded-full transition-all duration-300"
-                  style={{
-                    backgroundColor: i <= pwStrength.score ? pwStrength.color : '#e2e8f0',
-                    opacity: i <= pwStrength.score ? 1 : 0.5,
-                  }}
+                  className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+                    i <= pwStrength.score ? pwStrength.barClass : STRENGTH_TRACK_CLASS
+                  }`}
                 />
               ))}
             </div>
-            <p className="text-[11px] mt-1 ml-1 font-medium" style={{ color: pwStrength.textColor }}>
+            <p className={`text-[11px] mt-1 ml-1 font-medium ${pwStrength.textClass}`}>
               {pwStrength.label}
             </p>
           </div>

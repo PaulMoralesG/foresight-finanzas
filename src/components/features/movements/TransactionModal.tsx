@@ -307,8 +307,11 @@ export function TransactionModal({
             </div>
           </div>
 
-          {/* Row 3: Ámbito + Método */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* Row 3: Ámbito + Método.
+              Apilado en pantallas estrechas: Método tiene TRES opciones y en
+              media columna de un teléfono de 390px la última ("Transf.") se
+              cortaba contra el borde. A partir de sm vuelven a ir en paralelo. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>
               <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Ámbito</label>
               <div className="flex gap-1">

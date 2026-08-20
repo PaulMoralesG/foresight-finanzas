@@ -136,10 +136,15 @@ input[type="checkbox"]:indeterminate {
   }
 
   /* ── Mobile: espacio para el TabBar fijo (padding-bottom uniforme para todas las páginas) ── */
-  /*    !important necesario: Tailwind p-4 (utilities) gana en especificidad a main (base) */
+  /*    !important necesario: Tailwind p-4 (utilities) gana en especificidad a main (base)
+   *
+   *    --fab-clearance lo fija AppLayout: el FAB flota por encima de la barra
+   *    y solo aparece en Inicio y Movimientos, así que solo esas dos pantallas
+   *    necesitan el hueco extra. Sin él, el botón tapaba el final del
+   *    contenido (se comía el texto de la tarjeta de ahorro). */
   @media (max-width: 1023px) {
     main {
-      padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px)) !important;
+      padding-bottom: calc(3.5rem + var(--fab-clearance, 0px) + env(safe-area-inset-bottom, 0px)) !important;
     }
   }
 
