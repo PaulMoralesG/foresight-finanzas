@@ -8,8 +8,10 @@ import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_COLORS } from '@/config/categories';
 import { getTodayISO, parseMoneyInput, syncToCloud } from '@/lib/utils';
+import { makeCategoryId } from '@/lib/category-id';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import type { TransactionType, BusinessType, PaymentMethod, Category } from '@/types';
 
 export function TransactionModal({
@@ -83,7 +85,7 @@ export function TransactionModal({
       addToast('Ya existe una categoría con ese nombre', 'error');
       return;
     }
-    const id = 'custom_' + label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    const id = makeCategoryId(label);
     const newCategory: Category = { id, label, icon: newCatIcon, color: newCatColor };
     addCustomCategory(type, newCategory);
     setCategory(id);
@@ -147,6 +149,10 @@ export function TransactionModal({
   // Cerrar modal con tecla Escape
   useEscapeKey(closeModal, isOpen && !isDeleteModalOpen);
 
+  // Retener el foco dentro del diálogo (cumple la promesa de aria-modal) y
+  // enfocar el monto al abrir, que es el primer dato que se escribe.
+  const modalRef = useFocusTrap<HTMLDivElement>(isOpen && !isDeleteModalOpen, '#tx-amount');
+
   if (!isOpen) return null;
 
   const isEditing = editingId !== null;
@@ -204,24 +210,29 @@ export function TransactionModal({
 
       {/* Modal */}
       <div
+        ref={modalRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="transaction-modal-title"
         className="fixed inset-0 z-[201] bg-white dark:bg-slate-950 md:rounded-2xl shadow-2xl flex flex-col w-full max-w-full md:max-w-md mx-auto overflow-hidden animate-scale-in md:inset-y-6 md:mx-auto pt-safe"
-        style={{ touchAction: 'pan-y', overscrollBehaviorX: 'none' }}
+        style={{ overscrollBehaviorX: 'none' }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-800">
           <h2 id="transaction-modal-title" className="font-bold text-sm text-slate-900 dark:text-white">
             {isEditing ? 'Editar Movimiento' : 'Nuevo Movimiento'}
           </h2>
-          <button onClick={closeModal} aria-label="Cerrar" className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-            <X className="text-xs" />
+          <button onClick={closeModal} aria-label="Cerrar" className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
 
         {/* Body — scrollable with iOS momentum */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden ios-scroll p-3 space-y-1.5" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
+        {/* id + `form=` en el botón del pie: el pie es hermano del formulario,
+            no hijo, así que sin esta asociación el `required` del monto nunca
+            disparaba la validación nativa y el botón no quedaba vinculado al
+            formulario para tecnologías de asistencia. */}
+        <form id="transaction-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden ios-scroll p-3 space-y-1.5" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
           {/* Row 1: Tipo + Monto */}
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -254,6 +265,7 @@ export function TransactionModal({
                 Monto
               </label>
               <input
+                id="tx-amount"
                 type="text"
                 inputMode="decimal"
                 placeholder="0.00"
@@ -295,8 +307,11 @@ export function TransactionModal({
             </div>
           </div>
 
-          {/* Row 3: Ámbito + Método */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* Row 3: Ámbito + Método.
+              Apilado en pantallas estrechas: Método tiene TRES opciones y en
+              media columna de un teléfono de 390px la última ("Transf.") se
+              cortaba contra el borde. A partir de sm vuelven a ir en paralelo. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>
               <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Ámbito</label>
               <div className="flex gap-1">
@@ -351,12 +366,15 @@ export function TransactionModal({
             <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">
               Categoría
               {categories.length > 0 && (
-                <span className="ml-1 font-normal normal-case text-slate-400">
+                <span className="ml-1 font-normal normal-case text-slate-500 dark:text-slate-400">
                   ({categories.length})
                 </span>
               )}
             </label>
-            <div className="grid grid-cols-4 gap-1.5">
+            {/* 3 columnas en pantallas estrechas: con 4 fijas, un iPhone SE
+                (320px) dejaba ~68px por celda y truncaba «Entretenimiento» o
+                «Transporte» a la primera palabra. */}
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
               {categories.map((cat) => (
                 <button
                   key={cat.id}
@@ -369,7 +387,7 @@ export function TransactionModal({
                   }`}
                 >
                   <span className="text-xl leading-none">{cat.icon || '📌'}</span>
-                  <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400 leading-tight text-center line-clamp-1">
+                  <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400 leading-tight text-center line-clamp-2">
                     {cat.label}
                   </span>
                 </button>
@@ -385,9 +403,9 @@ export function TransactionModal({
                 }`}
               >
                 <span className="text-xl leading-none flex items-center justify-center h-6">
-                  {showNewCat ? <X className="w-4 h-4 text-brand-600 dark:text-brand-400" /> : <Plus className="w-4 h-4 text-slate-400" />}
+                  {showNewCat ? <X className="w-4 h-4 text-brand-600 dark:text-brand-400" /> : <Plus className="w-4 h-4 text-slate-500 dark:text-slate-400" />}
                 </span>
-                <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 leading-tight text-center">
+                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-tight text-center">
                   {showNewCat ? 'Cancelar' : 'Nueva'}
                 </span>
               </button>
@@ -411,17 +429,19 @@ export function TransactionModal({
                     onClick={handleAddCustomCategory}
                     className="saas-btn-primary saas-btn-sm flex-shrink-0"
                   >
-                    <Plus className="text-[10px]" />
+                    <Plus className="w-3 h-3" />
                   </button>
                 </div>
                 <div className="flex gap-1.5 items-center">
-                  <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 flex-shrink-0">Ícono:</span>
+                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex-shrink-0">Ícono:</span>
                   <div className="flex gap-1 flex-wrap">
                     {['📌', '🛒', '🍴', '💊', '📚', '🎉', '💼', '🏠', '🚗', '💻', '💰', '🎁', '🔧', '🐾', '✈️', '📱', '⛪'].map((emoji) => (
                       <button
                         key={emoji}
                         type="button"
                         onClick={() => setNewCatIcon(emoji)}
+                        aria-label={`Usar el ícono ${emoji}`}
+                        aria-pressed={newCatIcon === emoji}
                         className={`w-7 h-7 flex items-center justify-center rounded text-base leading-none transition-all ${
                           newCatIcon === emoji
                             ? 'ring-2 ring-brand-500 bg-white dark:bg-slate-700'
@@ -434,12 +454,14 @@ export function TransactionModal({
                   </div>
                 </div>
                 <div className="flex gap-1.5 items-center flex-wrap">
-                  <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">Color:</span>
-                  {CATEGORY_COLORS.slice(0, 8).map((c) => (
+                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Color:</span>
+                  {CATEGORY_COLORS.slice(0, 8).map((c, i) => (
                     <button
                       key={c}
                       type="button"
                       onClick={() => setNewCatColor(c)}
+                      aria-label={`Usar el color ${i + 1} de ${CATEGORY_COLORS.slice(0, 8).length}`}
+                      aria-pressed={newCatColor === c}
                       className={`w-5 h-5 rounded-full border-2 transition-all ${c.split(' ')[0]} ${
                         newCatColor === c ? 'ring-2 ring-brand-500 scale-110 border-white dark:border-slate-900' : 'border-transparent'
                       }`}
@@ -460,7 +482,7 @@ export function TransactionModal({
               className="saas-btn-danger py-1.5 text-xs"
               title="Eliminar"
             >
-              <Trash2 className="text-[10px]" />
+              <Trash2 className="w-3 h-3" />
             </button>
           )}
           {isEditing && (
@@ -473,7 +495,8 @@ export function TransactionModal({
             </button>
           )}
           <button
-            onClick={handleSubmit}
+            type="submit"
+            form="transaction-form"
             className="saas-btn-primary flex-1 py-1.5 text-xs"
           >
             {isEditing ? 'Guardar Cambios' : 'Registrar Movimiento'}

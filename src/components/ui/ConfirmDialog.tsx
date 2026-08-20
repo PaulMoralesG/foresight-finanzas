@@ -57,7 +57,11 @@ export function ConfirmDialog({
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
         aria-describedby="confirm-dialog-message"
-        className="relative w-full sm:max-w-sm mx-4 mb-4 sm:mb-0 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6 animate-scale-in z-10"
+        /* El margen inferior en móvil tiene que salvar el TabBar fijo (~56px
+           + safe-area): con `mb-4` los botones Cancelar/Eliminar quedaban
+           medio tapados por la barra, justo los controles que hay que pulsar.
+           A partir de sm el diálogo va centrado y no necesita el hueco. */
+        className="relative w-full sm:max-w-sm mx-4 mb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] sm:mb-0 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6 animate-scale-in z-10"
       >
         <div className="flex items-start gap-4">
           <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${

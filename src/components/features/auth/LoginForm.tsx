@@ -120,32 +120,46 @@ export function LoginForm({ onSwitchToSignUp, onForgotPassword }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      <input
-        type="email"
-        placeholder="Correo electrónico"
-        value={email}
-        onChange={(e) => { setEmail(e.target.value); clearError(); }}
-        className={inputClass(!!error && !password)}
-        autoComplete="email"
-      />
-      <div className="relative">
+      <div>
+        <label htmlFor="login-email" className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+          Correo electrónico
+        </label>
         <input
-          type={showPassword ? 'text' : 'password'}
-          placeholder="Contraseña"
-          value={password}
-          onChange={(e) => { setPassword(e.target.value); clearError(); }}
-          className={inputClass(!!error && !!password)}
-          autoComplete="current-password"
+          id="login-email"
+          name="email"
+          type="email"
+          placeholder="tu@correo.com"
+          value={email}
+          onChange={(e) => { setEmail(e.target.value); clearError(); }}
+          className={inputClass(!!error && !password)}
+          autoComplete="email"
         />
-        <button
-          type="button"
-          onClick={() => setShowPassword(!showPassword)}
-          aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-          tabIndex={-1}
-        >
-          {showPassword ? <EyeOff className="text-xs" /> : <Eye className="text-xs" />}
-        </button>
+      </div>
+      <div>
+        <label htmlFor="login-password" className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+          Contraseña
+        </label>
+        <div className="relative">
+          <input
+            id="login-password"
+            name="password"
+            type={showPassword ? 'text' : 'password'}
+            placeholder="Tu contraseña"
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); clearError(); }}
+            className={inputClass(!!error && !!password)}
+            autoComplete="current-password"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            aria-pressed={showPassword}
+            className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+          >
+            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
       </div>
 
       <div className="flex justify-end">

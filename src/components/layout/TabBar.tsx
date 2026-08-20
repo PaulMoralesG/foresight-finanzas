@@ -46,7 +46,12 @@ export function TabBar() {
     const width = btnRect.width;
     const height = btnRect.height;
 
-    if (!pillInitialized.current) {
+    // La curva de rebote es un desplazamiento elástico: se omite si el sistema
+    // pide movimiento reducido (WCAG 2.3.3). El CSS no puede cubrir esto
+    // porque la transición se asigna aquí, en línea.
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (!pillInitialized.current || reducedMotion) {
       pill.style.transition = 'none';
       pillInitialized.current = true;
     } else {
@@ -98,30 +103,32 @@ export function TabBar() {
     return (
       <button
         key={tab.id}
+        type="button"
         ref={(el) => { if (el) btnRefs.current.set(tab.id, el); }}
         onClick={() => setActiveTab(tab.id)}
         title={tab.label}
         aria-label={tab.label}
-        className="relative flex-1 flex flex-col items-center justify-center rounded-xl z-10"
+        aria-current={isActive ? 'page' : undefined}
+        className="relative flex-1 flex flex-col items-center justify-center rounded-xl z-10 min-h-[44px]"
       >
         <Icon
           className={`size-6 transition-colors duration-300 ${
             isActive
               ? 'text-brand-600 dark:text-brand-400'
-              : 'text-slate-400 dark:text-slate-500'
+              : 'text-slate-500 dark:text-slate-400'
           }`}
         />
         <span
           className={`text-[11px] font-semibold mt-0.5 transition-colors duration-300 ${
             isActive
               ? 'text-brand-600 dark:text-brand-400'
-              : 'text-slate-400 dark:text-slate-500'
+              : 'text-slate-500 dark:text-slate-400'
           }`}
         >
           {tab.label}
         </span>
         {tab.id === 'home' && pendingCount > 0 && (
-          <span className="absolute top-0 right-1/2 translate-x-[12px] min-w-[16px] h-[16px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1 leading-none shadow-md shadow-red-500/30">
+          <span className="absolute top-0 right-1/2 translate-x-[12px] min-w-[16px] h-[16px] rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center px-1 leading-none shadow-md shadow-red-500/30">
             {pendingCount > 9 ? '9+' : pendingCount}
           </span>
         )}
@@ -134,14 +141,27 @@ export function TabBar() {
        Solo UN position:fixed en toda la pantalla → iOS PWA no recalcula viewport.
        El FAB es absolute dentro de este contenedor, flotando sobre el borde superior. ── */
     <div className="fixed bottom-0 left-0 right-0 z-30">
-      {/* FAB flotante — centrado horizontalmente sobre el TabBar.
+      {/* FAB flotante — centrado horizontalmente SOBRE el TabBar, sin tocarlo.
           absolute dentro del contenedor fixed para evitar recálculo de viewport en iOS PWA.
-          Solo visible en la pestaña Movements (donde el contexto es "añadir transacción").
-          En Home no se muestra para no solapar con el contenido del dashboard.
-          Responsive: 56px default, 64px en sm+. */}
+          Solo visible en Inicio y Movimientos (donde el contexto es "añadir transacción").
+          Responsive: 56px default, 64px en sm+.
+
+          ⚠️ Antes iba centrado en top:-28px, lo que dejaba su mitad inferior
+          superpuesta sobre la barra — justo encima del tercero de los cinco
+          tabs, "Estadísticas", tapándole el ícono.
+
+          Se probó despegarlo hacia arriba manteniéndolo centrado, pero un botón
+          flotante en el centro se come el texto de las tarjetas al hacer
+          scroll: se cambió un solape por otro peor. Ahora va abajo a la
+          derecha —la posición canónica de un FAB—, donde nunca toca la barra y
+          apenas invade el contenido.
+
+          (Para el look "notch" del patrón fintech —el FAB encajado en un hueco
+          de la barra— haría falta un número PAR de tabs: centrar un hueco entre
+          cinco elementos es geométricamente imposible.) */}
       <button
         onClick={() => openModal()}
-        className="absolute z-40
+        className="absolute z-40 bottom-full mb-3 right-4
           w-14 h-14 sm:w-16 sm:h-16 rounded-2xl sm:rounded-[18px]
           bg-brand-600 hover:bg-brand-700
           text-white
@@ -151,9 +171,6 @@ export function TabBar() {
           transition-all duration-200
           ring-2 ring-white dark:ring-slate-900"
         style={{
-          top: '-28px',
-          left: '50%',
-          transform: 'translateX(-50%)',
           // FAB global: registrar un movimiento es LA acción principal de la app.
           // Visible en Inicio (donde empieza la sesión) y Movimientos.
           // Estadísticas/Planes/Perfil son vistas de lectura/configuración.

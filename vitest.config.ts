@@ -2,9 +2,17 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import { createRequire } from 'module';
+
+const { version } = createRequire(import.meta.url)('./package.json');
 
 export default defineConfig({
   plugins: [react()],
+  // Mismo `define` que vite.config.ts: sin esto, cualquier test que renderice
+  // un componente que lea __APP_VERSION__ falla con "is not defined".
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+  },
   test: {
     globals: true,
     environment: 'jsdom',

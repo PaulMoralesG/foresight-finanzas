@@ -11,6 +11,8 @@ import { useFinanceStore } from '@/stores/financeStore';
 import { CATEGORY_COLORS } from '@/config/categories';
 import { CATEGORY_EMOJIS } from '@/hooks/useCategories';
 import { syncToCloud } from '@/lib/utils';
+import { makeCategoryId } from '@/lib/category-id';
+import { MIN_PASSWORD_LENGTH, STRENGTH_TRACK_CLASS, passwordStrength, validateNewPassword } from '@/lib/password';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 type Section = 'profile' | 'email' | 'password' | 'categories' | null;
@@ -34,9 +36,11 @@ export function ProfilePage() {
   const [savingEmail, setSavingEmail] = useState(false);
 
   // ── Change password form ──
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
+  const pwStrength = passwordStrength(newPassword);
 
   // ── Categorías personalizadas ──
   const customExpenseCategories = useFinanceStore((s) => s.customExpenseCategories);
@@ -49,6 +53,7 @@ export function ProfilePage() {
   const [newCatIcon, setNewCatIcon] = useState('📌');
   const [newCatColor, setNewCatColor] = useState(CATEGORY_COLORS[0]);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const [pendingDeleteCat, setPendingDeleteCat] = useState<{ id: string; label: string } | null>(null);
 
   // ── Edición de categoría ──
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
@@ -72,7 +77,7 @@ export function ProfilePage() {
         setEditLastName(user?.lastName || '');
       }
       if (section === 'email') setNewEmail('');
-      if (section === 'password') { setNewPassword(''); setConfirmPassword(''); }
+      if (section === 'password') { setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); }
       if (section === 'categories') { setNewCatLabel(''); setNewCatIcon('📌'); setNewCatColor(CATEGORY_COLORS[0]); setCatType('expense'); }
     }
   };
@@ -118,8 +123,13 @@ export function ProfilePage() {
   };
 
   const handleSavePassword = async () => {
-    if (newPassword.length < 6) {
-      addToast('La contraseña debe tener al menos 6 caracteres', 'error');
+    if (!currentPassword) {
+      addToast('Ingresa tu contraseña actual', 'error');
+      return;
+    }
+    const pwError = validateNewPassword(newPassword);
+    if (pwError) {
+      addToast(pwError, 'error');
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -128,9 +138,12 @@ export function ProfilePage() {
     }
     setSavingPassword(true);
     try {
-      const result = await updatePassword(newPassword);
+      const result = await updatePassword(currentPassword, newPassword);
       if (result.success) {
         addToast(result.message, 'success');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
         setExpanded(null);
       } else {
         addToast(result.message, 'error');
@@ -156,7 +169,7 @@ export function ProfilePage() {
       addToast('Ya existe una categoría con ese nombre', 'error');
       return;
     }
-    const id = 'custom_' + label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    const id = makeCategoryId(label);
     addCustomCategory(catType, { id, label, icon: newCatIcon, color: newCatColor });
     setNewCatLabel('');
     addToast('Categoría creada ✅', 'success');
@@ -189,14 +202,21 @@ export function ProfilePage() {
     cancelEditing();
   }
 
-  function handleDeleteCategory(id: string) {
-    deleteCustomCategory(catType, id);
+  /** Borrar es irreversible y el botón está a pocos píxeles del de editar:
+   *  pedir confirmación, igual que ya hacen cerrar sesión y borrar movimientos. */
+  function confirmDeleteCategory() {
+    if (!pendingDeleteCat) return;
+    deleteCustomCategory(catType, pendingDeleteCat.id);
+    setPendingDeleteCat(null);
     addToast('Categoría eliminada 🗑️', 'success');
     syncToCloud(saveData, addToast);
   }
 
   return (
-    <div className="space-y-5 animate-fade-in max-w-2xl">
+    /* max-w-2xl dejaba una columna estrecha con mucho vacío a la derecha en
+       monitores grandes, mientras Inicio y Estadísticas sí se expandían.
+       A partir de xl la tarjeta de perfil y los ajustes van lado a lado. */
+    <div className="animate-fade-in max-w-2xl xl:max-w-5xl grid grid-cols-1 xl:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] gap-5 items-start">
       {/* ─── Profile Card ─── */}
       <div className="saas-card p-6">
         <div className="flex items-center gap-4">
@@ -211,10 +231,12 @@ export function ProfilePage() {
           </div>
           <button
             onClick={() => toggleSection('profile')}
+            type="button"
+            aria-expanded={expanded === 'profile'}
             className={`saas-btn-sm ${expanded === 'profile' ? 'saas-btn-primary' : 'saas-btn-secondary'}`}
             aria-label="Editar perfil"
           >
-            <Pencil className="text-xs mr-1.5" />
+            <Pencil className="w-3.5 h-3.5 mr-1.5" />
             Editar
           </button>
         </div>
@@ -265,7 +287,7 @@ export function ProfilePage() {
                 {savingProfile ? (
                   <Loader2 className="animate-spin w-3 h-3 mr-1" />
                 ) : (
-                  <Check className="text-xs mr-1" />
+                  <Check className="w-3.5 h-3.5 mr-1" />
                 )}
                 Guardar cambios
               </button>
@@ -277,23 +299,25 @@ export function ProfilePage() {
       {/* ─── Cuenta ─── */}
       <div className="saas-card divide-y divide-slate-100 dark:divide-slate-800">
         <div className="px-4 pt-4 pb-2">
-          <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Cuenta</p>
+          <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Cuenta</p>
         </div>
 
         {/* Change Email */}
         <div>
           <button
             onClick={() => toggleSection('email')}
+            type="button"
+            aria-expanded={expanded === 'email'}
             className="w-full flex items-center gap-4 p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded-lg"
           >
             <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950 flex items-center justify-center text-blue-500 flex-shrink-0">
-              <Mail />
+              <Mail className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Cambiar correo electrónico</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">Actualiza tu dirección de email</p>
             </div>
-            {expanded === 'email' ? <ChevronUp className="text-xs text-slate-400 transition-transform" /> : <ChevronRight className="text-xs text-slate-400 transition-transform" />}
+            {expanded === 'email' ? <ChevronUp className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" />}
           </button>
 
           {expanded === 'email' && (
@@ -326,7 +350,7 @@ export function ProfilePage() {
                   {savingEmail ? (
                     <Loader2 className="animate-spin w-3 h-3 mr-1" />
                   ) : (
-                    <Send className="text-xs mr-1" />
+                    <Send className="w-3.5 h-3.5 mr-1" />
                   )}
                   Enviar verificación
                 </button>
@@ -339,42 +363,84 @@ export function ProfilePage() {
         <div>
           <button
             onClick={() => toggleSection('password')}
+            type="button"
+            aria-expanded={expanded === 'password'}
             className="w-full flex items-center gap-4 p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded-lg"
           >
             <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-950 flex items-center justify-center text-amber-500 flex-shrink-0">
-              <Lock />
+              <Lock className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Cambiar contraseña</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">Mantén tu cuenta protegida</p>
             </div>
-            {expanded === 'password' ? <ChevronUp className="text-xs text-slate-400 transition-transform" /> : <ChevronRight className="text-xs text-slate-400 transition-transform" />}
+            {expanded === 'password' ? <ChevronUp className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" />}
           </button>
 
           {expanded === 'password' && (
             <div className="px-4 pb-4 space-y-3 animate-fade-in">
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Elige una contraseña segura de al menos 6 caracteres.
+                Por seguridad, confirma tu contraseña actual antes de elegir una nueva
+                de al menos {MIN_PASSWORD_LENGTH} caracteres.
               </p>
               <div>
-                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                  Nueva contraseña
+                <label htmlFor="current-password" className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                  Contraseña actual
                 </label>
                 <input
+                  id="current-password"
+                  name="current-password"
                   type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
                   className="saas-input"
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Tu contraseña de ahora"
                   onKeyDown={(e) => { if (e.key === 'Enter') handleSavePassword(); }}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                <label htmlFor="new-password" className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                  Nueva contraseña
+                </label>
+                <input
+                  id="new-password"
+                  name="new-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="saas-input"
+                  placeholder={`Mínimo ${MIN_PASSWORD_LENGTH} caracteres`}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSavePassword(); }}
+                />
+                {newPassword.length > 0 && (
+                  <div className="mt-2">
+                    <div className="flex gap-1">
+                      {[0, 1, 2, 3].map((i) => (
+                        <div
+                          key={i}
+                          className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+                            i <= pwStrength.score ? pwStrength.barClass : STRENGTH_TRACK_CLASS
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <p className={`text-[11px] mt-1 font-medium ${pwStrength.textClass}`}>
+                      {pwStrength.label}
+                    </p>
+                  </div>
+                )}
+              </div>
+              <div>
+                <label htmlFor="confirm-password" className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                   Confirmar contraseña
                 </label>
                 <input
+                  id="confirm-password"
+                  name="confirm-password"
                   type="password"
+                  autoComplete="new-password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="saas-input"
@@ -394,7 +460,7 @@ export function ProfilePage() {
                   {savingPassword ? (
                     <Loader2 className="animate-spin w-3 h-3 mr-1" />
                   ) : (
-                    <Key className="text-xs mr-1" />
+                    <Key className="w-3.5 h-3.5 mr-1" />
                   )}
                   Actualizar contraseña
                 </button>
@@ -405,25 +471,31 @@ export function ProfilePage() {
 
         {/* ─── Personalización ─── */}
         <div className="px-4 pt-5 pb-2">
-          <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Personalización</p>
+          <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Personalización</p>
         </div>
 
         {/* ─── Categorías ─── */}
         <div>
           <button
             onClick={() => toggleSection('categories')}
+            type="button"
+            aria-expanded={expanded === 'categories'}
             className="w-full flex items-center gap-4 p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded-lg"
           >
             <div className="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-950 flex items-center justify-center text-purple-500 flex-shrink-0">
-              <Tags />
+              <Tags className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Categorías personalizadas</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {customExpenseCategories.length + customIncomeCategories.length} categorías creadas
+                {(() => {
+                  const n = customExpenseCategories.length + customIncomeCategories.length;
+                  if (n === 0) return 'Ninguna todavía';
+                  return n === 1 ? '1 categoría creada' : `${n} categorías creadas`;
+                })()}
               </p>
             </div>
-            {expanded === 'categories' ? <ChevronUp className="text-xs text-slate-400 transition-transform" /> : <ChevronRight className="text-xs text-slate-400 transition-transform" />}
+            {expanded === 'categories' ? <ChevronUp className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" />}
           </button>
 
           {expanded === 'categories' && (
@@ -464,6 +536,8 @@ export function ProfilePage() {
                                 key={emoji}
                                 type="button"
                                 onClick={() => setEditingCatIcon(emoji)}
+                                aria-label={`Usar el ícono ${emoji}`}
+                                aria-pressed={editingCatIcon === emoji}
                                 className={`w-6 h-6 flex items-center justify-center rounded text-xs transition-all ${
                                   editingCatIcon === emoji
                                     ? 'ring-2 ring-brand-500 bg-white dark:bg-slate-700'
@@ -484,17 +558,17 @@ export function ProfilePage() {
                           />
                           <button
                             onClick={handleUpdateCategory}
-                            className="text-emerald-500 hover:text-emerald-600 p-1 flex-shrink-0"
+                            className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-600 p-1 flex-shrink-0"
                             title="Guardar"
                           >
-                            <Check className="text-xs" />
+                            <Check className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={cancelEditing}
-                            className="text-slate-400 hover:text-slate-600 p-1 flex-shrink-0"
+                            className="text-slate-500 dark:text-slate-400 hover:text-slate-600 p-1 flex-shrink-0"
                             title="Cancelar"
                           >
-                            <X className="text-xs" />
+                            <X className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       ) : (
@@ -504,19 +578,26 @@ export function ProfilePage() {
                           <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-300 truncate">
                             {cat.label}
                           </span>
+                          {/* Objetivos táctiles de 36px y separados entre sí:
+                              antes eran botones de ~24px pegados, y en un
+                              teléfono era fácil dar a Eliminar queriendo Editar. */}
                           <button
+                            type="button"
                             onClick={() => startEditing(cat)}
-                            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-1"
+                            className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
                             title="Editar categoría"
+                            aria-label={`Editar la categoría ${cat.label}`}
                           >
-                            <Edit3 className="text-xs" />
+                            <Edit3 className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() => handleDeleteCategory(cat.id)}
-                            className="text-red-400 hover:text-red-600 transition-colors p-1"
+                            type="button"
+                            onClick={() => setPendingDeleteCat({ id: cat.id, label: cat.label })}
+                            className="w-9 h-9 ml-1 flex items-center justify-center rounded-lg text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950 transition-colors flex-shrink-0"
                             title="Eliminar categoría"
+                            aria-label={`Eliminar la categoría ${cat.label}`}
                           >
-                            <Trash2 className="text-xs" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       )}
@@ -524,7 +605,7 @@ export function ProfilePage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-slate-400 dark:text-slate-500 text-center py-2">
+                <p className="text-xs text-slate-500 dark:text-slate-400 text-center py-2">
                   No tienes categorías personalizadas de {catType === 'expense' ? 'gasto' : 'ingreso'}.
                 </p>
               )}
@@ -550,6 +631,8 @@ export function ProfilePage() {
                         key={emoji}
                         type="button"
                         onClick={() => setNewCatIcon(emoji)}
+                        aria-label={`Usar el ícono ${emoji}`}
+                        aria-pressed={newCatIcon === emoji}
                         className={`w-7 h-7 flex items-center justify-center rounded text-sm transition-all ${
                           newCatIcon === emoji
                             ? 'ring-2 ring-brand-500 bg-white dark:bg-slate-700'
@@ -563,11 +646,13 @@ export function ProfilePage() {
                 </div>
                 <div className="flex gap-2 items-center flex-wrap">
                   <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Color:</span>
-                  {CATEGORY_COLORS.slice(0, 8).map((c) => (
+                  {CATEGORY_COLORS.slice(0, 8).map((c, i) => (
                     <button
                       key={c}
                       type="button"
                       onClick={() => setNewCatColor(c)}
+                      aria-label={`Usar el color ${i + 1} de ${CATEGORY_COLORS.slice(0, 8).length}`}
+                      aria-pressed={newCatColor === c}
                       className={`w-6 h-6 rounded-full border-2 transition-all ${c.split(' ')[0]} ${
                         newCatColor === c ? 'ring-2 ring-brand-500 scale-110 border-white dark:border-slate-900' : 'border-transparent'
                       }`}
@@ -575,7 +660,7 @@ export function ProfilePage() {
                   ))}
                 </div>
                 <button onClick={handleAddCategory} className="saas-btn-primary saas-btn-sm w-full">
-                  <Plus className="text-xs mr-1" />
+                  <Plus className="w-3.5 h-3.5 mr-1" />
                   Añadir categoría
                 </button>
               </div>
@@ -586,7 +671,7 @@ export function ProfilePage() {
         {/* Apariencia — Toggle (no accordion) */}
         <div className="flex items-center gap-4 p-4">
           <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${isDark ? 'bg-amber-50 dark:bg-amber-950 text-amber-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
-            {isDark ? <Sun /> : <Moon />}
+            {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-slate-900 dark:text-white">Apariencia</p>
@@ -599,8 +684,10 @@ export function ProfilePage() {
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
               isDark ? 'bg-brand-600' : 'bg-slate-300 dark:bg-slate-600'
             }`}
+            type="button"
             role="switch"
             aria-checked={isDark}
+            aria-label="Activar tema oscuro"
           >
             <span
               className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
@@ -612,7 +699,7 @@ export function ProfilePage() {
 
         {/* ─── Cerrar sesión ─── */}
         <div className="px-4 pt-5 pb-2">
-          <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Sesión</p>
+          <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Sesión</p>
         </div>
 
         {/* Sign Out */}
@@ -620,20 +707,21 @@ export function ProfilePage() {
           onClick={() => setShowSignOutConfirm(true)}
           className="w-full flex items-center gap-4 p-4 text-left hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors rounded-lg"
         >
-          <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-950 flex items-center justify-center text-red-500 flex-shrink-0">
-            <LogOut />
+          <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-950 flex items-center justify-center text-red-600 dark:text-red-400 flex-shrink-0">
+            <LogOut className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-red-600 dark:text-red-400">Cerrar sesión</p>
             <p className="text-xs text-slate-500 dark:text-slate-400">Finaliza tu sesión actual</p>
           </div>
-          <ChevronRight className="text-xs text-slate-400" />
+          <ChevronRight className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
         </button>
       </div>
 
-      {/* Version */}
-      <p className="text-center text-xs text-slate-400 dark:text-slate-500">
-        Foresight Finanzas v2.0 · SaaS Edition
+      {/* Versión — leída de package.json vía Vite, no escrita a mano
+          (el pie decía v2.0 mientras package.json ya iba por 2.1.0) */}
+      <p className="text-center text-xs text-slate-500 dark:text-slate-400 xl:col-span-2">
+        Foresight Finanzas v{__APP_VERSION__} · SaaS Edition
       </p>
 
       <ConfirmDialog
@@ -643,6 +731,15 @@ export function ProfilePage() {
         confirmLabel="Cerrar sesión"
         onConfirm={() => { setShowSignOutConfirm(false); signOut(); }}
         onCancel={() => setShowSignOutConfirm(false)}
+      />
+
+      <ConfirmDialog
+        open={pendingDeleteCat !== null}
+        title="Eliminar categoría"
+        message={`¿Eliminar «${pendingDeleteCat?.label ?? ''}»? Los movimientos que ya la usan conservan su categoría, pero no podrás asignarla a nuevos movimientos. Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        onConfirm={confirmDeleteCategory}
+        onCancel={() => setPendingDeleteCat(null)}
       />
     </div>
   );
