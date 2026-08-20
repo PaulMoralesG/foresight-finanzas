@@ -7,7 +7,7 @@ import { useState, useMemo } from 'react';
 import { X, Calendar, Loader2, Download, FileSpreadsheet, Building2, User } from 'lucide-react';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { formatMoney, MONTH_NAMES, downloadBlob } from '@/lib/utils';
+import { formatMoney, MONTH_NAMES, downloadBlob, toCsv } from '@/lib/utils';
 import { getCategoryById } from '@/config/categories';
 import { generatePDFReport } from '@/lib/pdf-generator';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
@@ -63,7 +63,6 @@ export function ReportModal() {
 
   async function handleCSV() {
     try {
-      const BOM = String.fromCharCode(0xFEFF);
       const headers = ['Fecha', 'Tipo', 'Categoría', 'Concepto', 'Monto', 'Ámbito', 'Método'];
       const rows = monthData.map((tx) => [
         tx.date,
@@ -74,12 +73,9 @@ export function ReportModal() {
         tx.businessType === 'business' || !tx.businessType ? 'Negocio' : 'Personal',
         tx.method === 'cash' ? 'Efectivo' : tx.method === 'card' ? 'Tarjeta' : 'Transferencia',
       ]);
-      const csv = [headers, ...rows]
-        .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-        .join('\n');
-      const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
-      await downloadBlob(blob, `reporte-${monthSlug}.csv`);
-      addToast('CSV descargado ✅', 'success');
+      const outcome = await downloadBlob(toCsv(headers, rows), `reporte-${monthSlug}.csv`);
+      if (outcome === 'cancelled') return; // el usuario cerró el menú de compartir
+      addToast(outcome === 'shared' ? 'CSV listo para compartir ✅' : 'CSV descargado ✅', 'success');
     } catch {
       addToast('Error al generar el CSV', 'error');
     }
@@ -114,9 +110,13 @@ export function ReportModal() {
       const filename = `foresight-reporte-${monthStr}-${label.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}.pdf`;
 
       const blob = doc.output('blob') as unknown as Blob;
-      await downloadBlob(blob, filename);
+      const outcome = await downloadBlob(blob, filename);
+      if (outcome === 'cancelled') return; // el usuario cerró el menú de compartir
 
-      addToast('Reporte PDF descargado ✅', 'success');
+      addToast(
+        outcome === 'shared' ? 'Reporte PDF listo para compartir ✅' : 'Reporte PDF descargado ✅',
+        'success',
+      );
     } catch {
       addToast('Error al generar el PDF', 'error');
     } finally {

@@ -6,7 +6,7 @@ import { useMemo, useState, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, FileText, FileSpreadsheet, Loader2, TrendingUp, ArrowUp, ArrowDown, PieChart, User, Building2, ClipboardList, CalendarClock } from 'lucide-react';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { formatMoney, MONTH_NAMES, formatDateLong, safeParseDate, downloadBlob } from '@/lib/utils';
+import { formatMoney, MONTH_NAMES, formatDateLong, safeParseDate, downloadBlob, toCsv } from '@/lib/utils';
 import { getCategoryById } from '@/config/categories';
 import { generatePDFReport } from '@/lib/pdf-generator';
 import {
@@ -244,8 +244,9 @@ export function StatsPage() {
       const monthStr = viewDate.toISOString().slice(0, 7);
       const filename = `foresight-reporte-${monthStr}-${reportLabel.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}.pdf`;
       const blob = doc.output('blob') as unknown as Blob;
-      await downloadBlob(blob, filename);
-      addToast(`PDF descargado ✅`, 'success');
+      const outcome = await downloadBlob(blob, filename);
+      if (outcome === 'cancelled') return; // el usuario cerró el menú de compartir
+      addToast(outcome === 'shared' ? 'PDF listo para compartir ✅' : 'PDF descargado ✅', 'success');
     } catch {
       addToast('Error al descargar el PDF', 'error');
     } finally {
@@ -258,7 +259,7 @@ export function StatsPage() {
   const customIncomeCats = useFinanceStore((s) => s.customIncomeCategories);
   const allCustomCats = useMemo(() => [...customExpenseCats, ...customIncomeCats], [customExpenseCats, customIncomeCats]);
 
-  const generateCSV = useCallback((): { blob: Blob; csv: string } | null => {
+  const generateCSV = useCallback((): { blob: Blob } | null => {
     const exportData = getExportData();
     if (exportData.length === 0) return null;
 
@@ -274,14 +275,14 @@ export function StatsPage() {
         cat?.label || item.category,
         negocio,
         monto.toFixed(2),
-        `"${(item.concept || '').replace(/"/g, '""')}"`,
+        item.concept || '',
       ];
     });
 
-    const BOM = '\uFEFF';
-    const csv = BOM + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    return { blob, csv };
+    // toCsv escapa TODAS las celdas. Antes aqu\u00ED solo se entrecomillaba el
+    // concepto, as\u00ED que una categor\u00EDa con coma (\u00ABComida, bebida\u00BB) desplazaba
+    // las columnas y Excel abr\u00EDa el archivo descuadrado desde esa fila.
+    return { blob: toCsv(headers, rows) };
   }, [getExportData, allCustomCats]);
 
   // ── Excel: download ──
@@ -296,8 +297,9 @@ export function StatsPage() {
       const viewDate = getViewDate();
       const monthStr = viewDate.toISOString().slice(0, 7);
       const filename = `foresight-datos-${monthStr}-${reportLabel.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}.csv`;
-      await downloadBlob(result.blob, filename);
-      addToast(`Excel descargado ✅`, 'success');
+      const outcome = await downloadBlob(result.blob, filename);
+      if (outcome === 'cancelled') return; // el usuario cerró el menú de compartir
+      addToast(outcome === 'shared' ? 'Excel listo para compartir ✅' : 'Excel descargado ✅', 'success');
     } catch {
       addToast('Error al descargar el Excel', 'error');
     } finally {
