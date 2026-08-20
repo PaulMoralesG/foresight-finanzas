@@ -153,23 +153,38 @@ export function formatDateLong(iso: string): string {
   return `${day} de ${MONTH_NAMES[month - 1]} ${year}`;
 }
 
-/**
- * Descarga un archivo.
- * - Móviles (iOS Safari, Android Chrome): Web Share API → menú nativo de
- *   compartir/guardar (WhatsApp, Archivos, AirDrop, etc.).
- * - Escritorio: blob URL + <a download>.
- */
-export async function downloadBlob(blob: Blob, filename: string): Promise<void> {
-  // Web Share API: funciona en iOS Safari 12.2+ y Android Chrome 75+
-  if (navigator.share && navigator.canShare) {
-    const file = new File([blob], filename, { type: blob.type || 'application/octet-stream' });
-    if (navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file] });
-      return;
-    }
-  }
+export type DownloadOutcome = 'downloaded' | 'shared' | 'cancelled';
 
-  // Escritorio: blob URL + <a download>
+/**
+ * ¿Conviene abrir el menú nativo de compartir en vez de descargar el archivo?
+ *
+ * La versión anterior preguntaba solo si la API EXISTE (`navigator.share &&
+ * navigator.canShare`), y eso es cierto también en Chrome y Edge sobre
+ * Windows. Resultado: en escritorio se abría el diálogo de compartir de
+ * Windows en lugar de guardar el archivo, justo lo contrario de lo que decía
+ * el comentario de la función.
+ *
+ * Ahora se decide por DISPOSITIVO: el menú de compartir solo se usa donde
+ * `<a download>` no es fiable —iOS/iPadOS Safari— o donde no hay ratón con el
+ * que manejar una descarga. Un portátil Windows con pantalla táctil tiene
+ * puntero grueso Y fino, así que recibe la descarga normal.
+ */
+function prefersShareSheet(): boolean {
+  if (typeof navigator === 'undefined' || !navigator.share || !navigator.canShare) return false;
+
+  // iOS / iPadOS: Safari ignora el atributo `download` en muchos casos
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  if (isIOS) return true;
+
+  if (typeof window === 'undefined' || !window.matchMedia) return false;
+  const coarse = window.matchMedia('(pointer: coarse)').matches;
+  const hasMouse = window.matchMedia('(any-pointer: fine)').matches;
+  return coarse && !hasMouse;
+}
+
+/** Descarga clásica: blob URL + <a download>. */
+function anchorDownload(blob: Blob, filename: string): DownloadOutcome {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -179,4 +194,65 @@ export async function downloadBlob(blob: Blob, filename: string): Promise<void> 
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 5000);
+  return 'downloaded';
+}
+
+/**
+ * Guarda un archivo en el dispositivo.
+ * - Móvil: menú nativo de compartir/guardar (WhatsApp, Archivos, AirDrop…).
+ * - Escritorio: descarga normal del navegador.
+ *
+ * NUNCA lanza por culpa del menú de compartir. Antes sí lo hacía, y eso
+ * producía los dos fallos que se veían en la app:
+ *
+ *  · `navigator.share()` exige activación de usuario RECIENTE. Los dos flujos
+ *    de PDF hacen `await generatePDFReport(...)` antes de llamar aquí, y
+ *    generar el PDF tarda lo suficiente como para que la activación caduque:
+ *    la llamada fallaba con NotAllowedError, la excepción subía hasta el
+ *    `catch` del componente y el usuario veía "Error al generar el PDF" — sin
+ *    llegar nunca a la descarga de respaldo.
+ *  · Cerrar el menú de compartir rechaza con AbortError. Cancelar no es un
+ *    error, pero acababa en el mismo `catch`: "Error al descargar el Excel".
+ *
+ * Ahora un fallo al compartir cae a la descarga normal, y una cancelación se
+ * informa como tal para que el llamador no cante un éxito que no ocurrió.
+ */
+export async function downloadBlob(blob: Blob, filename: string): Promise<DownloadOutcome> {
+  if (prefersShareSheet()) {
+    const file = new File([blob], filename, { type: blob.type || 'application/octet-stream' });
+    if (navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file] });
+        return 'shared';
+      } catch (err) {
+        // El usuario cerró el menú: no es un fallo, no hay nada que reintentar
+        if (err instanceof DOMException && err.name === 'AbortError') return 'cancelled';
+        // Cualquier otra cosa (activación caducada, tipo no permitido,
+        // el sistema no ofrece destino): seguir por la descarga normal
+        console.warn('[downloadBlob] Compartir falló, usando descarga directa:', err);
+      }
+    }
+  }
+
+  return anchorDownload(blob, filename);
+}
+
+/**
+ * Serializa filas a CSV escapando TODAS las celdas.
+ *
+ * Estaba duplicado, y solo una de las dos copias lo hacía bien: la de
+ * StatsPage entrecomillaba únicamente el concepto, así que una categoría con
+ * coma —«Comida, bebida», fácil de crear— desplazaba las columnas y Excel
+ * abría el archivo descuadrado a partir de esa fila.
+ *
+ * El BOM va delante para que Excel detecte UTF-8 y no rompa los acentos.
+ */
+export function toCsv(headers: string[], rows: (string | number)[][]): Blob {
+  const cell = (v: string | number) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const csv = [headers, ...rows].map((row) => row.map(cell).join(',')).join('\r\n');
+  // String.fromCharCode y no un BOM literal en el fuente: escrito de forma
+  // directa es invisible al leer el código y frágil según cómo se guarde el
+  // archivo (de hecho se perdió al escribir esta función, y lo cazó el test).
+  const BOM = String.fromCharCode(0xfeff);
+  return new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
 }
