@@ -7,7 +7,7 @@ import { useState, useMemo } from 'react';
 import { X, Calendar, Loader2, Download, FileSpreadsheet, Building2, User } from 'lucide-react';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { formatMoney, MONTH_NAMES, downloadBlob, toCsv } from '@/lib/utils';
+import { formatMoney, MONTH_NAMES, downloadBlob, toCsv, sortByDateAsc } from '@/lib/utils';
 import { getCategoryById } from '@/config/categories';
 import { generatePDFReport } from '@/lib/pdf-generator';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
@@ -64,7 +64,8 @@ export function ReportModal() {
   async function handleCSV() {
     try {
       const headers = ['Fecha', 'Tipo', 'Categoría', 'Concepto', 'Monto', 'Ámbito', 'Método'];
-      const rows = monthData.map((tx) => [
+      // Cronológico: el orden del store es por última edición, no por fecha.
+      const rows = sortByDateAsc(monthData).map((tx) => [
         tx.date,
         tx.type === 'income' ? 'Ingreso' : 'Gasto',
         (getCategoryById(tx.category, allCustomCats)?.label || tx.category),

@@ -4,14 +4,19 @@
 
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { formatMoney, MONTH_NAMES, safeParseDate } from './utils';
+import { formatMoney, MONTH_NAMES, safeParseDate, sortByDateAsc } from './utils';
 import type { Transaction } from '@/types';
 
 export async function generatePDFReport(
-  monthly: Transaction[],
+  monthlyInput: Transaction[],
   viewDate: Date,
   label = ''
 ): Promise<{ doc: jsPDF; monthName: string; year: number }> {
+  // Ordenar aquí dentro y no solo en quien llama: así CUALQUIER reporte sale
+  // cronológico, incluidos los que se añadan más adelante. Antes se recorría
+  // el array tal cual venía del store, cuyo orden es de última edición.
+  const monthly = sortByDateAsc(monthlyInput);
+
   const monthName = MONTH_NAMES[viewDate.getMonth()];
   const year = viewDate.getFullYear();
 
