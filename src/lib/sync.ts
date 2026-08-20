@@ -222,6 +222,54 @@ let dirtyDuringSync = false; // el usuario editó mientras sincronizábamos
 let syncDisabled = false; // esquema no migrado → modo local-only
 let initialized = false;
 
+// ── Marca de agua del push (DAT-01) ──
+//
+// pushAll() subía TODAS las filas vivas de las cinco tablas en cada ciclo, sin
+// distinguir qué había cambiado. Con 200 movimientos es imperceptible; con
+// 2000 —tres años de uso— cada guardado movía megabytes, y el debounce de
+// 800ms hace que ocurra a menudo: batería, plan de datos y cuota de Supabase.
+//
+// Ahora solo se suben las filas con `updated_at` posterior al último push
+// confirmado. Es deliberadamente conservador y solo se aplica al PUSH:
+//
+//   · Subir de más es inofensivo (el trigger keep_newest de la migración 0004
+//     descarta lo rancio y el upsert es idempotente).
+//   · Subir de menos sí perdería datos — por eso cada `attach` (login) fuerza
+//     un push completo que reconcilia cualquier divergencia acumulada.
+//   · El PULL sigue siendo completo: leer de menos dejaría al cliente con un
+//     snapshot incompleto y el merge podría interpretar filas ausentes como
+//     inexistentes. Ese lado necesita un diseño aparte.
+let pushWatermark: string | null = null;
+
+function watermarkKey(uid: string): string {
+  return `foresight-sync-watermark:${uid}`;
+}
+
+function loadWatermark(uid: string): string | null {
+  try {
+    return localStorage.getItem(watermarkKey(uid));
+  } catch {
+    return null; // modo privado de Safari, cuota llena, etc.
+  }
+}
+
+function saveWatermark(uid: string, at: string): void {
+  pushWatermark = at;
+  try {
+    localStorage.setItem(watermarkKey(uid), at);
+  } catch {
+    // Sin persistencia solo se pierde la optimización: el próximo arranque
+    // hará un push completo, que es el comportamiento anterior.
+  }
+}
+
+function clearWatermark(uid: string): void {
+  pushWatermark = null;
+  try {
+    localStorage.removeItem(watermarkKey(uid));
+  } catch { /* ignorar */ }
+}
+
 /** ¿Error de esquema PERMANENTE? (tabla/columna inexistente — SQL de migración
  *  no ejecutado). Estos sí deben desactivar el sync hasta que se corrija a mano. */
 export function isSchemaError(err: unknown): boolean {
@@ -490,57 +538,87 @@ async function upsert(
   if (error) throw error;
 }
 
-async function pushAll(uid: string, merged: MergeResult): Promise<void> {
+/**
+ * @param since  marca de agua: solo se suben filas con `updated_at` posterior.
+ *               `null` = push completo (primer push de la sesión).
+ */
+async function pushAll(uid: string, merged: MergeResult, since: string | null): Promise<void> {
+  // Comparación lexicográfica: los ISO-8601 en UTC ordenan igual como texto
+  // que como fecha, así que no hace falta parsear.
+  //
+  // `>=` y no `>`: una fila modificada en el MISMO milisegundo en que se tomó
+  // la marca de agua quedaría fuera con la comparación estricta y no se
+  // subiría nunca. Con `>=` esa fila se reenvía una vez de más —inofensivo,
+  // el upsert es idempotente y keep_newest descarta lo rancio— en vez de
+  // perderse.
+  const changed = (updatedAt: string): boolean => since === null || updatedAt >= since;
+
   const tombstoneRows = (tombstones: Record<string, string>): object[] =>
-    Object.entries(tombstones).map(([id, at]) => ({
-      id,
-      user_id: uid,
-      updated_at: at,
-      deleted_at: at,
-    }));
+    Object.entries(tombstones)
+      .filter(([, at]) => changed(at))
+      .map(([id, at]) => ({
+        id,
+        user_id: uid,
+        updated_at: at,
+        deleted_at: at,
+      }));
 
   // onConflict 'user_id,id' en las cuatro tablas: desde la migración 0005 la
   // PK es compuesta, de modo que dos cuentas pueden compartir un mismo `id`
   // sin que el upsert de una choque contra la fila —invisible por RLS— de la otra.
   await upsert('expenses', [
-    ...merged.expenses.live.map((t) => expenseToRow(t, uid)),
+    ...merged.expenses.live.filter((t) => changed(t.updated_at)).map((t) => expenseToRow(t, uid)),
     ...tombstoneRows(merged.expenses.tombstones),
   ], 'user_id,id');
 
   await upsert('reminders', [
-    ...merged.reminders.live.map((r) => reminderToRow(r, uid)),
+    ...merged.reminders.live.filter((r) => changed(r.updated_at)).map((r) => reminderToRow(r, uid)),
     ...tombstoneRows(merged.reminders.tombstones),
   ], 'user_id,id');
 
   await upsert('categories', [
-    ...merged.expenseCategories.live.map((c) => categoryToRow(c, uid, 'expense')),
-    ...merged.incomeCategories.live.map((c) => categoryToRow(c, uid, 'income')),
+    ...merged.expenseCategories.live
+      .filter((c) => changed(c.updated_at ?? ''))
+      .map((c) => categoryToRow(c, uid, 'expense')),
+    ...merged.incomeCategories.live
+      .filter((c) => changed(c.updated_at ?? ''))
+      .map((c) => categoryToRow(c, uid, 'income')),
     ...tombstoneRows(merged.expenseCategories.tombstones),
     ...tombstoneRows(merged.incomeCategories.tombstones),
   ], 'user_id,id');
 
   await upsert('savings_goals', [
-    ...merged.goals.live.map((g) => goalToRow(g, uid)),
+    ...merged.goals.live.filter((g) => changed(g.updated_at)).map((g) => goalToRow(g, uid)),
     ...tombstoneRows(merged.goals.tombstones),
   ], 'user_id,id');
 
-  await upsert('budgets', Object.entries(merged.budgets.budgets).map(([month, amount]) => ({
-    user_id: uid,
-    month,
-    amount,
-    updated_at: merged.budgets.updatedAt[month] ?? nowIso(),
-  })), 'user_id,month');
+  await upsert('budgets', Object.entries(merged.budgets.budgets)
+    .filter(([month]) => changed(merged.budgets.updatedAt[month] ?? ''))
+    .map(([month, amount]) => ({
+      user_id: uid,
+      month,
+      amount,
+      updated_at: merged.budgets.updatedAt[month] ?? nowIso(),
+    })), 'user_id,month');
 }
 
 /** Pull → merge → push con reintentos por red. Los errores de esquema
  *  desactivan el sync (modo local-only) sin reintentar. */
-async function pushWithRetry(uid: string): Promise<boolean> {
+async function pushWithRetry(uid: string, fullPush = false): Promise<boolean> {
   let lastError: unknown;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
+      // Se marca ANTES del pull: cualquier edición que ocurra durante el ciclo
+      // queda por encima de la marca y entra en el push siguiente en vez de
+      // caer en la grieta entre "ya sincronizado" y "aún no".
+      const startedAt = nowIso();
+      const since = fullPush ? null : pushWatermark;
+
       const snapshot = await pullAll(uid);
       const merged = applyMerge(snapshot);
-      await pushAll(uid, merged);
+      await pushAll(uid, merged, since);
+
+      saveWatermark(uid, startedAt);
       return true;
     } catch (err) {
       if (isSchemaError(err)) {
@@ -669,9 +747,15 @@ export const syncService = {
   async attach(uid: string): Promise<void> {
     userId = uid;
     if (!supabase || syncDisabled) return;
+    pushWatermark = loadWatermark(uid);
     try {
       await maybeImportLegacy(uid);
-      await performPush();
+      // Push COMPLETO al iniciar sesión: reconcilia cualquier fila que el
+      // filtrado incremental pudiera haber dejado atrás (un push fallido tras
+      // agotar reintentos, un dispositivo que estuvo offline mucho tiempo).
+      // Es la red de seguridad que hace defendible el filtrado del resto de
+      // los ciclos.
+      await performPush(true);
     } catch (err) {
       console.error('[sync] attach falló:', err);
       if (isSchemaError(err)) {
@@ -727,6 +811,11 @@ export const syncService = {
     syncService.cancel();
     queuedAfterPush = false;
     dirtyDuringSync = false;
+    // Borrar la marca de agua junto con el resto del estado de sesión: el
+    // logout limpia los datos locales, así que conservarla solo abriría la
+    // puerta a que el próximo login filtrara contra una referencia obsoleta.
+    if (userId) clearWatermark(userId);
+    pushWatermark = null;
     userId = null;
     syncDisabled = false;
     useUiStore.getState().setSyncState('idle');
@@ -740,7 +829,7 @@ export const syncService = {
   },
 };
 
-async function performPush(): Promise<boolean> {
+async function performPush(fullPush = false): Promise<boolean> {
   if (pushInFlight) {
     queuedAfterPush = true;
     return pushInFlight;
@@ -754,7 +843,7 @@ async function performPush(): Promise<boolean> {
     useUiStore.getState().setSyncState('syncing');
     try {
       isSyncing = true;
-      ok = await pushWithRetry(uid);
+      ok = await pushWithRetry(uid, fullPush);
     } catch (err) {
       console.error('[sync] push falló:', err);
     } finally {

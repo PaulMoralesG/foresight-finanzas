@@ -330,6 +330,20 @@ describe('syncService', () => {
     await tick(30);
     expect(upsertCalls.length).toBe(1); // push en vuelo
 
+    // Una edición local nueva: sin ella el push encolado no tendría nada que
+    // enviar (desde DAT-01 solo se suben las filas posteriores a la marca de
+    // agua) y no llegaría a llamar a upsert. Lo que se comprueba aquí es el
+    // single-flight, así que hay que darle carga real que empujar.
+    useFinanceStore.getState().addTransaction({
+      type: 'expense',
+      amount: 42,
+      concept: 'Editado durante el push',
+      date: '2026-08-19',
+      category: 'food',
+      method: 'cash',
+      businessType: 'personal',
+    });
+
     const flushP = syncService.flush(); // debe encolarse, no duplicar
     release();
 
@@ -340,6 +354,78 @@ describe('syncService', () => {
 
     // 2 upserts de expenses en total: el original + el encolado (no más)
     expect(upsertCalls.length).toBe(2);
+  });
+
+  it('el push incremental omite las filas ya sincronizadas', async () => {
+    const upsertCalls: { table: string; rows: unknown[] }[] = [];
+
+    mockFrom.mockImplementation((table: string) => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => {
+          const chain = {
+            maybeSingle: vi.fn(() => Promise.resolve({
+              data: table === 'profiles' ? { legacy_imported: true } : null,
+              error: null,
+            })),
+            order: vi.fn(() => chain),
+            range: vi.fn(() => Promise.resolve({ data: [], error: null })),
+          };
+          return chain;
+        }),
+      })),
+      upsert: vi.fn((rows: unknown[]) => {
+        upsertCalls.push({ table, rows: rows as unknown[] });
+        return Promise.resolve({ error: null });
+      }),
+      update: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) })),
+    }));
+
+    // Un movimiento existente antes de conectar
+    useFinanceStore.getState().addTransaction({
+      type: 'expense',
+      amount: 10,
+      concept: 'Antiguo',
+      date: '2026-08-01',
+      category: 'food',
+      method: 'cash',
+      businessType: 'personal',
+    });
+
+    // Separar el reloj: la marca de agua se toma al inicio del push y la
+    // comparación es `>=`, así que sin avanzar el tiempo la fila quedaría
+    // justo en el límite y se reenviaría.
+    await vi.advanceTimersByTimeAsync(10);
+
+    // attach hace push COMPLETO: el movimiento viaja
+    await syncService.attach('user-1');
+    await vi.advanceTimersByTimeAsync(100);
+    const firstPush = upsertCalls.filter((c) => c.table === 'expenses');
+    expect(firstPush.length).toBe(1);
+    expect(firstPush[0].rows.length).toBe(1);
+
+    // Segundo ciclo sin cambios: nada que subir, así que no se llama a upsert
+    await vi.advanceTimersByTimeAsync(10);
+    upsertCalls.length = 0;
+    await syncService.flush();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(upsertCalls.filter((c) => c.table === 'expenses')).toHaveLength(0);
+
+    // Tras una edición nueva, vuelve a viajar solo esa fila
+    useFinanceStore.getState().addTransaction({
+      type: 'income',
+      amount: 99,
+      concept: 'Nuevo',
+      date: '2026-08-19',
+      category: 'salary',
+      method: 'transfer',
+      businessType: 'personal',
+    });
+    upsertCalls.length = 0;
+    await syncService.flush();
+    await vi.advanceTimersByTimeAsync(100);
+    const thirdPush = upsertCalls.filter((c) => c.table === 'expenses');
+    expect(thirdPush.length).toBe(1);
+    expect(thirdPush[0].rows.length).toBe(1); // solo la nueva, no las dos
   });
 
   it('upsert de categories usa onConflict compuesto user_id,id', async () => {
