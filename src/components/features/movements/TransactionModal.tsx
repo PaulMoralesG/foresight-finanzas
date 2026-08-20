@@ -216,7 +216,7 @@ export function TransactionModal({
             {isEditing ? 'Editar Movimiento' : 'Nuevo Movimiento'}
           </h2>
           <button onClick={closeModal} aria-label="Cerrar" className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-            <X className="text-xs" />
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
 
@@ -411,7 +411,7 @@ export function TransactionModal({
                     onClick={handleAddCustomCategory}
                     className="saas-btn-primary saas-btn-sm flex-shrink-0"
                   >
-                    <Plus className="text-[10px]" />
+                    <Plus className="w-3 h-3" />
                   </button>
                 </div>
                 <div className="flex gap-1.5 items-center">
@@ -460,7 +460,7 @@ export function TransactionModal({
               className="saas-btn-danger py-1.5 text-xs"
               title="Eliminar"
             >
-              <Trash2 className="text-[10px]" />
+              <Trash2 className="w-3 h-3" />
             </button>
           )}
           {isEditing && (

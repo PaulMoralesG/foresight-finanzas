@@ -79,7 +79,7 @@ function BudgetPlanner() {
       {/* Selector de mes */}
       <div className="flex items-center gap-1.5 mb-3">
         <button onClick={() => setMonthKey(shiftMonthKey(monthKey, -1))} className="saas-btn-icon" aria-label="Mes anterior">
-          <ChevronLeft className="text-xs" />
+          <ChevronLeft className="w-3.5 h-3.5" />
         </button>
         <button
           onClick={() => setMonthKey(currentMonthKey())}
@@ -95,7 +95,7 @@ function BudgetPlanner() {
           {!isCurrent && <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-brand-500 dark:bg-brand-400" />}
         </button>
         <button onClick={() => setMonthKey(shiftMonthKey(monthKey, 1))} className="saas-btn-icon" aria-label="Mes siguiente">
-          <ChevronRight className="text-xs" />
+          <ChevronRight className="w-3.5 h-3.5" />
         </button>
         <span className="text-lg ml-auto">{emoji}</span>
       </div>
@@ -121,11 +121,11 @@ function BudgetPlanner() {
               }}
             />
             <button onClick={save} className="saas-btn-primary" aria-label="Guardar presupuesto">
-              <Check className="text-xs mr-1" />
+              <Check className="w-3.5 h-3.5 mr-1" />
               Guardar
             </button>
             <button onClick={() => setIsEditing(false)} className="saas-btn-secondary" aria-label="Cancelar edición">
-              <X className="text-xs" />
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
           {hasOwn && (
@@ -158,7 +158,7 @@ function BudgetPlanner() {
               className="saas-btn-primary"
               aria-label="Guardar presupuesto"
             >
-              <Check className="text-xs mr-1" />
+              <Check className="w-3.5 h-3.5 mr-1" />
               Guardar
             </button>
           </div>
@@ -449,7 +449,7 @@ export function SavingsPage() {
                 aria-label="Cerrar"
                 className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
-                <X className="text-xs" />
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
 

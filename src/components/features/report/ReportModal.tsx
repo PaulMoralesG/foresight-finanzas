@@ -150,7 +150,7 @@ export function ReportModal() {
             Reporte Mensual
           </h2>
           <button onClick={closeReportModal} aria-label="Cerrar" className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-            <X className="text-xs" />
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
 

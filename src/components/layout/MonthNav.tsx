@@ -40,7 +40,7 @@ export function MonthNav({ showReport = false }: MonthNavProps) {
         className="saas-btn-icon"
         aria-label="Mes anterior"
       >
-        <ChevronLeft className="text-xs" />
+        <ChevronLeft className="w-3.5 h-3.5" />
       </button>
       <button
         onClick={goToCurrentMonth}
@@ -64,7 +64,7 @@ export function MonthNav({ showReport = false }: MonthNavProps) {
         className="saas-btn-icon"
         aria-label="Mes siguiente"
       >
-        <ChevronRight className="text-xs" />
+        <ChevronRight className="w-3.5 h-3.5" />
       </button>
       {showReport && (
         <button
@@ -73,7 +73,7 @@ export function MonthNav({ showReport = false }: MonthNavProps) {
           aria-label="Generar reporte PDF"
           title="Reporte PDF mensual"
         >
-          <FileText className="text-xs" />
+          <FileText className="w-3.5 h-3.5" />
           <span className="inline ml-1.5 text-xs">Reporte</span>
         </button>
       )}

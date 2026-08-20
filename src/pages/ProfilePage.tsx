@@ -11,6 +11,7 @@ import { useFinanceStore } from '@/stores/financeStore';
 import { CATEGORY_COLORS } from '@/config/categories';
 import { CATEGORY_EMOJIS } from '@/hooks/useCategories';
 import { syncToCloud } from '@/lib/utils';
+import { MIN_PASSWORD_LENGTH, passwordStrength, validateNewPassword } from '@/lib/password';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 type Section = 'profile' | 'email' | 'password' | 'categories' | null;
@@ -34,9 +35,11 @@ export function ProfilePage() {
   const [savingEmail, setSavingEmail] = useState(false);
 
   // ── Change password form ──
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
+  const pwStrength = passwordStrength(newPassword);
 
   // ── Categorías personalizadas ──
   const customExpenseCategories = useFinanceStore((s) => s.customExpenseCategories);
@@ -72,7 +75,7 @@ export function ProfilePage() {
         setEditLastName(user?.lastName || '');
       }
       if (section === 'email') setNewEmail('');
-      if (section === 'password') { setNewPassword(''); setConfirmPassword(''); }
+      if (section === 'password') { setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); }
       if (section === 'categories') { setNewCatLabel(''); setNewCatIcon('📌'); setNewCatColor(CATEGORY_COLORS[0]); setCatType('expense'); }
     }
   };
@@ -118,8 +121,13 @@ export function ProfilePage() {
   };
 
   const handleSavePassword = async () => {
-    if (newPassword.length < 6) {
-      addToast('La contraseña debe tener al menos 6 caracteres', 'error');
+    if (!currentPassword) {
+      addToast('Ingresa tu contraseña actual', 'error');
+      return;
+    }
+    const pwError = validateNewPassword(newPassword);
+    if (pwError) {
+      addToast(pwError, 'error');
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -128,9 +136,12 @@ export function ProfilePage() {
     }
     setSavingPassword(true);
     try {
-      const result = await updatePassword(newPassword);
+      const result = await updatePassword(currentPassword, newPassword);
       if (result.success) {
         addToast(result.message, 'success');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
         setExpanded(null);
       } else {
         addToast(result.message, 'error');
@@ -214,7 +225,7 @@ export function ProfilePage() {
             className={`saas-btn-sm ${expanded === 'profile' ? 'saas-btn-primary' : 'saas-btn-secondary'}`}
             aria-label="Editar perfil"
           >
-            <Pencil className="text-xs mr-1.5" />
+            <Pencil className="w-3.5 h-3.5 mr-1.5" />
             Editar
           </button>
         </div>
@@ -265,7 +276,7 @@ export function ProfilePage() {
                 {savingProfile ? (
                   <Loader2 className="animate-spin w-3 h-3 mr-1" />
                 ) : (
-                  <Check className="text-xs mr-1" />
+                  <Check className="w-3.5 h-3.5 mr-1" />
                 )}
                 Guardar cambios
               </button>
@@ -287,13 +298,13 @@ export function ProfilePage() {
             className="w-full flex items-center gap-4 p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded-lg"
           >
             <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950 flex items-center justify-center text-blue-500 flex-shrink-0">
-              <Mail />
+              <Mail className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Cambiar correo electrónico</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">Actualiza tu dirección de email</p>
             </div>
-            {expanded === 'email' ? <ChevronUp className="text-xs text-slate-400 transition-transform" /> : <ChevronRight className="text-xs text-slate-400 transition-transform" />}
+            {expanded === 'email' ? <ChevronUp className="w-3.5 h-3.5 text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400 transition-transform" />}
           </button>
 
           {expanded === 'email' && (
@@ -326,7 +337,7 @@ export function ProfilePage() {
                   {savingEmail ? (
                     <Loader2 className="animate-spin w-3 h-3 mr-1" />
                   ) : (
-                    <Send className="text-xs mr-1" />
+                    <Send className="w-3.5 h-3.5 mr-1" />
                   )}
                   Enviar verificación
                 </button>
@@ -342,39 +353,81 @@ export function ProfilePage() {
             className="w-full flex items-center gap-4 p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded-lg"
           >
             <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-950 flex items-center justify-center text-amber-500 flex-shrink-0">
-              <Lock />
+              <Lock className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Cambiar contraseña</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">Mantén tu cuenta protegida</p>
             </div>
-            {expanded === 'password' ? <ChevronUp className="text-xs text-slate-400 transition-transform" /> : <ChevronRight className="text-xs text-slate-400 transition-transform" />}
+            {expanded === 'password' ? <ChevronUp className="w-3.5 h-3.5 text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400 transition-transform" />}
           </button>
 
           {expanded === 'password' && (
             <div className="px-4 pb-4 space-y-3 animate-fade-in">
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Elige una contraseña segura de al menos 6 caracteres.
+                Por seguridad, confirma tu contraseña actual antes de elegir una nueva
+                de al menos {MIN_PASSWORD_LENGTH} caracteres.
               </p>
               <div>
-                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                  Nueva contraseña
+                <label htmlFor="current-password" className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                  Contraseña actual
                 </label>
                 <input
+                  id="current-password"
+                  name="current-password"
                   type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
                   className="saas-input"
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Tu contraseña de ahora"
                   onKeyDown={(e) => { if (e.key === 'Enter') handleSavePassword(); }}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                <label htmlFor="new-password" className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                  Nueva contraseña
+                </label>
+                <input
+                  id="new-password"
+                  name="new-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="saas-input"
+                  placeholder={`Mínimo ${MIN_PASSWORD_LENGTH} caracteres`}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSavePassword(); }}
+                />
+                {newPassword.length > 0 && (
+                  <div className="mt-2">
+                    <div className="flex gap-1">
+                      {[0, 1, 2, 3].map((i) => (
+                        <div
+                          key={i}
+                          className="h-1 flex-1 rounded-full transition-all duration-300"
+                          style={{
+                            backgroundColor: i <= pwStrength.score ? pwStrength.color : '#e2e8f0',
+                            opacity: i <= pwStrength.score ? 1 : 0.5,
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-[11px] mt-1 font-medium" style={{ color: pwStrength.textColor }}>
+                      {pwStrength.label}
+                    </p>
+                  </div>
+                )}
+              </div>
+              <div>
+                <label htmlFor="confirm-password" className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                   Confirmar contraseña
                 </label>
                 <input
+                  id="confirm-password"
+                  name="confirm-password"
                   type="password"
+                  autoComplete="new-password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="saas-input"
@@ -394,7 +447,7 @@ export function ProfilePage() {
                   {savingPassword ? (
                     <Loader2 className="animate-spin w-3 h-3 mr-1" />
                   ) : (
-                    <Key className="text-xs mr-1" />
+                    <Key className="w-3.5 h-3.5 mr-1" />
                   )}
                   Actualizar contraseña
                 </button>
@@ -415,7 +468,7 @@ export function ProfilePage() {
             className="w-full flex items-center gap-4 p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded-lg"
           >
             <div className="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-950 flex items-center justify-center text-purple-500 flex-shrink-0">
-              <Tags />
+              <Tags className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Categorías personalizadas</p>
@@ -423,7 +476,7 @@ export function ProfilePage() {
                 {customExpenseCategories.length + customIncomeCategories.length} categorías creadas
               </p>
             </div>
-            {expanded === 'categories' ? <ChevronUp className="text-xs text-slate-400 transition-transform" /> : <ChevronRight className="text-xs text-slate-400 transition-transform" />}
+            {expanded === 'categories' ? <ChevronUp className="w-3.5 h-3.5 text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400 transition-transform" />}
           </button>
 
           {expanded === 'categories' && (
@@ -487,14 +540,14 @@ export function ProfilePage() {
                             className="text-emerald-500 hover:text-emerald-600 p-1 flex-shrink-0"
                             title="Guardar"
                           >
-                            <Check className="text-xs" />
+                            <Check className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={cancelEditing}
                             className="text-slate-400 hover:text-slate-600 p-1 flex-shrink-0"
                             title="Cancelar"
                           >
-                            <X className="text-xs" />
+                            <X className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       ) : (
@@ -509,14 +562,14 @@ export function ProfilePage() {
                             className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-1"
                             title="Editar categoría"
                           >
-                            <Edit3 className="text-xs" />
+                            <Edit3 className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => handleDeleteCategory(cat.id)}
                             className="text-red-400 hover:text-red-600 transition-colors p-1"
                             title="Eliminar categoría"
                           >
-                            <Trash2 className="text-xs" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       )}
@@ -575,7 +628,7 @@ export function ProfilePage() {
                   ))}
                 </div>
                 <button onClick={handleAddCategory} className="saas-btn-primary saas-btn-sm w-full">
-                  <Plus className="text-xs mr-1" />
+                  <Plus className="w-3.5 h-3.5 mr-1" />
                   Añadir categoría
                 </button>
               </div>
@@ -586,7 +639,7 @@ export function ProfilePage() {
         {/* Apariencia — Toggle (no accordion) */}
         <div className="flex items-center gap-4 p-4">
           <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${isDark ? 'bg-amber-50 dark:bg-amber-950 text-amber-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
-            {isDark ? <Sun /> : <Moon />}
+            {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-slate-900 dark:text-white">Apariencia</p>
@@ -621,13 +674,13 @@ export function ProfilePage() {
           className="w-full flex items-center gap-4 p-4 text-left hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors rounded-lg"
         >
           <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-950 flex items-center justify-center text-red-500 flex-shrink-0">
-            <LogOut />
+            <LogOut className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-red-600 dark:text-red-400">Cerrar sesión</p>
             <p className="text-xs text-slate-500 dark:text-slate-400">Finaliza tu sesión actual</p>
           </div>
-          <ChevronRight className="text-xs text-slate-400" />
+          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
         </button>
       </div>
 

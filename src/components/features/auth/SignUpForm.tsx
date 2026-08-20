@@ -5,13 +5,14 @@
 import { useState, type FormEvent, useRef } from 'react';
 import { Eye, EyeOff, MailCheck, AlertCircle, Loader2, UserPlus } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { MIN_PASSWORD_LENGTH, passwordStrength, validateNewPassword } from '@/lib/password';
 
 /** Traduce errores de Supabase a español amigable */
 function signUpErrorToSpanish(err: unknown): string {
   const msg = err instanceof Error ? err.message : '';
   const map: Record<string, string> = {
     'User already registered': 'Ya existe una cuenta con ese correo',
-    'Password should be at least 6 characters': 'La contraseña debe tener al menos 6 caracteres',
+    'Password should be at least': `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres`,
     'Unable to validate email': 'El correo no es válido',
     'Too many requests': 'Demasiados intentos. Espera unos segundos',
     'Email rate limit exceeded': 'Límite de correos alcanzado. Intenta de nuevo en 1 hora.',
@@ -22,23 +23,6 @@ function signUpErrorToSpanish(err: unknown): string {
     if (msg.includes(key)) return val;
   }
   return msg || 'Error al crear la cuenta';
-}
-
-/** Evalúa la fortaleza de una contraseña (0-4) */
-function passwordStrength(pw: string): { score: number; label: string; color: string } {
-  let score = 0;
-  if (pw.length >= 8) score++;
-  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score++;
-  if (/\d/.test(pw)) score++;
-  if (/[^a-zA-Z\d]/.test(pw)) score++;
-  const levels = [
-    { label: 'Muy débil', color: '#ef4444' },
-    { label: 'Débil', color: '#f97316' },
-    { label: 'Aceptable', color: '#eab308' },
-    { label: 'Buena', color: '#22c55e' },
-    { label: 'Excelente', color: '#10b981' },
-  ];
-  return { score, ...levels[score] };
 }
 
 interface Props {
@@ -83,7 +67,7 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
             : '';
         break;
       case 'password':
-        errs.password = value.length < 6 ? 'Mínimo 6 caracteres' : '';
+        errs.password = validateNewPassword(value) ?? '';
         break;
     }
     setFieldErrors(errs);
@@ -104,8 +88,9 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
     validateField('email', email);
     validateField('password', password);
 
-    if (!firstName.trim() || !email.trim() || password.length < 6) {
-      setError('Completa todos los campos requeridos');
+    const pwError = validateNewPassword(password);
+    if (!firstName.trim() || !email.trim() || pwError) {
+      setError(pwError ?? 'Completa todos los campos requeridos');
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -160,9 +145,15 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
       {/* Nombre + Apellido */}
       <div className="flex gap-3">
         <div className="flex-1">
+          <label htmlFor="signup-firstname" className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+            Nombre
+          </label>
           <input
+            id="signup-firstname"
+            name="given-name"
+            autoComplete="given-name"
             type="text"
-            placeholder="Nombre"
+            placeholder="Tu nombre"
             value={firstName}
             onChange={(e) => { setFirstName(e.target.value); clearError(); if (touched.firstName) validateField('firstName', e.target.value); }}
             onBlur={(e) => handleBlur('firstName', e.target.value)}
@@ -173,9 +164,15 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
           )}
         </div>
         <div className="flex-1">
+          <label htmlFor="signup-lastname" className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+            Apellido
+          </label>
           <input
+            id="signup-lastname"
+            name="family-name"
+            autoComplete="family-name"
             type="text"
-            placeholder="Apellido"
+            placeholder="Tu apellido"
             value={lastName}
             onChange={(e) => { setLastName(e.target.value); clearError(); }}
             className="saas-input"
@@ -185,9 +182,14 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
 
       {/* Email */}
       <div>
+        <label htmlFor="signup-email" className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+          Correo electrónico
+        </label>
         <input
+          id="signup-email"
+          name="email"
           type="email"
-          placeholder="Correo electrónico"
+          placeholder="tu@correo.com"
           value={email}
           onChange={(e) => { setEmail(e.target.value); clearError(); if (touched.email) validateField('email', e.target.value); }}
           onBlur={(e) => handleBlur('email', e.target.value)}
@@ -201,10 +203,15 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
 
       {/* Password con indicador de fortaleza */}
       <div>
+        <label htmlFor="signup-password" className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+          Contraseña
+        </label>
         <div className="relative">
           <input
+            id="signup-password"
+            name="new-password"
             type={showPassword ? 'text' : 'password'}
-            placeholder="Contraseña (mín. 6 caracteres)"
+            placeholder={`Contraseña (mín. ${MIN_PASSWORD_LENGTH} caracteres)`}
             value={password}
             onChange={(e) => { setPassword(e.target.value); clearError(); if (touched.password) validateField('password', e.target.value); }}
             onBlur={(e) => handleBlur('password', e.target.value)}
@@ -215,10 +222,10 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
             type="button"
             onClick={() => setShowPassword(!showPassword)}
             aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-            tabIndex={-1}
+            aria-pressed={showPassword}
+            className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
           >
-            {showPassword ? <EyeOff className="text-xs" /> : <Eye className="text-xs" />}
+            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
         </div>
         {touched.password && fieldErrors.password && (
@@ -239,7 +246,7 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
                 />
               ))}
             </div>
-            <p className="text-[11px] mt-1 ml-1 font-medium" style={{ color: pwStrength.color }}>
+            <p className="text-[11px] mt-1 ml-1 font-medium" style={{ color: pwStrength.textColor }}>
               {pwStrength.label}
             </p>
           </div>
@@ -250,7 +257,7 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
       {successMsg && (
         <div className="text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg px-4 py-3 border border-emerald-200 dark:border-emerald-800/50">
           <div className="flex items-start gap-2.5">
-            <MailCheck className="text-base mt-0.5 flex-shrink-0" />
+            <MailCheck className="w-4 h-4 mt-0.5 flex-shrink-0" />
             <div>
               <p className="font-semibold mb-1">¡Correo enviado!</p>
               <p className="opacity-80">{successMsg}</p>

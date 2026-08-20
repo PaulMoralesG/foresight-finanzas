@@ -84,7 +84,7 @@ export function LoginPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                <TrendingUp className="text-white text-lg" />
+                <TrendingUp className="text-white w-5 h-5" />
               </div>
               <span className="text-white font-bold text-lg">Foresight</span>
             </div>
@@ -111,7 +111,7 @@ export function LoginPage() {
                 { Icon: Smartphone, label: '100% responsive' },
               ].map((f) => (
                 <div key={f.label} className="flex items-center gap-3 text-white/90 text-sm">
-                  <f.Icon className="text-brand-400 text-sm w-5 text-center" />
+                  <f.Icon className="text-brand-400 w-5 h-5 flex-shrink-0" />
                   <span>{f.label}</span>
                 </div>
               ))}
@@ -139,10 +139,10 @@ export function LoginPage() {
               title={isDark ? 'Modo claro' : 'Modo oscuro'}
             >
               <span className={`dark-mode-pill-option ${!isDark ? 'active' : ''}`}>
-                <Sun />
+                <Sun className="w-3.5 h-3.5" />
               </span>
               <span className={`dark-mode-pill-option ${isDark ? 'active' : ''}`}>
-                <Moon />
+                <Moon className="w-3.5 h-3.5" />
               </span>
             </button>
           </div>
@@ -150,7 +150,7 @@ export function LoginPage() {
           {/* Mobile brand (shown only on small screens) */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
             <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center">
-              <TrendingUp className="text-white text-lg" />
+              <TrendingUp className="text-white w-5 h-5" />
             </div>
             <span className="text-xl font-bold text-slate-900 dark:text-white">Foresight</span>
           </div>
@@ -167,7 +167,7 @@ export function LoginPage() {
               /* ── Éxito: correo enviado ── */
               <div className="text-center space-y-4">
                 <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                  <MailCheck className="text-2xl text-emerald-600 dark:text-emerald-400" />
+                  <MailCheck className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">¡Correo enviado!</h3>
