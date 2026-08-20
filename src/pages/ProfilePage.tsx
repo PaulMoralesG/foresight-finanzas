@@ -11,6 +11,7 @@ import { useFinanceStore } from '@/stores/financeStore';
 import { CATEGORY_COLORS } from '@/config/categories';
 import { CATEGORY_EMOJIS } from '@/hooks/useCategories';
 import { syncToCloud } from '@/lib/utils';
+import { makeCategoryId } from '@/lib/category-id';
 import { MIN_PASSWORD_LENGTH, passwordStrength, validateNewPassword } from '@/lib/password';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
@@ -168,7 +169,7 @@ export function ProfilePage() {
       addToast('Ya existe una categoría con ese nombre', 'error');
       return;
     }
-    const id = 'custom_' + label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    const id = makeCategoryId(label);
     addCustomCategory(catType, { id, label, icon: newCatIcon, color: newCatColor });
     setNewCatLabel('');
     addToast('Categoría creada ✅', 'success');
@@ -212,7 +213,10 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="space-y-5 animate-fade-in max-w-2xl">
+    /* max-w-2xl dejaba una columna estrecha con mucho vacío a la derecha en
+       monitores grandes, mientras Inicio y Estadísticas sí se expandían.
+       A partir de xl la tarjeta de perfil y los ajustes van lado a lado. */
+    <div className="animate-fade-in max-w-2xl xl:max-w-5xl grid grid-cols-1 xl:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] gap-5 items-start">
       {/* ─── Profile Card ─── */}
       <div className="saas-card p-6">
         <div className="flex items-center gap-4">
@@ -712,9 +716,10 @@ export function ProfilePage() {
         </button>
       </div>
 
-      {/* Version */}
-      <p className="text-center text-xs text-slate-500 dark:text-slate-400">
-        Foresight Finanzas v2.0 · SaaS Edition
+      {/* Versión — leída de package.json vía Vite, no escrita a mano
+          (el pie decía v2.0 mientras package.json ya iba por 2.1.0) */}
+      <p className="text-center text-xs text-slate-500 dark:text-slate-400 xl:col-span-2">
+        Foresight Finanzas v{__APP_VERSION__} · SaaS Edition
       </p>
 
       <ConfirmDialog
