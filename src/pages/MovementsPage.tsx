@@ -186,7 +186,7 @@ export function MovementsPage() {
           className="saas-btn-primary saas-btn-sm flex-shrink-0 hidden sm:inline-flex"
           aria-label="Nueva transacción"
         >
-          <Plus className="text-[10px]" />
+          <Plus className="w-3 h-3" />
           <span className="hidden sm:inline ml-1">Nueva transacción</span>
         </button>
       </div>
@@ -236,7 +236,7 @@ export function MovementsPage() {
             className="saas-chip-filter"
             title="Quitar búsqueda"
           >
-            <Search className="text-[10px]" />
+            <Search className="w-3 h-3" />
             "{searchQuery}"
             <X className="text-[9px] ml-0.5" />
           </button>
@@ -293,7 +293,7 @@ export function MovementsPage() {
                 : 'saas-btn-ghost'
             }`}
           >
-            {(() => { const Icon = f.icon; return <Icon className="text-xs" />; })()}
+            {(() => { const Icon = f.icon; return <Icon className="w-3.5 h-3.5" />; })()}
             {f.label}
           </button>
         ))}
@@ -325,14 +325,14 @@ export function MovementsPage() {
       {filtered.length === 0 ? (
         <div className="saas-card p-6 text-center">
           <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-            <Receipt className="text-slate-400 text-xl" />
+            <Receipt className="text-slate-400 w-5 h-5" />
           </div>
           <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">Sin movimientos</h3>
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
             Registra tu primer ingreso o gasto para empezar
           </p>
           <button onClick={() => openModal()} className="saas-btn-primary">
-            <Plus className="text-xs" />
+            <Plus className="w-3.5 h-3.5" />
             Crear transacción
           </button>
         </div>
@@ -448,7 +448,7 @@ export function MovementsPage() {
                     <span className="inline-flex items-center gap-1">
                       Fecha
                       {sortField === 'date' && (
-                        <>{sortDir === 'asc' ? <ChevronUp className="text-[10px]" /> : <ChevronDown className="text-[10px]" />}</>
+                        <>{sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}</>
                       )}
                     </span>
                   </th>
@@ -463,7 +463,7 @@ export function MovementsPage() {
                     <span className="inline-flex items-center gap-1">
                       Monto
                       {sortField === 'amount' && (
-                        <>{sortDir === 'asc' ? <ChevronUp className="text-[10px]" /> : <ChevronDown className="text-[10px]" />}</>
+                        <>{sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}</>
                       )}
                     </span>
                   </th>
@@ -579,7 +579,7 @@ export function MovementsPage() {
               onClick={handleBulkDelete}
               className="saas-btn saas-btn-sm bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400 font-semibold hover:bg-red-100 dark:hover:bg-red-900 rounded-full"
             >
-              <Trash2 className="text-[10px]" />
+              <Trash2 className="w-3 h-3" />
               Eliminar
             </button>
           </div>

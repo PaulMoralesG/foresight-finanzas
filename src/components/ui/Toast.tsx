@@ -60,7 +60,7 @@ export function Toast() {
               className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex-shrink-0"
               aria-label="Cerrar"
             >
-              <X className="text-xs" />
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         );

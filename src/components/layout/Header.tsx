@@ -168,14 +168,14 @@ export function Header() {
                       onClick={() => handleDropdownAction(() => useUiStore.getState().setActiveTab('profile'))}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                     >
-                      <Settings className="text-xs w-4" />
+                      <Settings className="w-4 h-4" />
                       Configuración
                     </button>
                     <button
                       onClick={handleSignOut}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors"
                     >
-                      <LogOut className="text-xs w-4" />
+                      <LogOut className="w-4 h-4" />
                       Cerrar sesión
                     </button>
                   </div>

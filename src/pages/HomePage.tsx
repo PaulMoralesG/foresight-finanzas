@@ -41,14 +41,14 @@ function CategoryBreakdown({ expenses }: { expenses: Transaction[] }) {
     return (
       <div className="saas-card p-6 text-center">
         <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-          <ChartNoAxesColumn className="text-slate-400 text-lg" />
+          <ChartNoAxesColumn className="text-slate-400 w-5 h-5" />
         </div>
         <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Sin datos de gastos este mes</p>
         <button
           onClick={() => { setActiveTab('movements' as TabId); }}
           className="saas-btn-primary saas-btn-sm mt-3"
         >
-          <Plus className="text-xs" />
+          <Plus className="w-3.5 h-3.5" />
           Añadir transacción
         </button>
       </div>
@@ -125,14 +125,14 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
     return (
       <div className="saas-card p-6 text-center animate-slide-up">
         <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-          <Receipt className="text-slate-400 text-lg" />
+          <Receipt className="text-slate-400 w-5 h-5" />
         </div>
         <p className="text-sm font-medium text-slate-600 dark:text-slate-400">No hay movimientos este mes</p>
         <button
           onClick={() => openModal()}
           className="saas-btn-primary saas-btn-sm mt-3"
         >
-          <Plus className="text-xs" />
+          <Plus className="w-3.5 h-3.5" />
           Crear primer movimiento
         </button>
       </div>
@@ -329,7 +329,7 @@ function BudgetWidget() {
           {/* Alerta de excedido — banner notorio */}
           {pct > 100 && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 animate-pulse">
-              <AlertCircle className="text-red-600 dark:text-red-400 text-sm" />
+              <AlertCircle className="text-red-600 dark:text-red-400 w-4 h-4" />
               <span className="text-xs font-bold text-red-700 dark:text-red-400">
                 ¡Presupuesto excedido por {formatMoney(monthSpent - budget)}!
               </span>

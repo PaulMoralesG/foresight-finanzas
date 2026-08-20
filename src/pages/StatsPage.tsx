@@ -357,7 +357,7 @@ export function StatsPage() {
                 className="saas-btn-icon"
                 aria-label="Mes anterior"
               >
-                <ChevronLeft className="text-[10px]" />
+                <ChevronLeft className="w-3 h-3" />
               </button>
               <select
                 value={statsMonth}
@@ -389,7 +389,7 @@ export function StatsPage() {
                 className="saas-btn-icon"
                 aria-label="Mes siguiente"
               >
-                <ChevronRight className="text-[10px]" />
+                <ChevronRight className="w-3 h-3" />
               </button>
               {/* Volver al mes actual */}
               {(statsMonth !== currentYearMonth || statsYear !== currentYearYear) && (
@@ -441,7 +441,7 @@ export function StatsPage() {
               {isExporting ? (
                 <Loader2 className="animate-spin w-3 h-3" />
               ) : (
-                <FileText className="text-[10px]" />
+                <FileText className="w-3 h-3" />
               )}
               <span>PDF</span>
             </button>
@@ -455,7 +455,7 @@ export function StatsPage() {
               {isExportingCSV ? (
                 <Loader2 className="animate-spin w-3 h-3" />
               ) : (
-                <FileSpreadsheet className="text-[10px]" />
+                <FileSpreadsheet className="w-3 h-3" />
               )}
               <span>Excel</span>
             </button>
@@ -501,7 +501,7 @@ export function StatsPage() {
             {isExporting ? (
               <Loader2 className="animate-spin w-3 h-3" />
             ) : (
-              <FileText className="text-[10px]" />
+              <FileText className="w-3 h-3" />
             )}
             <span>Descargar PDF</span>
           </button>
@@ -517,7 +517,7 @@ export function StatsPage() {
             {isExportingCSV ? (
               <Loader2 className="animate-spin w-3 h-3" />
             ) : (
-              <FileSpreadsheet className="text-[10px]" />
+              <FileSpreadsheet className="w-3 h-3" />
             )}
             <span>Descargar Excel</span>
           </button>
@@ -529,7 +529,7 @@ export function StatsPage() {
         <h3 className="text-xs font-bold text-slate-900 dark:text-white mb-2">Evolución</h3>
         {trendData.every((d) => d.Ingresos === 0 && d.Gastos === 0) ? (
           <div className="text-center py-8">
-            <TrendingUp className="text-2xl text-slate-200 dark:text-slate-700 mb-1.5 block" />
+            <TrendingUp className="w-6 h-6 text-slate-200 dark:text-slate-700 mb-1.5 block" />
             <p className="text-xs text-slate-400 dark:text-slate-500">Sin datos para mostrar tendencia</p>
           </div>
         ) : (
@@ -660,7 +660,7 @@ export function StatsPage() {
           <h3 className="text-xs font-bold text-slate-900 dark:text-white mb-2">Gastos por categoría</h3>
           {expensesByCategory.length === 0 ? (
             <div className="text-center py-6">
-              <PieChart className="text-2xl text-slate-200 dark:text-slate-700 mb-1.5 block" />
+              <PieChart className="w-6 h-6 text-slate-200 dark:text-slate-700 mb-1.5 block" />
               <p className="text-xs text-slate-400 dark:text-slate-500">Sin gastos en este período</p>
             </div>
           ) : (
