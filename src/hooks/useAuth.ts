@@ -165,6 +165,16 @@ export function useAuth() {
       }
 
       if (session?.user) {
+        // Si ya hay una sesión cargada para ESTE mismo usuario, no rehacer el
+        // ciclo completo (perfil + import legacy + pull/merge/push). Antes,
+        // cada TOKEN_REFRESHED (una vez por hora) y cada reautenticación
+        // —como la de updatePassword— disparaba una sincronización entera del
+        // historial sin que nada hubiera cambiado.
+        const loaded = useAuthStore.getState().user;
+        if (loaded && loaded.id === session.user.id) {
+          setLoading(false);
+          return;
+        }
         const meta = session.user.user_metadata as Record<string, string> | undefined;
         loadProfile(session.user.id, session.user.email!, meta?.first_name, meta?.last_name);
       } else {
@@ -296,9 +306,42 @@ export function useAuth() {
     };
   }
 
-  /** Cambiar contraseña */
-  async function updatePassword(newPassword: string): Promise<{ success: boolean; message: string }> {
+  /**
+   * Cambiar contraseña — exige la contraseña ACTUAL (reautenticación).
+   *
+   * Sin esta verificación, cualquiera con acceso momentáneo a una sesión
+   * abierta (un teléfono desbloqueado, una laptop prestada) podía fijar una
+   * contraseña nueva y quedarse con la cuenta de forma permanente, dejando
+   * fuera al dueño real. `signInWithPassword` contra el email de la sesión
+   * es el patrón de reautenticación estándar de Supabase: falla si la
+   * contraseña actual no coincide y no altera la sesión si coincide.
+   */
+  async function updatePassword(
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<{ success: boolean; message: string }> {
     if (!supabase) return { success: false, message: 'No disponible en modo offline' };
+
+    const currentUser = useAuthStore.getState().user;
+    if (!currentUser?.email) return { success: false, message: 'No hay sesión activa' };
+
+    if (!currentPassword) {
+      return { success: false, message: 'Ingresa tu contraseña actual' };
+    }
+    if (currentPassword === newPassword) {
+      return { success: false, message: 'La contraseña nueva debe ser distinta de la actual' };
+    }
+
+    // 1) Reautenticar: verificar que quien pide el cambio conoce la contraseña actual
+    const { error: reauthError } = await supabase.auth.signInWithPassword({
+      email: currentUser.email,
+      password: currentPassword,
+    });
+    if (reauthError) {
+      return { success: false, message: 'La contraseña actual no es correcta' };
+    }
+
+    // 2) Recién ahora, aplicar el cambio
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) {
       return { success: false, message: error.message };

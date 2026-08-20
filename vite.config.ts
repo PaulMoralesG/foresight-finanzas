@@ -2,8 +2,16 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
+import { createRequire } from 'module';
+
+const { version } = createRequire(import.meta.url)('./package.json');
 
 export default defineConfig({
+  // Versión única: package.json manda. El pie de Perfil la lee de aquí en vez
+  // de tenerla escrita a mano (decía v2.0 con package.json ya en 2.1.0).
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+  },
   plugins: [
     react(),
     VitePWA({
@@ -71,22 +79,11 @@ export default defineConfig({
               expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 },
             },
           },
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-cache',
-              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
-            },
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-static-cache',
-              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
-            },
-          },
+          // (Aquí había reglas para fonts.googleapis.com y fonts.gstatic.com.
+          //  Eran código muerto: Inter pasó a estar auto-alojada en
+          //  /public/fonts —y precacheada por globPatterns vía woff2— y el CSP
+          //  de vercel.json no permite esos dominios, así que nunca podían
+          //  activarse.)
         ],
       },
     }),
