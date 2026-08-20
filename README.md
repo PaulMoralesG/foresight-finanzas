@@ -48,6 +48,42 @@ en modo local-only y lo indica en consola.
 borrados lógicos con `deleted_at` para propagar eliminaciones sin resurrecciones).
 Flush automático en `pagehide` / `visibilitychange` / `online` y antes de cerrar sesión.
 
+El **push es incremental**: solo viajan las filas modificadas desde el último push
+confirmado. El **pull sigue siendo completo** a propósito — leer de menos dejaría al
+cliente con un snapshot parcial y el merge podría interpretar filas ausentes como
+inexistentes. Cada login fuerza un push completo que reconcilia cualquier divergencia.
+
+### Migración 0005 (claves compuestas)
+
+`supabase/migrations/0005_composite_pks_and_date_index.sql` pasa `expenses`, `reminders`
+y `savings_goals` a PK `(user_id, id)`, alineándolas con `categories`. Ejecutarla en el
+SQL Editor **antes** de desplegar el código que la acompaña: los `onConflict` del cliente
+ya usan `'user_id,id'`.
+
+## Seguridad
+
+- **RLS** en las seis tablas con `USING` y `WITH CHECK` (`auth.uid() = user_id`).
+- **Cambio de contraseña con reautenticación**: exige la contraseña actual. Conviene
+  además activar *Secure password change* en Supabase → Authentication → Providers.
+- **Política de contraseñas** en `src/lib/password.ts` (mínimo 8 caracteres). El valor
+  debe coincidir con el configurado en el panel de Supabase; el cliente solo da
+  retroalimentación temprana, quien valida de verdad es el servidor.
+- **CSP** estricto en `vercel.json`, con hash de script en vez de `unsafe-inline`.
+
+### Datos locales sin cifrar (decisión consciente)
+
+El historial financiero se persiste en `localStorage` en texto plano, bajo
+`foresight-finance-storage`. Es el compromiso que exige el modo offline-first: cifrarlo
+de verdad requeriría una clave derivada de la contraseña, que no está disponible sin
+conexión ni tras recargar la página.
+
+La mitigación es que **cerrar sesión borra la copia local** (`persist.clearStorage()` en
+las tres rutas de cierre), que es lo que impide que la siguiente cuenta que inicie sesión
+en el mismo navegador vea datos ajenos. Queda el residuo de quien cierra la pestaña sin
+desloguear: los datos siguen en disco, legibles por cualquier extensión del navegador.
+
+Si el producto pasa a manejar datos de terceros, esto hay que revisarlo.
+
 ## Licencia
 
 MIT
