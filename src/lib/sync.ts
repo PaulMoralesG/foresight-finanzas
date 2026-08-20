@@ -499,15 +499,18 @@ async function pushAll(uid: string, merged: MergeResult): Promise<void> {
       deleted_at: at,
     }));
 
+  // onConflict 'user_id,id' en las cuatro tablas: desde la migración 0005 la
+  // PK es compuesta, de modo que dos cuentas pueden compartir un mismo `id`
+  // sin que el upsert de una choque contra la fila —invisible por RLS— de la otra.
   await upsert('expenses', [
     ...merged.expenses.live.map((t) => expenseToRow(t, uid)),
     ...tombstoneRows(merged.expenses.tombstones),
-  ], 'id');
+  ], 'user_id,id');
 
   await upsert('reminders', [
     ...merged.reminders.live.map((r) => reminderToRow(r, uid)),
     ...tombstoneRows(merged.reminders.tombstones),
-  ], 'id');
+  ], 'user_id,id');
 
   await upsert('categories', [
     ...merged.expenseCategories.live.map((c) => categoryToRow(c, uid, 'expense')),
@@ -519,7 +522,7 @@ async function pushAll(uid: string, merged: MergeResult): Promise<void> {
   await upsert('savings_goals', [
     ...merged.goals.live.map((g) => goalToRow(g, uid)),
     ...tombstoneRows(merged.goals.tombstones),
-  ], 'id');
+  ], 'user_id,id');
 
   await upsert('budgets', Object.entries(merged.budgets.budgets).map(([month, amount]) => ({
     user_id: uid,
@@ -603,13 +606,13 @@ async function maybeImportLegacy(uid: string): Promise<boolean> {
   // Idempotente por clave: los ids son UUID v5 deterministas y los upserts usan
   // ignoreDuplicates — filas existentes (vivas o tombstone) NO se pisan ni se
   // resucitan; solo se inserta lo que falta (cubre imports parciales fallidos).
-  await upsert('expenses', rows.expenses.map((t) => expenseToRow(t, uid)), 'id', true);
-  await upsert('reminders', rows.reminders.map((r) => reminderToRow(r, uid)), 'id', true);
+  await upsert('expenses', rows.expenses.map((t) => expenseToRow(t, uid)), 'user_id,id', true);
+  await upsert('reminders', rows.reminders.map((r) => reminderToRow(r, uid)), 'user_id,id', true);
   await upsert('categories', [
     ...rows.expenseCategories.map((c) => categoryToRow(c, uid, 'expense')),
     ...rows.incomeCategories.map((c) => categoryToRow(c, uid, 'income')),
   ], 'user_id,id', true);
-  await upsert('savings_goals', rows.goals.map((g) => goalToRow(g, uid)), 'id', true);
+  await upsert('savings_goals', rows.goals.map((g) => goalToRow(g, uid)), 'user_id,id', true);
   await upsert('budgets', rows.budgets.map((b) => ({
     user_id: uid,
     month: b.month,
