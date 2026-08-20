@@ -79,8 +79,8 @@ describe('syncService', () => {
     await vi.advanceTimersByTimeAsync(1);
     const result = await p3; // solo el último schedule dispara el push
     expect(result).toBe(true);
-    // Un solo ciclo: pull de las 5 tablas
-    expect(mockFrom.mock.calls.length).toBe(before + 5);
+    // Un solo ciclo: pull de las 4 tablas (reminders se eliminó)
+    expect(mockFrom.mock.calls.length).toBe(before + 4);
     void p1;
     void p2;
   });
@@ -93,7 +93,7 @@ describe('syncService', () => {
     const result = await syncService.flush(); // sin avanzar timers
 
     expect(result).toBe(true);
-    expect(mockFrom.mock.calls.length).toBe(before + 5);
+    expect(mockFrom.mock.calls.length).toBe(before + 4);
     void p;
   });
 

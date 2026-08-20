@@ -6,14 +6,13 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { safeParseDate } from '@/lib/utils';
 import { newId, nowIso } from '@/lib/ids';
-import type { Transaction, MonthlyBudget, FilterType, PaymentReminder, Category, SavingsGoal } from '@/types';
+import type { Transaction, MonthlyBudget, FilterType, Category, SavingsGoal } from '@/types';
 
 interface FinanceState {
   // --- Estado ---
   expenses: Transaction[];
   budgets: MonthlyBudget;
   budgetUpdatedAt: Record<string, string>; // monthKey 'YYYY-MM' → ISO (merge de sync)
-  reminders: PaymentReminder[];
   savingsGoals: SavingsGoal[];
   customExpenseCategories: Category[];
   customIncomeCategories: Category[];
@@ -38,11 +37,6 @@ interface FinanceState {
   setBudget: (monthKey: string, value: number) => void;
 
   // --- Recordatorios de pago ---
-  addReminder: (r: Omit<PaymentReminder, 'id' | 'createdAt' | 'isPaid' | 'updated_at'>) => string;
-  updateReminder: (id: string, partial: Partial<Omit<PaymentReminder, 'id' | 'createdAt' | 'updated_at'>>) => void;
-  deleteReminder: (id: string) => void;
-  toggleReminderPaid: (id: string) => void;
-  getUpcomingReminders: () => PaymentReminder[];
 
   // --- Categorías personalizadas ---
   addCustomCategory: (type: 'expense' | 'income', category: Category) => void;
@@ -65,7 +59,6 @@ const emptyState = {
   expenses: [] as Transaction[],
   budgets: {} as MonthlyBudget,
   budgetUpdatedAt: {} as Record<string, string>,
-  reminders: [] as PaymentReminder[],
   savingsGoals: [] as SavingsGoal[],
   customExpenseCategories: [] as Category[],
   customIncomeCategories: [] as Category[],
@@ -117,7 +110,6 @@ function migrateV8(persistedState: unknown): Record<string, unknown> {
   };
 
   state.expenses = dedupe(stampIds(state.expenses));
-  state.reminders = dedupe(stampIds(state.reminders));
 
   // Metas de ahorro: garantizar array, id y updated_at (limpiar key vieja)
   if (!Array.isArray(state.savingsGoals)) state.savingsGoals = [];
@@ -139,7 +131,6 @@ function migrateV8(persistedState: unknown): Record<string, unknown> {
 
   // Contadores numéricos: fuera. Campos nuevos del merge: inicializados.
   delete state.nextId;
-  delete state.nextReminderId;
   if (!state.tombstones || typeof state.tombstones !== 'object' || Array.isArray(state.tombstones)) {
     state.tombstones = {};
   }
@@ -234,56 +225,6 @@ export const useFinanceStore = create<FinanceState>()(
           budgetUpdatedAt: { ...state.budgetUpdatedAt, [monthKey]: nowIso() },
         })),
 
-      // ── Recordatorios de pago ──
-      addReminder: (r) => {
-        const id = newId();
-        set((state) => ({
-          reminders: [
-            ...state.reminders,
-            { ...r, id, createdAt: nowIso(), isPaid: false, updated_at: nowIso() },
-          ],
-        }));
-        return id;
-      },
-
-      updateReminder: (id, partial) =>
-        set((state) => ({
-          reminders: state.reminders.map((r) =>
-            r.id === id ? { ...r, ...partial, updated_at: nowIso() } : r
-          ),
-          tombstones: clearedTombstone(state.tombstones, id),
-        })),
-
-      deleteReminder: (id) =>
-        set((state) => ({
-          reminders: state.reminders.filter((r) => r.id !== id),
-          tombstones: tombstoned(state.tombstones, id),
-        })),
-
-      toggleReminderPaid: (id) =>
-        set((state) => ({
-          reminders: state.reminders.map((r) =>
-            r.id === id ? { ...r, isPaid: !r.isPaid, updated_at: nowIso() } : r
-          ),
-          tombstones: clearedTombstone(state.tombstones, id),
-        })),
-
-      getUpcomingReminders: () => {
-        const { reminders } = get();
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-
-        return reminders
-          .filter((r) => {
-            if (r.isPaid) return false;
-            const due = new Date(r.dueDate);
-            due.setHours(0, 0, 0, 0);
-            const diffDays = (due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-            return diffDays <= 30;
-          })
-          .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-      },
-
       // ── Categorías personalizadas ──
       addCustomCategory: (type, category) =>
         set((state) => {
@@ -377,7 +318,6 @@ export const useFinanceStore = create<FinanceState>()(
         expenses: state.expenses,
         budgets: state.budgets,
         budgetUpdatedAt: state.budgetUpdatedAt,
-        reminders: state.reminders,
         currentViewDate: state.currentViewDate,
         currentFilter: state.currentFilter,
         savingsGoals: state.savingsGoals,

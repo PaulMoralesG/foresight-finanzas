@@ -3,11 +3,9 @@
 //   Desktop: oculto (usa Sidebar). Mobile: full-width anclado al bottom.
 // ================================================================
 
-import { useMemo, useRef, useEffect, useLayoutEffect } from 'react';
+import { useRef, useEffect, useLayoutEffect } from 'react';
 import { Home, ArrowLeftRight, BarChart3, User, PiggyBank, Plus } from 'lucide-react';
 import { useUiStore } from '@/stores/uiStore';
-import { useFinanceStore } from '@/stores/financeStore';
-import { safeParseDate } from '@/lib/utils';
 import type { TabId } from '@/types';
 
 const TABS: { id: TabId; icon: typeof Home; label: string }[] = [
@@ -22,7 +20,6 @@ export function TabBar() {
   const activeTab = useUiStore((s) => s.activeTab);
   const setActiveTab = useUiStore((s) => s.setActiveTab);
   const openModal = useUiStore((s) => s.openModal);
-  const reminders = useFinanceStore((s) => s.reminders);
 
   // Refs para la píldora deslizante animada
   const navRef = useRef<HTMLDivElement>(null);
@@ -85,18 +82,6 @@ export function TabBar() {
     return () => window.removeEventListener('resize', handleResize);
   }, [activeTab]);
 
-  // Badge de recordatorios pendientes
-  const pendingCount = useMemo(() => {
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-
-    return reminders.filter((r) => {
-      if (r.isPaid) return false;
-      const due = safeParseDate(r.dueDate);
-      return due <= now;
-    }).length;
-  }, [reminders]);
-
   const renderTab = (tab: typeof TABS[0]) => {
     const isActive = activeTab === tab.id;
     const Icon = tab.icon;
@@ -127,11 +112,6 @@ export function TabBar() {
         >
           {tab.label}
         </span>
-        {tab.id === 'home' && pendingCount > 0 && (
-          <span className="absolute top-0 right-1/2 translate-x-[12px] min-w-[16px] h-[16px] rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center px-1 leading-none shadow-md shadow-red-500/30">
-            {pendingCount > 9 ? '9+' : pendingCount}
-          </span>
-        )}
       </button>
     );
   };

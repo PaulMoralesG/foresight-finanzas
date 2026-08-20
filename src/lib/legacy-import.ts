@@ -9,7 +9,6 @@ import { uuidv5 } from '@/lib/ids';
 import { getTodayISO } from '@/lib/utils';
 import type {
   Transaction,
-  PaymentReminder,
   MonthlyBudget,
   Category,
   SavingsGoal,
@@ -25,7 +24,6 @@ export interface LegacyProfileRow {
   legacy_imported?: boolean;
   expenses?: Transaction[] | string;
   budgets?: MonthlyBudget | string;
-  reminders?: PaymentReminder[] | string;
   savings_goal?: SavingsGoal[] | string;
   custom_expense_categories?: Category[] | string;
   custom_income_categories?: Category[] | string;
@@ -34,7 +32,6 @@ export interface LegacyProfileRow {
 
 export interface LegacyImportRows {
   expenses: Transaction[];
-  reminders: PaymentReminder[];
   expenseCategories: Category[];
   incomeCategories: Category[];
   goals: SavingsGoal[];
@@ -55,7 +52,6 @@ function parseJsonField<T>(field: unknown, fallback: T): unknown {
 interface ParsedBlobs {
   expenses: Transaction[];
   budgets: MonthlyBudget;
-  reminders: PaymentReminder[];
   goals: SavingsGoal[];
   expenseCategories: Category[];
   incomeCategories: Category[];
@@ -77,7 +73,6 @@ function parseBlobs(profile: LegacyProfileRow): ParsedBlobs {
   return {
     expenses: asArray<Transaction>(parseJsonField(profile.expenses, [])),
     budgets: asRecord(parseJsonField(profile.budgets, {})),
-    reminders: asArray<PaymentReminder>(parseJsonField(profile.reminders, [])),
     // savings_goal es NUMERIC en la DB real (herencia de v5): el guard lo descarta
     goals: asArray<SavingsGoal>(parseJsonField(profile.savings_goal, [])),
     expenseCategories: asArray<Category>(parseJsonField(profile.custom_expense_categories, [])),
@@ -90,7 +85,6 @@ export function hasLegacyBlobs(profile: LegacyProfileRow): boolean {
   const blobs = parseBlobs(profile);
   return (
     blobs.expenses.length > 0 ||
-    blobs.reminders.length > 0 ||
     Object.keys(blobs.budgets).length > 0 ||
     blobs.goals.length > 0 ||
     blobs.expenseCategories.length > 0 ||
@@ -108,7 +102,7 @@ export function shouldImportLegacy(profile: LegacyProfileRow): boolean {
 
 /**
  * Convierte los blobs legacy en filas locales listas para upsert.
- * Los ids de expenses/reminders/goals son UUID v5 deterministas;
+ * Los ids de expenses/goals son UUID v5 deterministas;
  * las categorías conservan su slug (clave de merge). Los presupuestos
  * se expanden a filas (month, amount).
  *
@@ -168,17 +162,6 @@ export async function buildImportRows(
     })),
   );
 
-  const reminders = await Promise.all(
-    dedupeById(blobs.reminders).map(async (r) => ({
-      ...r,
-      id: await uuidv5(`${userId}:reminder:${r.id}`),
-      amount: num(r.amount),
-      method: txMethod(r.method),
-      businessType: txBusiness(r.businessType),
-      dueDate: normalizeDate(r.dueDate),
-      updated_at: r.updated_at ?? fallbackStamp,
-    })),
-  );
 
   // Los goals legacy no tenían id: el índice dentro del blob es el seed.
   const goals = await Promise.all(
@@ -210,5 +193,5 @@ export async function buildImportRows(
     updated_at: fallbackStamp,
   }));
 
-  return { expenses, reminders, expenseCategories, incomeCategories, goals, budgets };
+  return { expenses, expenseCategories, incomeCategories, goals, budgets };
 }

@@ -25,7 +25,6 @@ function makeProfile(overrides: Partial<LegacyProfileRow> = {}): LegacyProfileRo
     legacy_imported: false,
     expenses: [legacyExpense],
     budgets: { '2026-07': 5000 },
-    reminders: [],
     savings_goal: [{ id: 'legacy-1', concept: 'Casa', target: 100000, updated_at: '2026-07-16T10:00:00.000Z' }],
     custom_expense_categories: [{ id: 'custom_test', label: 'Test', icon: '📌', color: 'bg-slate-100' }],
     custom_income_categories: [],
@@ -37,7 +36,6 @@ function makeProfile(overrides: Partial<LegacyProfileRow> = {}): LegacyProfileRo
 function emptyProfile(): LegacyProfileRow {
   return makeProfile({
     expenses: [],
-    reminders: [],
     budgets: {},
     savings_goal: [],
     custom_expense_categories: [],
@@ -124,14 +122,12 @@ describe('buildImportRows', () => {
       makeProfile({
         expenses: null as unknown as LegacyProfileRow['expenses'],
         budgets: null as unknown as LegacyProfileRow['budgets'],
-        reminders: 'no-es-json' as unknown as LegacyProfileRow['reminders'],
         custom_expense_categories: 42 as unknown as LegacyProfileRow['custom_expense_categories'],
       }),
       'user-1',
     );
     expect(rows.expenses).toEqual([]);
     expect(rows.budgets).toEqual([]);
-    expect(rows.reminders).toEqual([]);
     expect(rows.expenseCategories).toEqual([]);
   });
 
