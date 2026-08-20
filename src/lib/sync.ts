@@ -18,7 +18,6 @@ import {
 } from '@/lib/legacy-import';
 import type {
   Transaction,
-  PaymentReminder,
   Category,
   SavingsGoal,
   TransactionType,
@@ -44,22 +43,6 @@ export interface ExpenseRow {
   category: string | null;
   method: string | null;
   business_type: string | null;
-  created_at: string | null;
-  updated_at: string;
-  deleted_at: string | null;
-}
-
-export interface ReminderRow {
-  id: string;
-  user_id: string;
-  concept: string | null;
-  amount: number | null;
-  due_date: string | null;
-  category: string | null;
-  business_type: string | null;
-  method: string | null;
-  is_paid: boolean;
-  notes: string | null;
   created_at: string | null;
   updated_at: string;
   deleted_at: string | null;
@@ -94,7 +77,6 @@ export interface BudgetRow {
 
 export interface Snapshot {
   expenses: ExpenseRow[];
-  reminders: ReminderRow[];
   categories: CategoryRow[];
   goals: GoalRow[];
   budgets: BudgetRow[];
@@ -130,40 +112,6 @@ export function rowToExpense(r: ExpenseRow): Transaction {
     method: (r.method === 'cash' || r.method === 'card' || r.method === 'transfer' ? r.method : 'cash') as PaymentMethod,
     businessType: (r.business_type === 'business' || r.business_type === 'personal' ? r.business_type : 'personal') as BusinessType,
     created_at: r.created_at ?? undefined,
-    updated_at: r.updated_at,
-  };
-}
-
-export function reminderToRow(r: PaymentReminder, userId: string): ReminderRow {
-  return {
-    id: r.id,
-    user_id: userId,
-    concept: r.concept,
-    amount: r.amount,
-    due_date: r.dueDate,
-    category: r.category,
-    business_type: r.businessType,
-    method: r.method,
-    is_paid: r.isPaid,
-    notes: r.notes ?? null,
-    created_at: r.createdAt,
-    updated_at: r.updated_at,
-    deleted_at: null,
-  };
-}
-
-export function rowToReminder(r: ReminderRow): PaymentReminder {
-  return {
-    id: r.id,
-    concept: r.concept ?? '',
-    amount: r.amount ?? 0,
-    dueDate: r.due_date ?? getTodayISO(),
-    category: r.category ?? 'general',
-    businessType: (r.business_type === 'business' || r.business_type === 'personal' ? r.business_type : 'personal') as BusinessType,
-    method: (r.method === 'cash' || r.method === 'card' || r.method === 'transfer' ? r.method : 'cash') as PaymentMethod,
-    isPaid: r.is_paid,
-    notes: r.notes ?? undefined,
-    createdAt: r.created_at ?? r.updated_at,
     updated_at: r.updated_at,
   };
 }
@@ -291,7 +239,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-type TableName = 'expenses' | 'reminders' | 'categories' | 'savings_goals' | 'budgets';
+type TableName = 'expenses' | 'categories' | 'savings_goals' | 'budgets';
 
 // ── Pull ──
 
@@ -325,9 +273,8 @@ async function fetchAllRows<T>(
 }
 
 async function pullAll(uid: string): Promise<Snapshot> {
-  const [expenses, reminders, categories, goals, budgets] = await Promise.all([
+  const [expenses, categories, goals, budgets] = await Promise.all([
     fetchAllRows<ExpenseRow>('expenses', uid, ['updated_at', 'id']),
-    fetchAllRows<ReminderRow>('reminders', uid, ['updated_at', 'id']),
     fetchAllRows<CategoryRow>('categories', uid, ['updated_at', 'id']),
     fetchAllRows<GoalRow>('savings_goals', uid, ['updated_at', 'id']),
     // budgets no tiene columna `id` (PK compuesta user_id+month) — `month`
@@ -335,14 +282,13 @@ async function pullAll(uid: string): Promise<Snapshot> {
     fetchAllRows<BudgetRow>('budgets', uid, ['month']),
   ]);
 
-  return { expenses, reminders, categories, goals, budgets };
+  return { expenses, categories, goals, budgets };
 }
 
 // ── Merge ──
 
 interface MergeResult {
   expenses: MergeSet<Transaction>;
-  reminders: MergeSet<PaymentReminder>;
   goals: MergeSet<SavingsGoal>;
   expenseCategories: MergeSet<Category>;
   incomeCategories: MergeSet<Category>;
@@ -392,13 +338,6 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     remoteExpenses,
   );
 
-  const remoteReminders = buildRemoteSet(snapshot.reminders, rowToReminder);
-  const remUniverse = universeOf(state.reminders, remoteReminders);
-  const reminders = mergeById(
-    { live: state.reminders, tombstones: scopeTombstones(state.tombstones, remUniverse) },
-    remoteReminders,
-  );
-
   const remoteGoals = buildRemoteSet(snapshot.goals, rowToGoal);
   const goalsUniverse = universeOf(state.savingsGoals, remoteGoals);
   const goals = mergeById(
@@ -427,7 +366,6 @@ function applyMerge(snapshot: Snapshot): MergeResult {
   // Componer el mapa plano de tombstones (conserva entidades ajenas)
   const allUniverse = new Set<string>([
     ...expUniverse,
-    ...remUniverse,
     ...goalsUniverse,
     ...expCatsUniverse,
     ...incCatsUniverse,
@@ -437,7 +375,6 @@ function applyMerge(snapshot: Snapshot): MergeResult {
   Object.assign(
     flatTombstones,
     expenses.tombstones,
-    reminders.tombstones,
     goals.tombstones,
     expenseCategories.tombstones,
     incomeCategories.tombstones,
@@ -451,7 +388,6 @@ function applyMerge(snapshot: Snapshot): MergeResult {
   // borrado resucitaba en silencio.
   const remoteTombstoneIds = new Set<string>([
     ...Object.keys(remoteExpenses.tombstones),
-    ...Object.keys(remoteReminders.tombstones),
     ...Object.keys(remoteGoals.tombstones),
     ...Object.keys(remoteExpCats.tombstones),
     ...Object.keys(remoteIncCats.tombstones),
@@ -467,7 +403,6 @@ function applyMerge(snapshot: Snapshot): MergeResult {
   // Solo notificar si algo cambió (evita loops de sync subscribe→push)
   const next = {
     expenses: expenses.live,
-    reminders: reminders.live,
     savingsGoals: goals.live,
     customExpenseCategories: expenseCategories.live,
     customIncomeCategories: incomeCategories.live,
@@ -477,7 +412,6 @@ function applyMerge(snapshot: Snapshot): MergeResult {
   };
   const current = {
     expenses: state.expenses,
-    reminders: state.reminders,
     savingsGoals: state.savingsGoals,
     customExpenseCategories: state.customExpenseCategories,
     customIncomeCategories: state.customIncomeCategories,
@@ -496,14 +430,6 @@ function applyMerge(snapshot: Snapshot): MergeResult {
         }
       }
 
-      const liveRemMap = new Map(next.reminders.map((r) => [r.id, r]));
-      const safeReminders = [...next.reminders];
-      for (const localRem of currentState.reminders) {
-        if (!liveRemMap.has(localRem.id) && !next.tombstones[localRem.id]) {
-          safeReminders.push(localRem);
-        }
-      }
-
       const liveGoalMap = new Map(next.savingsGoals.map((g) => [g.id, g]));
       const safeGoals = [...next.savingsGoals];
       for (const localGoal of currentState.savingsGoals) {
@@ -515,13 +441,12 @@ function applyMerge(snapshot: Snapshot): MergeResult {
       return {
         ...next,
         expenses: safeExpenses,
-        reminders: safeReminders,
         savingsGoals: safeGoals,
       };
     });
   }
 
-  return { expenses, reminders, goals, expenseCategories, incomeCategories, budgets, flatTombstones };
+  return { expenses, goals, expenseCategories, incomeCategories, budgets, flatTombstones };
 }
 
 // ── Push ──
@@ -569,11 +494,6 @@ async function pushAll(uid: string, merged: MergeResult, since: string | null): 
   await upsert('expenses', [
     ...merged.expenses.live.filter((t) => changed(t.updated_at)).map((t) => expenseToRow(t, uid)),
     ...tombstoneRows(merged.expenses.tombstones),
-  ], 'user_id,id');
-
-  await upsert('reminders', [
-    ...merged.reminders.live.filter((r) => changed(r.updated_at)).map((r) => reminderToRow(r, uid)),
-    ...tombstoneRows(merged.reminders.tombstones),
   ], 'user_id,id');
 
   await upsert('categories', [
@@ -685,7 +605,6 @@ async function maybeImportLegacy(uid: string): Promise<boolean> {
   // ignoreDuplicates — filas existentes (vivas o tombstone) NO se pisan ni se
   // resucitan; solo se inserta lo que falta (cubre imports parciales fallidos).
   await upsert('expenses', rows.expenses.map((t) => expenseToRow(t, uid)), 'user_id,id', true);
-  await upsert('reminders', rows.reminders.map((r) => reminderToRow(r, uid)), 'user_id,id', true);
   await upsert('categories', [
     ...rows.expenseCategories.map((c) => categoryToRow(c, uid, 'expense')),
     ...rows.incomeCategories.map((c) => categoryToRow(c, uid, 'income')),
@@ -729,7 +648,6 @@ export const syncService = {
         state.expenses !== prev.expenses ||
         state.budgets !== prev.budgets ||
         state.budgetUpdatedAt !== prev.budgetUpdatedAt ||
-        state.reminders !== prev.reminders ||
         state.savingsGoals !== prev.savingsGoals ||
         state.customExpenseCategories !== prev.customExpenseCategories ||
         state.customIncomeCategories !== prev.customIncomeCategories ||

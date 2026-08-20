@@ -362,34 +362,7 @@ function BudgetWidget() {
 export function HomePage() {
   const { summary, monthlyData } = useMonthlyData();
   const navigateTo = useUiStore((s) => s.navigateTo);
-  const getUpcomingReminders = useFinanceStore((s) => s.getUpcomingReminders);
-  const reminders = useFinanceStore((s) => s.reminders);
   const currentViewDate = useFinanceStore((s) => s.currentViewDate);
-  const addToast = useUiStore((s) => s.addToast);
-  const hasShownReminderToast = useRef(false);
-
-  // Toast automático al cargar: alerta de recordatorios vencidos o para hoy
-  useEffect(() => {
-    if (hasShownReminderToast.current) return;
-    if (reminders.length === 0) return; // esperar a que carguen datos
-    const now = new Date(); now.setHours(0, 0, 0, 0);
-    const upcoming = getUpcomingReminders();
-    const overdue: string[] = [];
-    const today: string[] = [];
-    upcoming.forEach((r) => {
-      const due = safeParseDate(r.dueDate);
-      const diff = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-      if (diff < 0) overdue.push(r.concept);
-      else if (diff === 0) today.push(r.concept);
-    });
-    if (overdue.length > 0) {
-      addToast(`⚠️ ${overdue.length} recordatorio${overdue.length > 1 ? 's' : ''} vencido${overdue.length > 1 ? 's' : ''}: ${overdue.slice(0, 2).join(', ')}${overdue.length > 2 ? '...' : ''}`, 'error');
-      hasShownReminderToast.current = true;
-    } else if (today.length > 0) {
-      addToast(`📅 Hoy vence: ${today.slice(0, 2).join(', ')}${today.length > 2 ? '...' : ''}`, 'info');
-      hasShownReminderToast.current = true;
-    }
-  }, [reminders, getUpcomingReminders, addToast]);
 
   // For now, we always show data since Zustand starts with defaults
   return (

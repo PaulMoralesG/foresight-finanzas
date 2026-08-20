@@ -28,20 +28,6 @@ export interface Transaction {
   updated_at: string; // ISO — usado por el merge de sync
 }
 
-export interface PaymentReminder {
-  id: string; // UUID
-  concept: string;
-  amount: number;
-  dueDate: string; // ISO format "YYYY-MM-DD"
-  category: string;
-  businessType: BusinessType;
-  method: PaymentMethod;
-  isPaid: boolean;
-  notes?: string;
-  createdAt: string;
-  updated_at: string; // ISO — usado por el merge de sync
-}
-
 export interface MonthlyBudget {
   [key: string]: number; // "2026-07": 5000
 }

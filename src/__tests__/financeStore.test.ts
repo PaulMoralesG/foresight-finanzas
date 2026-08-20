@@ -4,7 +4,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useFinanceStore } from '@/stores/financeStore';
-import type { Transaction, Category, PaymentReminder } from '@/types';
+import type { Transaction, Category } from '@/types';
 
 // Helper: crear una transacción de prueba
 function makeTx(overrides: Partial<Transaction> = {}): Omit<Transaction, 'id' | 'created_at' | 'updated_at'> {
@@ -31,17 +31,6 @@ function makeCat(overrides: Partial<Category> = {}): Category {
   };
 }
 
-function makeReminder(): Omit<PaymentReminder, 'id' | 'createdAt' | 'isPaid' | 'updated_at'> {
-  return {
-    concept: 'Renta',
-    amount: 8000,
-    dueDate: '2026-08-01',
-    category: 'rent',
-    businessType: 'personal',
-    method: 'transfer',
-  };
-}
-
 describe('financeStore', () => {
   beforeEach(() => {
     useFinanceStore.getState().reset();
@@ -53,7 +42,6 @@ describe('financeStore', () => {
     const s = useFinanceStore.getState();
     expect(s.expenses).toEqual([]);
     expect(s.budgets).toEqual({});
-    expect(s.reminders).toEqual([]);
     expect(s.savingsGoals).toEqual([]);
     expect(s.tombstones).toEqual({});
     expect(s.budgetUpdatedAt).toEqual({});
@@ -225,63 +213,10 @@ describe('financeStore', () => {
 
   // ─── Recordatorios de pago ────────────────────────────────────
 
-  it('addReminder agrega recordatorio con isPaid=false', () => {
-    const id = useFinanceStore.getState().addReminder(makeReminder());
 
-    const reminders = useFinanceStore.getState().reminders;
-    expect(reminders).toHaveLength(1);
-    expect(reminders[0].concept).toBe('Renta');
-    expect(reminders[0].isPaid).toBe(false);
-    expect(reminders[0].id).toBe(id);
-    expect(reminders[0].updated_at).toBeDefined();
-  });
 
-  it('toggleReminderPaid alterna isPaid', () => {
-    const id = useFinanceStore.getState().addReminder(makeReminder());
-    useFinanceStore.getState().toggleReminderPaid(id);
-    expect(useFinanceStore.getState().reminders[0].isPaid).toBe(true);
 
-    useFinanceStore.getState().toggleReminderPaid(id);
-    expect(useFinanceStore.getState().reminders[0].isPaid).toBe(false);
-  });
 
-  it('deleteReminder elimina recordatorio y registra tombstone', () => {
-    const id = useFinanceStore.getState().addReminder(makeReminder());
-    useFinanceStore.getState().deleteReminder(id);
-    expect(useFinanceStore.getState().reminders).toHaveLength(0);
-    expect(useFinanceStore.getState().tombstones[id]).toBeDefined();
-  });
-
-  it('updateReminder actualiza campos de recordatorio', () => {
-    const id = useFinanceStore.getState().addReminder(makeReminder());
-    useFinanceStore.getState().updateReminder(id, { amount: 9000, notes: 'Subió' });
-    const r = useFinanceStore.getState().reminders[0];
-    expect(r.amount).toBe(9000);
-    expect(r.notes).toBe('Subió');
-  });
-
-  it('getUpcomingReminders filtra pagados y fechas > 30 días', () => {
-    const today = new Date();
-    const in7Days = new Date(today);
-    in7Days.setDate(today.getDate() + 7);
-    const in60Days = new Date(today);
-    in60Days.setDate(today.getDate() + 60);
-
-    useFinanceStore.getState().addReminder({
-      ...makeReminder(),
-      concept: 'Próximo',
-      dueDate: in7Days.toISOString().substring(0, 10),
-    });
-    useFinanceStore.getState().addReminder({
-      ...makeReminder(),
-      concept: 'Lejano',
-      dueDate: in60Days.toISOString().substring(0, 10),
-    });
-
-    const upcoming = useFinanceStore.getState().getUpcomingReminders();
-    expect(upcoming).toHaveLength(1);
-    expect(upcoming[0].concept).toBe('Próximo');
-  });
 
   // ─── Categorías personalizadas ────────────────────────────────
 
