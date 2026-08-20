@@ -87,7 +87,7 @@ export function App() {
                   <button onClick={dismissInstallBanner} className="saas-btn-ghost saas-btn-sm text-xs">Ahora no</button>
                 </div>
               </div>
-              <button onClick={dismissInstallBanner} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex-shrink-0">
+              <button onClick={dismissInstallBanner} className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 flex-shrink-0">
                 <X className="w-4 h-4" />
               </button>
             </div>

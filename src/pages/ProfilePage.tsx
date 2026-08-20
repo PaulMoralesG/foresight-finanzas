@@ -52,6 +52,7 @@ export function ProfilePage() {
   const [newCatIcon, setNewCatIcon] = useState('📌');
   const [newCatColor, setNewCatColor] = useState(CATEGORY_COLORS[0]);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const [pendingDeleteCat, setPendingDeleteCat] = useState<{ id: string; label: string } | null>(null);
 
   // ── Edición de categoría ──
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
@@ -200,8 +201,12 @@ export function ProfilePage() {
     cancelEditing();
   }
 
-  function handleDeleteCategory(id: string) {
-    deleteCustomCategory(catType, id);
+  /** Borrar es irreversible y el botón está a pocos píxeles del de editar:
+   *  pedir confirmación, igual que ya hacen cerrar sesión y borrar movimientos. */
+  function confirmDeleteCategory() {
+    if (!pendingDeleteCat) return;
+    deleteCustomCategory(catType, pendingDeleteCat.id);
+    setPendingDeleteCat(null);
     addToast('Categoría eliminada 🗑️', 'success');
     syncToCloud(saveData, addToast);
   }
@@ -222,6 +227,8 @@ export function ProfilePage() {
           </div>
           <button
             onClick={() => toggleSection('profile')}
+            type="button"
+            aria-expanded={expanded === 'profile'}
             className={`saas-btn-sm ${expanded === 'profile' ? 'saas-btn-primary' : 'saas-btn-secondary'}`}
             aria-label="Editar perfil"
           >
@@ -288,13 +295,15 @@ export function ProfilePage() {
       {/* ─── Cuenta ─── */}
       <div className="saas-card divide-y divide-slate-100 dark:divide-slate-800">
         <div className="px-4 pt-4 pb-2">
-          <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Cuenta</p>
+          <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Cuenta</p>
         </div>
 
         {/* Change Email */}
         <div>
           <button
             onClick={() => toggleSection('email')}
+            type="button"
+            aria-expanded={expanded === 'email'}
             className="w-full flex items-center gap-4 p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded-lg"
           >
             <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950 flex items-center justify-center text-blue-500 flex-shrink-0">
@@ -304,7 +313,7 @@ export function ProfilePage() {
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Cambiar correo electrónico</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">Actualiza tu dirección de email</p>
             </div>
-            {expanded === 'email' ? <ChevronUp className="w-3.5 h-3.5 text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400 transition-transform" />}
+            {expanded === 'email' ? <ChevronUp className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" />}
           </button>
 
           {expanded === 'email' && (
@@ -350,6 +359,8 @@ export function ProfilePage() {
         <div>
           <button
             onClick={() => toggleSection('password')}
+            type="button"
+            aria-expanded={expanded === 'password'}
             className="w-full flex items-center gap-4 p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded-lg"
           >
             <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-950 flex items-center justify-center text-amber-500 flex-shrink-0">
@@ -359,7 +370,7 @@ export function ProfilePage() {
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Cambiar contraseña</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">Mantén tu cuenta protegida</p>
             </div>
-            {expanded === 'password' ? <ChevronUp className="w-3.5 h-3.5 text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400 transition-transform" />}
+            {expanded === 'password' ? <ChevronUp className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" />}
           </button>
 
           {expanded === 'password' && (
@@ -458,13 +469,15 @@ export function ProfilePage() {
 
         {/* ─── Personalización ─── */}
         <div className="px-4 pt-5 pb-2">
-          <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Personalización</p>
+          <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Personalización</p>
         </div>
 
         {/* ─── Categorías ─── */}
         <div>
           <button
             onClick={() => toggleSection('categories')}
+            type="button"
+            aria-expanded={expanded === 'categories'}
             className="w-full flex items-center gap-4 p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded-lg"
           >
             <div className="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-950 flex items-center justify-center text-purple-500 flex-shrink-0">
@@ -476,7 +489,7 @@ export function ProfilePage() {
                 {customExpenseCategories.length + customIncomeCategories.length} categorías creadas
               </p>
             </div>
-            {expanded === 'categories' ? <ChevronUp className="w-3.5 h-3.5 text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400 transition-transform" />}
+            {expanded === 'categories' ? <ChevronUp className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" />}
           </button>
 
           {expanded === 'categories' && (
@@ -517,6 +530,8 @@ export function ProfilePage() {
                                 key={emoji}
                                 type="button"
                                 onClick={() => setEditingCatIcon(emoji)}
+                                aria-label={`Usar el ícono ${emoji}`}
+                                aria-pressed={editingCatIcon === emoji}
                                 className={`w-6 h-6 flex items-center justify-center rounded text-xs transition-all ${
                                   editingCatIcon === emoji
                                     ? 'ring-2 ring-brand-500 bg-white dark:bg-slate-700'
@@ -537,14 +552,14 @@ export function ProfilePage() {
                           />
                           <button
                             onClick={handleUpdateCategory}
-                            className="text-emerald-500 hover:text-emerald-600 p-1 flex-shrink-0"
+                            className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-600 p-1 flex-shrink-0"
                             title="Guardar"
                           >
                             <Check className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={cancelEditing}
-                            className="text-slate-400 hover:text-slate-600 p-1 flex-shrink-0"
+                            className="text-slate-500 dark:text-slate-400 hover:text-slate-600 p-1 flex-shrink-0"
                             title="Cancelar"
                           >
                             <X className="w-3.5 h-3.5" />
@@ -557,17 +572,24 @@ export function ProfilePage() {
                           <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-300 truncate">
                             {cat.label}
                           </span>
+                          {/* Objetivos táctiles de 36px y separados entre sí:
+                              antes eran botones de ~24px pegados, y en un
+                              teléfono era fácil dar a Eliminar queriendo Editar. */}
                           <button
+                            type="button"
                             onClick={() => startEditing(cat)}
-                            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-1"
+                            className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
                             title="Editar categoría"
+                            aria-label={`Editar la categoría ${cat.label}`}
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() => handleDeleteCategory(cat.id)}
-                            className="text-red-400 hover:text-red-600 transition-colors p-1"
+                            type="button"
+                            onClick={() => setPendingDeleteCat({ id: cat.id, label: cat.label })}
+                            className="w-9 h-9 ml-1 flex items-center justify-center rounded-lg text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950 transition-colors flex-shrink-0"
                             title="Eliminar categoría"
+                            aria-label={`Eliminar la categoría ${cat.label}`}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -577,7 +599,7 @@ export function ProfilePage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-slate-400 dark:text-slate-500 text-center py-2">
+                <p className="text-xs text-slate-500 dark:text-slate-400 text-center py-2">
                   No tienes categorías personalizadas de {catType === 'expense' ? 'gasto' : 'ingreso'}.
                 </p>
               )}
@@ -603,6 +625,8 @@ export function ProfilePage() {
                         key={emoji}
                         type="button"
                         onClick={() => setNewCatIcon(emoji)}
+                        aria-label={`Usar el ícono ${emoji}`}
+                        aria-pressed={newCatIcon === emoji}
                         className={`w-7 h-7 flex items-center justify-center rounded text-sm transition-all ${
                           newCatIcon === emoji
                             ? 'ring-2 ring-brand-500 bg-white dark:bg-slate-700'
@@ -616,11 +640,13 @@ export function ProfilePage() {
                 </div>
                 <div className="flex gap-2 items-center flex-wrap">
                   <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Color:</span>
-                  {CATEGORY_COLORS.slice(0, 8).map((c) => (
+                  {CATEGORY_COLORS.slice(0, 8).map((c, i) => (
                     <button
                       key={c}
                       type="button"
                       onClick={() => setNewCatColor(c)}
+                      aria-label={`Usar el color ${i + 1} de ${CATEGORY_COLORS.slice(0, 8).length}`}
+                      aria-pressed={newCatColor === c}
                       className={`w-6 h-6 rounded-full border-2 transition-all ${c.split(' ')[0]} ${
                         newCatColor === c ? 'ring-2 ring-brand-500 scale-110 border-white dark:border-slate-900' : 'border-transparent'
                       }`}
@@ -652,8 +678,10 @@ export function ProfilePage() {
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
               isDark ? 'bg-brand-600' : 'bg-slate-300 dark:bg-slate-600'
             }`}
+            type="button"
             role="switch"
             aria-checked={isDark}
+            aria-label="Activar tema oscuro"
           >
             <span
               className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
@@ -665,7 +693,7 @@ export function ProfilePage() {
 
         {/* ─── Cerrar sesión ─── */}
         <div className="px-4 pt-5 pb-2">
-          <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Sesión</p>
+          <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Sesión</p>
         </div>
 
         {/* Sign Out */}
@@ -673,19 +701,19 @@ export function ProfilePage() {
           onClick={() => setShowSignOutConfirm(true)}
           className="w-full flex items-center gap-4 p-4 text-left hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors rounded-lg"
         >
-          <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-950 flex items-center justify-center text-red-500 flex-shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-950 flex items-center justify-center text-red-600 dark:text-red-400 flex-shrink-0">
             <LogOut className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-red-600 dark:text-red-400">Cerrar sesión</p>
             <p className="text-xs text-slate-500 dark:text-slate-400">Finaliza tu sesión actual</p>
           </div>
-          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+          <ChevronRight className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
         </button>
       </div>
 
       {/* Version */}
-      <p className="text-center text-xs text-slate-400 dark:text-slate-500">
+      <p className="text-center text-xs text-slate-500 dark:text-slate-400">
         Foresight Finanzas v2.0 · SaaS Edition
       </p>
 
@@ -696,6 +724,15 @@ export function ProfilePage() {
         confirmLabel="Cerrar sesión"
         onConfirm={() => { setShowSignOutConfirm(false); signOut(); }}
         onCancel={() => setShowSignOutConfirm(false)}
+      />
+
+      <ConfirmDialog
+        open={pendingDeleteCat !== null}
+        title="Eliminar categoría"
+        message={`¿Eliminar «${pendingDeleteCat?.label ?? ''}»? Los movimientos que ya la usan conservan su categoría, pero no podrás asignarla a nuevos movimientos. Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        onConfirm={confirmDeleteCategory}
+        onCancel={() => setPendingDeleteCat(null)}
       />
     </div>
   );

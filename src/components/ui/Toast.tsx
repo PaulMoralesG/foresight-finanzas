@@ -22,9 +22,9 @@ export function Toast() {
       {toasts.map((toast) => {
         const IconComponent = toast.type === 'error' ? AlertCircle : CheckCircle;
         const iconColor = toast.type === 'error'
-          ? 'text-red-500'
+          ? 'text-red-600 dark:text-red-400'
           : toast.type === 'success'
-            ? 'text-emerald-500'
+            ? 'text-emerald-600 dark:text-emerald-400'
             : 'text-brand-500';
 
         const borderColor =
@@ -57,7 +57,7 @@ export function Toast() {
             )}
             <button
               onClick={() => removeToast(toast.id)}
-              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex-shrink-0"
+              className="text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex-shrink-0"
               aria-label="Cerrar"
             >
               <X className="w-3.5 h-3.5" />

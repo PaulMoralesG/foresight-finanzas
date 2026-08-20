@@ -44,8 +44,12 @@ export function AppLayout({ children }: AppLayoutProps) {
         }`}
       >
         <Header />
+        {/* Sin `pt-safe`: el Header ya aplica env(safe-area-inset-top) y está
+            encima. Tenerlo en ambos sitios metía ~47px de vacío entre la
+            cabecera y el contenido en cada pantalla de un iPhone con muesca
+            (en Android y escritorio el inset es 0, por eso no se notaba). */}
         <main
-          className="flex-1 p-4 md:p-5 lg:p-6 w-full lg:pb-6 pt-safe bg-slate-50 dark:bg-slate-950"
+          className="flex-1 p-4 md:p-5 lg:p-6 w-full lg:pb-6 bg-slate-50 dark:bg-slate-950"
         >
           {children}
         </main>
