@@ -3,6 +3,8 @@
 // Uso: <Skeleton className="h-4 w-48" /> o <Skeleton variant="card" />
 // ================================================================
 
+import { TrendingUp } from 'lucide-react';
+
 interface SkeletonProps {
   className?: string;
   variant?: 'text' | 'card' | 'circle' | 'button';
@@ -54,7 +56,14 @@ export function AppLoadingSkeleton() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-950">
       <div className="flex flex-col items-center gap-4 animate-fade-in">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 animate-pulse" />
+        {/* El logo, no un cuadro de color. Antes esto era un div degradado
+            vacío —un marcador de posición que nunca se sustituyó—, así que al
+            abrir la app aparecía un cuadrado azul sin identidad durante toda
+            la carga. Mismo gradiente y misma flecha que el icono de la PWA,
+            para que arranque reconociéndose. */}
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-800 flex items-center justify-center shadow-lg shadow-brand-600/25">
+          <TrendingUp className="w-8 h-8 text-white" strokeWidth={2.5} />
+        </div>
         <div className="space-y-2 text-center">
           <Skeleton className="h-5 w-40" />
           <Skeleton className="h-3 w-24 mx-auto" />

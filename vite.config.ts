@@ -42,7 +42,18 @@ export default defineConfig({
             purpose: 'any',
           },
           {
-            src: 'icons/icon-512.png',
+            // Icono APARTE para maskable, no el mismo que `any`.
+            //
+            // Android no muestra el maskable entero: recorta a la forma del
+            // lanzador (círculo, squircle, gota) y AMPLÍA para llenarla, de
+            // modo que solo se ve ~66% central. Con el icono normal —flecha
+            // casi a sangre— el recorte dejaba una banda blanca de borde a
+            // borde entre dos medias lunas azules: leía como un ojo.
+            //
+            // Este lleva la flecha al 75% y fondo a sangre sin esquinas
+            // redondeadas (la forma la pone el sistema). Fuente editable en
+            // icons/icon-maskable.svg.
+            src: 'icons/icon-maskable-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',

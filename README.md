@@ -85,6 +85,11 @@ había. El código sigue en el historial de git.
   debe coincidir con el configurado en el panel de Supabase; el cliente solo da
   retroalimentación temprana, quien valida de verdad es el servidor.
 - **CSP** estricto en `vercel.json`, con hash de script en vez de `unsafe-inline`.
+- **Cierre por inactividad**: 30 minutos sin interacción cierran la sesión, con aviso
+  60 segundos antes (`src/hooks/useIdleLogout.ts`). `persistSession` + `autoRefreshToken`
+  mantenían la sesión viva indefinidamente: una pestaña abierta en un portátil prestado
+  seguía autenticada semanas después. El cierre hace flush del sync antes de invalidar el
+  token, así que no se pierde ningún cambio pendiente, y borra la copia local.
 
 ### Datos locales sin cifrar (decisión consciente)
 

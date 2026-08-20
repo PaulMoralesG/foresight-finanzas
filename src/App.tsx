@@ -6,6 +6,9 @@ import { useEffect, lazy, Suspense } from 'react';
 import { Download, RefreshCw, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePWA } from '@/hooks/usePWA';
+import { useIdleLogout } from '@/hooks/useIdleLogout';
+import { supabaseAvailable } from '@/config/supabase';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useUiStore } from '@/stores/uiStore';
 import { HomePage } from '@/pages/HomePage';
 import { MovementsPage } from '@/pages/MovementsPage';
@@ -23,7 +26,7 @@ const LoginPage = lazy(() => import('@/pages/LoginPage').then(m => ({ default: m
 const ReportModal = lazy(() => import('@/components/features/report/ReportModal').then(m => ({ default: m.ReportModal })));
 
 export function App() {
-  const { user, isLoading, saveData } = useAuth();
+  const { user, isLoading, saveData, signOut } = useAuth();
   const activeTab = useUiStore((s) => s.activeTab);
   const isModalOpen = useUiStore((s) => s.isModalOpen);
   const isReportModalOpen = useUiStore((s) => s.isReportModalOpen);
@@ -45,6 +48,14 @@ export function App() {
     document.documentElement.classList.toggle('dark', isDark);
     localStorage.setItem('foresight-dark-mode', String(isDark));
   }, [isDark]);
+
+  // Cierre por inactividad. Solo con sesión real: en modo offline no hay nada
+  // que cerrar y desloguear solo estorbaría. signOut() ya hace flush del sync
+  // antes de invalidar el token, así que no se pierde ningún cambio pendiente.
+  const { avisando, segundosRestantes } = useIdleLogout({
+    enabled: supabaseAvailable && !!user,
+    onTimeout: signOut,
+  });
 
   if (isLoading) {
     return <AppLoadingSkeleton />;
@@ -112,6 +123,20 @@ export function App() {
           </div>
         </div>
       )}
+
+      {/* Aviso antes de cerrar por inactividad. Cualquier interacción con el
+          diálogo cuenta como actividad y reinicia el contador, así que basta
+          con pulsar "Seguir conectado". */}
+      <ConfirmDialog
+        open={avisando}
+        variant="warning"
+        title="¿Sigues ahí?"
+        message={`Por seguridad cerraremos tu sesión en ${segundosRestantes} segundo${segundosRestantes === 1 ? '' : 's'} por inactividad. Tus datos ya están guardados.`}
+        confirmLabel="Seguir conectado"
+        cancelLabel="Cerrar sesión"
+        onConfirm={() => { /* el propio clic reinicia el contador */ }}
+        onCancel={signOut}
+      />
 
       <AppLayout>
         {renderPage()}
