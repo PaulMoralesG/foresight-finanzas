@@ -238,6 +238,38 @@ export async function downloadBlob(blob: Blob, filename: string): Promise<Downlo
 }
 
 /**
+ * Ordena movimientos cronológicamente (del más antiguo al más reciente).
+ *
+ * Ni el PDF ni el CSV ordenaban nada: tomaban los movimientos en el orden en
+ * que estuvieran en el store, y ese orden NO es cronológico:
+ *
+ *  · `addTransaction` añade al final, así que registrar hoy un gasto de enero
+ *    lo deja detrás de uno de agosto.
+ *  · El pull del sync trae las filas con `order by updated_at, id`, de modo
+ *    que tras sincronizar el orden pasa a ser "por última edición".
+ *
+ * Por eso el reporte salía con días y meses entremezclados — y se notaba más
+ * en el reporte por rango, donde el desorden cruza varios meses. La lista de
+ * Movimientos sí ordena por su cuenta, así que en pantalla se veía bien y solo
+ * fallaba al exportar.
+ *
+ * Se compara el texto ISO (YYYY-MM-DD) directamente: ordena igual que la fecha
+ * y evita cualquier problema de zona horaria. Desempate por `created_at` para
+ * que dos movimientos del mismo día salgan en el orden en que se registraron.
+ */
+export function sortByDateAsc<T extends { date: string; created_at?: string; id: string }>(
+  items: T[],
+): T[] {
+  return [...items].sort((a, b) => {
+    const byDate = (a.date ?? '').slice(0, 10).localeCompare((b.date ?? '').slice(0, 10));
+    if (byDate !== 0) return byDate;
+    const byCreated = (a.created_at ?? '').localeCompare(b.created_at ?? '');
+    if (byCreated !== 0) return byCreated;
+    return a.id.localeCompare(b.id); // determinista aunque falte created_at
+  });
+}
+
+/**
  * Serializa filas a CSV escapando TODAS las celdas.
  *
  * Estaba duplicado, y solo una de las dos copias lo hacía bien: la de

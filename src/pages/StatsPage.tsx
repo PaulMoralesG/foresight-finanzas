@@ -6,7 +6,7 @@ import { useMemo, useState, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, FileText, FileSpreadsheet, Loader2, TrendingUp, ArrowUp, ArrowDown, PieChart, User, Building2, ClipboardList, CalendarClock } from 'lucide-react';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { formatMoney, MONTH_NAMES, formatDateLong, safeParseDate, downloadBlob, toCsv } from '@/lib/utils';
+import { formatMoney, MONTH_NAMES, formatDateLong, safeParseDate, downloadBlob, toCsv, sortByDateAsc } from '@/lib/utils';
 import { getCategoryById } from '@/config/categories';
 import { generatePDFReport } from '@/lib/pdf-generator';
 import {
@@ -264,7 +264,9 @@ export function StatsPage() {
     if (exportData.length === 0) return null;
 
     const headers = ['Fecha', 'Tipo', 'Categoría', 'Negocio/Personal', 'Monto', 'Concepto'];
-    const rows = exportData.map((item) => {
+    // Cronológico: el store no lo está (ver sortByDateAsc), así que sin esto
+    // el Excel salía con días y meses entremezclados igual que el PDF.
+    const rows = sortByDateAsc(exportData).map((item) => {
       const cat = getCategoryById(item.category, allCustomCats);
       const tipo = item.type === 'income' ? 'Ingreso' : 'Gasto';
       const negocio = item.businessType === 'business' || !item.businessType ? 'Negocio' : 'Personal';
