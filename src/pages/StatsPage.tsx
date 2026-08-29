@@ -6,7 +6,8 @@ import { useMemo, useState, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, FileText, FileSpreadsheet, Loader2, TrendingUp, ArrowUp, ArrowDown, PieChart, User, Building2, ClipboardList, CalendarClock } from 'lucide-react';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { formatMoney, MONTH_NAMES, formatDateLong, roundMoney, safeParseDate, downloadBlob, toCsv, sortByDateAsc } from '@/lib/utils';
+import { formatMoney, MONTH_NAMES, formatDateLong, roundMoney, safeParseDate, downloadBlob } from '@/lib/utils';
+import { movementsToCsv } from '@/lib/movements-csv';
 import { getCategoryById } from '@/config/categories';
 import { generatePDFReport } from '@/lib/pdf-generator';
 import {
@@ -269,28 +270,9 @@ export function StatsPage() {
     const exportData = getExportData();
     if (exportData.length === 0) return null;
 
-    const headers = ['Fecha', 'Tipo', 'Categoría', 'Negocio/Personal', 'Monto', 'Concepto'];
-    // Cronológico: el store no lo está (ver sortByDateAsc), así que sin esto
-    // el Excel salía con días y meses entremezclados igual que el PDF.
-    const rows = sortByDateAsc(exportData).map((item) => {
-      const cat = getCategoryById(item.category, allCustomCats);
-      const tipo = item.type === 'income' ? 'Ingreso' : 'Gasto';
-      const negocio = item.businessType === 'business' || !item.businessType ? 'Negocio' : 'Personal';
-      const monto = item.type === 'income' ? item.amount : -item.amount;
-      return [
-        safeParseDate(item.date).toLocaleDateString('es-ES'),
-        tipo,
-        cat?.label || item.category,
-        negocio,
-        monto.toFixed(2),
-        item.concept || '',
-      ];
-    });
-
-    // toCsv escapa TODAS las celdas. Antes aqu\u00ED solo se entrecomillaba el
-    // concepto, as\u00ED que una categor\u00EDa con coma (\u00ABComida, bebida\u00BB) desplazaba
-    // las columnas y Excel abr\u00EDa el archivo descuadrado desde esa fila.
-    return { blob: toCsv(headers, rows) };
+    // Formato único compartido con ReportModal: antes cada pantalla emitía sus
+    // propias columnas, en otro orden y con otro convenio de signo.
+    return { blob: movementsToCsv(exportData, allCustomCats) };
   }, [getExportData, allCustomCats]);
 
   // ── Excel: download ──
