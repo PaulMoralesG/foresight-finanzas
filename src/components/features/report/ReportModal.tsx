@@ -7,8 +7,8 @@ import { useState, useMemo, useId } from 'react';
 import { X, Calendar, Loader2, Download, FileSpreadsheet, Building2, User } from 'lucide-react';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { formatMoney, MONTH_NAMES, downloadBlob, roundMoney, toCsv, sortByDateAsc } from '@/lib/utils';
-import { getCategoryById } from '@/config/categories';
+import { formatMoney, MONTH_NAMES, downloadBlob, roundMoney } from '@/lib/utils';
+import { movementsToCsv } from '@/lib/movements-csv';
 import { generatePDFReport } from '@/lib/pdf-generator';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
@@ -69,18 +69,9 @@ export function ReportModal() {
 
   async function handleCSV() {
     try {
-      const headers = ['Fecha', 'Tipo', 'Categoría', 'Concepto', 'Monto', 'Ámbito', 'Método'];
-      // Cronológico: el orden del store es por última edición, no por fecha.
-      const rows = sortByDateAsc(monthData).map((tx) => [
-        tx.date,
-        tx.type === 'income' ? 'Ingreso' : 'Gasto',
-        (getCategoryById(tx.category, allCustomCats)?.label || tx.category),
-        tx.concept,
-        tx.amount.toString(),
-        tx.businessType === 'business' || !tx.businessType ? 'Negocio' : 'Personal',
-        tx.method === 'cash' ? 'Efectivo' : tx.method === 'card' ? 'Tarjeta' : 'Transferencia',
-      ]);
-      const outcome = await downloadBlob(toCsv(headers, rows), `reporte-${monthSlug}.csv`);
+      // Formato único compartido con StatsPage.
+      const blob = movementsToCsv(monthData, allCustomCats);
+      const outcome = await downloadBlob(blob, `reporte-${monthSlug}.csv`);
       if (outcome === 'cancelled') return; // el usuario cerró el menú de compartir
       addToast(outcome === 'shared' ? 'CSV listo para compartir ✅' : 'CSV descargado ✅', 'success');
     } catch {
