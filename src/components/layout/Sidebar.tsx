@@ -6,6 +6,7 @@
 import { LayoutGrid, ArrowLeftRight, BarChart3, User, TrendingUp, PiggyBank, ChevronsRight, ChevronsLeft } from 'lucide-react';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
+import { userInitials } from '@/lib/utils';
 import type { TabId } from '@/types';
 
 const NAV_ITEMS: { id: TabId; icon: typeof LayoutGrid; label: string }[] = [
@@ -23,9 +24,7 @@ export function Sidebar() {
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
   const user = useAuthStore((s) => s.user);
 
-  const initials = user
-    ? ((user.firstName?.[0] || '') + (user.lastName?.[0] || '')).toUpperCase() || user.email[0].toUpperCase()
-    : '?';
+  const initials = userInitials(user);
 
   return (
     <aside

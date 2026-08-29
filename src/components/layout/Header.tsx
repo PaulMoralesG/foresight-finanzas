@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useAuth } from '@/hooks/useAuth';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { supabaseAvailable } from '@/config/supabase';
+import { userInitials } from '@/lib/utils';
 import type { TabId } from '@/types';
 
 const PAGE_TITLES: Record<TabId, string> = {
@@ -163,7 +164,7 @@ export function Header() {
                   aria-label="Menú de usuario"
                   aria-expanded={isDropdownOpen}
                 >
-                  {((user.firstName?.[0] || '') + (user.lastName?.[0] || '')).toUpperCase() || user.email[0].toUpperCase()}
+                  {userInitials(user)}
                 </button>
 
                 {/* Dropdown */}
