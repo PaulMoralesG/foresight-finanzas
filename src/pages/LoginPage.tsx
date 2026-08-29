@@ -92,11 +92,14 @@ export function LoginPage() {
 
           {/* Middle — Value Prop */}
           <div className="space-y-6 max-w-md">
-            <h2 className="text-4xl font-extrabold text-white leading-tight">
+            {/* Reclamo de marketing, no una sección del documento: como <h2>
+                precedía en el DOM al <h1> del formulario, y un lector de
+                pantalla que navega por encabezados encontraba el h2 primero. */}
+            <p className="text-4xl font-extrabold text-white leading-tight">
               Tus finanzas,
               <br />
               <span className="text-brand-300">bajo control total</span>
-            </h2>
+            </p>
             <p className="text-lg text-slate-300 leading-relaxed">
               Separa ingresos y gastos personales de tu negocio. Visualiza tu crecimiento
               mes a mes con reportes claros y exportables.

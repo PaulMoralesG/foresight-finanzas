@@ -527,7 +527,7 @@ export function StatsPage() {
 
       {/* ─── Trend Chart ─── */}
       <div className="saas-card p-3">
-        <h3 className="text-xs font-bold text-slate-900 dark:text-white mb-2">Evolución</h3>
+        <h2 className="text-xs font-bold text-slate-900 dark:text-white mb-2">Evolución</h2>
         {trendData.every((d) => d.Ingresos === 0 && d.Gastos === 0) ? (
           <div className="text-center py-8">
             <TrendingUp className="w-6 h-6 text-slate-200 dark:text-slate-700 mb-1.5 block" />
@@ -658,7 +658,7 @@ export function StatsPage() {
       {/* ─── Category Breakdown ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="saas-card p-3">
-          <h3 className="text-xs font-bold text-slate-900 dark:text-white mb-2">Gastos por categoría</h3>
+          <h2 className="text-xs font-bold text-slate-900 dark:text-white mb-2">Gastos por categoría</h2>
           {expensesByCategory.length === 0 ? (
             <div className="text-center py-6">
               <PieChart className="w-6 h-6 text-slate-200 dark:text-slate-700 mb-1.5 block" />
@@ -735,7 +735,7 @@ export function StatsPage() {
         <div className="space-y-3">
           {/* Mayor gasto — transacción individual */}
           <div className="saas-card p-3">
-            <h3 className="text-xs font-bold text-slate-900 dark:text-white mb-2">Mayor gasto</h3>
+            <h2 className="text-xs font-bold text-slate-900 dark:text-white mb-2">Mayor gasto</h2>
             {largestExpense ? (
               <div>
                 <div className="flex items-center gap-2 mb-1.5">
@@ -775,7 +775,7 @@ export function StatsPage() {
 
           {/* Día pico */}
           <div className="saas-card p-3">
-            <h3 className="text-xs font-bold text-slate-900 dark:text-white mb-2">📅 Día de mayor gasto</h3>
+            <h2 className="text-xs font-bold text-slate-900 dark:text-white mb-2">📅 Día de mayor gasto</h2>
             {peakDay ? (
               <div>
                 <p className="text-sm font-semibold text-slate-900 dark:text-white">
