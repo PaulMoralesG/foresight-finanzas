@@ -7,7 +7,7 @@ import { X, Plus, Trash2, ArrowDown, ArrowUp, Building2, User, Banknote, CreditC
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_COLORS } from '@/config/categories';
-import { getTodayISO, parseMoneyInput, syncToCloud } from '@/lib/utils';
+import { getTodayISO, parseMoneyInput, roundMoney, syncToCloud } from '@/lib/utils';
 import { makeCategoryId } from '@/lib/category-id';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
@@ -159,7 +159,10 @@ export function TransactionModal({
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    const numAmount = parseMoneyInput(amount);
+    // Redondear al guardar, no solo al mostrar: la columna es numeric(14,2),
+    // así que un monto con más decimales divergiría entre local y servidor
+    // en el primer round-trip de sync.
+    const numAmount = roundMoney(parseMoneyInput(amount));
     if (numAmount <= 0) {
       addToast('Ingresa un monto mayor a 0', 'error');
       return;
@@ -236,8 +239,11 @@ export function TransactionModal({
           {/* Row 1: Tipo + Monto */}
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Tipo</label>
-              <div className="flex gap-1">
+              {/* span y no label: estos grupos son botones, no un control de
+                  formulario, así que un <label> sin `for` no nombra nada. El
+                  nombre accesible lo pone el role="group" del contenedor. */}
+              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Tipo</span>
+              <div className="flex gap-1" role="group" aria-label="Tipo de movimiento">
                 {(['expense', 'income'] as TransactionType[]).map((t) => (
                   <button
                     key={t}
@@ -261,7 +267,7 @@ export function TransactionModal({
               </div>
             </div>
             <div>
-              <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">
+              <label htmlFor="tx-amount" className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">
                 Monto
               </label>
               <input
@@ -287,8 +293,9 @@ export function TransactionModal({
           {/* Row 2: Concepto + Fecha */}
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Concepto</label>
+              <label htmlFor="tx-concept" className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Concepto</label>
               <input
+                id="tx-concept"
                 type="text"
                 placeholder="Ej. Venta, Pago renta..."
                 value={concept}
@@ -297,8 +304,9 @@ export function TransactionModal({
               />
             </div>
             <div>
-              <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Fecha</label>
+              <label htmlFor="tx-date" className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Fecha</label>
               <input
+                id="tx-date"
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
@@ -313,8 +321,8 @@ export function TransactionModal({
               cortaba contra el borde. A partir de sm vuelven a ir en paralelo. */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>
-              <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Ámbito</label>
-              <div className="flex gap-1">
+              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Ámbito</span>
+              <div className="flex gap-1" role="group" aria-label="Ámbito del movimiento">
                 {(['business', 'personal'] as BusinessType[]).map((bt) => (
                   <button
                     key={bt}
@@ -336,8 +344,8 @@ export function TransactionModal({
               </div>
             </div>
             <div>
-              <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Método</label>
-              <div className="flex gap-1">
+              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Método</span>
+              <div className="flex gap-1" role="group" aria-label="Método de pago">
                 {([
                   { id: 'cash', label: 'Efectivo', icon: Banknote },
                   { id: 'card', label: 'Tarjeta', icon: CreditCard },
@@ -363,18 +371,18 @@ export function TransactionModal({
 
           {/* Categorías */}
           <div>
-            <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">
+            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">
               Categoría
               {categories.length > 0 && (
                 <span className="ml-1 font-normal normal-case text-slate-500 dark:text-slate-400">
                   ({categories.length})
                 </span>
               )}
-            </label>
+            </span>
             {/* 3 columnas en pantallas estrechas: con 4 fijas, un iPhone SE
                 (320px) dejaba ~68px por celda y truncaba «Entretenimiento» o
                 «Transporte» a la primera palabra. */}
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5" role="group" aria-label="Categoría del movimiento">
               {categories.map((cat) => (
                 <button
                   key={cat.id}
@@ -419,6 +427,7 @@ export function TransactionModal({
                     type="text"
                     value={newCatLabel}
                     onChange={(e) => setNewCatLabel(e.target.value)}
+                    aria-label="Nombre de la nueva categoría"
                     className="saas-input-sm flex-1 text-xs"
                     placeholder="Nombre categoría"
                     autoFocus
@@ -427,6 +436,8 @@ export function TransactionModal({
                   <button
                     type="button"
                     onClick={handleAddCustomCategory}
+                    aria-label="Crear categoría"
+                    title="Crear categoría"
                     className="saas-btn-primary saas-btn-sm flex-shrink-0"
                   >
                     <Plus className="w-3 h-3" />
@@ -480,6 +491,7 @@ export function TransactionModal({
               type="button"
               onClick={() => openDeleteModal(editingId!)}
               className="saas-btn-danger py-1.5 text-xs"
+              aria-label="Eliminar movimiento"
               title="Eliminar"
             >
               <Trash2 className="w-3 h-3" />

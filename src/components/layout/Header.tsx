@@ -93,15 +93,20 @@ export function Header() {
           {/* Right: Sync status + Global actions */}
           <div className="flex items-center gap-2">
             {/* Sync status indicator — combina red real + resultado real del push */}
+            {/* Región viva: el estado solo se comunicaba por `title`, que la
+                mayoría de lectores de pantalla no anuncia, así que pasar a
+                "error de sincronización" era invisible sin ratón. */}
             {supabaseAvailable && (
-              <>
+              <div role="status" aria-live="polite" className="flex items-center">
                 {!isOnline ? (
                   <span className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400" title="Sin conexión">
                     <WifiOff className="w-3 h-3" />
+                    <span className="sr-only">Sin conexión</span>
                   </span>
                 ) : syncState === 'syncing' ? (
                   <span className="flex items-center gap-1 text-[11px] text-amber-500" title="Sincronizando...">
                     <Loader2 className="w-3 h-3 animate-spin" />
+                    <span className="sr-only">Sincronizando</span>
                   </span>
                 ) : syncState === 'error' ? (
                   <span
@@ -109,6 +114,9 @@ export function Header() {
                     title="No se pudo sincronizar con la nube. Tus cambios están guardados solo en este dispositivo."
                   >
                     <CloudOff className="w-3 h-3" />
+                    <span className="sr-only">
+                      No se pudo sincronizar con la nube. Tus cambios están guardados solo en este dispositivo.
+                    </span>
                   </span>
                 ) : syncState === 'local-only' ? (
                   <span
@@ -116,13 +124,15 @@ export function Header() {
                     title="Sincronización desactivada (falta migrar el esquema de Supabase)"
                   >
                     <CloudOff className="w-3 h-3" />
+                    <span className="sr-only">Sincronización desactivada. Los cambios se guardan solo en este dispositivo.</span>
                   </span>
                 ) : (
                   <span className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400" title="Sincronizado">
                     <Wifi className="w-3 h-3" />
+                    <span className="sr-only">Sincronizado</span>
                   </span>
                 )}
-              </>
+              </div>
             )}
 
             {/* Dark mode toggle pill */}

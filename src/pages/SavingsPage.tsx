@@ -9,10 +9,11 @@ import { PiggyBank, Plus, Pencil, Trash2, X, Target, Wallet, ChevronLeft, Chevro
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
-import { formatMoney, parseMoneyInput, syncToCloud } from '@/lib/utils';
+import { formatMoney, parseMoneyInput, roundMoney, syncToCloud } from '@/lib/utils';
 import { computeSavingsByConcept, savingsForGoal } from '@/lib/savings';
 import { useBudget, currentMonthKey, shiftMonthKey, monthKeyLabel } from '@/hooks/useBudget';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import type { SavingsGoal } from '@/types';
 
@@ -34,8 +35,13 @@ function BudgetPlanner() {
   const hasOwn = (budgets[monthKey] ?? 0) > 0;
 
   const save = () => {
-    const v = parseMoneyInput(editValue);
-    if (isNaN(v) || v < 0) {
+    // `parseMoneyInput` ya devuelve 0 para cualquier cosa que no sepa leer, así
+    // que comprobar isNaN sobre su salida no detectaba nada: escribir "abc"
+    // guardaba un presupuesto de 0 y anunciaba "Presupuesto eliminado". Hay que
+    // mirar el texto crudo, y aceptar el 0 explícito (el botón de quitar).
+    const crudo = editValue.trim();
+    const v = roundMoney(parseMoneyInput(crudo));
+    if (!/\d/.test(crudo) || v < 0) {
       addToast('Ingresa un monto válido', 'error');
       return;
     }
@@ -103,11 +109,12 @@ function BudgetPlanner() {
       {/* ── Modo edición ── */}
       {isEditing ? (
         <div className="space-y-2.5">
-          <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+          <label htmlFor="budget-amount" className="block text-xs font-semibold text-slate-600 dark:text-slate-300">
             Presupuesto para {monthKeyLabel(monthKey)}
           </label>
           <div className="flex gap-2">
             <input
+              id="budget-amount"
               type="text"
               inputMode="decimal"
               value={editValue}
@@ -150,6 +157,7 @@ function BudgetPlanner() {
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               placeholder="Ej: 15000"
+              aria-label={`Presupuesto para ${monthKeyLabel(monthKey)}`}
               className="saas-input flex-1"
               onKeyDown={(e) => { if (e.key === 'Enter') save(); }}
             />
@@ -223,10 +231,10 @@ export function SavingsPage() {
   const totalSaved = useMemo(() => {
     let sum = 0;
     for (const saved of savingsByConcept.values()) sum += saved;
-    return sum;
+    return roundMoney(sum);
   }, [savingsByConcept]);
 
-  const totalTarget = savingsGoals.reduce((sum, g) => sum + g.target, 0);
+  const totalTarget = roundMoney(savingsGoals.reduce((sum, g) => sum + g.target, 0));
   const globalPct = totalTarget > 0 ? Math.min(100, Math.round((totalSaved / totalTarget) * 100)) : 0;
 
   function openCreate() {
@@ -245,7 +253,7 @@ export function SavingsPage() {
 
   function handleSave() {
     const name = concept.trim();
-    const target = parseMoneyInput(targetInput);
+    const target = roundMoney(parseMoneyInput(targetInput));
     if (!name) {
       addToast('Ingresa un concepto para la meta', 'error');
       return;
@@ -280,6 +288,11 @@ export function SavingsPage() {
   }, isModalOpen || !!confirmDelete);
 
   useScrollLock(isModalOpen || !!confirmDelete);
+
+  // Ambos diálogos declaraban aria-modal sin retener el foco: con Tab se
+  // salía al contenido de fondo, que seguía siendo operable bajo el overlay.
+  const goalModalRef = useFocusTrap<HTMLDivElement>(isModalOpen && !confirmDelete, '#goal-concept');
+  const deleteModalRef = useFocusTrap<HTMLDivElement>(!!confirmDelete);
 
   return (
     <div className="space-y-4">
@@ -406,7 +419,9 @@ export function SavingsPage() {
                     style={{ width: `${pct}%` }}
                   />
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex items-center justify-between gap-2 flex-wrap">
+                {/* div y no p: un <button> dentro de <p> es HTML inválido y el
+                    navegador reubica el botón fuera del párrafo al parsear. */}
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex items-center justify-between gap-2 flex-wrap">
                   <span>
                     {remaining > 0 ? `Te falta ${formatMoney(remaining)} para cumplirla` : '🎉 ¡Meta cumplida!'}
                   </span>
@@ -418,12 +433,13 @@ export function SavingsPage() {
                       businessType: 'personal',
                     })}
                     className="saas-btn-primary saas-btn-sm flex items-center gap-1"
+                    aria-label={`Aportar a la meta ${goal.concept}`}
                     title={`Aportar a "${goal.concept}"`}
                   >
                     <Plus className="w-3 h-3" />
                     Aportar
                   </button>
-                </p>
+                </div>
               </div>
             );
           })}
@@ -435,6 +451,7 @@ export function SavingsPage() {
         <>
           <div className="fixed inset-0 bg-black/50 z-[200] animate-fade-in" onClick={() => setIsModalOpen(false)} />
           <div
+            ref={goalModalRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="savings-goal-modal-title"
@@ -455,23 +472,24 @@ export function SavingsPage() {
 
             <div className="p-4 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                <label htmlFor="goal-concept" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Concepto
                 </label>
                 <input
+                  id="goal-concept"
                   type="text"
                   value={concept}
                   onChange={(e) => setConcept(e.target.value)}
                   placeholder="Ej: Casa, Vacaciones, Auto…"
                   className="saas-input w-full"
-                  autoFocus
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                <label htmlFor="goal-target" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Monto objetivo
                 </label>
                 <input
+                  id="goal-target"
                   type="text"
                   inputMode="decimal"
                   value={targetInput}
@@ -500,6 +518,7 @@ export function SavingsPage() {
         <>
           <div className="fixed inset-0 bg-black/50 z-[200] animate-fade-in" onClick={() => setConfirmDelete(null)} />
           <div
+            ref={deleteModalRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="savings-delete-modal-title"

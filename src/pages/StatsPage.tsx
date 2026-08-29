@@ -6,7 +6,7 @@ import { useMemo, useState, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, FileText, FileSpreadsheet, Loader2, TrendingUp, ArrowUp, ArrowDown, PieChart, User, Building2, ClipboardList, CalendarClock } from 'lucide-react';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { formatMoney, MONTH_NAMES, formatDateLong, safeParseDate, downloadBlob, toCsv, sortByDateAsc } from '@/lib/utils';
+import { formatMoney, MONTH_NAMES, formatDateLong, roundMoney, safeParseDate, downloadBlob, toCsv, sortByDateAsc } from '@/lib/utils';
 import { getCategoryById } from '@/config/categories';
 import { generatePDFReport } from '@/lib/pdf-generator';
 import {
@@ -54,13 +54,13 @@ export function StatsPage() {
         const id = safeParseDate(item.date);
         return id.getMonth() === m && id.getFullYear() === y;
       });
-      const ingresos = items.filter((i) => i.type === 'income').reduce((s, i) => s + i.amount, 0);
-      const gastos = items.filter((i) => i.type === 'expense').reduce((s, i) => s + i.amount, 0);
+      const ingresos = roundMoney(items.filter((i) => i.type === 'income').reduce((s, i) => s + i.amount, 0));
+      const gastos = roundMoney(items.filter((i) => i.type === 'expense').reduce((s, i) => s + i.amount, 0));
       months.push({
         month: MONTH_NAMES[m].slice(0, 3),
         Ingresos: ingresos,
         Gastos: gastos,
-        Balance: ingresos - gastos,
+        Balance: roundMoney(ingresos - gastos),
       });
     }
     return months;
@@ -118,21 +118,27 @@ export function StatsPage() {
 
   // Totals
   const totals = useMemo(() => {
-    const income = filteredData.filter((i) => i.type === 'income').reduce((s, i) => s + i.amount, 0);
-    const spent = filteredData.filter((i) => i.type === 'expense').reduce((s, i) => s + i.amount, 0);
-    const businessInc = filteredData
+    const income = roundMoney(filteredData.filter((i) => i.type === 'income').reduce((s, i) => s + i.amount, 0));
+    const spent = roundMoney(filteredData.filter((i) => i.type === 'expense').reduce((s, i) => s + i.amount, 0));
+    const businessInc = roundMoney(filteredData
       .filter((i) => i.type === 'income' && i.businessType === 'business')
-      .reduce((s, i) => s + i.amount, 0);
-    const businessSpent = filteredData
+      .reduce((s, i) => s + i.amount, 0));
+    const businessSpent = roundMoney(filteredData
       .filter((i) => i.type === 'expense' && i.businessType === 'business')
-      .reduce((s, i) => s + i.amount, 0);
-    return { income, spent, balance: income - spent, businessProfit: businessInc - businessSpent, count: filteredData.length };
+      .reduce((s, i) => s + i.amount, 0));
+    return {
+      income,
+      spent,
+      balance: roundMoney(income - spent),
+      businessProfit: roundMoney(businessInc - businessSpent),
+      count: filteredData.length,
+    };
   }, [filteredData]);
 
   // Previous totals for comparison
   const prevTotals = useMemo(() => {
-    const income = previousData.filter((i) => i.type === 'income').reduce((s, i) => s + i.amount, 0);
-    const spent = previousData.filter((i) => i.type === 'expense').reduce((s, i) => s + i.amount, 0);
+    const income = roundMoney(previousData.filter((i) => i.type === 'income').reduce((s, i) => s + i.amount, 0));
+    const spent = roundMoney(previousData.filter((i) => i.type === 'expense').reduce((s, i) => s + i.amount, 0));
     return { income, spent };
   }, [previousData]);
 
@@ -148,7 +154,7 @@ export function StatsPage() {
     filteredData
       .filter((i) => i.type === 'expense')
       .forEach((item) => {
-        map[item.category] = (map[item.category] || 0) + item.amount;
+        map[item.category] = roundMoney((map[item.category] || 0) + item.amount);
       });
     return Object.entries(map).sort(([, a], [, b]) => b - a);
   }, [filteredData]);
@@ -169,7 +175,7 @@ export function StatsPage() {
     const byDay: Record<string, number> = {};
     expenseItems.forEach((i) => {
       const day = i.date.slice(0, 10);
-      byDay[day] = (byDay[day] || 0) + i.amount;
+      byDay[day] = roundMoney((byDay[day] || 0) + i.amount);
     });
     let maxDay = '';
     let maxAmount = 0;
@@ -317,6 +323,11 @@ export function StatsPage() {
         ? `${formatDateLong(statsFromDate)} → ${formatDateLong(statsToDate)}`
         : 'Selecciona un rango';
 
+  // Recharts recibe colores como props, no como clases, así que el tema hay
+  // que resolverlo aquí. Estaba fijo en slate-400, que sobre el fondo claro
+  // del gráfico da ~2,6:1 — por debajo del mínimo de WCAG para texto.
+  const axisTickColor = isDark ? '#94a3b8' : '#475569';
+
   return (
     <div className="space-y-4 animate-fade-in">
       {/* ─── Filter Bar ─── */}
@@ -366,6 +377,7 @@ export function StatsPage() {
               <select
                 value={statsMonth}
                 onChange={(e) => setStatsMonth(Number(e.target.value))}
+                aria-label="Mes a analizar"
                 className="saas-input-sm text-[11px] w-[100px]"
               >
                 {MONTH_NAMES.map((name, i) => (
@@ -375,6 +387,7 @@ export function StatsPage() {
               <select
                 value={statsYear}
                 onChange={(e) => setStatsYear(Number(e.target.value))}
+                aria-label="Año a analizar"
                 className="saas-input-sm text-[11px] w-[75px]"
               >
                 {yearOptions.map((y) => (
@@ -416,6 +429,7 @@ export function StatsPage() {
                 type="date"
                 value={statsFromDate || ''}
                 onChange={(e) => setStatsRange(e.target.value || null, statsToDate)}
+                aria-label="Fecha de inicio del rango"
                 className="saas-input-sm text-[11px] w-[120px]"
               />
               <span className="text-slate-500 dark:text-slate-400 text-[11px]">→</span>
@@ -423,6 +437,7 @@ export function StatsPage() {
                 type="date"
                 value={statsToDate || ''}
                 onChange={(e) => setStatsRange(statsFromDate, e.target.value || null)}
+                aria-label="Fecha de fin del rango"
                 className="saas-input-sm text-[11px] w-[120px]"
               />
             </div>
@@ -543,12 +558,12 @@ export function StatsPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#334155' : '#e2e8f0'} />
                 <XAxis
                   dataKey="month"
-                  tick={{ fontSize: 12, fill: '#94a3b8' }}
+                  tick={{ fontSize: 12, fill: axisTickColor }}
                   axisLine={{ stroke: isDark ? '#334155' : '#e2e8f0' }}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  tick={{ fontSize: 11, fill: axisTickColor }}
                   axisLine={false}
                   tickLine={false}
                   width={55}
@@ -614,7 +629,7 @@ export function StatsPage() {
             {formatMoney(totals.income)}
           </p>
           {prevTotals.income > 0 && (
-            <p className={`text-[11px] mt-0.5 ${totals.income >= prevTotals.income ? 'text-income-500' : 'text-expense-500'}`}>
+            <p className={`text-[11px] mt-0.5 ${totals.income >= prevTotals.income ? 'text-income-600 dark:text-income-400' : 'text-expense-600 dark:text-expense-400'}`}>
               {totals.income >= prevTotals.income ? <ArrowUp className="inline w-2 h-2 mr-0.5" /> : <ArrowDown className="inline w-2 h-2 mr-0.5" />}
               {pctChange(totals.income, prevTotals.income)} vs período anterior
             </p>
@@ -628,7 +643,7 @@ export function StatsPage() {
             {formatMoney(totals.spent)}
           </p>
           {prevTotals.spent > 0 && (
-            <p className={`text-[11px] mt-0.5 ${totals.spent <= prevTotals.spent ? 'text-income-500' : 'text-expense-500'}`}>
+            <p className={`text-[11px] mt-0.5 ${totals.spent <= prevTotals.spent ? 'text-income-600 dark:text-income-400' : 'text-expense-600 dark:text-expense-400'}`}>
               {totals.spent <= prevTotals.spent ? <ArrowDown className="inline w-2 h-2 mr-0.5" /> : <ArrowUp className="inline w-2 h-2 mr-0.5" />}
               {pctChange(totals.spent, prevTotals.spent)} vs período anterior
             </p>

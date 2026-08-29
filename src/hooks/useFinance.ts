@@ -54,7 +54,7 @@ export function useMonthlyData(): {
     const prevDate = new Date(d.getFullYear(), d.getMonth() - 1, 1);
     const prevMonth = prevDate.getMonth();
     const prevYear = prevDate.getFullYear();
-    const previousBusinessIncome = expenses
+    const previousBusinessIncome = roundMoney(expenses
       .filter((item) => {
         const id = safeParseDate(item.date);
         return (
@@ -64,7 +64,7 @@ export function useMonthlyData(): {
           item.businessType === 'business'
         );
       })
-      .reduce((s, i) => s + i.amount, 0);
+      .reduce((s, i) => s + i.amount, 0));
 
     return {
       monthlyData,

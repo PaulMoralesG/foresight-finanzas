@@ -119,7 +119,10 @@ export function LoginPage() {
           </div>
 
           {/* Bottom */}
-          <p className="text-slate-500 dark:text-slate-400 text-xs">
+          {/* Este panel es oscuro en ambos temas, así que la variante `dark:`
+              nunca se aplicaba en modo claro y quedaba slate-500 sobre
+              slate-950. Color fijo, elegido para el fondo real. */}
+          <p className="text-slate-400 text-xs">
             © {new Date().getFullYear()} Foresight Finanzas. Todos los derechos reservados.
           </p>
         </div>
@@ -192,6 +195,7 @@ export function LoginPage() {
                 <input
                   type="email"
                   placeholder="Correo electrónico"
+                  aria-label="Correo electrónico para recuperar la contraseña"
                   value={forgotEmail}
                   onChange={(e) => setForgotEmail(e.target.value)}
                   className="saas-input"

@@ -8,7 +8,7 @@ import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useMonthlyData } from '@/hooks/useFinance';
 import { useBudget } from '@/hooks/useBudget';
-import { formatMoney, safeParseDate } from '@/lib/utils';
+import { formatMoney, roundMoney, safeParseDate } from '@/lib/utils';
 import { computeSavingsByConcept } from '@/lib/savings';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/config/categories';
 import { MonthNav } from '@/components/layout/MonthNav';
@@ -79,7 +79,12 @@ function CategoryBreakdown({ expenses }: { expenses: Transaction[] }) {
               onClick={() => { navigateTo('movements' as TabId, catId); }}
               role="button"
               tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter') navigateTo('movements' as TabId, catId); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  navigateTo('movements' as TabId, catId);
+                }
+              }}
               title={`Filtrar por ${cat?.label || catId}`}
             >
               <div className="flex items-center justify-between text-xs mb-0.5">
@@ -174,8 +179,17 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
               return (
                 <tr
                   key={tx.id}
-                  className="cursor-pointer"
+                  className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500"
                   onClick={() => openModal(tx.id)}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Editar ${tx.concept}`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      openModal(tx.id);
+                    }
+                  }}
                 >
                   <td className="text-center">
                     <span className="text-base">{cat?.icon || '📌'}</span>
@@ -224,8 +238,17 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
           return (
             <div
               key={tx.id}
-              className="p-3 active:scale-[0.98] transition-transform cursor-pointer"
+              className="p-3 active:scale-[0.98] transition-transform cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500"
               onClick={() => openModal(tx.id)}
+              role="button"
+              tabIndex={0}
+              aria-label={`Editar ${tx.concept}`}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  openModal(tx.id);
+                }
+              }}
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -472,7 +495,7 @@ function SavingsGoalWidget({ totalIncome }: { totalIncome: number }) {
       .sort((a, b) => b.saved - a.saved);
   }, [expenses, currentViewDate]);
 
-  const totalSaved = savingsByConcept.reduce((s, g) => s + g.saved, 0);
+  const totalSaved = roundMoney(savingsByConcept.reduce((s, g) => s + g.saved, 0));
   const savingsPct = totalIncome > 0 ? Math.round((totalSaved / totalIncome) * 100) : 0;
 
   const emoji = totalSaved > 10000 ? '💰' : totalSaved > 5000 ? '🐷' : totalSaved > 1000 ? '🪙' : totalSaved > 0 ? '🌱' : '💤';
