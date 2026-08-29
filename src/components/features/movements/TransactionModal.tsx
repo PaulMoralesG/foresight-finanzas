@@ -6,7 +6,7 @@ import { useState, useEffect, useMemo, type FormEvent } from 'react';
 import { X, Plus, Trash2, ArrowDown, ArrowUp, Building2, User, Banknote, CreditCard, Landmark } from 'lucide-react';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_COLORS } from '@/config/categories';
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_COLORS, CATEGORY_EMOJIS } from '@/config/categories';
 import { getTodayISO, parseMoneyInput, roundMoney, syncToCloud } from '@/lib/utils';
 import { makeCategoryId } from '@/lib/category-id';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
@@ -209,7 +209,7 @@ export function TransactionModal({
   return (
     <>
       {/* Overlay */}
-      <div className="fixed inset-0 bg-black/50 z-[200] animate-fade-in" onClick={closeModal} />
+      <div className="fixed inset-0 bg-black/50 z-overlay animate-fade-in" onClick={closeModal} />
 
       {/* Modal */}
       <div
@@ -217,7 +217,7 @@ export function TransactionModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="transaction-modal-title"
-        className="fixed inset-0 z-[201] bg-white dark:bg-slate-950 md:rounded-2xl shadow-2xl flex flex-col w-full max-w-full md:max-w-md mx-auto overflow-hidden animate-scale-in md:inset-y-6 md:mx-auto pt-safe"
+        className="fixed inset-0 z-modal bg-white dark:bg-slate-950 md:rounded-2xl shadow-2xl flex flex-col w-full max-w-full md:max-w-md mx-auto overflow-hidden animate-scale-in md:inset-y-6 md:mx-auto pt-safe"
         style={{ overscrollBehaviorX: 'none' }}
       >
         {/* Header */}
@@ -446,7 +446,7 @@ export function TransactionModal({
                 <div className="flex gap-1.5 items-center">
                   <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex-shrink-0">Ícono:</span>
                   <div className="flex gap-1 flex-wrap">
-                    {['📌', '🛒', '🍴', '💊', '📚', '🎉', '💼', '🏠', '🚗', '💻', '💰', '🎁', '🔧', '🐾', '✈️', '📱', '⛪'].map((emoji) => (
+                    {CATEGORY_EMOJIS.map((emoji) => (
                       <button
                         key={emoji}
                         type="button"
@@ -518,8 +518,8 @@ export function TransactionModal({
       {/* Modal de confirmación de borrado — dentro del contenedor principal para visibilidad en móvil */}
       {isDeleteModalOpen && (
         <>
-          <div className="absolute inset-0 bg-black/60 z-[210] animate-fade-in" onClick={closeDeleteModal} />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[211] w-[calc(100%-2rem)] max-w-xs">
+          <div className="absolute inset-0 bg-black/60 z-10 animate-fade-in" onClick={closeDeleteModal} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-[calc(100%-2rem)] max-w-xs">
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-4 text-center animate-scale-in">
               <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-red-50 dark:bg-red-950 flex items-center justify-center">
                 <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />

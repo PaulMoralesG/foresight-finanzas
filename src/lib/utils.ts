@@ -3,10 +3,20 @@
 // ================================================================
 
 /**
+ * Locale único de la app.
+ *
+ * Convivían tres: los importes y casi todas las fechas en `es-MX`, el mes del
+ * saldo del dashboard en `es-EC` y el CSV en `es-ES`. La diferencia se veía —
+ * `es-ES` escribe la fecha como dd/mm/yyyy y `es-MX` como d/m/yyyy—, y nada
+ * garantizaba que las tres se movieran juntas. Un solo sitio que cambiar.
+ */
+export const LOCALE = 'es-MX';
+
+/**
  * Formatea un número como moneda MXN.
  */
 export function formatMoney(amount: number): string {
-  return new Intl.NumberFormat('es-MX', {
+  return new Intl.NumberFormat(LOCALE, {
     style: 'currency',
     currency: 'MXN',
     minimumFractionDigits: 2,
@@ -126,7 +136,7 @@ export function syncToCloud(
  * Nombres de meses en español.
  */
 export const MONTH_NAMES = Array.from({ length: 12 }, (_, i) => {
-  const name = new Intl.DateTimeFormat('es-MX', { month: 'long' }).format(new Date(2024, i, 1));
+  const name = new Intl.DateTimeFormat(LOCALE, { month: 'long' }).format(new Date(2024, i, 1));
   return name.charAt(0).toUpperCase() + name.slice(1);
 });
 

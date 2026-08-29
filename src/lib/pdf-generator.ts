@@ -4,7 +4,7 @@
 
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { formatMoney, MONTH_NAMES, roundMoney, safeParseDate, sortByDateAsc } from './utils';
+import { formatMoney, LOCALE, MONTH_NAMES, roundMoney, safeParseDate, sortByDateAsc } from './utils';
 import type { Transaction } from '@/types';
 
 export async function generatePDFReport(
@@ -62,7 +62,7 @@ export async function generatePDFReport(
 
   if (monthly.length > 0) {
     const tableData = monthly.map((item) => [
-      safeParseDate(item.date).toLocaleDateString('es-ES'),
+      safeParseDate(item.date).toLocaleDateString(LOCALE),
       item.type === 'income' ? 'Ingreso' : 'Gasto',
       item.businessType === 'personal' ? 'Personal' : 'Negocio',
       formatMoney(item.amount),

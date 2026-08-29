@@ -54,7 +54,7 @@ export function ConfirmDialog({
     : 'bg-amber-500 hover:bg-amber-600 text-white';
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-dialog flex items-end sm:items-center justify-center">
       {/* Overlay */}
       <div
         className="absolute inset-0 bg-black/50 animate-fade-in"
@@ -72,7 +72,7 @@ export function ConfirmDialog({
            + safe-area): con `mb-4` los botones Cancelar/Eliminar quedaban
            medio tapados por la barra, justo los controles que hay que pulsar.
            A partir de sm el diálogo va centrado y no necesita el hueco. */
-        className="relative w-full sm:max-w-sm mx-4 mb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] sm:mb-0 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6 animate-scale-in z-10"
+        className="relative w-full sm:max-w-sm mx-4 mb-[calc(var(--bottom-clearance)+1rem)] sm:mb-0 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6 animate-scale-in z-10"
       >
         <div className="flex items-start gap-4">
           <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${

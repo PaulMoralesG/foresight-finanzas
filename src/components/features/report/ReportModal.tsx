@@ -126,7 +126,7 @@ export function ReportModal() {
     <>
       {/* Overlay */}
       <div
-        className="fixed inset-0 bg-black/50 z-[200] animate-fade-in"
+        className="fixed inset-0 bg-black/50 z-overlay animate-fade-in"
         onClick={closeReportModal}
       />
 
@@ -136,7 +136,7 @@ export function ReportModal() {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="fixed inset-x-0 top-0 z-[201] saas-card max-w-sm mx-auto p-3 animate-scale-in rounded-t-2xl md:rounded-2xl overflow-hidden flex flex-col"
+        className="fixed inset-x-0 top-0 z-modal saas-card max-w-sm mx-auto p-3 animate-scale-in rounded-t-2xl md:rounded-2xl overflow-hidden flex flex-col"
         style={{
           top: 'env(safe-area-inset-top, 0px)',
           maxHeight: 'calc(100dvh - env(safe-area-inset-bottom, 0px))',

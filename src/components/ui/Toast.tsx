@@ -66,8 +66,10 @@ export function Toast() {
 
   return (
     <div
-      className="fixed right-4 left-4 sm:left-auto sm:right-6 z-[9999] flex flex-col gap-2 sm:w-[380px] sm:max-w-[calc(100%-2rem)]"
-      style={{ bottom: `calc(80px + env(safe-area-inset-bottom, 0px))` }}
+      className="fixed right-4 left-4 sm:left-auto sm:right-6 z-toast flex flex-col gap-2 sm:w-[380px] sm:max-w-[calc(100%-2rem)]"
+      // Un solo origen para el hueco de la barra inferior (ver --tabbar-h en
+      // index.css); antes eran 80px escritos a mano aquí.
+      style={{ bottom: 'calc(var(--bottom-clearance) + 1.5rem)' }}
     >
       <div role="alert" aria-live="assertive" aria-atomic="false" className="flex flex-col gap-2">
         {errors.map(renderToast)}

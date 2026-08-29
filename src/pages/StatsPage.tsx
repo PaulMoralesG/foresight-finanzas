@@ -6,7 +6,7 @@ import { useMemo, useState, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, FileText, FileSpreadsheet, Loader2, TrendingUp, ArrowUp, ArrowDown, PieChart, User, Building2, ClipboardList, CalendarClock } from 'lucide-react';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { formatMoney, MONTH_NAMES, formatDateLong, roundMoney, safeParseDate, downloadBlob } from '@/lib/utils';
+import { formatMoney, MONTH_NAMES, formatDateLong, LOCALE, roundMoney, safeParseDate, downloadBlob } from '@/lib/utils';
 import { movementsToCsv } from '@/lib/movements-csv';
 import { getCategoryById } from '@/config/categories';
 import { generatePDFReport } from '@/lib/pdf-generator';
@@ -714,7 +714,7 @@ export function StatsPage() {
                                 {t.concept || 'Sin concepto'}
                               </p>
                               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                                {safeParseDate(t.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                                {safeParseDate(t.date).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })}
                               </p>
                             </div>
                             <span className="text-expense-600 dark:text-expense-400 font-semibold tabular-nums ml-2 flex-shrink-0">
@@ -762,7 +762,7 @@ export function StatsPage() {
                     {largestExpense.concept || 'Sin concepto'}
                   </p>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    {safeParseDate(largestExpense.date).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    {safeParseDate(largestExpense.date).toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long' })}
                     {' · '}
                     {largestExpense.method === 'cash' ? '💵 Efectivo' : largestExpense.method === 'card' ? '💳 Tarjeta' : '🏦 Transferencia'}
                   </p>
@@ -779,7 +779,7 @@ export function StatsPage() {
             {peakDay ? (
               <div>
                 <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                  {safeParseDate(peakDay.date).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  {safeParseDate(peakDay.date).toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long' })}
                 </p>
                 <p className="text-base font-bold text-expense-600 dark:text-expense-400 tabular-nums mt-0.5">
                   {formatMoney(peakDay.amount)}
