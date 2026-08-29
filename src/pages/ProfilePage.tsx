@@ -9,7 +9,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useFinanceStore } from '@/stores/financeStore';
 import { CATEGORY_COLORS, CATEGORY_EMOJIS } from '@/config/categories';
-import { syncToCloud } from '@/lib/utils';
+import { syncToCloud, userInitials } from '@/lib/utils';
 import { makeCategoryId } from '@/lib/category-id';
 import { MIN_PASSWORD_LENGTH, STRENGTH_TRACK_CLASS, passwordStrength, validateNewPassword } from '@/lib/password';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -59,9 +59,7 @@ export function ProfilePage() {
   const [editingCatLabel, setEditingCatLabel] = useState('');
   const [editingCatIcon, setEditingCatIcon] = useState('📌');
 
-  const initials = user
-    ? ((user.firstName?.[0] || '') + (user.lastName?.[0] || '')).toUpperCase() || user.email[0].toUpperCase()
-    : '?';
+  const initials = userInitials(user);
 
   const fullName = user?.firstName
     ? `${user.firstName} ${user.lastName}`.trim()

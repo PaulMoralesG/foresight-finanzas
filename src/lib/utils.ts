@@ -298,3 +298,17 @@ export function toCsv(headers: string[], rows: (string | number)[][]): Blob {
   const BOM = String.fromCharCode(0xfeff);
   return new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
 }
+
+/**
+ * Iniciales para el avatar: nombre + apellido, o la primera letra del correo
+ * si aún no hay nombre. La expresión estaba escrita tres veces —Header,
+ * Sidebar y ProfilePage— y las tres tenían que coincidir para que el avatar no
+ * cambiara de letra al navegar.
+ */
+export function userInitials(
+  user: { firstName?: string; lastName?: string; email: string } | null,
+): string {
+  if (!user) return '?';
+  const iniciales = ((user.firstName?.[0] ?? '') + (user.lastName?.[0] ?? '')).toUpperCase();
+  return iniciales || user.email[0]?.toUpperCase() || '?';
+}
