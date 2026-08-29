@@ -8,9 +8,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useFinanceStore } from '@/stores/financeStore';
-import { CATEGORY_COLORS } from '@/config/categories';
-import { CATEGORY_EMOJIS } from '@/hooks/useCategories';
-import { syncToCloud } from '@/lib/utils';
+import { CATEGORY_COLORS, CATEGORY_EMOJIS } from '@/config/categories';
+import { syncToCloud, userInitials } from '@/lib/utils';
 import { makeCategoryId } from '@/lib/category-id';
 import { MIN_PASSWORD_LENGTH, STRENGTH_TRACK_CLASS, passwordStrength, validateNewPassword } from '@/lib/password';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -60,9 +59,7 @@ export function ProfilePage() {
   const [editingCatLabel, setEditingCatLabel] = useState('');
   const [editingCatIcon, setEditingCatIcon] = useState('📌');
 
-  const initials = user
-    ? ((user.firstName?.[0] || '') + (user.lastName?.[0] || '')).toUpperCase() || user.email[0].toUpperCase()
-    : '?';
+  const initials = userInitials(user);
 
   const fullName = user?.firstName
     ? `${user.firstName} ${user.lastName}`.trim()
@@ -249,10 +246,11 @@ export function ProfilePage() {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                <label htmlFor="profile-first-name" className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                   Nombre
                 </label>
                 <input
+                  id="profile-first-name"
                   type="text"
                   value={editFirstName}
                   onChange={(e) => setEditFirstName(e.target.value)}
@@ -262,10 +260,11 @@ export function ProfilePage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                <label htmlFor="profile-last-name" className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                   Apellido
                 </label>
                 <input
+                  id="profile-last-name"
                   type="text"
                   value={editLastName}
                   onChange={(e) => setEditLastName(e.target.value)}
@@ -326,10 +325,11 @@ export function ProfilePage() {
                 Te enviaremos un enlace de verificación a tu nuevo correo. El cambio se aplica al confirmar ambos emails.
               </p>
               <div>
-                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                <label htmlFor="profile-new-email" className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                   Nuevo correo electrónico
                 </label>
                 <input
+                  id="profile-new-email"
                   type="email"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
@@ -552,6 +552,7 @@ export function ProfilePage() {
                             type="text"
                             value={editingCatLabel}
                             onChange={(e) => setEditingCatLabel(e.target.value)}
+                            aria-label="Nombre de la categoría"
                             className="flex-1 min-w-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-xs"
                             onKeyDown={(e) => { if (e.key === 'Enter') handleUpdateCategory(); }}
                             autoFocus
@@ -559,6 +560,7 @@ export function ProfilePage() {
                           <button
                             onClick={handleUpdateCategory}
                             className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-600 p-1 flex-shrink-0"
+                            aria-label="Guardar categoría"
                             title="Guardar"
                           >
                             <Check className="w-3.5 h-3.5" />
@@ -566,6 +568,7 @@ export function ProfilePage() {
                           <button
                             onClick={cancelEditing}
                             className="text-slate-500 dark:text-slate-400 hover:text-slate-600 p-1 flex-shrink-0"
+                            aria-label="Cancelar edición de categoría"
                             title="Cancelar"
                           >
                             <X className="w-3.5 h-3.5" />
@@ -619,6 +622,7 @@ export function ProfilePage() {
                   type="text"
                   value={newCatLabel}
                   onChange={(e) => setNewCatLabel(e.target.value)}
+                  aria-label="Nombre de la nueva categoría"
                   className="saas-input-sm text-xs"
                   placeholder="Nombre de la categoría"
                   onKeyDown={(e) => { if (e.key === 'Enter') handleAddCategory(); }}

@@ -2,7 +2,7 @@
 // SAVINGS — Agrupación de gastos de ahorro por concepto
 // ================================================================
 
-import { safeParseDate } from '@/lib/utils';
+import { roundMoney, safeParseDate } from '@/lib/utils';
 import type { Transaction } from '@/types';
 
 /**
@@ -22,7 +22,7 @@ export function computeSavingsByConcept(
       if (d.getMonth() !== month.month || d.getFullYear() !== month.year) continue;
     }
     const concept = e.concept.trim() || 'Sin concepto';
-    map.set(concept, (map.get(concept) || 0) + e.amount);
+    map.set(concept, roundMoney((map.get(concept) || 0) + e.amount));
   }
   return map;
 }
@@ -37,5 +37,5 @@ export function savingsForGoal(
   for (const [concept, saved] of savingsByConcept) {
     if (concept.trim().toLowerCase() === target) total += saved;
   }
-  return total;
+  return roundMoney(total);
 }

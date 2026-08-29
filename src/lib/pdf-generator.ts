@@ -4,7 +4,7 @@
 
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { formatMoney, MONTH_NAMES, safeParseDate, sortByDateAsc } from './utils';
+import { formatMoney, LOCALE, MONTH_NAMES, roundMoney, safeParseDate, sortByDateAsc } from './utils';
 import type { Transaction } from '@/types';
 
 export async function generatePDFReport(
@@ -20,9 +20,9 @@ export async function generatePDFReport(
   const monthName = MONTH_NAMES[viewDate.getMonth()];
   const year = viewDate.getFullYear();
 
-  const totalIncome = monthly.filter((i) => i.type === 'income').reduce((s, i) => s + i.amount, 0);
-  const totalExpenses = monthly.filter((i) => i.type === 'expense').reduce((s, i) => s + i.amount, 0);
-  const balance = totalIncome - totalExpenses;
+  const totalIncome = roundMoney(monthly.filter((i) => i.type === 'income').reduce((s, i) => s + i.amount, 0));
+  const totalExpenses = roundMoney(monthly.filter((i) => i.type === 'expense').reduce((s, i) => s + i.amount, 0));
+  const balance = roundMoney(totalIncome - totalExpenses);
 
   const monthNum = String(viewDate.getMonth() + 1).padStart(2, '0');
   const doc = new jsPDF();
@@ -62,7 +62,7 @@ export async function generatePDFReport(
 
   if (monthly.length > 0) {
     const tableData = monthly.map((item) => [
-      safeParseDate(item.date).toLocaleDateString('es-ES'),
+      safeParseDate(item.date).toLocaleDateString(LOCALE),
       item.type === 'income' ? 'Ingreso' : 'Gasto',
       item.businessType === 'personal' ? 'Personal' : 'Negocio',
       formatMoney(item.amount),

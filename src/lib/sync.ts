@@ -421,27 +421,30 @@ function applyMerge(snapshot: Snapshot): MergeResult {
   };
   if (JSON.stringify(next) !== JSON.stringify(current)) {
     useFinanceStore.setState((currentState) => {
-      // Preservar mutaciones locales que pudieron haber ocurrido mientras se procesaba el merge
-      const liveTxMap = new Map(next.expenses.map((e) => [e.id, e]));
-      const safeExpenses = [...next.expenses];
-      for (const localTx of currentState.expenses) {
-        if (!liveTxMap.has(localTx.id) && !next.tombstones[localTx.id]) {
-          safeExpenses.push(localTx);
+      // Preservar mutaciones locales que pudieron haber ocurrido mientras se
+      // procesaba el merge: si una fila local no salió viva del merge y tampoco
+      // tiene tombstone, es que se creó durante el ciclo — se conserva.
+      const keepLocalAdditions = <T extends { id: string }>(merged: T[], local: T[]): T[] => {
+        const mergedIds = new Set(merged.map((i) => i.id));
+        const out = [...merged];
+        for (const item of local) {
+          if (!mergedIds.has(item.id) && !next.tombstones[item.id]) out.push(item);
         }
-      }
-
-      const liveGoalMap = new Map(next.savingsGoals.map((g) => [g.id, g]));
-      const safeGoals = [...next.savingsGoals];
-      for (const localGoal of currentState.savingsGoals) {
-        if (!liveGoalMap.has(localGoal.id) && !next.tombstones[localGoal.id]) {
-          safeGoals.push(localGoal);
-        }
-      }
+        return out;
+      };
 
       return {
         ...next,
-        expenses: safeExpenses,
-        savingsGoals: safeGoals,
+        expenses: keepLocalAdditions(next.expenses, currentState.expenses),
+        savingsGoals: keepLocalAdditions(next.savingsGoals, currentState.savingsGoals),
+        customExpenseCategories: keepLocalAdditions(
+          next.customExpenseCategories,
+          currentState.customExpenseCategories,
+        ),
+        customIncomeCategories: keepLocalAdditions(
+          next.customIncomeCategories,
+          currentState.customIncomeCategories,
+        ),
       };
     });
   }

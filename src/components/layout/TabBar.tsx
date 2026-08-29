@@ -120,7 +120,7 @@ export function TabBar() {
     /* ── Contenedor fixed ÚNICO (TabBar + FAB juntos).
        Solo UN position:fixed en toda la pantalla → iOS PWA no recalcula viewport.
        El FAB es absolute dentro de este contenedor, flotando sobre el borde superior. ── */
-    <div className="fixed bottom-0 left-0 right-0 z-30">
+    <div className="fixed bottom-0 left-0 right-0 z-sticky">
       {/* FAB flotante — centrado horizontalmente SOBRE el TabBar, sin tocarlo.
           absolute dentro del contenedor fixed para evitar recálculo de viewport en iOS PWA.
           Solo visible en Inicio y Movimientos (donde el contexto es "añadir transacción").
@@ -141,7 +141,7 @@ export function TabBar() {
           cinco elementos es geométricamente imposible.) */}
       <button
         onClick={() => openModal()}
-        className="absolute z-40 bottom-full mb-3 right-4
+        className="absolute z-nav bottom-full mb-3 right-4
           w-14 h-14 sm:w-16 sm:h-16 rounded-2xl sm:rounded-[18px]
           bg-brand-600 hover:bg-brand-700
           text-white

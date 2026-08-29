@@ -136,6 +136,25 @@ describe('mergeById', () => {
     );
     expect(result.live).toEqual([{ id: 'cat', label: 'nueva', updated_at: T1 }]);
   });
+
+  it('item vivo sin updated_at y sin contraparte remota sobrevive', () => {
+    // Antes caía en el early-continue de "ningún lado tiene marca" y
+    // desaparecía del resultado: ni vivo ni en tombstones.
+    const result = mergeById<{ id: string; updated_at?: string; label: string }>(
+      { live: [{ id: 'cat', label: 'solo-local' }], tombstones: {} },
+      { live: [], tombstones: {} },
+    );
+    expect(result.live).toEqual([{ id: 'cat', label: 'solo-local' }]);
+    expect(result.tombstones).toEqual({});
+  });
+
+  it('item remoto sin updated_at y sin contraparte local sobrevive', () => {
+    const result = mergeById<{ id: string; updated_at?: string; label: string }>(
+      { live: [], tombstones: {} },
+      { live: [{ id: 'cat', label: 'solo-remoto' }], tombstones: {} },
+    );
+    expect(result.live).toEqual([{ id: 'cat', label: 'solo-remoto' }]);
+  });
 });
 
 describe('mergeBudgets', () => {

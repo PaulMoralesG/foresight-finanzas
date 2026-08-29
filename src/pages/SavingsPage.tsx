@@ -9,11 +9,13 @@ import { PiggyBank, Plus, Pencil, Trash2, X, Target, Wallet, ChevronLeft, Chevro
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
-import { formatMoney, parseMoneyInput, syncToCloud } from '@/lib/utils';
+import { formatMoney, parseMoneyInput, roundMoney, syncToCloud } from '@/lib/utils';
 import { computeSavingsByConcept, savingsForGoal } from '@/lib/savings';
 import { useBudget, currentMonthKey, shiftMonthKey, monthKeyLabel } from '@/hooks/useBudget';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useScrollLock } from '@/hooks/useScrollLock';
+import { BudgetProgress } from '@/components/ui/BudgetProgress';
 import type { SavingsGoal } from '@/types';
 
 /* ─── Presupuesto mensual — editor completo (sección Planes) ───
@@ -34,8 +36,13 @@ function BudgetPlanner() {
   const hasOwn = (budgets[monthKey] ?? 0) > 0;
 
   const save = () => {
-    const v = parseMoneyInput(editValue);
-    if (isNaN(v) || v < 0) {
+    // `parseMoneyInput` ya devuelve 0 para cualquier cosa que no sepa leer, así
+    // que comprobar isNaN sobre su salida no detectaba nada: escribir "abc"
+    // guardaba un presupuesto de 0 y anunciaba "Presupuesto eliminado". Hay que
+    // mirar el texto crudo, y aceptar el 0 explícito (el botón de quitar).
+    const crudo = editValue.trim();
+    const v = roundMoney(parseMoneyInput(crudo));
+    if (!/\d/.test(crudo) || v < 0) {
       addToast('Ingresa un monto válido', 'error');
       return;
     }
@@ -103,11 +110,12 @@ function BudgetPlanner() {
       {/* ── Modo edición ── */}
       {isEditing ? (
         <div className="space-y-2.5">
-          <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+          <label htmlFor="budget-amount" className="block text-xs font-semibold text-slate-600 dark:text-slate-300">
             Presupuesto para {monthKeyLabel(monthKey)}
           </label>
           <div className="flex gap-2">
             <input
+              id="budget-amount"
               type="text"
               inputMode="decimal"
               value={editValue}
@@ -150,6 +158,7 @@ function BudgetPlanner() {
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               placeholder="Ej: 15000"
+              aria-label={`Presupuesto para ${monthKeyLabel(monthKey)}`}
               className="saas-input flex-1"
               onKeyDown={(e) => { if (e.key === 'Enter') save(); }}
             />
@@ -171,30 +180,13 @@ function BudgetPlanner() {
               Heredado de {carriedFrom ? monthKeyLabel(carriedFrom) : 'un mes anterior'} — define uno propio para {monthKeyLabel(monthKey)}
             </p>
           )}
-          {pct > 100 && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800">
-              <span className="text-xs font-bold text-red-700 dark:text-red-400">
-                ¡Excedido por {formatMoney(monthSpent - budget)}!
-              </span>
-            </div>
-          )}
-          <div className="flex justify-between text-xs">
-            <span className={`font-semibold ${pct > 100 ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'}`}>
-              {formatMoney(monthSpent)} de {formatMoney(budget)}
-            </span>
-            <span className={`font-bold text-sm ${pct > 100 ? 'text-red-600 dark:text-red-400' : pct > 90 ? 'text-orange-600 dark:text-orange-400' : 'text-slate-600 dark:text-slate-400'}`}>
-              {pct}%
-            </span>
-          </div>
-          <div className={`h-2.5 rounded-full overflow-hidden ${pct > 100 ? 'bg-red-100 dark:bg-red-950/80 ring-1 ring-red-300 dark:ring-red-800' : 'bg-slate-100 dark:bg-slate-800'}`}>
-            <div
-              className={`h-full ${colorBar} rounded-full transition-all duration-500`}
-              style={{ width: `${Math.min(pct, 100)}%` }}
-            />
-          </div>
-          <p className={`text-xs font-medium ${pct > 100 ? 'text-red-600 dark:text-red-400' : pct > 90 ? 'text-orange-600 dark:text-orange-400' : 'text-slate-500 dark:text-slate-400'}`}>
-            {message}
-          </p>
+          <BudgetProgress
+            monthSpent={monthSpent}
+            budget={budget}
+            pct={pct}
+            colorBar={colorBar}
+            message={message}
+          />
         </div>
       )}
     </div>
@@ -207,6 +199,7 @@ export function SavingsPage() {
   const addSavingsGoal = useFinanceStore((s) => s.addSavingsGoal);
   const updateSavingsGoal = useFinanceStore((s) => s.updateSavingsGoal);
   const deleteSavingsGoal = useFinanceStore((s) => s.deleteSavingsGoal);
+  const updateTransaction = useFinanceStore((s) => s.updateTransaction);
   const addToast = useUiStore((s) => s.addToast);
   const openModal = useUiStore((s) => s.openModal);
   const { saveData } = useAuth();
@@ -223,10 +216,10 @@ export function SavingsPage() {
   const totalSaved = useMemo(() => {
     let sum = 0;
     for (const saved of savingsByConcept.values()) sum += saved;
-    return sum;
+    return roundMoney(sum);
   }, [savingsByConcept]);
 
-  const totalTarget = savingsGoals.reduce((sum, g) => sum + g.target, 0);
+  const totalTarget = roundMoney(savingsGoals.reduce((sum, g) => sum + g.target, 0));
   const globalPct = totalTarget > 0 ? Math.min(100, Math.round((totalSaved / totalTarget) * 100)) : 0;
 
   function openCreate() {
@@ -245,7 +238,7 @@ export function SavingsPage() {
 
   function handleSave() {
     const name = concept.trim();
-    const target = parseMoneyInput(targetInput);
+    const target = roundMoney(parseMoneyInput(targetInput));
     if (!name) {
       addToast('Ingresa un concepto para la meta', 'error');
       return;
@@ -256,8 +249,33 @@ export function SavingsPage() {
     }
 
     if (editingGoal) {
+      const conceptoAnterior = editingGoal.concept.trim();
       updateSavingsGoal(editingGoal.id, { concept: name, target });
-      addToast('Meta actualizada ✅', 'success');
+
+      // El progreso de una meta se calcula emparejando su concepto con el de
+      // los gastos de categoría "ahorro" — no hay id que los ate. Sin esto,
+      // renombrar la meta la desvinculaba de todos sus aportes y el progreso
+      // volvía a cero, con el dinero aparentemente perdido.
+      const renombrada = conceptoAnterior.toLowerCase() !== name.toLowerCase();
+      if (renombrada) {
+        const aportes = useFinanceStore
+          .getState()
+          .expenses.filter(
+            (e) =>
+              e.type === 'expense' &&
+              e.category === 'ahorro' &&
+              e.concept.trim().toLowerCase() === conceptoAnterior.toLowerCase(),
+          );
+        aportes.forEach((e) => updateTransaction(e.id, { concept: name }));
+        addToast(
+          aportes.length > 0
+            ? `Meta actualizada ✅ — ${aportes.length} aporte${aportes.length > 1 ? 's' : ''} renombrado${aportes.length > 1 ? 's' : ''}`
+            : 'Meta actualizada ✅',
+          'success',
+        );
+      } else {
+        addToast('Meta actualizada ✅', 'success');
+      }
     } else {
       addSavingsGoal({ concept: name, target });
       addToast('Meta creada ✅', 'success');
@@ -280,6 +298,11 @@ export function SavingsPage() {
   }, isModalOpen || !!confirmDelete);
 
   useScrollLock(isModalOpen || !!confirmDelete);
+
+  // Ambos diálogos declaraban aria-modal sin retener el foco: con Tab se
+  // salía al contenido de fondo, que seguía siendo operable bajo el overlay.
+  const goalModalRef = useFocusTrap<HTMLDivElement>(isModalOpen && !confirmDelete, '#goal-concept');
+  const deleteModalRef = useFocusTrap<HTMLDivElement>(!!confirmDelete);
 
   return (
     <div className="space-y-4">
@@ -406,7 +429,9 @@ export function SavingsPage() {
                     style={{ width: `${pct}%` }}
                   />
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex items-center justify-between gap-2 flex-wrap">
+                {/* div y no p: un <button> dentro de <p> es HTML inválido y el
+                    navegador reubica el botón fuera del párrafo al parsear. */}
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex items-center justify-between gap-2 flex-wrap">
                   <span>
                     {remaining > 0 ? `Te falta ${formatMoney(remaining)} para cumplirla` : '🎉 ¡Meta cumplida!'}
                   </span>
@@ -418,12 +443,13 @@ export function SavingsPage() {
                       businessType: 'personal',
                     })}
                     className="saas-btn-primary saas-btn-sm flex items-center gap-1"
+                    aria-label={`Aportar a la meta ${goal.concept}`}
                     title={`Aportar a "${goal.concept}"`}
                   >
                     <Plus className="w-3 h-3" />
                     Aportar
                   </button>
-                </p>
+                </div>
               </div>
             );
           })}
@@ -433,12 +459,13 @@ export function SavingsPage() {
       {/* ── Modal crear/editar ── */}
       {isModalOpen && (
         <>
-          <div className="fixed inset-0 bg-black/50 z-[200] animate-fade-in" onClick={() => setIsModalOpen(false)} />
+          <div className="fixed inset-0 bg-black/50 z-overlay animate-fade-in" onClick={() => setIsModalOpen(false)} />
           <div
+            ref={goalModalRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="savings-goal-modal-title"
-            className="fixed inset-0 z-[201] bg-white dark:bg-slate-950 md:rounded-2xl shadow-2xl flex flex-col w-full max-w-full md:max-w-md mx-auto overflow-hidden animate-scale-in md:inset-y-6 md:mx-auto pt-safe"
+            className="fixed inset-0 z-modal bg-white dark:bg-slate-950 md:rounded-2xl shadow-2xl flex flex-col w-full max-w-full md:max-w-md mx-auto overflow-hidden animate-scale-in md:inset-y-6 md:mx-auto pt-safe"
           >
             <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-800">
               <h2 id="savings-goal-modal-title" className="font-bold text-sm text-slate-900 dark:text-white">
@@ -455,23 +482,24 @@ export function SavingsPage() {
 
             <div className="p-4 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                <label htmlFor="goal-concept" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Concepto
                 </label>
                 <input
+                  id="goal-concept"
                   type="text"
                   value={concept}
                   onChange={(e) => setConcept(e.target.value)}
                   placeholder="Ej: Casa, Vacaciones, Auto…"
                   className="saas-input w-full"
-                  autoFocus
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                <label htmlFor="goal-target" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Monto objetivo
                 </label>
                 <input
+                  id="goal-target"
                   type="text"
                   inputMode="decimal"
                   value={targetInput}
@@ -498,12 +526,13 @@ export function SavingsPage() {
       {/* ── Confirmación de borrado ── */}
       {confirmDelete && (
         <>
-          <div className="fixed inset-0 bg-black/50 z-[200] animate-fade-in" onClick={() => setConfirmDelete(null)} />
+          <div className="fixed inset-0 bg-black/50 z-overlay animate-fade-in" onClick={() => setConfirmDelete(null)} />
           <div
+            ref={deleteModalRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="savings-delete-modal-title"
-            className="fixed inset-x-0 top-1/2 -translate-y-1/2 z-[201] mx-auto w-[90%] max-w-sm bg-white dark:bg-slate-950 rounded-2xl shadow-2xl p-5 animate-scale-in"
+            className="fixed inset-x-0 top-1/2 -translate-y-1/2 z-modal mx-auto w-[90%] max-w-sm bg-white dark:bg-slate-950 rounded-2xl shadow-2xl p-5 animate-scale-in"
           >
             <h3 id="savings-delete-modal-title" className="font-bold text-sm text-slate-900 dark:text-white">
               ¿Eliminar meta "{confirmDelete.concept}"?

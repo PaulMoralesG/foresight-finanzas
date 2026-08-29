@@ -4,7 +4,7 @@
 
 import { useEffect, lazy, Suspense } from 'react';
 import { Download, RefreshCw, X } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, useAuthSession } from '@/hooks/useAuth';
 import { usePWA } from '@/hooks/usePWA';
 import { useIdleLogout } from '@/hooks/useIdleLogout';
 import { supabaseAvailable } from '@/config/supabase';
@@ -26,6 +26,10 @@ const LoginPage = lazy(() => import('@/pages/LoginPage').then(m => ({ default: m
 const ReportModal = lazy(() => import('@/components/features/report/ReportModal').then(m => ({ default: m.ReportModal })));
 
 export function App() {
+  // Único punto de arranque de la sesión en toda la app. El resto de los
+  // componentes usa useAuth(), que no tiene efectos.
+  useAuthSession();
+
   const { user, isLoading, saveData, signOut } = useAuth();
   const activeTab = useUiStore((s) => s.activeTab);
   const isModalOpen = useUiStore((s) => s.isModalOpen);
@@ -84,7 +88,7 @@ export function App() {
     <ErrorBoundary>
       {/* ── PWA Install Banner ── */}
       {showInstallBanner && (
-        <div className="fixed bottom-20 left-4 right-4 z-[250] sm:left-auto sm:right-4 sm:bottom-20 sm:w-80 animate-slide-up">
+        <div className="fixed bottom-20 left-4 right-4 z-banner sm:left-auto sm:right-4 sm:bottom-20 sm:w-80 animate-slide-up">
           <div className="saas-card p-4 shadow-2xl border-brand-500/30">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-brand-100 dark:bg-brand-900 flex items-center justify-center flex-shrink-0">
@@ -108,7 +112,7 @@ export function App() {
 
       {/* ── Service Worker Update Banner ── */}
       {swUpdateReady && (
-        <div className="fixed top-16 left-4 right-4 z-[250] sm:left-auto sm:right-4 sm:w-80 animate-slide-up">
+        <div className="fixed top-16 left-4 right-4 z-banner sm:left-auto sm:right-4 sm:w-80 animate-slide-up">
           <div className="saas-card p-4 shadow-2xl border-amber-500/30">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900 flex items-center justify-center flex-shrink-0">
