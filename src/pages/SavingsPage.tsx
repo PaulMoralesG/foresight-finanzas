@@ -15,6 +15,7 @@ import { useBudget, currentMonthKey, shiftMonthKey, monthKeyLabel } from '@/hook
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useScrollLock } from '@/hooks/useScrollLock';
+import { BudgetProgress } from '@/components/ui/BudgetProgress';
 import type { SavingsGoal } from '@/types';
 
 /* ─── Presupuesto mensual — editor completo (sección Planes) ───
@@ -179,30 +180,13 @@ function BudgetPlanner() {
               Heredado de {carriedFrom ? monthKeyLabel(carriedFrom) : 'un mes anterior'} — define uno propio para {monthKeyLabel(monthKey)}
             </p>
           )}
-          {pct > 100 && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800">
-              <span className="text-xs font-bold text-red-700 dark:text-red-400">
-                ¡Excedido por {formatMoney(monthSpent - budget)}!
-              </span>
-            </div>
-          )}
-          <div className="flex justify-between text-xs">
-            <span className={`font-semibold ${pct > 100 ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'}`}>
-              {formatMoney(monthSpent)} de {formatMoney(budget)}
-            </span>
-            <span className={`font-bold text-sm ${pct > 100 ? 'text-red-600 dark:text-red-400' : pct > 90 ? 'text-orange-600 dark:text-orange-400' : 'text-slate-600 dark:text-slate-400'}`}>
-              {pct}%
-            </span>
-          </div>
-          <div className={`h-2.5 rounded-full overflow-hidden ${pct > 100 ? 'bg-red-100 dark:bg-red-950/80 ring-1 ring-red-300 dark:ring-red-800' : 'bg-slate-100 dark:bg-slate-800'}`}>
-            <div
-              className={`h-full ${colorBar} rounded-full transition-all duration-500`}
-              style={{ width: `${Math.min(pct, 100)}%` }}
-            />
-          </div>
-          <p className={`text-xs font-medium ${pct > 100 ? 'text-red-600 dark:text-red-400' : pct > 90 ? 'text-orange-600 dark:text-orange-400' : 'text-slate-500 dark:text-slate-400'}`}>
-            {message}
-          </p>
+          <BudgetProgress
+            monthSpent={monthSpent}
+            budget={budget}
+            pct={pct}
+            colorBar={colorBar}
+            message={message}
+          />
         </div>
       )}
     </div>
@@ -215,6 +199,7 @@ export function SavingsPage() {
   const addSavingsGoal = useFinanceStore((s) => s.addSavingsGoal);
   const updateSavingsGoal = useFinanceStore((s) => s.updateSavingsGoal);
   const deleteSavingsGoal = useFinanceStore((s) => s.deleteSavingsGoal);
+  const updateTransaction = useFinanceStore((s) => s.updateTransaction);
   const addToast = useUiStore((s) => s.addToast);
   const openModal = useUiStore((s) => s.openModal);
   const { saveData } = useAuth();
@@ -264,8 +249,33 @@ export function SavingsPage() {
     }
 
     if (editingGoal) {
+      const conceptoAnterior = editingGoal.concept.trim();
       updateSavingsGoal(editingGoal.id, { concept: name, target });
-      addToast('Meta actualizada ✅', 'success');
+
+      // El progreso de una meta se calcula emparejando su concepto con el de
+      // los gastos de categoría "ahorro" — no hay id que los ate. Sin esto,
+      // renombrar la meta la desvinculaba de todos sus aportes y el progreso
+      // volvía a cero, con el dinero aparentemente perdido.
+      const renombrada = conceptoAnterior.toLowerCase() !== name.toLowerCase();
+      if (renombrada) {
+        const aportes = useFinanceStore
+          .getState()
+          .expenses.filter(
+            (e) =>
+              e.type === 'expense' &&
+              e.category === 'ahorro' &&
+              e.concept.trim().toLowerCase() === conceptoAnterior.toLowerCase(),
+          );
+        aportes.forEach((e) => updateTransaction(e.id, { concept: name }));
+        addToast(
+          aportes.length > 0
+            ? `Meta actualizada ✅ — ${aportes.length} aporte${aportes.length > 1 ? 's' : ''} renombrado${aportes.length > 1 ? 's' : ''}`
+            : 'Meta actualizada ✅',
+          'success',
+        );
+      } else {
+        addToast('Meta actualizada ✅', 'success');
+      }
     } else {
       addSavingsGoal({ concept: name, target });
       addToast('Meta creada ✅', 'success');
@@ -449,13 +459,13 @@ export function SavingsPage() {
       {/* ── Modal crear/editar ── */}
       {isModalOpen && (
         <>
-          <div className="fixed inset-0 bg-black/50 z-[200] animate-fade-in" onClick={() => setIsModalOpen(false)} />
+          <div className="fixed inset-0 bg-black/50 z-overlay animate-fade-in" onClick={() => setIsModalOpen(false)} />
           <div
             ref={goalModalRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="savings-goal-modal-title"
-            className="fixed inset-0 z-[201] bg-white dark:bg-slate-950 md:rounded-2xl shadow-2xl flex flex-col w-full max-w-full md:max-w-md mx-auto overflow-hidden animate-scale-in md:inset-y-6 md:mx-auto pt-safe"
+            className="fixed inset-0 z-modal bg-white dark:bg-slate-950 md:rounded-2xl shadow-2xl flex flex-col w-full max-w-full md:max-w-md mx-auto overflow-hidden animate-scale-in md:inset-y-6 md:mx-auto pt-safe"
           >
             <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-800">
               <h2 id="savings-goal-modal-title" className="font-bold text-sm text-slate-900 dark:text-white">
@@ -516,13 +526,13 @@ export function SavingsPage() {
       {/* ── Confirmación de borrado ── */}
       {confirmDelete && (
         <>
-          <div className="fixed inset-0 bg-black/50 z-[200] animate-fade-in" onClick={() => setConfirmDelete(null)} />
+          <div className="fixed inset-0 bg-black/50 z-overlay animate-fade-in" onClick={() => setConfirmDelete(null)} />
           <div
             ref={deleteModalRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="savings-delete-modal-title"
-            className="fixed inset-x-0 top-1/2 -translate-y-1/2 z-[201] mx-auto w-[90%] max-w-sm bg-white dark:bg-slate-950 rounded-2xl shadow-2xl p-5 animate-scale-in"
+            className="fixed inset-x-0 top-1/2 -translate-y-1/2 z-modal mx-auto w-[90%] max-w-sm bg-white dark:bg-slate-950 rounded-2xl shadow-2xl p-5 animate-scale-in"
           >
             <h3 id="savings-delete-modal-title" className="font-bold text-sm text-slate-900 dark:text-white">
               ¿Eliminar meta "{confirmDelete.concept}"?

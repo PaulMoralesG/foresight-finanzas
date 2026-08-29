@@ -30,7 +30,7 @@ export function Sidebar() {
   return (
     <aside
       className={`
-        hidden lg:flex fixed top-0 left-0 z-40 h-full
+        hidden lg:flex fixed top-0 left-0 z-nav h-full
         bg-white dark:bg-slate-900
         border-r border-slate-200 dark:border-slate-800
         flex-col transition-all duration-300 ease-in-out
@@ -80,7 +80,7 @@ export function Sidebar() {
                     absolute left-full ml-2 top-1/2 -translate-y-1/2
                     px-2.5 py-1.5 rounded-lg text-xs font-medium
                     bg-slate-800 dark:bg-slate-700 text-white
-                    whitespace-nowrap z-50 pointer-events-none
+                    whitespace-nowrap z-popover pointer-events-none
                     opacity-0 group-hover:opacity-100
                     transition-opacity duration-150
                     shadow-lg
@@ -106,7 +106,7 @@ export function Sidebar() {
                 absolute left-full ml-2 top-1/2 -translate-y-1/2
                 px-2.5 py-1.5 rounded-lg text-xs font-medium
                 bg-slate-800 dark:bg-slate-700 text-white
-                whitespace-nowrap z-50 pointer-events-none
+                whitespace-nowrap z-popover pointer-events-none
                 opacity-0 group-hover:opacity-100
                 transition-opacity duration-150
                 shadow-lg

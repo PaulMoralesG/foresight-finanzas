@@ -88,7 +88,7 @@ export function App() {
     <ErrorBoundary>
       {/* ── PWA Install Banner ── */}
       {showInstallBanner && (
-        <div className="fixed bottom-20 left-4 right-4 z-[250] sm:left-auto sm:right-4 sm:bottom-20 sm:w-80 animate-slide-up">
+        <div className="fixed bottom-20 left-4 right-4 z-banner sm:left-auto sm:right-4 sm:bottom-20 sm:w-80 animate-slide-up">
           <div className="saas-card p-4 shadow-2xl border-brand-500/30">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-brand-100 dark:bg-brand-900 flex items-center justify-center flex-shrink-0">
@@ -112,7 +112,7 @@ export function App() {
 
       {/* ── Service Worker Update Banner ── */}
       {swUpdateReady && (
-        <div className="fixed top-16 left-4 right-4 z-[250] sm:left-auto sm:right-4 sm:w-80 animate-slide-up">
+        <div className="fixed top-16 left-4 right-4 z-banner sm:left-auto sm:right-4 sm:w-80 animate-slide-up">
           <div className="saas-card p-4 shadow-2xl border-amber-500/30">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900 flex items-center justify-center flex-shrink-0">

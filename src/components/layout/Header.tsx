@@ -79,7 +79,7 @@ export function Header() {
   return (
     <>
       <header
-        className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200 dark:border-slate-800"
+        className="sticky top-0 z-sticky bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200 dark:border-slate-800"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
         <div className="flex items-center justify-between h-12 px-4 md:px-6">
@@ -168,7 +168,7 @@ export function Header() {
 
                 {/* Dropdown */}
                 {isDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-56 saas-card p-1.5 z-50 animate-scale-in origin-top-right shadow-lg">
+                  <div className="absolute right-0 top-full mt-2 w-56 saas-card p-1.5 z-popover animate-scale-in origin-top-right shadow-lg">
                     <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
                       <p className="text-sm font-semibold text-slate-900 dark:text-white">
                         {user.firstName} {user.lastName}

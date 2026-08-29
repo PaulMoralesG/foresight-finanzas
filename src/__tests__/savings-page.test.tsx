@@ -188,6 +188,44 @@ describe('Metas de ahorro', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('renombrar una meta arrastra sus aportes y conserva el progreso', async () => {
+    const user = userEvent.setup();
+    const store = useFinanceStore.getState();
+    store.addSavingsGoal({ concept: 'Vacaciones', target: 1000 });
+    store.addTransaction(ahorro('Vacaciones', 400));
+
+    render(<SavingsPage />);
+    expect(screen.getByText(/Ahorrado \$400\.00 de \$1,000\.00/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Editar meta/ }));
+    const campo = screen.getByLabelText('Concepto');
+    await user.clear(campo);
+    await user.type(campo, 'Viaje a Japón');
+    await user.click(screen.getByRole('button', { name: /Guardar cambios/ }));
+
+    // El progreso se empareja por texto del concepto: sin arrastrar los aportes
+    // el contador volvía a cero y el dinero parecía haberse perdido.
+    expect(screen.getByText(/Ahorrado \$400\.00 de \$1,000\.00/)).toBeInTheDocument();
+    expect(useFinanceStore.getState().expenses[0].concept).toBe('Viaje a Japón');
+  });
+
+  it('cambiar solo el importe objetivo no toca los aportes', async () => {
+    const user = userEvent.setup();
+    const store = useFinanceStore.getState();
+    store.addSavingsGoal({ concept: 'Casa', target: 1000 });
+    store.addTransaction(ahorro('Casa', 250));
+
+    render(<SavingsPage />);
+    await user.click(screen.getByRole('button', { name: /Editar meta/ }));
+    const objetivo = screen.getByLabelText('Monto objetivo');
+    await user.clear(objetivo);
+    await user.type(objetivo, '2000');
+    await user.click(screen.getByRole('button', { name: /Guardar cambios/ }));
+
+    expect(useFinanceStore.getState().expenses[0].concept).toBe('Casa');
+    expect(screen.getByText(/Ahorrado \$250\.00 de \$2,000\.00/)).toBeInTheDocument();
+  });
+
   it('el botón Aportar de cada meta nombra la meta', () => {
     useFinanceStore.getState().addSavingsGoal({ concept: 'Vacaciones', target: 2000 });
     render(<SavingsPage />);
