@@ -204,6 +204,17 @@ describe('StatsPage — accesibilidad de los filtros', () => {
     expect(screen.getByLabelText('Año a analizar')).toBeInTheDocument();
   });
 
+  it('los encabezados de las tarjetas son h2, sin saltos de nivel', () => {
+    // La página no tenía ningún h1 ni h2 y arrancaba en h3: la navegación por
+    // encabezados de un lector de pantalla se saltaba la jerarquía entera.
+    // El h1 lo pone la cabecera de la app, fuera de esta página.
+    verAgosto2026([]);
+    render(<StatsPage />);
+
+    expect(screen.getAllByRole('heading', { level: 2 }).length).toBeGreaterThan(0);
+    expect(screen.queryAllByRole('heading', { level: 3 })).toHaveLength(0);
+  });
+
   it('los campos de rango tienen nombre accesible', () => {
     verAgosto2026([]);
     useUiStore.setState({ statsMode: 'range', statsFromDate: '2026-08-01', statsToDate: '2026-08-31' });

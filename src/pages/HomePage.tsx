@@ -56,7 +56,7 @@ function CategoryBreakdown({ expenses }: { expenses: Transaction[] }) {
   return (
     <div className="saas-card p-4 animate-slide-up">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white">Categorías principales</h3>
+        <h2 className="text-sm font-bold text-slate-900 dark:text-white">Categorías principales</h2>
         <button
           onClick={() => { setActiveTab('stats' as TabId); }}
           className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
@@ -138,7 +138,7 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
     <div className="saas-card animate-slide-up overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b border-slate-100 dark:border-slate-800">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white">Últimos movimientos</h3>
+        <h2 className="text-sm font-bold text-slate-900 dark:text-white">Últimos movimientos</h2>
         <button
           onClick={() => { setActiveTab('movements' as TabId); }}
           className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline active:scale-95 transition-transform"
@@ -306,7 +306,7 @@ function BudgetWidget() {
   return (
     <div className="saas-card p-4 animate-slide-up">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white">Presupuesto mensual</h3>
+        <h2 className="text-sm font-bold text-slate-900 dark:text-white">Presupuesto mensual</h2>
         <div className="flex items-center gap-1.5">
           {budget > 0 && (
             <button
@@ -476,10 +476,10 @@ function SavingsGoalWidget({ totalIncome }: { totalIncome: number }) {
     return (
       <div className="saas-card p-4 animate-slide-up">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white">
             <PiggyBank className="text-brand-500 mr-2" />
             Ahorro del mes
-          </h3>
+          </h2>
           <button
             onClick={() => navigateTo('savings' as TabId)}
             className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
@@ -501,10 +501,10 @@ function SavingsGoalWidget({ totalIncome }: { totalIncome: number }) {
   return (
     <div className="saas-card p-4 animate-slide-up">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+        <h2 className="text-sm font-bold text-slate-900 dark:text-white">
           <PiggyBank className="text-brand-500 mr-2" />
           Ahorro del mes
-        </h3>
+        </h2>
         <div className="flex items-center gap-2">
           {savingsPct > 0 && (
             <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded-full">
