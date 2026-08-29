@@ -4,7 +4,7 @@
 
 import { useEffect, lazy, Suspense } from 'react';
 import { Download, RefreshCw, X } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, useAuthSession } from '@/hooks/useAuth';
 import { usePWA } from '@/hooks/usePWA';
 import { useIdleLogout } from '@/hooks/useIdleLogout';
 import { supabaseAvailable } from '@/config/supabase';
@@ -26,6 +26,10 @@ const LoginPage = lazy(() => import('@/pages/LoginPage').then(m => ({ default: m
 const ReportModal = lazy(() => import('@/components/features/report/ReportModal').then(m => ({ default: m.ReportModal })));
 
 export function App() {
+  // Único punto de arranque de la sesión en toda la app. El resto de los
+  // componentes usa useAuth(), que no tiene efectos.
+  useAuthSession();
+
   const { user, isLoading, saveData, signOut } = useAuth();
   const activeTab = useUiStore((s) => s.activeTab);
   const isModalOpen = useUiStore((s) => s.isModalOpen);

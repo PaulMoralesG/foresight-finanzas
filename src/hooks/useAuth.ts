@@ -1,9 +1,22 @@
 // ================================================================
 // useAuth - Hook de autenticación con Supabase (modo offline soportado)
 // El sync (pull-then-push con merge) vive en src/lib/sync.ts.
+//
+// El archivo expone DOS hooks y la separación importa:
+//
+//   · useAuthSession() — el efecto de arranque de sesión. Se monta UNA vez.
+//   · useAuth()        — estado y acciones. Sin efectos, seguro en cualquier sitio.
+//
+// Antes era un solo hook con el efecto dentro, invocado desde nueve
+// componentes. Cada montaje volvía a arrancar la sesión entera: en modo
+// offline la rama de arranque llama a financeStore.reset(), así que abrir la
+// pestaña Movimientos borraba el presupuesto recién guardado; con Supabase
+// configurado no borraba nada, pero disparaba un ciclo completo de import
+// legacy + pull + merge + push forzado por cada montaje —abrir el modal de una
+// transacción resincronizaba todo el historial—.
 // ================================================================
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { supabase, supabaseAvailable } from '@/config/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useFinanceStore } from '@/stores/financeStore';
@@ -22,9 +35,39 @@ function basicUser(id: string, email: string, firstName?: string, lastName?: str
   return { id, email, firstName: firstName || '', lastName: lastName || '' };
 }
 
-export function useAuth() {
-  const { user, isLoading, setUser, setLoading, logout: clearUser } = useAuthStore();
+/** Montajes simultáneos de useAuthSession. Debe ser siempre 0 o 1. */
+let sesionesMontadas = 0;
+
+/**
+ * Arranca y mantiene la sesión: restaura la existente, carga el perfil y
+ * adjunta el servicio de sincronización.
+ *
+ * **Se monta exactamente una vez, en `App`.** No lo llames desde una página ni
+ * desde un modal: cada montaje reinicia el ciclo completo (ver cabecera).
+ * Para leer el usuario o ejecutar acciones, usa `useAuth()`.
+ */
+export function useAuthSession(): void {
+  const setUser = useAuthStore((s) => s.setUser);
+  const setLoading = useAuthStore((s) => s.setLoading);
   const financeStore = useFinanceStore;
+
+  // Aviso en desarrollo si alguien vuelve a montar el efecto en otro sitio.
+  // Se cuentan montajes SIMULTÁNEOS: StrictMode hace monta→limpia→monta, así
+  // que el contador nunca pasa de 1 por un doble render legítimo.
+  const avisoRef = useRef(false);
+  useEffect(() => {
+    sesionesMontadas += 1;
+    if (sesionesMontadas > 1 && import.meta.env.DEV && !avisoRef.current) {
+      avisoRef.current = true;
+      console.error(
+        '[useAuthSession] Montado más de una vez. El efecto de sesión debe vivir solo en App; ' +
+          'para leer el usuario o ejecutar acciones usá useAuth().',
+      );
+    }
+    return () => {
+      sesionesMontadas -= 1;
+    };
+  }, []);
 
   useEffect(() => {
     // === MODO OFFLINE: Sin Supabase configurado ===
@@ -193,6 +236,18 @@ export function useAuth() {
   // Solo montar/desmontar
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+}
+
+/**
+ * Estado de sesión y acciones de cuenta. **No tiene efectos**: llamarlo desde
+ * cualquier número de componentes es gratis. Quien arranca la sesión es
+ * `useAuthSession()`, montado una sola vez en `App`.
+ */
+export function useAuth() {
+  const user = useAuthStore((s) => s.user);
+  const isLoading = useAuthStore((s) => s.isLoading);
+  const clearUser = useAuthStore((s) => s.logout);
+  const financeStore = useFinanceStore;
 
   async function signIn(email: string, password: string) {
     if (!supabase) throw new Error('Supabase no disponible (modo offline)');
