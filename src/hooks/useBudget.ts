@@ -7,7 +7,7 @@
 
 import { useMemo } from 'react';
 import { useFinanceStore } from '@/stores/financeStore';
-import { roundMoney } from '@/lib/utils';
+import { roundMoney, safeParseDate } from '@/lib/utils';
 
 export interface BudgetStatus {
   /** Presupuesto vigente (propio del mes o heredado) */
@@ -40,10 +40,13 @@ export function useBudget(monthKey: string): BudgetStatus {
   const expenses = useFinanceStore((s) => s.expenses);
 
   return useMemo(() => {
-    // Carry-forward: si no hay presupuesto para el mes, usar el más reciente del pasado
+    // Carry-forward: si no hay presupuesto para el mes, usar el más reciente del pasado.
+    // Un 0 explícito es "sin presupuesto este mes", no "no definido": heredarlo
+    // haría reaparecer el importe del mes anterior justo después de borrarlo.
+    const hasOwnBudget = budgets[monthKey] !== undefined;
     let budget = budgets[monthKey] ?? 0;
     let carriedFrom: string | null = null;
-    if (!budgets[monthKey]) {
+    if (!hasOwnBudget) {
       const keys = Object.keys(budgets).sort().reverse();
       for (const k of keys) {
         if (k < monthKey && budgets[k] > 0) {
@@ -53,7 +56,7 @@ export function useBudget(monthKey: string): BudgetStatus {
         }
       }
     }
-    const isCarriedOver = budget > 0 && !budgets[monthKey];
+    const isCarriedOver = budget > 0 && !hasOwnBudget;
 
     // Gastos del mes
     const [y, m] = monthKey.split('-').map(Number);
@@ -61,7 +64,11 @@ export function useBudget(monthKey: string): BudgetStatus {
       expenses
         .filter((e) => {
           if (e.type !== 'expense') return false;
-          const d = new Date(e.date);
+          // safeParseDate y no `new Date(e.date)`: este último parsea
+          // 'YYYY-MM-DD' como UTC, así que en zonas con offset negativo el
+          // día 1 de cada mes caía en el mes anterior y el presupuesto
+          // contradecía al total de gastos del dashboard.
+          const d = safeParseDate(e.date);
           return d.getFullYear() === y && d.getMonth() === m - 1;
         })
         .reduce((s, e) => s + e.amount, 0)
