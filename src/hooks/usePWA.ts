@@ -48,9 +48,18 @@ export function usePWA() {
     setInstallPrompt(null);
   };
 
-  const handleUpdate = () => {
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
+  const handleUpdate = async () => {
+    // SKIP_WAITING tiene que ir al worker EN ESPERA, que es el que puede
+    // saltarse la espera. Antes se le mandaba a `controller`, que es el worker
+    // viejo y activo: ignoraba el mensaje y la recarga volvía a servir la
+    // versión anterior, con lo que el botón "Actualizar ahora" no actualizaba.
+    if ('serviceWorker' in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        registration?.waiting?.postMessage({ type: 'SKIP_WAITING' });
+      } catch {
+        // Sin registro accesible solo queda recargar, que es lo que sigue.
+      }
     }
     window.location.reload();
   };

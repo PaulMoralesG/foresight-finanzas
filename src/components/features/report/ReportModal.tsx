@@ -3,14 +3,15 @@
 // Para reportes por rango de fechas, usar la pestaña Estadísticas
 // ================================================================
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useId } from 'react';
 import { X, Calendar, Loader2, Download, FileSpreadsheet, Building2, User } from 'lucide-react';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { formatMoney, MONTH_NAMES, downloadBlob, toCsv, sortByDateAsc } from '@/lib/utils';
-import { getCategoryById } from '@/config/categories';
+import { formatMoney, MONTH_NAMES, downloadBlob, roundMoney } from '@/lib/utils';
+import { movementsToCsv } from '@/lib/movements-csv';
 import { generatePDFReport } from '@/lib/pdf-generator';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useScrollLock } from '@/hooks/useScrollLock';
 
 export function ReportModal() {
@@ -32,6 +33,11 @@ export function ReportModal() {
   // Scroll lock para iOS PWA
   useScrollLock(isOpen);
 
+  // Este modal no declaraba ser un diálogo: era un div suelto, sin rol ni
+  // retención de foco, así que con teclado se salía al fondo sin cerrarlo.
+  const modalRef = useFocusTrap<HTMLDivElement>(isOpen);
+  const titleId = useId();
+
   // ── Usar getMonthlyData() que ya hace dedup de templates recurrentes ──
   // (hook incondicional: no puede ir después del early return).
   // Deps "innecesarias" a propósito: getMonthlyData lee el store por dentro,
@@ -45,13 +51,13 @@ export function ReportModal() {
   const monthLabel = `${MONTH_NAMES[viewDate.getMonth()]} ${viewDate.getFullYear()}`;
   const monthSlug = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}`;
 
-  const totalIncome = monthData
+  const totalIncome = roundMoney(monthData
     .filter((i) => i.type === 'income')
-    .reduce((s, i) => s + i.amount, 0);
-  const totalExpenses = monthData
+    .reduce((s, i) => s + i.amount, 0));
+  const totalExpenses = roundMoney(monthData
     .filter((i) => i.type === 'expense')
-    .reduce((s, i) => s + i.amount, 0);
-  const balance = totalIncome - totalExpenses;
+    .reduce((s, i) => s + i.amount, 0));
+  const balance = roundMoney(totalIncome - totalExpenses);
   const count = monthData.length;
 
   const businessCount = monthData.filter(
@@ -63,18 +69,9 @@ export function ReportModal() {
 
   async function handleCSV() {
     try {
-      const headers = ['Fecha', 'Tipo', 'Categoría', 'Concepto', 'Monto', 'Ámbito', 'Método'];
-      // Cronológico: el orden del store es por última edición, no por fecha.
-      const rows = sortByDateAsc(monthData).map((tx) => [
-        tx.date,
-        tx.type === 'income' ? 'Ingreso' : 'Gasto',
-        (getCategoryById(tx.category, allCustomCats)?.label || tx.category),
-        tx.concept,
-        tx.amount.toString(),
-        tx.businessType === 'business' || !tx.businessType ? 'Negocio' : 'Personal',
-        tx.method === 'cash' ? 'Efectivo' : tx.method === 'card' ? 'Tarjeta' : 'Transferencia',
-      ]);
-      const outcome = await downloadBlob(toCsv(headers, rows), `reporte-${monthSlug}.csv`);
+      // Formato único compartido con StatsPage.
+      const blob = movementsToCsv(monthData, allCustomCats);
+      const outcome = await downloadBlob(blob, `reporte-${monthSlug}.csv`);
       if (outcome === 'cancelled') return; // el usuario cerró el menú de compartir
       addToast(outcome === 'shared' ? 'CSV listo para compartir ✅' : 'CSV descargado ✅', 'success');
     } catch {
@@ -129,13 +126,17 @@ export function ReportModal() {
     <>
       {/* Overlay */}
       <div
-        className="fixed inset-0 bg-black/50 z-[200] animate-fade-in"
+        className="fixed inset-0 bg-black/50 z-overlay animate-fade-in"
         onClick={closeReportModal}
       />
 
       {/* Modal — anchored top, scrollable with safe-area */}
       <div
-        className="fixed inset-x-0 top-0 z-[201] saas-card max-w-sm mx-auto p-3 animate-scale-in rounded-t-2xl md:rounded-2xl overflow-hidden flex flex-col"
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="fixed inset-x-0 top-0 z-modal saas-card max-w-sm mx-auto p-3 animate-scale-in rounded-t-2xl md:rounded-2xl overflow-hidden flex flex-col"
         style={{
           top: 'env(safe-area-inset-top, 0px)',
           maxHeight: 'calc(100dvh - env(safe-area-inset-bottom, 0px))',
@@ -147,7 +148,7 @@ export function ReportModal() {
         <div className="overflow-y-auto ios-scroll -mx-3 -mt-3 px-3 pt-3 flex-1" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
         {/* Header */}
         <div className="flex items-center justify-between mb-2">
-          <h2 className="font-bold text-sm text-slate-900 dark:text-white">
+          <h2 id={titleId} className="font-bold text-sm text-slate-900 dark:text-white">
             Reporte Mensual
           </h2>
           <button onClick={closeReportModal} aria-label="Cerrar" className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">

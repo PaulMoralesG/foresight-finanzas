@@ -62,6 +62,27 @@ export default {
           950: '#2e1065',
         },
       },
+      /**
+       * Escala de apilado con nombre.
+       *
+       * Los valores estaban escritos a mano y sin criterio: de `z-30` a
+       * `z-[9999]`, con la cabecera y la barra de pestañas empatadas en 30 y
+       * tres modales distintos compartiendo `z-[200]`/`z-[201]`. Cuando dos
+       * capas empatan, el orden lo decide el DOM, que no es una decisión de
+       * diseño. Estos nombres dicen qué va encima de qué y por qué.
+       */
+      zIndex: {
+        base: '0',       // contenido normal en su contexto
+        sticky: '30',    // cabecera pegajosa
+        nav: '40',       // barra de pestañas, sidebar y FAB
+        popover: '50',   // menú de usuario y tooltips del sidebar
+        actionbar: '80', // barra de selección múltiple, sobre la de pestañas
+        overlay: '200',  // fondo oscuro de un modal
+        modal: '201',    // panel del modal
+        banner: '250',   // avisos de instalar/actualizar la PWA
+        dialog: '300',   // confirmación: va sobre cualquier modal
+        toast: '400',    // avisos: siempre visibles, incluso sobre un diálogo
+      },
       animation: {
         'slide-up': 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         'fade-in': 'fadeIn 0.3s ease forwards',

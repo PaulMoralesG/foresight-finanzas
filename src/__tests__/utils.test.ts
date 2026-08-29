@@ -11,6 +11,7 @@ import {
   MONTH_NAMES,
   safeParseDate,
   formatDateLong,
+  userInitials,
 } from '@/lib/utils';
 
 // ─── formatMoney & roundMoney ───────────────────────────────────
@@ -151,5 +152,27 @@ describe('MONTH_NAMES', () => {
     expect(MONTH_NAMES).toHaveLength(12);
     expect(MONTH_NAMES[0]).toBe('Enero');
     expect(MONTH_NAMES[11]).toBe('Diciembre');
+  });
+});
+
+// ─── userInitials ───────────────────────────────────────────────
+
+describe('userInitials', () => {
+  it('usa la inicial del nombre y del apellido', () => {
+    expect(userInitials({ firstName: 'Ana', lastName: 'Pérez', email: 'a@b.c' })).toBe('AP');
+  });
+
+  it('cae al correo cuando aún no hay nombre', () => {
+    // Pasa justo tras registrarse, antes de que llegue el perfil
+    expect(userInitials({ firstName: '', lastName: '', email: 'zoe@ejemplo.com' })).toBe('Z');
+    expect(userInitials({ email: 'zoe@ejemplo.com' })).toBe('Z');
+  });
+
+  it('se conforma con solo el nombre', () => {
+    expect(userInitials({ firstName: 'Ana', email: 'a@b.c' })).toBe('A');
+  });
+
+  it('devuelve ? sin usuario', () => {
+    expect(userInitials(null)).toBe('?');
   });
 });

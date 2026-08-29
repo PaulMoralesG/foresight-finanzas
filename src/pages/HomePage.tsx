@@ -3,15 +3,17 @@
 // ================================================================
 
 import { useMemo, useEffect, useRef } from 'react';
-import { ChartNoAxesColumn, Plus, Receipt, AlertCircle, ArrowDown, ArrowUp, Store, PiggyBank } from 'lucide-react';
+import { ChartNoAxesColumn, Plus, Receipt, ArrowDown, ArrowUp, Store, PiggyBank } from 'lucide-react';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useMonthlyData } from '@/hooks/useFinance';
 import { useBudget } from '@/hooks/useBudget';
-import { formatMoney, safeParseDate } from '@/lib/utils';
+import { formatMoney, LOCALE, roundMoney, safeParseDate } from '@/lib/utils';
 import { computeSavingsByConcept } from '@/lib/savings';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/config/categories';
 import { MonthNav } from '@/components/layout/MonthNav';
+import { BudgetProgress } from '@/components/ui/BudgetProgress';
+import { EmptyState } from '@/components/ui/EmptyState';
 import type { Transaction, TabId } from '@/types';
 
 /* ─── Category Bar (simple, no recharts dependency for now) ─── */
@@ -39,26 +41,22 @@ function CategoryBreakdown({ expenses }: { expenses: Transaction[] }) {
 
   if (categoryTotals.length === 0) {
     return (
-      <div className="saas-card p-6 text-center">
-        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-          <ChartNoAxesColumn className="text-slate-500 dark:text-slate-400 w-5 h-5" />
-        </div>
-        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Sin datos de gastos este mes</p>
-        <button
-          onClick={() => { setActiveTab('movements' as TabId); }}
-          className="saas-btn-primary saas-btn-sm mt-3"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Añadir transacción
-        </button>
-      </div>
+      <EmptyState
+        icon={ChartNoAxesColumn}
+        title="Sin datos de gastos este mes"
+        action={{
+          label: 'Añadir transacción',
+          icon: Plus,
+          onClick: () => setActiveTab('movements' as TabId),
+        }}
+      />
     );
   }
 
   return (
     <div className="saas-card p-4 animate-slide-up">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white">Categorías principales</h3>
+        <h2 className="text-sm font-bold text-slate-900 dark:text-white">Categorías principales</h2>
         <button
           onClick={() => { setActiveTab('stats' as TabId); }}
           className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
@@ -79,7 +77,12 @@ function CategoryBreakdown({ expenses }: { expenses: Transaction[] }) {
               onClick={() => { navigateTo('movements' as TabId, catId); }}
               role="button"
               tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter') navigateTo('movements' as TabId, catId); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  navigateTo('movements' as TabId, catId);
+                }
+              }}
               title={`Filtrar por ${cat?.label || catId}`}
             >
               <div className="flex items-center justify-between text-xs mb-0.5">
@@ -123,19 +126,11 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
 
   if (allData.length === 0) {
     return (
-      <div className="saas-card p-6 text-center animate-slide-up">
-        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-          <Receipt className="text-slate-500 dark:text-slate-400 w-5 h-5" />
-        </div>
-        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">No hay movimientos este mes</p>
-        <button
-          onClick={() => openModal()}
-          className="saas-btn-primary saas-btn-sm mt-3"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Crear primer movimiento
-        </button>
-      </div>
+      <EmptyState
+        icon={Receipt}
+        title="No hay movimientos este mes"
+        action={{ label: 'Crear primer movimiento', icon: Plus, onClick: () => openModal() }}
+      />
     );
   }
 
@@ -143,7 +138,7 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
     <div className="saas-card animate-slide-up overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b border-slate-100 dark:border-slate-800">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white">Últimos movimientos</h3>
+        <h2 className="text-sm font-bold text-slate-900 dark:text-white">Últimos movimientos</h2>
         <button
           onClick={() => { setActiveTab('movements' as TabId); }}
           className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline active:scale-95 transition-transform"
@@ -174,8 +169,17 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
               return (
                 <tr
                   key={tx.id}
-                  className="cursor-pointer"
+                  className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500"
                   onClick={() => openModal(tx.id)}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Editar ${tx.concept}`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      openModal(tx.id);
+                    }
+                  }}
                 >
                   <td className="text-center">
                     <span className="text-base">{cat?.icon || '📌'}</span>
@@ -204,7 +208,7 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
                   </td>
                   <td className="whitespace-nowrap">
                     <span className="text-xs text-slate-500 dark:text-slate-400">
-                      {safeParseDate(tx.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      {safeParseDate(tx.date).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short', year: 'numeric' })}
                     </span>
                   </td>
                   <td className={`whitespace-nowrap text-right text-sm font-semibold tabular-nums ${tx.type === 'income' ? 'text-income-600 dark:text-income-400' : 'text-expense-600 dark:text-expense-400'}`}>
@@ -224,8 +228,17 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
           return (
             <div
               key={tx.id}
-              className="p-3 active:scale-[0.98] transition-transform cursor-pointer"
+              className="p-3 active:scale-[0.98] transition-transform cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500"
               onClick={() => openModal(tx.id)}
+              role="button"
+              tabIndex={0}
+              aria-label={`Editar ${tx.concept}`}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  openModal(tx.id);
+                }
+              }}
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -253,7 +266,7 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
                   {tx.businessType === 'business' ? 'Negocio' : 'Personal'}
                 </span>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400 ml-auto">
-                  {safeParseDate(tx.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                  {safeParseDate(tx.date).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })}
                 </span>
               </div>
             </div>
@@ -293,7 +306,7 @@ function BudgetWidget() {
   return (
     <div className="saas-card p-4 animate-slide-up">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white">Presupuesto mensual</h3>
+        <h2 className="text-sm font-bold text-slate-900 dark:text-white">Presupuesto mensual</h2>
         <div className="flex items-center gap-1.5">
           {budget > 0 && (
             <button
@@ -326,32 +339,14 @@ function BudgetWidget() {
               Presupuesto heredado del mes anterior
             </p>
           )}
-          {/* Alerta de excedido — banner notorio */}
-          {pct > 100 && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 animate-pulse">
-              <AlertCircle className="text-red-600 dark:text-red-400 w-4 h-4" />
-              <span className="text-xs font-bold text-red-700 dark:text-red-400">
-                ¡Presupuesto excedido por {formatMoney(monthSpent - budget)}!
-              </span>
-            </div>
-          )}
-          <div className="flex justify-between text-xs">
-            <span className={`font-semibold ${pct > 100 ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'}`}>
-              {formatMoney(monthSpent)} de {formatMoney(budget)}
-            </span>
-            <span className={`font-bold text-sm ${pct > 100 ? 'text-red-600 dark:text-red-400' : pct > 90 ? 'text-orange-600 dark:text-orange-400' : 'text-slate-600 dark:text-slate-400'}`}>
-              {pct}%
-            </span>
-          </div>
-          <div className={`h-2.5 rounded-full overflow-hidden ${pct > 100 ? 'bg-red-100 dark:bg-red-950/80 ring-1 ring-red-300 dark:ring-red-800' : 'bg-slate-100 dark:bg-slate-800'}`}>
-            <div
-              className={`h-full ${colorBar} rounded-full transition-all duration-500 ${pct > 100 ? 'animate-pulse' : ''}`}
-              style={{ width: `${Math.min(pct, 100)}%` }}
-            />
-          </div>
-          <p className={`text-xs font-medium ${pct > 100 ? 'text-red-600 dark:text-red-400' : pct > 90 ? 'text-orange-600 dark:text-orange-400' : 'text-slate-500 dark:text-slate-400'}`}>
-            {message}
-          </p>
+          <BudgetProgress
+            monthSpent={monthSpent}
+            budget={budget}
+            pct={pct}
+            colorBar={colorBar}
+            message={message}
+            destacarExcedido
+          />
         </div>
       )}
     </div>
@@ -381,7 +376,7 @@ export function HomePage() {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-200">
-                Saldo de {(() => { const d = new Date(currentViewDate); return `${d.toLocaleDateString('es-EC', { month: 'long' })} ${d.getFullYear()}`; })()}
+                Saldo de {(() => { const d = new Date(currentViewDate); return `${d.toLocaleDateString(LOCALE, { month: 'long' })} ${d.getFullYear()}`; })()}
               </p>
               <p className="text-3xl sm:text-4xl font-extrabold tabular-nums mt-1 truncate">
                 {formatMoney(summary.available)}
@@ -472,7 +467,7 @@ function SavingsGoalWidget({ totalIncome }: { totalIncome: number }) {
       .sort((a, b) => b.saved - a.saved);
   }, [expenses, currentViewDate]);
 
-  const totalSaved = savingsByConcept.reduce((s, g) => s + g.saved, 0);
+  const totalSaved = roundMoney(savingsByConcept.reduce((s, g) => s + g.saved, 0));
   const savingsPct = totalIncome > 0 ? Math.round((totalSaved / totalIncome) * 100) : 0;
 
   const emoji = totalSaved > 10000 ? '💰' : totalSaved > 5000 ? '🐷' : totalSaved > 1000 ? '🪙' : totalSaved > 0 ? '🌱' : '💤';
@@ -481,10 +476,10 @@ function SavingsGoalWidget({ totalIncome }: { totalIncome: number }) {
     return (
       <div className="saas-card p-4 animate-slide-up">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white">
             <PiggyBank className="text-brand-500 mr-2" />
             Ahorro del mes
-          </h3>
+          </h2>
           <button
             onClick={() => navigateTo('savings' as TabId)}
             className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
@@ -506,10 +501,10 @@ function SavingsGoalWidget({ totalIncome }: { totalIncome: number }) {
   return (
     <div className="saas-card p-4 animate-slide-up">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+        <h2 className="text-sm font-bold text-slate-900 dark:text-white">
           <PiggyBank className="text-brand-500 mr-2" />
           Ahorro del mes
-        </h3>
+        </h2>
         <div className="flex items-center gap-2">
           {savingsPct > 0 && (
             <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded-full">

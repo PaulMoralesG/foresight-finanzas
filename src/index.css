@@ -51,26 +51,23 @@ input[type="checkbox"]:indeterminate {
    Foresight Finanzas v2 — SaaS Design System
    ================================================================ */
 
-:root {
-  --color-income: #059669;
-  --color-income-soft: #ecfdf5;
-  --color-expense: #dc2626;
-  --color-expense-soft: #fef2f2;
-  --color-balance: #2563eb;
-  --color-balance-soft: #eff6ff;
-  --color-business: #7c3aed;
-  --color-business-soft: #f5f3ff;
-}
+/* Aquí vivían --color-income/expense/balance/business y sus variantes soft,
+   para claro y oscuro. Ningún archivo las consumía: los colores semánticos se
+   toman de las rampas `income`/`expense`/`business` de tailwind.config.js, que
+   sí están en uso. Un juego de tokens que nadie lee es peor que ninguno,
+   porque invita a creer que cambiarlos cambia algo. Lo mismo con --sat/--sar/
+   --sab/--sal, que estaban más abajo: todos los consumidores de safe-area
+   escriben env(safe-area-inset-*) directamente. */
 
-.dark {
-  --color-income: #34d399;
-  --color-income-soft: #022c22;
-  --color-expense: #f87171;
-  --color-expense-soft: #450a0a;
-  --color-balance: #60a5fa;
-  --color-balance-soft: #172554;
-  --color-business: #a78bfa;
-  --color-business-soft: #2e1065;
+:root {
+  /* Alto real de la barra de pestañas móvil, SIN el safe-area inferior.
+     Este número estaba escrito a mano en cuatro sitios con tres valores
+     distintos (3.5rem, 80px, 88px) para esquivar la misma barra: el toast
+     flotaba 24px más arriba que el diálogo de confirmación sin que nadie lo
+     hubiera decidido. */
+  --tabbar-h: 3.5rem;
+  /* Hueco mínimo para que algo flotante no quede bajo la barra. */
+  --bottom-clearance: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
 }
 
 @layer base {
@@ -144,16 +141,8 @@ input[type="checkbox"]:indeterminate {
    *    contenido (se comía el texto de la tarjeta de ahorro). */
   @media (max-width: 1023px) {
     main {
-      padding-bottom: calc(3.5rem + var(--fab-clearance, 0px) + env(safe-area-inset-bottom, 0px)) !important;
+      padding-bottom: calc(var(--bottom-clearance) + var(--fab-clearance, 0px)) !important;
     }
-  }
-
-  /* ── Safe-area como variables CSS para reuso ── */
-  :root {
-    --sat: env(safe-area-inset-top, 0px);
-    --sar: env(safe-area-inset-right, 0px);
-    --sab: env(safe-area-inset-bottom, 0px);
-    --sal: env(safe-area-inset-left, 0px);
   }
 }
 

@@ -7,9 +7,10 @@ import { Layers, ArrowDown, ArrowUp, Store, User as UserIcon, Plus, X, Search, R
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
-import { formatMoney, safeParseDate, syncToCloud } from '@/lib/utils';
+import { formatMoney, LOCALE, roundMoney, safeParseDate, syncToCloud } from '@/lib/utils';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/config/categories';
 import { MonthNav } from '@/components/layout/MonthNav';
+import { EmptyState } from '@/components/ui/EmptyState';
 import type { FilterType } from '@/types';
 
 const FILTERS: { id: FilterType; label: string; icon: React.ElementType }[] = [
@@ -173,8 +174,8 @@ export function MovementsPage() {
     }
   };
 
-  const totalIncome = filtered.filter((i) => i.type === 'income').reduce((s, i) => s + i.amount, 0);
-  const totalExpense = filtered.filter((i) => i.type === 'expense').reduce((s, i) => s + i.amount, 0);
+  const totalIncome = roundMoney(filtered.filter((i) => i.type === 'income').reduce((s, i) => s + i.amount, 0));
+  const totalExpense = roundMoney(filtered.filter((i) => i.type === 'expense').reduce((s, i) => s + i.amount, 0));
 
   return (
     <div className="space-y-2 sm:space-y-2.5 animate-fade-in">
@@ -255,7 +256,7 @@ export function MovementsPage() {
                 : 'saas-btn-ghost'
             }`}
           >
-            <i className={`${f.icon} text-xs`} />
+            {(() => { const Icon = f.icon; return <Icon className="w-3.5 h-3.5" />; })()}
             {f.label}
           </button>
         ))}
@@ -264,9 +265,11 @@ export function MovementsPage() {
           <input
             type="text"
             placeholder="Buscar..."
+            aria-label="Buscar movimientos por concepto o categoría"
+            data-search-input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 min-w-0 bg-transparent border-0 outline-none px-1.5 py-1.5 text-[11px] text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
+            className="flex-1 min-w-0 bg-transparent border-0 outline-none px-1.5 py-1.5 text-[11px] text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400"
           />
           {searchQuery && (
             <button
@@ -305,9 +308,11 @@ export function MovementsPage() {
         <input
           type="text"
           placeholder="Buscar..."
+          aria-label="Buscar movimientos por concepto o categoría"
+          data-search-input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="flex-1 min-w-0 bg-transparent border-0 outline-none px-1.5 py-1.5 text-[11px] text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
+          className="flex-1 min-w-0 bg-transparent border-0 outline-none px-1.5 py-1.5 text-[11px] text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400"
         />
         {searchQuery && (
           <button
@@ -323,19 +328,12 @@ export function MovementsPage() {
 
       {/* Table — DESKTOP only (md+) */}
       {filtered.length === 0 ? (
-        <div className="saas-card p-6 text-center">
-          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-            <Receipt className="text-slate-500 dark:text-slate-400 w-5 h-5" />
-          </div>
-          <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">Sin movimientos</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-            Registra tu primer ingreso o gasto para empezar
-          </p>
-          <button onClick={() => openModal()} className="saas-btn-primary">
-            <Plus className="w-3.5 h-3.5" />
-            Crear transacción
-          </button>
-        </div>
+        <EmptyState
+          icon={Receipt}
+          title="Sin movimientos"
+          description="Registra tu primer ingreso o gasto para empezar"
+          action={{ label: 'Crear transacción', icon: Plus, onClick: () => openModal() }}
+        />
       ) : (
         <>
           {/* ── MOBILE: Tarjetas ── */}
@@ -404,7 +402,7 @@ export function MovementsPage() {
                       )}
                     </div>
                     <span className="text-[11px] text-slate-500 dark:text-slate-400 flex-shrink-0">
-                      {safeParseDate(tx.date).toLocaleDateString('es-MX', {
+                      {safeParseDate(tx.date).toLocaleDateString(LOCALE, {
                         day: 'numeric',
                         month: 'short',
                       })}
@@ -441,7 +439,7 @@ export function MovementsPage() {
                     className="whitespace-nowrap cursor-pointer hover:text-slate-700 dark:hover:text-slate-200 select-none"
                     onClick={() => handleSort('date')}
                     tabIndex={0}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleSort('date'); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort('date'); } }}
                     role="button"
                     aria-sort={sortField === 'date' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
                   >
@@ -456,7 +454,7 @@ export function MovementsPage() {
                     className="whitespace-nowrap !text-right cursor-pointer hover:text-slate-700 dark:hover:text-slate-200 select-none"
                     onClick={() => handleSort('amount')}
                     tabIndex={0}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleSort('amount'); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort('amount'); } }}
                     role="button"
                     aria-sort={sortField === 'amount' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
                   >
@@ -476,8 +474,17 @@ export function MovementsPage() {
                   return (
                     <tr
                       key={tx.id}
-                      className={`cursor-pointer transition-colors ${isSelected ? 'bg-brand-50 dark:bg-brand-950/30' : ''}`}
+                      className={`cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 ${isSelected ? 'bg-brand-50 dark:bg-brand-950/30' : ''}`}
                       onClick={() => openModal(tx.id)}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Editar ${tx.concept}`}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          openModal(tx.id);
+                        }
+                      }}
                     >
                       <td className="text-center" onClick={(e) => e.stopPropagation()}>
                         <input
@@ -503,12 +510,13 @@ export function MovementsPage() {
                             e.stopPropagation();
                             setFilter(tx.businessType === 'business' ? 'business' : 'personal');
                           }}
+                          aria-label={`Filtrar solo ${tx.businessType === 'business' ? 'Negocio' : 'Personal'}`}
                           title={`Filtrar solo ${tx.businessType === 'business' ? 'Negocio' : 'Personal'}`}
                         >
                           {tx.businessType === 'business' ? (
-                            <span className="saas-badge-blue text-[11px] cursor-pointer">Negocio</span>
+                            <span className="saas-badge-blue text-[11px]">Negocio</span>
                           ) : (
-                            <span className="saas-badge-slate text-[11px] cursor-pointer">Personal</span>
+                            <span className="saas-badge-slate text-[11px]">Personal</span>
                           )}
                         </button>
                       </td>
@@ -535,7 +543,7 @@ export function MovementsPage() {
                       </td>
                       <td className="whitespace-nowrap">
                         <span className="text-xs text-slate-500 dark:text-slate-400">
-                          {safeParseDate(tx.date).toLocaleDateString('es-MX', {
+                          {safeParseDate(tx.date).toLocaleDateString(LOCALE, {
                             day: 'numeric',
                             month: 'short',
                             year: 'numeric',
@@ -562,8 +570,8 @@ export function MovementsPage() {
       {/* ── Barra de acciones bulk (flotante) ── */}
       {selectedIds.size > 0 && (
         <div
-          className="fixed left-1/2 -translate-x-1/2 z-[80] max-w-[calc(100vw-1rem)]"
-          style={{ bottom: 'calc(88px + env(safe-area-inset-bottom, 0px))' }}
+          className="fixed left-1/2 -translate-x-1/2 z-actionbar max-w-[calc(100vw-1rem)]"
+          style={{ bottom: 'calc(var(--bottom-clearance) + 1.5rem)' }}
         >
           <div className="flex items-center gap-1 sm:gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-full px-2 sm:px-4 py-1.5 sm:py-2 shadow-2xl animate-slide-up">
             <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">

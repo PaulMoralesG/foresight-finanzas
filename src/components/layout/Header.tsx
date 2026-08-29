@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useAuth } from '@/hooks/useAuth';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { supabaseAvailable } from '@/config/supabase';
+import { userInitials } from '@/lib/utils';
 import type { TabId } from '@/types';
 
 const PAGE_TITLES: Record<TabId, string> = {
@@ -79,7 +80,7 @@ export function Header() {
   return (
     <>
       <header
-        className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200 dark:border-slate-800"
+        className="sticky top-0 z-sticky bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200 dark:border-slate-800"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
         <div className="flex items-center justify-between h-12 px-4 md:px-6">
@@ -93,15 +94,20 @@ export function Header() {
           {/* Right: Sync status + Global actions */}
           <div className="flex items-center gap-2">
             {/* Sync status indicator — combina red real + resultado real del push */}
+            {/* Región viva: el estado solo se comunicaba por `title`, que la
+                mayoría de lectores de pantalla no anuncia, así que pasar a
+                "error de sincronización" era invisible sin ratón. */}
             {supabaseAvailable && (
-              <>
+              <div role="status" aria-live="polite" className="flex items-center">
                 {!isOnline ? (
                   <span className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400" title="Sin conexión">
                     <WifiOff className="w-3 h-3" />
+                    <span className="sr-only">Sin conexión</span>
                   </span>
                 ) : syncState === 'syncing' ? (
                   <span className="flex items-center gap-1 text-[11px] text-amber-500" title="Sincronizando...">
                     <Loader2 className="w-3 h-3 animate-spin" />
+                    <span className="sr-only">Sincronizando</span>
                   </span>
                 ) : syncState === 'error' ? (
                   <span
@@ -109,6 +115,9 @@ export function Header() {
                     title="No se pudo sincronizar con la nube. Tus cambios están guardados solo en este dispositivo."
                   >
                     <CloudOff className="w-3 h-3" />
+                    <span className="sr-only">
+                      No se pudo sincronizar con la nube. Tus cambios están guardados solo en este dispositivo.
+                    </span>
                   </span>
                 ) : syncState === 'local-only' ? (
                   <span
@@ -116,13 +125,15 @@ export function Header() {
                     title="Sincronización desactivada (falta migrar el esquema de Supabase)"
                   >
                     <CloudOff className="w-3 h-3" />
+                    <span className="sr-only">Sincronización desactivada. Los cambios se guardan solo en este dispositivo.</span>
                   </span>
                 ) : (
                   <span className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400" title="Sincronizado">
                     <Wifi className="w-3 h-3" />
+                    <span className="sr-only">Sincronizado</span>
                   </span>
                 )}
-              </>
+              </div>
             )}
 
             {/* Dark mode toggle pill */}
@@ -153,12 +164,12 @@ export function Header() {
                   aria-label="Menú de usuario"
                   aria-expanded={isDropdownOpen}
                 >
-                  {((user.firstName?.[0] || '') + (user.lastName?.[0] || '')).toUpperCase() || user.email[0].toUpperCase()}
+                  {userInitials(user)}
                 </button>
 
                 {/* Dropdown */}
                 {isDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-56 saas-card p-1.5 z-50 animate-scale-in origin-top-right shadow-lg">
+                  <div className="absolute right-0 top-full mt-2 w-56 saas-card p-1.5 z-popover animate-scale-in origin-top-right shadow-lg">
                     <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
                       <p className="text-sm font-semibold text-slate-900 dark:text-white">
                         {user.firstName} {user.lastName}

@@ -48,7 +48,14 @@ export function mergeById<T extends { id: string; updated_at?: string }>(
 
     let winner: { kind: 'live'; item: T } | { kind: 'deleted'; at: string };
 
-    if (!localMark && !remoteMark) continue;
+    // Un item vivo sin marca ('' porque updated_at es opcional en Category)
+    // no es "sin datos": es una fila real. Antes caía en el `continue` de
+    // abajo cuando no tenía contraparte remota y desaparecía del resultado.
+    if (!localMark && !remoteMark) {
+      if (localItem) live.push(localItem);
+      else if (remoteItem) live.push(remoteItem);
+      continue;
+    }
 
     if (!localMark) {
       winner = remoteItem

@@ -90,6 +90,19 @@ export function getCategoryById(id: string, customCategories?: Category[]): Cate
   };
 }
 
+/**
+ * Emojis ofrecidos al crear una categoría personalizada.
+ *
+ * Vivía en `hooks/useCategories.ts` —un hook que ya no llamaba nadie— y
+ * TransactionModal llevaba además su propia copia escrita a mano en el JSX, así
+ * que las dos listas podían divergir. Va aquí, junto a CATEGORY_COLORS, que es
+ * su pareja natural.
+ */
+export const CATEGORY_EMOJIS = [
+  '📌', '🛒', '🍴', '💊', '📚', '🎉', '💼', '🏠', '🚗',
+  '💻', '💰', '🎁', '🔧', '🐾', '✈️', '📱', '⛪',
+] as const;
+
 /** Paleta de colores para categorías personalizadas (usada en TransactionModal y ProfilePage) */
 export const CATEGORY_COLORS = [
   'bg-violet-100 text-violet-600',

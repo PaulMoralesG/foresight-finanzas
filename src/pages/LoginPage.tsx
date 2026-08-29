@@ -92,11 +92,14 @@ export function LoginPage() {
 
           {/* Middle — Value Prop */}
           <div className="space-y-6 max-w-md">
-            <h2 className="text-4xl font-extrabold text-white leading-tight">
+            {/* Reclamo de marketing, no una sección del documento: como <h2>
+                precedía en el DOM al <h1> del formulario, y un lector de
+                pantalla que navega por encabezados encontraba el h2 primero. */}
+            <p className="text-4xl font-extrabold text-white leading-tight">
               Tus finanzas,
               <br />
               <span className="text-brand-300">bajo control total</span>
-            </h2>
+            </p>
             <p className="text-lg text-slate-300 leading-relaxed">
               Separa ingresos y gastos personales de tu negocio. Visualiza tu crecimiento
               mes a mes con reportes claros y exportables.
@@ -119,7 +122,10 @@ export function LoginPage() {
           </div>
 
           {/* Bottom */}
-          <p className="text-slate-500 dark:text-slate-400 text-xs">
+          {/* Este panel es oscuro en ambos temas, así que la variante `dark:`
+              nunca se aplicaba en modo claro y quedaba slate-500 sobre
+              slate-950. Color fijo, elegido para el fondo real. */}
+          <p className="text-slate-400 text-xs">
             © {new Date().getFullYear()} Foresight Finanzas. Todos los derechos reservados.
           </p>
         </div>
@@ -192,6 +198,7 @@ export function LoginPage() {
                 <input
                   type="email"
                   placeholder="Correo electrónico"
+                  aria-label="Correo electrónico para recuperar la contraseña"
                   value={forgotEmail}
                   onChange={(e) => setForgotEmail(e.target.value)}
                   className="saas-input"

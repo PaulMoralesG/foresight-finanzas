@@ -6,6 +6,7 @@
 import { LayoutGrid, ArrowLeftRight, BarChart3, User, TrendingUp, PiggyBank, ChevronsRight, ChevronsLeft } from 'lucide-react';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
+import { userInitials } from '@/lib/utils';
 import type { TabId } from '@/types';
 
 const NAV_ITEMS: { id: TabId; icon: typeof LayoutGrid; label: string }[] = [
@@ -23,14 +24,12 @@ export function Sidebar() {
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
   const user = useAuthStore((s) => s.user);
 
-  const initials = user
-    ? ((user.firstName?.[0] || '') + (user.lastName?.[0] || '')).toUpperCase() || user.email[0].toUpperCase()
-    : '?';
+  const initials = userInitials(user);
 
   return (
     <aside
       className={`
-        hidden lg:flex fixed top-0 left-0 z-40 h-full
+        hidden lg:flex fixed top-0 left-0 z-nav h-full
         bg-white dark:bg-slate-900
         border-r border-slate-200 dark:border-slate-800
         flex-col transition-all duration-300 ease-in-out
@@ -80,7 +79,7 @@ export function Sidebar() {
                     absolute left-full ml-2 top-1/2 -translate-y-1/2
                     px-2.5 py-1.5 rounded-lg text-xs font-medium
                     bg-slate-800 dark:bg-slate-700 text-white
-                    whitespace-nowrap z-50 pointer-events-none
+                    whitespace-nowrap z-popover pointer-events-none
                     opacity-0 group-hover:opacity-100
                     transition-opacity duration-150
                     shadow-lg
@@ -106,7 +105,7 @@ export function Sidebar() {
                 absolute left-full ml-2 top-1/2 -translate-y-1/2
                 px-2.5 py-1.5 rounded-lg text-xs font-medium
                 bg-slate-800 dark:bg-slate-700 text-white
-                whitespace-nowrap z-50 pointer-events-none
+                whitespace-nowrap z-popover pointer-events-none
                 opacity-0 group-hover:opacity-100
                 transition-opacity duration-150
                 shadow-lg
@@ -133,6 +132,8 @@ export function Sidebar() {
           <button
             onClick={toggleSidebar}
             className="hidden lg:flex w-full items-center justify-center rounded-lg p-2 text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+            aria-label={collapsed ? 'Expandir menú' : 'Colapsar menú'}
+            aria-expanded={!collapsed}
             title={collapsed ? 'Expandir menú' : 'Colapsar menú'}
           >
             {collapsed ? <ChevronsRight className="w-3.5 h-3.5" /> : <ChevronsLeft className="w-3.5 h-3.5" />}
