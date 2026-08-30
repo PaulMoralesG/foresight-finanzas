@@ -18,13 +18,23 @@ export function usePWA() {
     };
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
 
-    // Service Worker: detectar actualizaciones
+    // Service Worker: avisar cuando hay una versión nueva ESPERANDO.
+    //
+    // La señal correcta es `registration.waiting`, no `installing`: un worker
+    // recién instalado puede seguir instalándose. Y hay que mirarlo también al
+    // arrancar, porque si la versión nueva llegó en una visita anterior ya
+    // está en espera y `updatefound` no vuelve a dispararse: el banner no
+    // aparecía nunca para ese caso.
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.ready.then((registration) => {
+        if (registration.waiting) setSwUpdateReady(true);
+
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
           if (!newWorker) return;
           newWorker.addEventListener('statechange', () => {
+            // `controller` presente = ya había un SW activo, así que esto es
+            // una actualización y no la primera instalación.
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
               setSwUpdateReady(true);
             }
@@ -48,18 +58,31 @@ export function usePWA() {
     setInstallPrompt(null);
   };
 
+  /**
+   * Entrar en la versión nueva, a petición del usuario.
+   *
+   * SKIP_WAITING va al worker EN ESPERA, que es el único que puede saltarse la
+   * espera: antes se le mandaba a `controller` —el worker viejo y activo—, que
+   * además ni siquiera escuchaba mensajes, así que el botón no actualizaba.
+   *
+   * Tras activarse, el worker reclama los clientes y main.tsx recarga al
+   * recibir `controllerchange`. No se recarga aquí para no hacerlo dos veces;
+   * el temporizador es la red por si el evento no llega.
+   */
   const handleUpdate = async () => {
-    // SKIP_WAITING tiene que ir al worker EN ESPERA, que es el que puede
-    // saltarse la espera. Antes se le mandaba a `controller`, que es el worker
-    // viejo y activo: ignoraba el mensaje y la recarga volvía a servir la
-    // versión anterior, con lo que el botón "Actualizar ahora" no actualizaba.
-    if ('serviceWorker' in navigator) {
-      try {
-        const registration = await navigator.serviceWorker.getRegistration();
-        registration?.waiting?.postMessage({ type: 'SKIP_WAITING' });
-      } catch {
-        // Sin registro accesible solo queda recargar, que es lo que sigue.
+    if (!('serviceWorker' in navigator)) {
+      window.location.reload();
+      return;
+    }
+    try {
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (registration?.waiting) {
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        setTimeout(() => window.location.reload(), 2000);
+        return;
       }
+    } catch {
+      // Sin registro accesible solo queda recargar.
     }
     window.location.reload();
   };
