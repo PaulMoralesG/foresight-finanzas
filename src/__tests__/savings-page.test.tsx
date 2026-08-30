@@ -226,6 +226,39 @@ describe('Metas de ahorro', () => {
     expect(screen.getByText(/Ahorrado \$250\.00 de \$2,000\.00/)).toBeInTheDocument();
   });
 
+  it('rechaza una segunda meta con el mismo concepto', async () => {
+    const user = userEvent.setup();
+    useFinanceStore.getState().addSavingsGoal({ concept: 'Casa', target: 1000 });
+    render(<SavingsPage />);
+
+    await user.click(screen.getByRole('button', { name: /Nueva meta/ }));
+    await user.type(screen.getByLabelText('Concepto'), 'casa');
+    await user.type(screen.getByLabelText('Monto objetivo'), '5000');
+    await user.click(screen.getByRole('button', { name: /Crear meta/ }));
+
+    // Dos metas con el mismo concepto compartirían progreso: el avance se
+    // empareja por texto, así que el mismo dinero se contaría en las dos.
+    expect(useFinanceStore.getState().savingsGoals).toHaveLength(1);
+    expect(useUiStore.getState().toasts[0]).toMatchObject({
+      type: 'error',
+      message: 'Ya tienes una meta con ese concepto',
+    });
+  });
+
+  it('editar una meta sin cambiarle el nombre no la considera duplicada', async () => {
+    const user = userEvent.setup();
+    useFinanceStore.getState().addSavingsGoal({ concept: 'Casa', target: 1000 });
+    render(<SavingsPage />);
+
+    await user.click(screen.getByRole('button', { name: /Editar meta/ }));
+    const objetivo = screen.getByLabelText('Monto objetivo');
+    await user.clear(objetivo);
+    await user.type(objetivo, '2500');
+    await user.click(screen.getByRole('button', { name: /Guardar cambios/ }));
+
+    expect(useFinanceStore.getState().savingsGoals[0].target).toBe(2500);
+  });
+
   it('el botón Aportar de cada meta nombra la meta', () => {
     useFinanceStore.getState().addSavingsGoal({ concept: 'Vacaciones', target: 2000 });
     render(<SavingsPage />);

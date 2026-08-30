@@ -45,9 +45,9 @@ export function TransactionAmount({
 /** Negocio / Personal. Un ámbito ausente cuenta como Negocio, igual que en el CSV. */
 export function ScopeBadge({ businessType }: { businessType: BusinessType }) {
   return businessType === 'personal' ? (
-    <span className="saas-badge-slate text-[11px]">Personal</span>
+    <span className="saas-badge-slate text-2xs">Personal</span>
   ) : (
-    <span className="saas-badge-blue text-[11px]">Negocio</span>
+    <span className="saas-badge-blue text-2xs">Negocio</span>
   );
 }
 
