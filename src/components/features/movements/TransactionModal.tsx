@@ -6,12 +6,13 @@ import { useState, useEffect, useMemo, type FormEvent } from 'react';
 import { X, Plus, Trash2, ArrowDown, ArrowUp, Building2, User, Banknote, CreditCard, Landmark } from 'lucide-react';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_COLORS, CATEGORY_EMOJIS } from '@/config/categories';
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_COLORS } from '@/config/categories';
+import { ColorPicker, IconPicker } from '@/components/ui/CategoryStylePicker';
 import { getTodayISO, parseMoneyInput, roundMoney, syncToCloud } from '@/lib/utils';
 import { makeCategoryId } from '@/lib/category-id';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
-import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { ModalSheet } from '@/components/ui/ModalSheet';
 import type { TransactionType, BusinessType, PaymentMethod, Category } from '@/types';
 
 export function TransactionModal({
@@ -151,7 +152,6 @@ export function TransactionModal({
 
   // Retener el foco dentro del diálogo (cumple la promesa de aria-modal) y
   // enfocar el monto al abrir, que es el primer dato que se escribe.
-  const modalRef = useFocusTrap<HTMLDivElement>(isOpen && !isDeleteModalOpen, '#tx-amount');
 
   if (!isOpen) return null;
 
@@ -207,28 +207,15 @@ export function TransactionModal({
   }
 
   return (
-    <>
-      {/* Overlay */}
-      <div className="fixed inset-0 bg-black/50 z-overlay animate-fade-in" onClick={closeModal} />
-
-      {/* Modal */}
-      <div
-        ref={modalRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="transaction-modal-title"
-        className="fixed inset-0 z-modal bg-white dark:bg-slate-950 md:rounded-2xl shadow-2xl flex flex-col w-full max-w-full md:max-w-md mx-auto overflow-hidden animate-scale-in md:inset-y-6 md:mx-auto pt-safe"
-        style={{ overscrollBehaviorX: 'none' }}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-800">
-          <h2 id="transaction-modal-title" className="font-bold text-sm text-slate-900 dark:text-white">
-            {isEditing ? 'Editar Movimiento' : 'Nuevo Movimiento'}
-          </h2>
-          <button onClick={closeModal} aria-label="Cerrar" className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
+    <ModalSheet
+      id="transaction-modal-title"
+      titulo={isEditing ? 'Editar Movimiento' : 'Nuevo Movimiento'}
+      onClose={closeModal}
+      // Con el diálogo de borrado abierto, el foco lo retiene ese, no este
+      trapActivo={isOpen && !isDeleteModalOpen}
+      focoInicial="#tx-amount"
+      style={{ overscrollBehaviorX: 'none' }}
+    >
 
         {/* Body — scrollable with iOS momentum */}
         {/* id + `form=` en el botón del pie: el pie es hermano del formulario,
@@ -445,39 +432,11 @@ export function TransactionModal({
                 </div>
                 <div className="flex gap-1.5 items-center">
                   <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex-shrink-0">Ícono:</span>
-                  <div className="flex gap-1 flex-wrap">
-                    {CATEGORY_EMOJIS.map((emoji) => (
-                      <button
-                        key={emoji}
-                        type="button"
-                        onClick={() => setNewCatIcon(emoji)}
-                        aria-label={`Usar el ícono ${emoji}`}
-                        aria-pressed={newCatIcon === emoji}
-                        className={`w-7 h-7 flex items-center justify-center rounded text-base leading-none transition-all ${
-                          newCatIcon === emoji
-                            ? 'ring-2 ring-brand-500 bg-white dark:bg-slate-700'
-                            : 'hover:bg-white dark:hover:bg-slate-700'
-                        }`}
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
+                  <IconPicker value={newCatIcon} onChange={setNewCatIcon} />
                 </div>
                 <div className="flex gap-1.5 items-center flex-wrap">
                   <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Color:</span>
-                  {CATEGORY_COLORS.slice(0, 8).map((c, i) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setNewCatColor(c)}
-                      aria-label={`Usar el color ${i + 1} de ${CATEGORY_COLORS.slice(0, 8).length}`}
-                      aria-pressed={newCatColor === c}
-                      className={`w-5 h-5 rounded-full border-2 transition-all ${c.split(' ')[0]} ${
-                        newCatColor === c ? 'ring-2 ring-brand-500 scale-110 border-white dark:border-slate-900' : 'border-transparent'
-                      }`}
-                    />
-                  ))}
+                  <ColorPicker value={newCatColor} onChange={setNewCatColor} />
                 </div>
               </div>
             )}
@@ -534,7 +493,6 @@ export function TransactionModal({
           </div>
         </>
       )}
-      </div>
-    </>
+    </ModalSheet>
   );
 }

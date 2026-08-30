@@ -71,8 +71,17 @@ export function useAuthSession(): void {
 
   useEffect(() => {
     // === MODO OFFLINE: Sin Supabase configurado ===
+    //
+    // Aquí NO se llama a reset(). El reset existe para que, al no haber sesión,
+    // la siguiente cuenta que entre en este navegador no vea datos de la
+    // anterior. En modo offline no hay cuentas: siempre es el mismo
+    // OFFLINE_USER, así que lo único que borraba era el trabajo del usuario.
+    //
+    // Y lo borraba entero: el efecto corre en cada arranque, de modo que un
+    // gasto registrado desaparecía en la siguiente recarga. La app parecía
+    // funcionar hasta que cerrabas la pestaña — justo lo contrario de lo que
+    // promete el README ("funciona offline con almacenamiento local").
     if (!supabaseAvailable || !supabase) {
-      financeStore.getState().reset();
       setUser(OFFLINE_USER);
       return;
     }
