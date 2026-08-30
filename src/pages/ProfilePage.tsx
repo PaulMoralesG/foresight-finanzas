@@ -3,16 +3,14 @@
 // ================================================================
 
 import { useState } from 'react';
-import { Pencil, Loader2, Check, Mail, ChevronUp, ChevronRight, Send, Lock, Key, Tags, Trash2, Plus, Sun, Moon, LogOut, Edit3, X } from 'lucide-react';
+import { Pencil, Loader2, Check, Mail, ChevronUp, ChevronRight, Send, Lock, Key, Sun, Moon, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
-import { useFinanceStore } from '@/stores/financeStore';
-import { CATEGORY_COLORS, CATEGORY_EMOJIS } from '@/config/categories';
-import { syncToCloud, userInitials } from '@/lib/utils';
-import { makeCategoryId } from '@/lib/category-id';
+import { userInitials } from '@/lib/utils';
 import { MIN_PASSWORD_LENGTH, STRENGTH_TRACK_CLASS, passwordStrength, validateNewPassword } from '@/lib/password';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { CategoryManager } from '@/components/features/categories/CategoryManager';
 
 type Section = 'profile' | 'email' | 'password' | 'categories' | null;
 
@@ -41,23 +39,9 @@ export function ProfilePage() {
   const [savingPassword, setSavingPassword] = useState(false);
   const pwStrength = passwordStrength(newPassword);
 
-  // ── Categorías personalizadas ──
-  const customExpenseCategories = useFinanceStore((s) => s.customExpenseCategories);
-  const customIncomeCategories = useFinanceStore((s) => s.customIncomeCategories);
-  const deleteCustomCategory = useFinanceStore((s) => s.deleteCustomCategory);
-  const addCustomCategory = useFinanceStore((s) => s.addCustomCategory);
-  const updateCustomCategory = useFinanceStore((s) => s.updateCustomCategory);
-  const [catType, setCatType] = useState<'expense' | 'income'>('expense');
-  const [newCatLabel, setNewCatLabel] = useState('');
-  const [newCatIcon, setNewCatIcon] = useState('📌');
-  const [newCatColor, setNewCatColor] = useState(CATEGORY_COLORS[0]);
+  // ── Confirmación de cierre de sesión ──
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
-  const [pendingDeleteCat, setPendingDeleteCat] = useState<{ id: string; label: string } | null>(null);
 
-  // ── Edición de categoría ──
-  const [editingCatId, setEditingCatId] = useState<string | null>(null);
-  const [editingCatLabel, setEditingCatLabel] = useState('');
-  const [editingCatIcon, setEditingCatIcon] = useState('📌');
 
   const initials = userInitials(user);
 
@@ -75,7 +59,6 @@ export function ProfilePage() {
       }
       if (section === 'email') setNewEmail('');
       if (section === 'password') { setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); }
-      if (section === 'categories') { setNewCatLabel(''); setNewCatIcon('📌'); setNewCatColor(CATEGORY_COLORS[0]); setCatType('expense'); }
     }
   };
 
@@ -152,62 +135,6 @@ export function ProfilePage() {
       setSavingPassword(false);
     }
   };
-
-  // ── Categorías ──
-  const activeCustomCats = catType === 'expense' ? customExpenseCategories : customIncomeCategories;
-
-  function handleAddCategory() {
-    const label = newCatLabel.trim();
-    if (!label) {
-      addToast('Ingresa un nombre para la categoría', 'error');
-      return;
-    }
-    if (activeCustomCats.some((c) => c.label.toLowerCase() === label.toLowerCase())) {
-      addToast('Ya existe una categoría con ese nombre', 'error');
-      return;
-    }
-    const id = makeCategoryId(label);
-    addCustomCategory(catType, { id, label, icon: newCatIcon, color: newCatColor });
-    setNewCatLabel('');
-    addToast('Categoría creada ✅', 'success');
-    // Sincronizar con Supabase para que la categoría persista al recargar
-    syncToCloud(saveData, addToast);
-  }
-
-  function startEditing(cat: typeof activeCustomCats[number]) {
-    setEditingCatId(cat.id);
-    setEditingCatLabel(cat.label);
-    setEditingCatIcon(cat.icon);
-  }
-
-  function cancelEditing() {
-    setEditingCatId(null);
-    setEditingCatLabel('');
-    setEditingCatIcon('📌');
-  }
-
-  function handleUpdateCategory() {
-    const label = editingCatLabel.trim();
-    if (!label || !editingCatId) return;
-    if (activeCustomCats.some((c) => c.id !== editingCatId && c.label.toLowerCase() === label.toLowerCase())) {
-      addToast('Ya existe una categoría con ese nombre', 'error');
-      return;
-    }
-    updateCustomCategory(catType, editingCatId, { label, icon: editingCatIcon });
-    addToast('Categoría actualizada ✅', 'success');
-    syncToCloud(saveData, addToast);
-    cancelEditing();
-  }
-
-  /** Borrar es irreversible y el botón está a pocos píxeles del de editar:
-   *  pedir confirmación, igual que ya hacen cerrar sesión y borrar movimientos. */
-  function confirmDeleteCategory() {
-    if (!pendingDeleteCat) return;
-    deleteCustomCategory(catType, pendingDeleteCat.id);
-    setPendingDeleteCat(null);
-    addToast('Categoría eliminada 🗑️', 'success');
-    syncToCloud(saveData, addToast);
-  }
 
   return (
     /* max-w-2xl dejaba una columna estrecha con mucho vacío a la derecha en
@@ -474,203 +401,11 @@ export function ProfilePage() {
           <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Personalización</p>
         </div>
 
-        {/* ─── Categorías ─── */}
-        <div>
-          <button
-            onClick={() => toggleSection('categories')}
-            type="button"
-            aria-expanded={expanded === 'categories'}
-            className="w-full flex items-center gap-4 p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded-lg"
-          >
-            <div className="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-950 flex items-center justify-center text-purple-500 flex-shrink-0">
-              <Tags className="w-5 h-5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">Categorías personalizadas</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {(() => {
-                  const n = customExpenseCategories.length + customIncomeCategories.length;
-                  if (n === 0) return 'Ninguna todavía';
-                  return n === 1 ? '1 categoría creada' : `${n} categorías creadas`;
-                })()}
-              </p>
-            </div>
-            {expanded === 'categories' ? <ChevronUp className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" />}
-          </button>
-
-          {expanded === 'categories' && (
-            <div className="px-4 pb-4 space-y-3 animate-fade-in">
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Crea, visualiza y elimina tus categorías personalizadas. Las categorías por defecto no se pueden modificar.
-              </p>
-
-              {/* Selector de tipo */}
-              <div className="flex gap-1 p-1 rounded-lg bg-slate-100 dark:bg-slate-800">
-                {(['expense', 'income'] as const).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setCatType(t)}
-                    className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                      catType === t
-                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
-                    }`}
-                  >
-                    {t === 'expense' ? '💸 Gastos' : '💰 Ingresos'}
-                  </button>
-                ))}
-              </div>
-
-              {/* Lista de categorías personalizadas */}
-              {activeCustomCats.length > 0 ? (
-                <div className="space-y-1">
-                  {activeCustomCats.map((cat) => (
-                    <div key={cat.id}>
-                      {editingCatId === cat.id ? (
-                        /* ── Inline edit form ── */
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-brand-300 dark:border-brand-700">
-                          <div className="flex gap-0.5 flex-wrap">
-                            {CATEGORY_EMOJIS.map((emoji) => (
-                              <button
-                                key={emoji}
-                                type="button"
-                                onClick={() => setEditingCatIcon(emoji)}
-                                aria-label={`Usar el ícono ${emoji}`}
-                                aria-pressed={editingCatIcon === emoji}
-                                className={`w-6 h-6 flex items-center justify-center rounded text-xs transition-all ${
-                                  editingCatIcon === emoji
-                                    ? 'ring-2 ring-brand-500 bg-white dark:bg-slate-700'
-                                    : 'hover:bg-white dark:hover:bg-slate-700'
-                                }`}
-                              >
-                                {emoji}
-                              </button>
-                            ))}
-                          </div>
-                          <input
-                            type="text"
-                            value={editingCatLabel}
-                            onChange={(e) => setEditingCatLabel(e.target.value)}
-                            aria-label="Nombre de la categoría"
-                            className="flex-1 min-w-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-xs"
-                            onKeyDown={(e) => { if (e.key === 'Enter') handleUpdateCategory(); }}
-                            autoFocus
-                          />
-                          <button
-                            onClick={handleUpdateCategory}
-                            className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-600 p-1 flex-shrink-0"
-                            aria-label="Guardar categoría"
-                            title="Guardar"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={cancelEditing}
-                            className="text-slate-500 dark:text-slate-400 hover:text-slate-600 p-1 flex-shrink-0"
-                            aria-label="Cancelar edición de categoría"
-                            title="Cancelar"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ) : (
-                        /* ── Normal view ── */
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/50">
-                          <span className="text-lg">{cat.icon}</span>
-                          <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-300 truncate">
-                            {cat.label}
-                          </span>
-                          {/* Objetivos táctiles de 36px y separados entre sí:
-                              antes eran botones de ~24px pegados, y en un
-                              teléfono era fácil dar a Eliminar queriendo Editar. */}
-                          <button
-                            type="button"
-                            onClick={() => startEditing(cat)}
-                            className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
-                            title="Editar categoría"
-                            aria-label={`Editar la categoría ${cat.label}`}
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPendingDeleteCat({ id: cat.id, label: cat.label })}
-                            className="w-9 h-9 ml-1 flex items-center justify-center rounded-lg text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950 transition-colors flex-shrink-0"
-                            title="Eliminar categoría"
-                            aria-label={`Eliminar la categoría ${cat.label}`}
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-slate-500 dark:text-slate-400 text-center py-2">
-                  No tienes categorías personalizadas de {catType === 'expense' ? 'gasto' : 'ingreso'}.
-                </p>
-              )}
-
-              {/* Form para añadir nueva */}
-              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-3">
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Nueva categoría
-                </p>
-                <input
-                  type="text"
-                  value={newCatLabel}
-                  onChange={(e) => setNewCatLabel(e.target.value)}
-                  aria-label="Nombre de la nueva categoría"
-                  className="saas-input-sm text-xs"
-                  placeholder="Nombre de la categoría"
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleAddCategory(); }}
-                />
-                <div className="flex gap-2 items-center">
-                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Ícono:</span>
-                  <div className="flex gap-1 flex-wrap">
-                    {CATEGORY_EMOJIS.map((emoji) => (
-                      <button
-                        key={emoji}
-                        type="button"
-                        onClick={() => setNewCatIcon(emoji)}
-                        aria-label={`Usar el ícono ${emoji}`}
-                        aria-pressed={newCatIcon === emoji}
-                        className={`w-7 h-7 flex items-center justify-center rounded text-sm transition-all ${
-                          newCatIcon === emoji
-                            ? 'ring-2 ring-brand-500 bg-white dark:bg-slate-700'
-                            : 'hover:bg-white dark:hover:bg-slate-700'
-                        }`}
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex gap-2 items-center flex-wrap">
-                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Color:</span>
-                  {CATEGORY_COLORS.slice(0, 8).map((c, i) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setNewCatColor(c)}
-                      aria-label={`Usar el color ${i + 1} de ${CATEGORY_COLORS.slice(0, 8).length}`}
-                      aria-pressed={newCatColor === c}
-                      className={`w-6 h-6 rounded-full border-2 transition-all ${c.split(' ')[0]} ${
-                        newCatColor === c ? 'ring-2 ring-brand-500 scale-110 border-white dark:border-slate-900' : 'border-transparent'
-                      }`}
-                    />
-                  ))}
-                </div>
-                <button onClick={handleAddCategory} className="saas-btn-primary saas-btn-sm w-full">
-                  <Plus className="w-3.5 h-3.5 mr-1" />
-                  Añadir categoría
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        <CategoryManager
+          abierto={expanded === 'categories'}
+          onToggle={() => toggleSection('categories')}
+          saveData={saveData}
+        />
 
         {/* Apariencia — Toggle (no accordion) */}
         <div className="flex items-center gap-4 p-4">
@@ -737,14 +472,6 @@ export function ProfilePage() {
         onCancel={() => setShowSignOutConfirm(false)}
       />
 
-      <ConfirmDialog
-        open={pendingDeleteCat !== null}
-        title="Eliminar categoría"
-        message={`¿Eliminar «${pendingDeleteCat?.label ?? ''}»? Los movimientos que ya la usan conservan su categoría, pero no podrás asignarla a nuevos movimientos. Esta acción no se puede deshacer.`}
-        confirmLabel="Eliminar"
-        onConfirm={confirmDeleteCategory}
-        onCancel={() => setPendingDeleteCat(null)}
-      />
     </div>
   );
 }

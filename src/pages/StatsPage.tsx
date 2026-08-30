@@ -6,8 +6,9 @@ import { useMemo, useState, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, FileText, FileSpreadsheet, Loader2, TrendingUp, ArrowUp, ArrowDown, PieChart, User, Building2, ClipboardList, CalendarClock } from 'lucide-react';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { formatMoney, MONTH_NAMES, formatDateLong, LOCALE, roundMoney, safeParseDate, downloadBlob } from '@/lib/utils';
+import { formatMoney, MONTH_NAMES, formatDateLong, LOCALE, safeParseDate, downloadBlob } from '@/lib/utils';
 import { movementsToCsv } from '@/lib/movements-csv';
+import { useStatsPeriod, pctChange } from '@/hooks/useStatsPeriod';
 import { getCategoryById } from '@/config/categories';
 import { generatePDFReport } from '@/lib/pdf-generator';
 import {
@@ -16,7 +17,6 @@ import {
 } from 'recharts';
 
 export function StatsPage() {
-  const expenses = useFinanceStore((s) => s.expenses);
   const currentViewDate = useFinanceStore((s) => s.currentViewDate);
   const addToast = useUiStore((s) => s.addToast);
   const isDark = useUiStore((s) => s.isDark);
@@ -44,28 +44,26 @@ export function StatsPage() {
   const [exportFilter, setExportFilter] = useState<'all' | 'personal' | 'business'>('all');
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
-  // ── Trend data: last 6 months ──
-  const trendData = useMemo(() => {
-    const months: { month: string; Ingresos: number; Gastos: number; Balance: number }[] = [];
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(statsYear, statsMonth - i, 1);
-      const m = d.getMonth();
-      const y = d.getFullYear();
-      const items = expenses.filter((item) => {
-        const id = safeParseDate(item.date);
-        return id.getMonth() === m && id.getFullYear() === y;
-      });
-      const ingresos = roundMoney(items.filter((i) => i.type === 'income').reduce((s, i) => s + i.amount, 0));
-      const gastos = roundMoney(items.filter((i) => i.type === 'expense').reduce((s, i) => s + i.amount, 0));
-      months.push({
-        month: MONTH_NAMES[m].slice(0, 3),
-        Ingresos: ingresos,
-        Gastos: gastos,
-        Balance: roundMoney(ingresos - gastos),
-      });
-    }
-    return months;
-  }, [expenses, statsMonth, statsYear]);
+  // Todas las derivaciones del periodo viven en el hook: son aritmética
+  // sobre transacciones y se prueban sin montar la página.
+  const {
+    trendData,
+    filteredData,
+    totals,
+    prevTotals,
+    expensesByCategory,
+    maxAmount,
+    largestExpense,
+    peakDay,
+    peakDayTransactions,
+    avgDaily,
+  } = useStatsPeriod({
+    mode: statsMode,
+    month: statsMonth,
+    year: statsYear,
+    fromDate: statsFromDate,
+    toDate: statsToDate,
+  });
 
   // Populate year options: 3 years back to 1 forward
   const currentYear = new Date().getFullYear();
@@ -75,135 +73,6 @@ export function StatsPage() {
     () => Array.from({ length: 5 }, (_, i) => currentYear - 3 + i),
     [currentYear]
   );
-
-  // Filtered data
-  const filteredData = useMemo(() => {
-    if (statsMode === 'range' && statsFromDate && statsToDate) {
-      const from = safeParseDate(statsFromDate);
-      const to = safeParseDate(statsToDate);
-      to.setHours(23, 59, 59, 999);
-      return expenses.filter((i) => {
-        const d = safeParseDate(i.date);
-        return d >= from && d <= to;
-      });
-    }
-    // month mode
-    return expenses.filter((i) => {
-      const d = safeParseDate(i.date);
-      return d.getFullYear() === statsYear && d.getMonth() === statsMonth;
-    });
-  }, [expenses, statsMode, statsMonth, statsYear, statsFromDate, statsToDate]);
-
-  // Previous period data (for comparison)
-  const previousData = useMemo(() => {
-    if (statsMode === 'range' && statsFromDate && statsToDate) {
-      const from = safeParseDate(statsFromDate);
-      const to = safeParseDate(statsToDate);
-      const diff = to.getTime() - from.getTime();
-      const prevFrom = new Date(from.getTime() - diff);
-      const prevTo = new Date(to.getTime() - diff);
-      return expenses.filter((i) => {
-        const d = safeParseDate(i.date);
-        return d >= prevFrom && d <= prevTo;
-      });
-    }
-    // month mode: previous month (or December of previous year)
-    const prevDate = new Date(statsYear, statsMonth - 1, 1);
-    const prevYear = prevDate.getFullYear();
-    const prevMonth = prevDate.getMonth();
-    return expenses.filter((i) => {
-      const d = safeParseDate(i.date);
-      return d.getFullYear() === prevYear && d.getMonth() === prevMonth;
-    });
-  }, [expenses, statsMode, statsMonth, statsYear, statsFromDate, statsToDate]);
-
-  // Totals
-  const totals = useMemo(() => {
-    const income = roundMoney(filteredData.filter((i) => i.type === 'income').reduce((s, i) => s + i.amount, 0));
-    const spent = roundMoney(filteredData.filter((i) => i.type === 'expense').reduce((s, i) => s + i.amount, 0));
-    const businessInc = roundMoney(filteredData
-      .filter((i) => i.type === 'income' && i.businessType === 'business')
-      .reduce((s, i) => s + i.amount, 0));
-    const businessSpent = roundMoney(filteredData
-      .filter((i) => i.type === 'expense' && i.businessType === 'business')
-      .reduce((s, i) => s + i.amount, 0));
-    return {
-      income,
-      spent,
-      balance: roundMoney(income - spent),
-      businessProfit: roundMoney(businessInc - businessSpent),
-      count: filteredData.length,
-    };
-  }, [filteredData]);
-
-  // Previous totals for comparison
-  const prevTotals = useMemo(() => {
-    const income = roundMoney(previousData.filter((i) => i.type === 'income').reduce((s, i) => s + i.amount, 0));
-    const spent = roundMoney(previousData.filter((i) => i.type === 'expense').reduce((s, i) => s + i.amount, 0));
-    return { income, spent };
-  }, [previousData]);
-
-  const pctChange = (current: number, previous: number): string => {
-    if (previous === 0) return current > 0 ? '+100%' : '—';
-    const pct = ((current - previous) / previous) * 100;
-    return `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
-  };
-
-  // Category breakdown
-  const expensesByCategory = useMemo(() => {
-    const map: Record<string, number> = {};
-    filteredData
-      .filter((i) => i.type === 'expense')
-      .forEach((item) => {
-        map[item.category] = roundMoney((map[item.category] || 0) + item.amount);
-      });
-    return Object.entries(map).sort(([, a], [, b]) => b - a);
-  }, [filteredData]);
-
-  const maxAmount = expensesByCategory[0]?.[1] || 1;
-
-  // Largest single expense transaction
-  const largestExpense = useMemo(() => {
-    const expenseItems = filteredData.filter((i) => i.type === 'expense');
-    if (expenseItems.length === 0) return null;
-    return expenseItems.reduce((max, item) => item.amount > max.amount ? item : max, expenseItems[0]);
-  }, [filteredData]);
-
-  // Peak day (día con mayor gasto)
-  const peakDay = useMemo(() => {
-    const expenseItems = filteredData.filter((i) => i.type === 'expense');
-    if (expenseItems.length === 0) return null;
-    const byDay: Record<string, number> = {};
-    expenseItems.forEach((i) => {
-      const day = i.date.slice(0, 10);
-      byDay[day] = roundMoney((byDay[day] || 0) + i.amount);
-    });
-    let maxDay = '';
-    let maxAmount = 0;
-    Object.entries(byDay).forEach(([day, amount]) => {
-      if (amount > maxAmount) { maxDay = day; maxAmount = amount; }
-    });
-    return { date: maxDay, amount: maxAmount };
-  }, [filteredData]);
-
-  // Transactions on peak day
-  const peakDayTransactions = useMemo(() => {
-    if (!peakDay) return [];
-    return filteredData
-      .filter((i) => i.type === 'expense' && i.date.slice(0, 10) === peakDay.date)
-      .sort((a, b) => b.amount - a.amount);
-  }, [filteredData, peakDay]);
-
-  // Average daily balance
-  const avgDaily =
-    statsMode === 'range' && statsFromDate && statsToDate
-      ? (() => {
-          const from = safeParseDate(statsFromDate);
-          const to = safeParseDate(statsToDate);
-          const days = Math.max(1, Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-          return totals.balance / days;
-        })()
-      : totals.balance / Math.max(1, new Date(statsYear, statsMonth + 1, 0).getDate());
 
   // ── Helpers: filtrar datos para export ──
   const getExportData = useCallback(() => {
