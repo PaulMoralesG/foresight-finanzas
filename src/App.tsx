@@ -2,9 +2,10 @@
 // App.tsx — Componente raíz: autenticación, routing por tabs, layout SaaS
 // ================================================================
 
-import { useEffect, lazy, Suspense } from 'react';
+import { useEffect, Suspense } from 'react';
 import { Download, RefreshCw, X } from 'lucide-react';
 import { useAuth, useAuthSession } from '@/hooks/useAuth';
+import { lazyConRecuperacion } from '@/lib/lazy-recovery';
 import { usePWA } from '@/hooks/usePWA';
 import { useIdleLogout } from '@/hooks/useIdleLogout';
 import { supabaseAvailable } from '@/config/supabase';
@@ -18,12 +19,18 @@ import { TransactionModal } from '@/components/features/movements/TransactionMod
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { AppLoadingSkeleton, PageSkeleton } from '@/components/ui/Skeleton';
 
-// Lazy-load: páginas pesadas que no se necesitan en la carga inicial
-const StatsPage = lazy(() => import('@/pages/StatsPage').then(m => ({ default: m.StatsPage })));
-const SavingsPage = lazy(() => import('@/pages/SavingsPage').then(m => ({ default: m.SavingsPage })));
-const LoginPage = lazy(() => import('@/pages/LoginPage').then(m => ({ default: m.LoginPage })));
+// Lazy-load: páginas pesadas que no se necesitan en la carga inicial.
+//
+// Van con `lazyConRecuperacion` y no con `lazy` a secas: al publicar una
+// versión, los chunks cambian de hash y los viejos desaparecen del servidor.
+// Un shell servido desde el precache del worker anterior pide el chunk que ya
+// no existe, el import falla y la pantalla entera cae al ErrorBoundary. El
+// envoltorio activa el worker en espera y recarga. Ver src/lib/lazy-recovery.ts.
+const StatsPage = lazyConRecuperacion(() => import('@/pages/StatsPage').then(m => ({ default: m.StatsPage })));
+const SavingsPage = lazyConRecuperacion(() => import('@/pages/SavingsPage').then(m => ({ default: m.SavingsPage })));
+const LoginPage = lazyConRecuperacion(() => import('@/pages/LoginPage').then(m => ({ default: m.LoginPage })));
 // Lazy: jspdf + html2canvas (~400 KB) solo se descargan al abrir el reporte
-const ReportModal = lazy(() => import('@/components/features/report/ReportModal').then(m => ({ default: m.ReportModal })));
+const ReportModal = lazyConRecuperacion(() => import('@/components/features/report/ReportModal').then(m => ({ default: m.ReportModal })));
 
 export function App() {
   // Único punto de arranque de la sesión en toda la app. El resto de los
