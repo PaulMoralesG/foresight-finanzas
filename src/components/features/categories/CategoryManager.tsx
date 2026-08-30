@@ -12,7 +12,8 @@ import { useState } from 'react';
 import { ChevronRight, ChevronUp, Check, Edit3, Plus, Tags, Trash2, X } from 'lucide-react';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { CATEGORY_COLORS, CATEGORY_EMOJIS } from '@/config/categories';
+import { CATEGORY_COLORS } from '@/config/categories';
+import { ColorPicker, IconPicker } from '@/components/ui/CategoryStylePicker';
 import { makeCategoryId } from '@/lib/category-id';
 import { syncToCloud } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -157,24 +158,7 @@ export function CategoryManager({ abierto, onToggle, saveData }: CategoryManager
                 {editingCatId === cat.id ? (
                   /* ── Inline edit form ── */
                   <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-brand-300 dark:border-brand-700">
-                    <div className="flex gap-0.5 flex-wrap">
-                      {CATEGORY_EMOJIS.map((emoji) => (
-                        <button
-                          key={emoji}
-                          type="button"
-                          onClick={() => setEditingCatIcon(emoji)}
-                          aria-label={`Usar el ícono ${emoji}`}
-                          aria-pressed={editingCatIcon === emoji}
-                          className={`w-6 h-6 flex items-center justify-center rounded text-xs transition-all ${
-                            editingCatIcon === emoji
-                              ? 'ring-2 ring-brand-500 bg-white dark:bg-slate-700'
-                              : 'hover:bg-white dark:hover:bg-slate-700'
-                          }`}
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
+                    <IconPicker value={editingCatIcon} onChange={setEditingCatIcon} size="sm" />
                     <input
                       type="text"
                       value={editingCatLabel}
@@ -256,39 +240,11 @@ export function CategoryManager({ abierto, onToggle, saveData }: CategoryManager
           />
           <div className="flex gap-2 items-center">
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Ícono:</span>
-            <div className="flex gap-1 flex-wrap">
-              {CATEGORY_EMOJIS.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => setNewCatIcon(emoji)}
-                  aria-label={`Usar el ícono ${emoji}`}
-                  aria-pressed={newCatIcon === emoji}
-                  className={`w-7 h-7 flex items-center justify-center rounded text-sm transition-all ${
-                    newCatIcon === emoji
-                      ? 'ring-2 ring-brand-500 bg-white dark:bg-slate-700'
-                      : 'hover:bg-white dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
+            <IconPicker value={newCatIcon} onChange={setNewCatIcon} />
           </div>
           <div className="flex gap-2 items-center flex-wrap">
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Color:</span>
-            {CATEGORY_COLORS.slice(0, 8).map((c, i) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setNewCatColor(c)}
-                aria-label={`Usar el color ${i + 1} de ${CATEGORY_COLORS.slice(0, 8).length}`}
-                aria-pressed={newCatColor === c}
-                className={`w-6 h-6 rounded-full border-2 transition-all ${c.split(' ')[0]} ${
-                  newCatColor === c ? 'ring-2 ring-brand-500 scale-110 border-white dark:border-slate-900' : 'border-transparent'
-                }`}
-              />
-            ))}
+            <ColorPicker value={newCatColor} onChange={setNewCatColor} />
           </div>
           <button onClick={handleAddCategory} className="saas-btn-primary saas-btn-sm w-full">
             <Plus className="w-3.5 h-3.5 mr-1" />

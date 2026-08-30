@@ -249,14 +249,14 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
                 </div>
               </div>
               <div className="flex items-center gap-1 mt-1 flex-wrap">
-                <TypePill type={tx.type} className="text-[11px] px-1.5 py-0.5 rounded" />
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                <TypePill type={tx.type} className="text-2xs px-1.5 py-0.5 rounded" />
+                <span className="text-2xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
                   {cat?.label || tx.category}
                 </span>
-                <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded ${tx.businessType === 'business' ? 'bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
+                <span className={`text-2xs font-medium px-1.5 py-0.5 rounded ${tx.businessType === 'business' ? 'bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
                   {tx.businessType === 'business' ? 'Negocio' : 'Personal'}
                 </span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 ml-auto">
+                <span className="text-2xs text-slate-500 dark:text-slate-400 ml-auto">
                   {safeParseDate(tx.date).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })}
                 </span>
               </div>
@@ -326,7 +326,7 @@ function BudgetWidget() {
       ) : (
         <div className="space-y-3">
           {isCarriedOver && (
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">
+            <p className="text-2xs text-slate-500 dark:text-slate-400 italic">
               Presupuesto heredado del mes anterior
             </p>
           )}
@@ -366,7 +366,7 @@ export function HomePage() {
         <div className="relative">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-200">
+              <p className="text-2xs font-semibold uppercase tracking-wider text-brand-200">
                 Saldo de {(() => { const d = new Date(currentViewDate); return `${d.toLocaleDateString(LOCALE, { month: 'long' })} ${d.getFullYear()}`; })()}
               </p>
               <p className="text-3xl sm:text-4xl font-extrabold tabular-nums mt-1 truncate">
@@ -385,7 +385,7 @@ export function HomePage() {
               className="text-left rounded-xl p-2 -m-1 hover:bg-white/10 active:bg-white/15 transition-colors group"
               title="Ver ingresos"
             >
-              <span className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-brand-200">
+              <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-brand-200">
                 <ArrowDown className="w-3 h-3" /> Ingresos
               </span>
               <span className="block text-sm sm:text-base font-bold tabular-nums mt-0.5 truncate">
@@ -397,7 +397,7 @@ export function HomePage() {
               className="text-left rounded-xl p-2 -m-1 hover:bg-white/10 active:bg-white/15 transition-colors"
               title="Ver gastos"
             >
-              <span className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-brand-200">
+              <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-brand-200">
                 <ArrowUp className="w-3 h-3" /> Gastos
               </span>
               <span className="block text-sm sm:text-base font-bold tabular-nums mt-0.5 truncate">
@@ -409,13 +409,13 @@ export function HomePage() {
               className="text-left rounded-xl p-2 -m-1 hover:bg-white/10 active:bg-white/15 transition-colors"
               title="Ver movimientos de negocio"
             >
-              <span className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-brand-200">
+              <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-brand-200">
                 <Store className="w-3 h-3" /> Negocio
               </span>
               <span className="block text-sm sm:text-base font-bold tabular-nums mt-0.5 truncate">
                 {formatMoney(summary.businessProfit)}
               </span>
-              <span className="block text-[11px] text-brand-200/90 tabular-nums">
+              <span className="block text-2xs text-brand-200/90 tabular-nums">
                 margen {summary.profitMargin.toFixed(1)}%
               </span>
             </button>
@@ -498,7 +498,7 @@ function SavingsGoalWidget({ totalIncome }: { totalIncome: number }) {
         </h2>
         <div className="flex items-center gap-2">
           {savingsPct > 0 && (
-            <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded-full">
+            <span className="text-2xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded-full">
               {savingsPct}% del ingreso
             </span>
           )}

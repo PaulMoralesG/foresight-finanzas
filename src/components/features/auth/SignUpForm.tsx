@@ -160,7 +160,7 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
             className={inputClass(!!fieldErrors.firstName && touched.firstName)}
           />
           {touched.firstName && fieldErrors.firstName && (
-            <p className="text-[11px] text-red-600 dark:text-red-400 mt-1 ml-1">{fieldErrors.firstName}</p>
+            <p className="text-2xs text-red-600 dark:text-red-400 mt-1 ml-1">{fieldErrors.firstName}</p>
           )}
         </div>
         <div className="flex-1">
@@ -197,7 +197,7 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
           autoComplete="email"
         />
         {touched.email && fieldErrors.email && (
-          <p className="text-[11px] text-red-600 dark:text-red-400 mt-1 ml-1">{fieldErrors.email}</p>
+          <p className="text-2xs text-red-600 dark:text-red-400 mt-1 ml-1">{fieldErrors.email}</p>
         )}
       </div>
 
@@ -229,7 +229,7 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
           </button>
         </div>
         {touched.password && fieldErrors.password && (
-          <p className="text-[11px] text-red-600 dark:text-red-400 mt-1 ml-1">{fieldErrors.password}</p>
+          <p className="text-2xs text-red-600 dark:text-red-400 mt-1 ml-1">{fieldErrors.password}</p>
         )}
         {/* Barra de fortaleza */}
         {showStrength && (
@@ -244,7 +244,7 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
                 />
               ))}
             </div>
-            <p className={`text-[11px] mt-1 ml-1 font-medium ${pwStrength.textClass}`}>
+            <p className={`text-2xs mt-1 ml-1 font-medium ${pwStrength.textClass}`}>
               {pwStrength.label}
             </p>
           </div>
@@ -259,7 +259,7 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
             <div>
               <p className="font-semibold mb-1">¡Correo enviado!</p>
               <p className="opacity-80">{successMsg}</p>
-              <p className="text-[11px] mt-2 opacity-60">
+              <p className="text-2xs mt-2 opacity-60">
                 ¿No lo encuentras? Revisa la carpeta de spam o promociones.
               </p>
             </div>

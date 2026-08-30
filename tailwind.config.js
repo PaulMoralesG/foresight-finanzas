@@ -63,6 +63,23 @@ export default {
         },
       },
       /**
+       * Dos escalones por debajo de `text-xs` (12px), que es donde acaba la
+       * escala de Tailwind.
+       *
+       * Estaban escritos como valores arbitrarios: `text-[11px]` noventa veces
+       * y `text-[9px]` tres, mezclados con la escala normal. Así no había forma
+       * de saber si 11px era una decisión o un despiste, ni de cambiarlo sin
+       * tocar noventa sitios.
+       *
+       * Se declaran como cadena y no como par [tamaño, interlineado] a
+       * propósito: el valor arbitrario tampoco fijaba interlineado, y ponerlo
+       * ahora cambiaría el alto de línea de media aplicación.
+       */
+      fontSize: {
+        '3xs': '9px',
+        '2xs': '11px',
+      },
+      /**
        * Escala de apilado con nombre.
        *
        * Los valores estaban escritos a mano y sin criterio: de `z-30` a

@@ -211,9 +211,9 @@ export function MovementsPage() {
               className="saas-chip-filter"
               title="Quitar filtro"
             >
-              {(() => { const Icon = f?.icon; return Icon ? <Icon className="text-[11px]" /> : null; })()}
+              {(() => { const Icon = f?.icon; return Icon ? <Icon className="text-2xs" /> : null; })()}
               {f?.label || currentFilter}
-              <X className="text-[9px] ml-0.5" />
+              <X className="text-3xs ml-0.5" />
             </button>
           );
         })()}
@@ -227,7 +227,7 @@ export function MovementsPage() {
               title="Quitar filtro de categoría"
             >
               {cat?.icon || '📌'} {cat?.label || categoryFilter}
-              <X className="text-[9px] ml-0.5" />
+              <X className="text-3xs ml-0.5" />
             </button>
           );
         })()}
@@ -240,7 +240,7 @@ export function MovementsPage() {
           >
             <Search className="w-3 h-3" />
             "{searchQuery}"
-            <X className="text-[9px] ml-0.5" />
+            <X className="text-3xs ml-0.5" />
           </button>
         )}
       </div>
@@ -270,7 +270,7 @@ export function MovementsPage() {
             data-search-input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 min-w-0 bg-transparent border-0 outline-none px-1.5 py-1.5 text-[11px] text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400"
+            className="flex-1 min-w-0 bg-transparent border-0 outline-none px-1.5 py-1.5 text-2xs text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400"
           />
           {searchQuery && (
             <button
@@ -313,7 +313,7 @@ export function MovementsPage() {
           data-search-input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="flex-1 min-w-0 bg-transparent border-0 outline-none px-1.5 py-1.5 text-[11px] text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400"
+          className="flex-1 min-w-0 bg-transparent border-0 outline-none px-1.5 py-1.5 text-2xs text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400"
         />
         {searchQuery && (
           <button
@@ -376,27 +376,27 @@ export function MovementsPage() {
                   {/* Row 2: badges + date */}
                   <div className="flex items-center justify-between gap-1.5">
                     <div className="flex items-center gap-1 flex-wrap">
-                      <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded-full ${
+                      <span className={`text-2xs font-medium px-1.5 py-0.5 rounded-full ${
                         tx.type === 'income'
                           ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400'
                           : 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400'
                       }`}>
                         {tx.type === 'income' ? 'Ingreso' : 'Gasto'}
                       </span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
+                      <span className="text-2xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
                         {category?.label || tx.category}
                       </span>
                       {tx.businessType === 'business' ? (
-                        <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-brand-50 dark:bg-brand-950 text-brand-700 dark:text-brand-400">
+                        <span className="text-2xs font-medium px-1.5 py-0.5 rounded-full bg-brand-50 dark:bg-brand-950 text-brand-700 dark:text-brand-400">
                           Negocio
                         </span>
                       ) : (
-                        <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                        <span className="text-2xs font-medium px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
                           Personal
                         </span>
                       )}
                     </div>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 flex-shrink-0">
+                    <span className="text-2xs text-slate-500 dark:text-slate-400 flex-shrink-0">
                       {safeParseDate(tx.date).toLocaleDateString(LOCALE, {
                         day: 'numeric',
                         month: 'short',

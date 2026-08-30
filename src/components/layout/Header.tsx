@@ -100,18 +100,18 @@ export function Header() {
             {supabaseAvailable && (
               <div role="status" aria-live="polite" className="flex items-center">
                 {!isOnline ? (
-                  <span className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400" title="Sin conexión">
+                  <span className="flex items-center gap-1 text-2xs text-slate-500 dark:text-slate-400" title="Sin conexión">
                     <WifiOff className="w-3 h-3" />
                     <span className="sr-only">Sin conexión</span>
                   </span>
                 ) : syncState === 'syncing' ? (
-                  <span className="flex items-center gap-1 text-[11px] text-amber-500" title="Sincronizando...">
+                  <span className="flex items-center gap-1 text-2xs text-amber-500" title="Sincronizando...">
                     <Loader2 className="w-3 h-3 animate-spin" />
                     <span className="sr-only">Sincronizando</span>
                   </span>
                 ) : syncState === 'error' ? (
                   <span
-                    className="flex items-center gap-1 text-[11px] text-red-600 dark:text-red-400"
+                    className="flex items-center gap-1 text-2xs text-red-600 dark:text-red-400"
                     title="No se pudo sincronizar con la nube. Tus cambios están guardados solo en este dispositivo."
                   >
                     <CloudOff className="w-3 h-3" />
@@ -121,14 +121,14 @@ export function Header() {
                   </span>
                 ) : syncState === 'local-only' ? (
                   <span
-                    className="flex items-center gap-1 text-[11px] text-amber-600"
+                    className="flex items-center gap-1 text-2xs text-amber-600"
                     title="Sincronización desactivada (falta migrar el esquema de Supabase)"
                   >
                     <CloudOff className="w-3 h-3" />
                     <span className="sr-only">Sincronización desactivada. Los cambios se guardan solo en este dispositivo.</span>
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400" title="Sincronizado">
+                  <span className="flex items-center gap-1 text-2xs text-emerald-600 dark:text-emerald-400" title="Sincronizado">
                     <Wifi className="w-3 h-3" />
                     <span className="sr-only">Sincronizado</span>
                   </span>

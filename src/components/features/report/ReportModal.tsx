@@ -156,19 +156,19 @@ export function ReportModal() {
           </button>
         </div>
 
-        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1.5">
+        <p className="text-2xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">
           <Calendar className="inline w-3.5 h-3.5 mr-1" />
           {monthLabel}
         </p>
 
-        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-3 uppercase tracking-wider">
+        <p className="text-2xs font-medium text-slate-500 dark:text-slate-400 mb-3 uppercase tracking-wider">
           {count} mov. · {businessCount} neg, {personalCount} pers
         </p>
 
         {/* Summary grid */}
         <div className="grid grid-cols-2 gap-1.5 mb-3">
           <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-2">
-            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Ingresos
             </p>
             <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">
@@ -176,7 +176,7 @@ export function ReportModal() {
             </p>
           </div>
           <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-2">
-            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Gastos
             </p>
             <p className="text-sm font-bold text-red-600 dark:text-red-400 tabular-nums">
@@ -184,7 +184,7 @@ export function ReportModal() {
             </p>
           </div>
           <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-2">
-            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Saldo
             </p>
             <p
@@ -198,7 +198,7 @@ export function ReportModal() {
             </p>
           </div>
           <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-2">
-            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Movimientos
             </p>
             <p className="text-sm font-bold text-slate-900 dark:text-white tabular-nums">
@@ -233,7 +233,7 @@ export function ReportModal() {
             <button
               onClick={() => handleDownload('business')}
               disabled={downloading !== null}
-              className="saas-btn-secondary flex-1 py-1.5 text-[11px]"
+              className="saas-btn-secondary flex-1 py-1.5 text-2xs"
             >
               {downloading === 'business' ? (
                 <Loader2 className="animate-spin w-3 h-3" />
@@ -245,7 +245,7 @@ export function ReportModal() {
             <button
               onClick={() => handleDownload('personal')}
               disabled={downloading !== null}
-              className="saas-btn-secondary flex-1 py-1.5 text-[11px]"
+              className="saas-btn-secondary flex-1 py-1.5 text-2xs"
             >
               {downloading === 'personal' ? (
                 <Loader2 className="animate-spin w-3 h-3" />
