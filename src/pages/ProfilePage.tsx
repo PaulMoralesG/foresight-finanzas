@@ -225,7 +225,7 @@ export function ProfilePage() {
       {/* ─── Cuenta ─── */}
       <div className="saas-card divide-y divide-slate-100 dark:divide-slate-800">
         <div className="px-4 pt-4 pb-2">
-          <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Cuenta</p>
+          <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Cuenta</p>
         </div>
 
         {/* Change Email */}
@@ -353,7 +353,7 @@ export function ProfilePage() {
                         />
                       ))}
                     </div>
-                    <p className={`text-[11px] mt-1 font-medium ${pwStrength.textClass}`}>
+                    <p className={`text-2xs mt-1 font-medium ${pwStrength.textClass}`}>
                       {pwStrength.label}
                     </p>
                   </div>
@@ -398,7 +398,7 @@ export function ProfilePage() {
 
         {/* ─── Personalización ─── */}
         <div className="px-4 pt-5 pb-2">
-          <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Personalización</p>
+          <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Personalización</p>
         </div>
 
         <CategoryManager
@@ -438,7 +438,7 @@ export function ProfilePage() {
 
         {/* ─── Cerrar sesión ─── */}
         <div className="px-4 pt-5 pb-2">
-          <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Sesión</p>
+          <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Sesión</p>
         </div>
 
         {/* Sign Out */}

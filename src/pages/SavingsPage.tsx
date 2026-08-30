@@ -132,7 +132,7 @@ function BudgetPlanner() {
           {hasOwn && (
             <button
               onClick={() => { setEditValue('0'); }}
-              className="text-[11px] text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 underline"
+              className="text-2xs text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 underline"
             >
               Quitar presupuesto de este mes (guardar 0)
             </button>
@@ -169,7 +169,7 @@ function BudgetPlanner() {
         /* ── Presupuesto vigente: estado ── */
         <div className="space-y-2.5">
           {isCarriedOver && (
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">
+            <p className="text-2xs text-slate-500 dark:text-slate-400 italic">
               Heredado de {carriedFrom ? monthKeyLabel(carriedFrom) : 'un mes anterior'} — define uno propio para {monthKeyLabel(monthKey)}
             </p>
           )}
@@ -238,6 +238,21 @@ export function SavingsPage() {
     }
     if (target <= 0) {
       addToast('El monto objetivo debe ser mayor a 0', 'error');
+      return;
+    }
+
+    // Dos metas con el mismo concepto compartirían progreso, porque el avance
+    // se empareja por texto y no por id: los aportes de una sumarían también
+    // en la otra y el usuario vería el mismo dinero contado dos veces.
+    //
+    // Atarlos por id pide una columna nueva en `expenses`, su migración de
+    // datos y tocar el sync — mucho riesgo para un caso poco frecuente.
+    // Impedir el nombre repetido elimina el síntoma sin nada de eso.
+    const yaExiste = savingsGoals.some(
+      (g) => g.id !== editingGoal?.id && g.concept.trim().toLowerCase() === name.toLowerCase(),
+    );
+    if (yaExiste) {
+      addToast('Ya tienes una meta con ese concepto', 'error');
       return;
     }
 

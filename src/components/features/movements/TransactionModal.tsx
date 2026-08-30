@@ -229,14 +229,14 @@ export function TransactionModal({
               {/* span y no label: estos grupos son botones, no un control de
                   formulario, así que un <label> sin `for` no nombra nada. El
                   nombre accesible lo pone el role="group" del contenedor. */}
-              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Tipo</span>
+              <span className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Tipo</span>
               <div className="flex gap-1" role="group" aria-label="Tipo de movimiento">
                 {(['expense', 'income'] as TransactionType[]).map((t) => (
                   <button
                     key={t}
                     type="button"
                     onClick={() => { setType(t); setCategory(''); }}
-                    className={`flex-1 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center justify-center gap-1 ${
+                    className={`flex-1 py-1 rounded-md text-2xs font-semibold transition-all flex items-center justify-center gap-1 ${
                       type === t
                         ? t === 'expense'
                           ? 'bg-red-600 text-white'
@@ -254,7 +254,7 @@ export function TransactionModal({
               </div>
             </div>
             <div>
-              <label htmlFor="tx-amount" className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">
+              <label htmlFor="tx-amount" className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">
                 Monto
               </label>
               <input
@@ -280,7 +280,7 @@ export function TransactionModal({
           {/* Row 2: Concepto + Fecha */}
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label htmlFor="tx-concept" className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Concepto</label>
+              <label htmlFor="tx-concept" className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Concepto</label>
               <input
                 id="tx-concept"
                 type="text"
@@ -291,7 +291,7 @@ export function TransactionModal({
               />
             </div>
             <div>
-              <label htmlFor="tx-date" className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Fecha</label>
+              <label htmlFor="tx-date" className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Fecha</label>
               <input
                 id="tx-date"
                 type="date"
@@ -308,14 +308,14 @@ export function TransactionModal({
               cortaba contra el borde. A partir de sm vuelven a ir en paralelo. */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>
-              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Ámbito</span>
+              <span className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Ámbito</span>
               <div className="flex gap-1" role="group" aria-label="Ámbito del movimiento">
                 {(['business', 'personal'] as BusinessType[]).map((bt) => (
                   <button
                     key={bt}
                     type="button"
                     onClick={() => setBusinessType(bt)}
-                    className={`flex-1 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center justify-center gap-1 ${
+                    className={`flex-1 py-1 rounded-md text-2xs font-semibold transition-all flex items-center justify-center gap-1 ${
                       businessType === bt
                         ? 'bg-brand-600 text-white'
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
@@ -331,7 +331,7 @@ export function TransactionModal({
               </div>
             </div>
             <div>
-              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Método</span>
+              <span className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Método</span>
               <div className="flex gap-1" role="group" aria-label="Método de pago">
                 {([
                   { id: 'cash', label: 'Efectivo', icon: Banknote },
@@ -342,7 +342,7 @@ export function TransactionModal({
                     key={m.id}
                     type="button"
                     onClick={() => setMethod(m.id)}
-                    className={`flex-1 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center justify-center gap-1 ${
+                    className={`flex-1 py-1 rounded-md text-2xs font-semibold transition-all flex items-center justify-center gap-1 ${
                       method === m.id
                         ? 'bg-slate-900 dark:bg-brand-600 text-white'
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
@@ -358,7 +358,7 @@ export function TransactionModal({
 
           {/* Categorías */}
           <div>
-            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">
+            <span className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">
               Categoría
               {categories.length > 0 && (
                 <span className="ml-1 font-normal normal-case text-slate-500 dark:text-slate-400">
@@ -382,7 +382,7 @@ export function TransactionModal({
                   }`}
                 >
                   <span className="text-xl leading-none">{cat.icon || '📌'}</span>
-                  <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400 leading-tight text-center line-clamp-2">
+                  <span className="text-2xs font-medium text-slate-600 dark:text-slate-400 leading-tight text-center line-clamp-2">
                     {cat.label}
                   </span>
                 </button>
@@ -400,7 +400,7 @@ export function TransactionModal({
                 <span className="text-xl leading-none flex items-center justify-center h-6">
                   {showNewCat ? <X className="w-4 h-4 text-brand-600 dark:text-brand-400" /> : <Plus className="w-4 h-4 text-slate-500 dark:text-slate-400" />}
                 </span>
-                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-tight text-center">
+                <span className="text-2xs font-medium text-slate-500 dark:text-slate-400 leading-tight text-center">
                   {showNewCat ? 'Cancelar' : 'Nueva'}
                 </span>
               </button>
@@ -431,11 +431,11 @@ export function TransactionModal({
                   </button>
                 </div>
                 <div className="flex gap-1.5 items-center">
-                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex-shrink-0">Ícono:</span>
+                  <span className="text-2xs font-medium text-slate-500 dark:text-slate-400 flex-shrink-0">Ícono:</span>
                   <IconPicker value={newCatIcon} onChange={setNewCatIcon} />
                 </div>
                 <div className="flex gap-1.5 items-center flex-wrap">
-                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Color:</span>
+                  <span className="text-2xs font-medium text-slate-500 dark:text-slate-400">Color:</span>
                   <ColorPicker value={newCatColor} onChange={setNewCatColor} />
                 </div>
               </div>

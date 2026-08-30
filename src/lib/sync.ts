@@ -272,6 +272,58 @@ async function fetchAllRows<T>(
   }
 }
 
+/** A partir de aquí el desfase deja de ser ruido de red y es el reloj. */
+const DESFASE_TOLERADO_MS = 5 * 60_000;
+
+/**
+ * Minutos que el reloj local va por detrás, deducidos de los datos que ya
+ * bajamos. Devuelve 0 si no hay motivo de alarma.
+ *
+ * `updated_at` lo pone el CLIENTE (`nowIso()`), no el servidor. Un dispositivo
+ * con el reloj atrasado genera ediciones con marca anterior a la que ya hay en
+ * la base; el trigger `keep_newest` las descarta —correctamente, según su
+ * criterio— y el siguiente pull le pisa su propio cambio. Todo en silencio.
+ *
+ * Arreglarlo de raíz obliga a sellar la marca en el servidor, lo que cambia el
+ * contrato del merge. Mientras tanto, al menos que no sea invisible: si en el
+ * servidor hay filas con fecha futura respecto a este reloj, o vamos
+ * atrasados, o hay otro dispositivo adelantado. Ambas cosas conviene saberlas.
+ */
+export function desfaseDeRelojMinutos(snapshot: Snapshot, ahoraMs = Date.now()): number {
+  let masNueva = 0;
+  const mirar = (filas: { updated_at?: string | null }[]) => {
+    for (const f of filas) {
+      if (!f.updated_at) continue;
+      const t = Date.parse(f.updated_at);
+      if (!Number.isNaN(t) && t > masNueva) masNueva = t;
+    }
+  };
+  mirar(snapshot.expenses);
+  mirar(snapshot.categories);
+  mirar(snapshot.goals);
+  mirar(snapshot.budgets);
+
+  const adelanto = masNueva - ahoraMs;
+  return adelanto > DESFASE_TOLERADO_MS ? Math.round(adelanto / 60_000) : 0;
+}
+
+/** Un aviso por sesión: repetirlo en cada sync sería insoportable. */
+let avisoDeRelojDado = false;
+
+function avisarSiElRelojVaMal(snapshot: Snapshot) {
+  if (avisoDeRelojDado) return;
+  const minutos = desfaseDeRelojMinutos(snapshot);
+  if (minutos === 0) return;
+  avisoDeRelojDado = true;
+  console.warn(`[sync] Reloj local desfasado ~${minutos} min respecto a los datos del servidor.`);
+  useUiStore
+    .getState()
+    .addToast(
+      'La hora de este dispositivo parece incorrecta. Revísala: algunos cambios podrían no guardarse.',
+      'error',
+    );
+}
+
 async function pullAll(uid: string): Promise<Snapshot> {
   const [expenses, categories, goals, budgets] = await Promise.all([
     fetchAllRows<ExpenseRow>('expenses', uid, ['updated_at', 'id']),
@@ -282,7 +334,9 @@ async function pullAll(uid: string): Promise<Snapshot> {
     fetchAllRows<BudgetRow>('budgets', uid, ['month']),
   ]);
 
-  return { expenses, categories, goals, budgets };
+  const snapshot = { expenses, categories, goals, budgets };
+  avisarSiElRelojVaMal(snapshot);
+  return snapshot;
 }
 
 // ── Merge ──

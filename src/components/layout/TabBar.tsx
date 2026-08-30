@@ -104,7 +104,7 @@ export function TabBar() {
           }`}
         />
         <span
-          className={`text-[11px] font-semibold mt-0.5 transition-colors duration-300 ${
+          className={`text-2xs font-semibold mt-0.5 transition-colors duration-300 ${
             isActive
               ? 'text-brand-600 dark:text-brand-400'
               : 'text-slate-500 dark:text-slate-400'
