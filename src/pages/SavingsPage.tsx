@@ -5,7 +5,7 @@
 // ================================================================
 
 import { useMemo, useState } from 'react';
-import { PiggyBank, Plus, Pencil, Trash2, X, Target, Wallet, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { PiggyBank, Plus, Pencil, Trash2, X, Target, Wallet, Check } from 'lucide-react';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,6 +16,7 @@ import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { BudgetProgress } from '@/components/ui/BudgetProgress';
+import { MonthStepper } from '@/components/ui/MonthStepper';
 import type { SavingsGoal } from '@/types';
 
 /* ─── Presupuesto mensual — editor completo (sección Planes) ───
@@ -83,28 +84,19 @@ function BudgetPlanner() {
         Límite de gastos del mes. Si un mes no tiene presupuesto propio, se hereda el más reciente.
       </p>
 
-      {/* Selector de mes */}
-      <div className="flex items-center gap-1.5 mb-3">
-        <button onClick={() => setMonthKey(shiftMonthKey(monthKey, -1))} className="saas-btn-icon" aria-label="Mes anterior">
-          <ChevronLeft className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={() => setMonthKey(currentMonthKey())}
-          disabled={isCurrent}
-          className={`relative text-sm font-semibold min-w-[110px] text-center select-none rounded-md px-2 py-1 transition-colors ${
-            isCurrent
-              ? 'text-slate-700 dark:text-slate-300 cursor-default'
-              : 'text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950 cursor-pointer'
-          }`}
-          title={isCurrent ? 'Mes actual' : 'Volver al mes actual'}
+      {/* Selector de mes. Navega por monthKey propio, no por el mes visto en
+          el dashboard: aquí se planifica un mes concreto sin mover el resto
+          de la app. La presentación es la misma que la de MonthNav. */}
+      <div className="mb-3">
+        <MonthStepper
+          label={monthKeyLabel(monthKey)}
+          isCurrent={isCurrent}
+          onPrev={() => setMonthKey(shiftMonthKey(monthKey, -1))}
+          onNext={() => setMonthKey(shiftMonthKey(monthKey, 1))}
+          onCurrent={() => setMonthKey(currentMonthKey())}
         >
-          {monthKeyLabel(monthKey)}
-          {!isCurrent && <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-brand-500 dark:bg-brand-400" />}
-        </button>
-        <button onClick={() => setMonthKey(shiftMonthKey(monthKey, 1))} className="saas-btn-icon" aria-label="Mes siguiente">
-          <ChevronRight className="w-3.5 h-3.5" />
-        </button>
-        <span className="text-lg ml-auto">{emoji}</span>
+          <span className="text-lg ml-auto">{emoji}</span>
+        </MonthStepper>
       </div>
 
       {/* ── Modo edición ── */}

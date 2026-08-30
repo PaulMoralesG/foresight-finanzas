@@ -11,6 +11,7 @@ import { formatMoney, LOCALE, roundMoney, safeParseDate, syncToCloud } from '@/l
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/config/categories';
 import { MonthNav } from '@/components/layout/MonthNav';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ScopeBadge, TransactionAmount } from '@/components/ui/TransactionBits';
 import type { FilterType } from '@/types';
 
 const FILTERS: { id: FilterType; label: string; icon: React.ElementType }[] = [
@@ -370,13 +371,7 @@ export function MovementsPage() {
                         </p>
                       </div>
                     </div>
-                    <span className={`text-xs font-bold tabular-nums flex-shrink-0 ${
-                      tx.type === 'income'
-                        ? 'text-income-600 dark:text-income-400'
-                        : 'text-expense-600 dark:text-expense-400'
-                    }`}>
-                      {tx.type === 'income' ? '+' : '-'}{formatMoney(tx.amount)}
-                    </span>
+                    <TransactionAmount type={tx.type} amount={tx.amount} className="text-xs font-bold flex-shrink-0" />
                   </div>
                   {/* Row 2: badges + date */}
                   <div className="flex items-center justify-between gap-1.5">
@@ -513,11 +508,7 @@ export function MovementsPage() {
                           aria-label={`Filtrar solo ${tx.businessType === 'business' ? 'Negocio' : 'Personal'}`}
                           title={`Filtrar solo ${tx.businessType === 'business' ? 'Negocio' : 'Personal'}`}
                         >
-                          {tx.businessType === 'business' ? (
-                            <span className="saas-badge-blue text-[11px]">Negocio</span>
-                          ) : (
-                            <span className="saas-badge-slate text-[11px]">Personal</span>
-                          )}
+                          <ScopeBadge businessType={tx.businessType} />
                         </button>
                       </td>
                       <td className="whitespace-nowrap">
@@ -550,13 +541,9 @@ export function MovementsPage() {
                           })}
                         </span>
                       </td>
-                      <td className={`whitespace-nowrap text-right text-sm font-semibold tabular-nums ${
-                        tx.type === 'income'
-                          ? 'text-income-600 dark:text-income-400'
-                          : 'text-expense-600 dark:text-expense-400'
-                      }`}>
-                        {tx.type === 'income' ? '+' : '-'}{formatMoney(tx.amount)}
-                      </td>
+                      <td className="whitespace-nowrap text-right">
+                    <TransactionAmount type={tx.type} amount={tx.amount} className="text-sm font-semibold" />
+                  </td>
                     </tr>
                   );
                 })}

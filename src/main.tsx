@@ -88,27 +88,14 @@ if ('serviceWorker' in navigator) {
         scope: '/',
       });
 
-      // Si ya hay un SW esperando (instalado pero no activado),
-      // skipWaiting ya lo activará → controllerchange se disparará → recarga
-      if (swRegistration.waiting) {
-        swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
-      }
-
-      // Escuchar nuevos SW que quedan en espera
-      swRegistration.addEventListener('updatefound', () => {
-        const newWorker = swRegistration?.installing;
-        if (!newWorker) return;
-
-        newWorker.addEventListener('statechange', () => {
-          if (
-            newWorker.state === 'installed' &&
-            navigator.serviceWorker.controller
-          ) {
-            // Nueva versión lista — forzar activación
-            newWorker.postMessage({ type: 'SKIP_WAITING' });
-          }
-        });
-      });
+      // Aquí NO se fuerza la activación. Quien decide cuándo entra la versión
+      // nueva es el usuario, desde el banner que muestra usePWA: activar por
+      // nuestra cuenta dispara `controllerchange` y recarga la página, lo que
+      // en mitad de una transacción le borra el formulario.
+      //
+      // (Antes había dos postMessage de SKIP_WAITING aquí. No hacían nada: con
+      // `skipWaiting: true` en workbox el sw.js generado ni siquiera incluía
+      // un listener de `message`.)
 
       // Verificar updates periódicamente (cada 5 min) como fallback
       setInterval(checkForUpdate, 5 * 60 * 1000);

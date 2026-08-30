@@ -62,7 +62,20 @@ export default defineConfig({
         categories: ['finance', 'productivity'],
       },
       workbox: {
-        skipWaiting: true,
+        // skipWaiting: false a propósito.
+        //
+        // Con `true`, workbox mete `self.skipWaiting()` en la instalación: el
+        // worker nuevo se activa solo, reclama los clientes, se dispara
+        // `controllerchange` y main.tsx recarga la página. En una app donde se
+        // escriben importes, eso significa que publicar una versión le puede
+        // borrar el formulario a quien esté a media transacción.
+        //
+        // Con `false`, workbox genera además un listener de `message` que
+        // atiende SKIP_WAITING —el que la app ya intentaba usar y que hasta
+        // ahora no existía, así que los tres postMessage del código eran
+        // no-ops—. El worker nuevo espera y el usuario decide cuándo entrar,
+        // desde el banner "Nueva versión disponible".
+        skipWaiting: false,
         clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         // Precache solo el shell esencial. Los chunks pesados (PDF, charts, Sentry,
