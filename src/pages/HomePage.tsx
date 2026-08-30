@@ -14,6 +14,7 @@ import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/config/categories';
 import { MonthNav } from '@/components/layout/MonthNav';
 import { BudgetProgress } from '@/components/ui/BudgetProgress';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ScopeBadge, TransactionAmount, TypePill } from '@/components/ui/TransactionBits';
 import type { Transaction, TabId } from '@/types';
 
 /* ─── Category Bar (simple, no recharts dependency for now) ─── */
@@ -190,11 +191,7 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
                     </span>
                   </td>
                   <td className="whitespace-nowrap">
-                    {tx.businessType === 'business' ? (
-                      <span className="saas-badge-blue text-[11px]">Negocio</span>
-                    ) : (
-                      <span className="saas-badge-slate text-[11px]">Personal</span>
-                    )}
+                    <ScopeBadge businessType={tx.businessType} />
                   </td>
                   <td className="whitespace-nowrap">
                     <span className="text-xs text-slate-600 dark:text-slate-400">
@@ -202,17 +199,15 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
                     </span>
                   </td>
                   <td className="whitespace-nowrap">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${tx.type === 'income' ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400'}`}>
-                      {tx.type === 'income' ? 'Ingreso' : 'Gasto'}
-                    </span>
+                    <TypePill type={tx.type} />
                   </td>
                   <td className="whitespace-nowrap">
                     <span className="text-xs text-slate-500 dark:text-slate-400">
                       {safeParseDate(tx.date).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short', year: 'numeric' })}
                     </span>
                   </td>
-                  <td className={`whitespace-nowrap text-right text-sm font-semibold tabular-nums ${tx.type === 'income' ? 'text-income-600 dark:text-income-400' : 'text-expense-600 dark:text-expense-400'}`}>
-                    {tx.type === 'income' ? '+' : '-'}{formatMoney(tx.amount)}
+                  <td className="whitespace-nowrap text-right">
+                    <TransactionAmount type={tx.type} amount={tx.amount} className="text-sm font-semibold" />
                   </td>
                 </tr>
               );
@@ -250,15 +245,11 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className={`text-sm font-bold tabular-nums ${tx.type === 'income' ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {tx.type === 'income' ? '+' : '-'}{formatMoney(tx.amount)}
-                  </p>
+                  <TransactionAmount type={tx.type} amount={tx.amount} className="block text-sm font-bold" />
                 </div>
               </div>
               <div className="flex items-center gap-1 mt-1 flex-wrap">
-                <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded ${tx.type === 'income' ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400'}`}>
-                  {tx.type === 'income' ? 'Ingreso' : 'Gasto'}
-                </span>
+                <TypePill type={tx.type} className="text-[11px] px-1.5 py-0.5 rounded" />
                 <span className="text-[11px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
                   {cat?.label || tx.category}
                 </span>
