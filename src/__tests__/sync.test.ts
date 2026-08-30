@@ -16,7 +16,7 @@ vi.mock('@/config/supabase', () => ({
   supabaseAvailable: true,
 }));
 
-import { syncService, isSchemaError, isTransientSchemaError } from '@/lib/sync';
+import { syncService, isSchemaError, isTransientSchemaError, desfaseDeRelojMinutos } from '@/lib/sync';
 import { useFinanceStore } from '@/stores/financeStore';
 
 const mockFrom = (mocks.supabase as { from: ReturnType<typeof vi.fn> }).from;
@@ -485,5 +485,53 @@ describe('isTransientSchemaError', () => {
     expect(isTransientSchemaError({ code: '42P01' })).toBe(false);
     expect(isTransientSchemaError({ code: '23505' })).toBe(false);
     expect(isTransientSchemaError(new Error('red caída'))).toBe(false);
+  });
+});
+
+// ─── Detección de desfase de reloj ──────────────────────────────
+
+describe('desfaseDeRelojMinutos', () => {
+  const ahora = Date.parse('2026-08-30T12:00:00.000Z');
+  const vacio = { expenses: [], categories: [], goals: [], budgets: [] };
+  const fila = (updated_at: string) => ({ updated_at }) as never;
+
+  it('no avisa cuando los datos del servidor son del pasado', () => {
+    const snap = { ...vacio, expenses: [fila('2026-08-30T11:59:00.000Z')] };
+    expect(desfaseDeRelojMinutos(snap, ahora)).toBe(0);
+  });
+
+  it('tolera unos minutos de diferencia sin dar la alarma', () => {
+    // Latencia y relojes ligeramente distintos son normales
+    const snap = { ...vacio, expenses: [fila('2026-08-30T12:03:00.000Z')] };
+    expect(desfaseDeRelojMinutos(snap, ahora)).toBe(0);
+  });
+
+  it('detecta un reloj local claramente atrasado', () => {
+    // El servidor tiene filas de "dentro de media hora": este reloj va detrás,
+    // así que sus ediciones nacerían con marca vieja y keep_newest las tiraría
+    const snap = { ...vacio, expenses: [fila('2026-08-30T12:30:00.000Z')] };
+    expect(desfaseDeRelojMinutos(snap, ahora)).toBe(30);
+  });
+
+  it('mira todas las tablas, no solo los gastos', () => {
+    const snap = { ...vacio, budgets: [fila('2026-08-30T13:00:00.000Z')] };
+    expect(desfaseDeRelojMinutos(snap, ahora)).toBe(60);
+  });
+
+  it('se queda con la marca más nueva de todas', () => {
+    const snap = {
+      ...vacio,
+      expenses: [fila('2026-08-30T12:10:00.000Z'), fila('2026-08-30T12:45:00.000Z')],
+      goals: [fila('2026-08-30T12:20:00.000Z')],
+    };
+    expect(desfaseDeRelojMinutos(snap, ahora)).toBe(45);
+  });
+
+  it('ignora marcas ausentes o ilegibles', () => {
+    const snap = {
+      ...vacio,
+      categories: [fila(''), { updated_at: null } as never, fila('no es una fecha')],
+    };
+    expect(desfaseDeRelojMinutos(snap, ahora)).toBe(0);
   });
 });

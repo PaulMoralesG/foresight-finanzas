@@ -188,7 +188,7 @@ export function StatsPage() {
           <div className="flex rounded-lg bg-slate-100 dark:bg-slate-800 p-1 flex-shrink-0">
             <button
               onClick={() => setStatsMode('month')}
-              className={`px-2.5 md:px-3 py-1.5 rounded-md text-[11px] md:text-xs font-semibold transition-all whitespace-nowrap ${
+              className={`px-2.5 md:px-3 py-1.5 rounded-md text-2xs md:text-xs font-semibold transition-all whitespace-nowrap ${
                 statsMode === 'month'
                   ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
@@ -198,7 +198,7 @@ export function StatsPage() {
             </button>
             <button
               onClick={() => setStatsMode('range')}
-              className={`px-2.5 md:px-3 py-1.5 rounded-md text-[11px] md:text-xs font-semibold transition-all whitespace-nowrap ${
+              className={`px-2.5 md:px-3 py-1.5 rounded-md text-2xs md:text-xs font-semibold transition-all whitespace-nowrap ${
                 statsMode === 'range'
                   ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
@@ -229,7 +229,7 @@ export function StatsPage() {
                 value={statsMonth}
                 onChange={(e) => setStatsMonth(Number(e.target.value))}
                 aria-label="Mes a analizar"
-                className="saas-input-sm text-[11px] w-[100px]"
+                className="saas-input-sm text-2xs w-[100px]"
               >
                 {MONTH_NAMES.map((name, i) => (
                   <option key={i} value={i}>{name}</option>
@@ -239,7 +239,7 @@ export function StatsPage() {
                 value={statsYear}
                 onChange={(e) => setStatsYear(Number(e.target.value))}
                 aria-label="Año a analizar"
-                className="saas-input-sm text-[11px] w-[75px]"
+                className="saas-input-sm text-2xs w-[75px]"
               >
                 {yearOptions.map((y) => (
                   <option key={y} value={y}>{y}</option>
@@ -263,7 +263,7 @@ export function StatsPage() {
               {(statsMonth !== currentYearMonth || statsYear !== currentYearYear) && (
                 <button
                   onClick={() => { setStatsMonth(currentYearMonth); setStatsYear(currentYearYear); }}
-                  className="saas-btn-secondary saas-btn-sm flex items-center gap-1 text-[11px]"
+                  className="saas-btn-secondary saas-btn-sm flex items-center gap-1 text-2xs"
                   title="Volver al mes actual"
                 >
                   <CalendarClock className="w-3 h-3" />
@@ -281,21 +281,21 @@ export function StatsPage() {
                 value={statsFromDate || ''}
                 onChange={(e) => setStatsRange(e.target.value || null, statsToDate)}
                 aria-label="Fecha de inicio del rango"
-                className="saas-input-sm text-[11px] w-[120px]"
+                className="saas-input-sm text-2xs w-[120px]"
               />
-              <span className="text-slate-500 dark:text-slate-400 text-[11px]">→</span>
+              <span className="text-slate-500 dark:text-slate-400 text-2xs">→</span>
               <input
                 type="date"
                 value={statsToDate || ''}
                 onChange={(e) => setStatsRange(statsFromDate, e.target.value || null)}
                 aria-label="Fecha de fin del rango"
-                className="saas-input-sm text-[11px] w-[120px]"
+                className="saas-input-sm text-2xs w-[120px]"
               />
             </div>
           )}
 
           {/* Period label */}
-          <span className="text-[11px] md:text-xs font-medium text-slate-500 dark:text-slate-400 md:flex-1">
+          <span className="text-2xs md:text-xs font-medium text-slate-500 dark:text-slate-400 md:flex-1">
             {periodLabel}
           </span>
 
@@ -304,7 +304,7 @@ export function StatsPage() {
             <button
               onClick={handleDownloadPDF}
               disabled={isExporting || filteredData.length === 0}
-              className="saas-btn-primary saas-btn-sm flex items-center gap-1 text-[11px]"
+              className="saas-btn-primary saas-btn-sm flex items-center gap-1 text-2xs"
               title="Descargar PDF"
               aria-label="Descargar PDF"
             >
@@ -318,7 +318,7 @@ export function StatsPage() {
             <button
               onClick={handleDownloadCSV}
               disabled={isExportingCSV || filteredData.length === 0}
-              className="saas-btn-sm flex items-center gap-1 text-[11px] rounded-lg font-medium bg-emerald-600 hover:bg-emerald-700 text-white transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-900 focus:ring-emerald-500 shadow-sm shadow-emerald-500/20"
+              className="saas-btn-sm flex items-center gap-1 text-2xs rounded-lg font-medium bg-emerald-600 hover:bg-emerald-700 text-white transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-900 focus:ring-emerald-500 shadow-sm shadow-emerald-500/20"
               title="Descargar Excel"
               aria-label="Descargar Excel"
             >
@@ -345,7 +345,7 @@ export function StatsPage() {
                 key={key}
                 onClick={() => setExportFilter(key)}
                 title={label}
-                className={`px-1.5 md:px-2.5 py-1 rounded-md text-[11px] md:text-[11px] font-semibold transition-all whitespace-nowrap flex items-center gap-1 ${
+                className={`px-1.5 md:px-2.5 py-1 rounded-md text-2xs md:text-2xs font-semibold transition-all whitespace-nowrap flex items-center gap-1 ${
                   exportFilter === key
                     ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
@@ -364,7 +364,7 @@ export function StatsPage() {
           <button
             onClick={handleDownloadPDF}
             disabled={isExporting || filteredData.length === 0}
-            className="saas-btn-primary saas-btn-sm hidden md:inline-flex items-center gap-1 text-[11px] md:text-[11px]"
+            className="saas-btn-primary saas-btn-sm hidden md:inline-flex items-center gap-1 text-2xs md:text-2xs"
             title="Descargar PDF"
             aria-label="Descargar PDF"
           >
@@ -380,7 +380,7 @@ export function StatsPage() {
           <button
             onClick={handleDownloadCSV}
             disabled={isExportingCSV || filteredData.length === 0}
-            className="saas-btn-sm hidden md:inline-flex items-center gap-1 text-[11px] md:text-[11px] rounded-lg font-medium bg-emerald-600 hover:bg-emerald-700 text-white transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-900 focus:ring-emerald-500 shadow-sm shadow-emerald-500/20"
+            className="saas-btn-sm hidden md:inline-flex items-center gap-1 text-2xs md:text-2xs rounded-lg font-medium bg-emerald-600 hover:bg-emerald-700 text-white transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-900 focus:ring-emerald-500 shadow-sm shadow-emerald-500/20"
             title="Descargar Excel"
             aria-label="Descargar Excel"
           >
@@ -473,52 +473,52 @@ export function StatsPage() {
       {/* ─── Summary Cards ─── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <div className="saas-card p-2.5">
-          <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5">
+          <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5">
             Ingresos
           </p>
           <p className="text-base font-bold text-income-600 dark:text-income-400 tabular-nums">
             {formatMoney(totals.income)}
           </p>
           {prevTotals.income > 0 && (
-            <p className={`text-[11px] mt-0.5 ${totals.income >= prevTotals.income ? 'text-income-600 dark:text-income-400' : 'text-expense-600 dark:text-expense-400'}`}>
+            <p className={`text-2xs mt-0.5 ${totals.income >= prevTotals.income ? 'text-income-600 dark:text-income-400' : 'text-expense-600 dark:text-expense-400'}`}>
               {totals.income >= prevTotals.income ? <ArrowUp className="inline w-2 h-2 mr-0.5" /> : <ArrowDown className="inline w-2 h-2 mr-0.5" />}
               {pctChange(totals.income, prevTotals.income)} vs período anterior
             </p>
           )}
         </div>
         <div className="saas-card p-2.5">
-          <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5">
+          <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5">
             Gastos
           </p>
           <p className="text-base font-bold text-expense-600 dark:text-expense-400 tabular-nums">
             {formatMoney(totals.spent)}
           </p>
           {prevTotals.spent > 0 && (
-            <p className={`text-[11px] mt-0.5 ${totals.spent <= prevTotals.spent ? 'text-income-600 dark:text-income-400' : 'text-expense-600 dark:text-expense-400'}`}>
+            <p className={`text-2xs mt-0.5 ${totals.spent <= prevTotals.spent ? 'text-income-600 dark:text-income-400' : 'text-expense-600 dark:text-expense-400'}`}>
               {totals.spent <= prevTotals.spent ? <ArrowDown className="inline w-2 h-2 mr-0.5" /> : <ArrowUp className="inline w-2 h-2 mr-0.5" />}
               {pctChange(totals.spent, prevTotals.spent)} vs período anterior
             </p>
           )}
         </div>
         <div className="saas-card p-2.5">
-          <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5">
+          <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5">
             Saldo
           </p>
           <p className={`text-base font-bold tabular-nums ${totals.balance >= 0 ? 'text-brand-600 dark:text-brand-400' : 'text-expense-600 dark:text-expense-400'}`}>
             {formatMoney(totals.balance)}
           </p>
-          <p className="text-[11px] mt-0.5 text-slate-500 dark:text-slate-400">
+          <p className="text-2xs mt-0.5 text-slate-500 dark:text-slate-400">
             Promedio diario {formatMoney(avgDaily)}
           </p>
         </div>
         <div className="saas-card p-2.5">
-          <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5">
+          <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5">
             Resultado negocio
           </p>
           <p className={`text-base font-bold tabular-nums ${totals.businessProfit >= 0 ? 'text-business-600 dark:text-business-400' : 'text-expense-600 dark:text-expense-400'}`}>
             {formatMoney(totals.businessProfit)}
           </p>
-          <p className="text-[11px] mt-0.5 text-slate-500 dark:text-slate-400">
+          <p className="text-2xs mt-0.5 text-slate-500 dark:text-slate-400">
             {totals.count} movimientos
           </p>
         </div>
@@ -573,7 +573,7 @@ export function StatsPage() {
                     {/* Expanded: individual transactions */}
                     {isExpanded && (
                       <div className="mt-2 mb-1 pl-10 space-y-1.5 animate-fade-in">
-                        <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                           {categoryTransactions.length} movimiento{categoryTransactions.length !== 1 ? 's' : ''}
                         </p>
                         {categoryTransactions.map((t) => (
@@ -582,7 +582,7 @@ export function StatsPage() {
                               <p className="font-medium text-slate-700 dark:text-slate-300 truncate">
                                 {t.concept || 'Sin concepto'}
                               </p>
-                              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                              <p className="text-2xs text-slate-500 dark:text-slate-400">
                                 {safeParseDate(t.date).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })}
                               </p>
                             </div>
@@ -615,7 +615,7 @@ export function StatsPage() {
                     })()}
                   </span>
                   <div>
-                    <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                    <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400">
                       {(() => {
                         const cat = getCategoryById(largestExpense.category, allCustomCats);
                         return cat?.label || largestExpense.category;
@@ -630,7 +630,7 @@ export function StatsPage() {
                   <p className="text-xs text-slate-700 dark:text-slate-300 font-medium">
                     {largestExpense.concept || 'Sin concepto'}
                   </p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <p className="text-2xs text-slate-500 dark:text-slate-400">
                     {safeParseDate(largestExpense.date).toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long' })}
                     {' · '}
                     {largestExpense.method === 'cash' ? '💵 Efectivo' : largestExpense.method === 'card' ? '💳 Tarjeta' : '🏦 Transferencia'}
@@ -655,7 +655,7 @@ export function StatsPage() {
                 </p>
                 {peakDayTransactions.length > 0 && (
                   <div className="mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800 space-y-1">
-                    <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       {peakDayTransactions.length} mov.
                     </p>
                     {peakDayTransactions.map((t) => (
