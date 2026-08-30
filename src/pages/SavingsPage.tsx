@@ -13,9 +13,10 @@ import { formatMoney, parseMoneyInput, roundMoney, syncToCloud } from '@/lib/uti
 import { computeSavingsByConcept, savingsForGoal } from '@/lib/savings';
 import { useBudget, currentMonthKey, shiftMonthKey, monthKeyLabel } from '@/hooks/useBudget';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
-import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { BudgetProgress } from '@/components/ui/BudgetProgress';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { ModalSheet } from '@/components/ui/ModalSheet';
 import { MonthStepper } from '@/components/ui/MonthStepper';
 import type { SavingsGoal } from '@/types';
 
@@ -291,10 +292,6 @@ export function SavingsPage() {
 
   useScrollLock(isModalOpen || !!confirmDelete);
 
-  // Ambos diálogos declaraban aria-modal sin retener el foco: con Tab se
-  // salía al contenido de fondo, que seguía siendo operable bajo el overlay.
-  const goalModalRef = useFocusTrap<HTMLDivElement>(isModalOpen && !confirmDelete, '#goal-concept');
-  const deleteModalRef = useFocusTrap<HTMLDivElement>(!!confirmDelete);
 
   return (
     <div className="space-y-4">
@@ -450,27 +447,13 @@ export function SavingsPage() {
 
       {/* ── Modal crear/editar ── */}
       {isModalOpen && (
-        <>
-          <div className="fixed inset-0 bg-black/50 z-overlay animate-fade-in" onClick={() => setIsModalOpen(false)} />
-          <div
-            ref={goalModalRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="savings-goal-modal-title"
-            className="fixed inset-0 z-modal bg-white dark:bg-slate-950 md:rounded-2xl shadow-2xl flex flex-col w-full max-w-full md:max-w-md mx-auto overflow-hidden animate-scale-in md:inset-y-6 md:mx-auto pt-safe"
-          >
-            <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-800">
-              <h2 id="savings-goal-modal-title" className="font-bold text-sm text-slate-900 dark:text-white">
-                {editingGoal ? 'Editar meta' : 'Nueva meta'}
-              </h2>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                aria-label="Cerrar"
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
+        <ModalSheet
+          id="savings-goal-modal-title"
+          titulo={editingGoal ? 'Editar meta' : 'Nueva meta'}
+          onClose={() => setIsModalOpen(false)}
+          trapActivo={isModalOpen && !confirmDelete}
+          focoInicial="#goal-concept"
+        >
 
             <div className="p-4 space-y-4">
               <div>
@@ -511,39 +494,22 @@ export function SavingsPage() {
                 Cancelar
               </button>
             </div>
-          </div>
-        </>
+        </ModalSheet>
       )}
 
-      {/* ── Confirmación de borrado ── */}
-      {confirmDelete && (
-        <>
-          <div className="fixed inset-0 bg-black/50 z-overlay animate-fade-in" onClick={() => setConfirmDelete(null)} />
-          <div
-            ref={deleteModalRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="savings-delete-modal-title"
-            className="fixed inset-x-0 top-1/2 -translate-y-1/2 z-modal mx-auto w-[90%] max-w-sm bg-white dark:bg-slate-950 rounded-2xl shadow-2xl p-5 animate-scale-in"
-          >
-            <h3 id="savings-delete-modal-title" className="font-bold text-sm text-slate-900 dark:text-white">
-              ¿Eliminar meta "{confirmDelete.concept}"?
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Se eliminará solo la meta — tus movimientos de ahorro no se tocan.
-            </p>
-            <div className="flex gap-2 mt-4">
-              <button onClick={handleDelete} className="saas-btn saas-btn-danger flex-1">
-                <Trash2 className="w-4 h-4" />
-                Eliminar
-              </button>
-              <button onClick={() => setConfirmDelete(null)} className="saas-btn saas-btn-secondary">
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+      {/* ── Confirmación de borrado ──
+          Era un diálogo escrito a mano, con su propio overlay, su trampa de
+          foco y su marcado, mientras ConfirmDialog hacía exactamente esto
+          mismo en el perfil, en las categorías y al cerrar sesión. Dos
+          implementaciones de "¿seguro?" es una de más. */}
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        title={`¿Eliminar meta "${confirmDelete?.concept ?? ''}"?`}
+        message="Se eliminará solo la meta — tus movimientos de ahorro no se tocan."
+        confirmLabel="Eliminar"
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }
