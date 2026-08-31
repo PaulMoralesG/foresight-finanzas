@@ -186,8 +186,19 @@ export function ProfilePage() {
           <div className="mt-4 flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800">
             <Mail className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
             <p className="text-xs text-amber-800 dark:text-amber-300">
-              Verificación pendiente para <strong>{user.pendingEmail}</strong>. Revisa ambas
-              bandejas — la actual y la nueva— para confirmar el cambio.
+              Verificación pendiente para <strong>{user.pendingEmail}</strong>. Revisa esa
+              bandeja para confirmar el cambio.
+              {/* No se afirma "revisa ambas bandejas": eso depende de si el
+                  proyecto tiene activado "Secure email change" en el panel
+                  de Supabase (Authentication → Providers). Con esa opción
+                  desactivada, solo se envía UN correo —a la dirección
+                  nueva—, y decirle al usuario que mire también la bandeja
+                  vieja sería instrucción falsa. Confirmado vía la
+                  documentación de supabase/auth (Context7): el campo
+                  `new_email` que dispara este aviso se llena igual en
+                  ambos modos, así que la detección es correcta
+                  independientemente del ajuste; solo el texto tenía que
+                  dejar de asumirlo. */}
             </p>
           </div>
         )}
