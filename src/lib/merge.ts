@@ -145,7 +145,7 @@ export function mergeBudgets(
 }
 
 /** JSON.stringify con claves ordenadas recursivamente (comparación determinista). */
-export function canonicalJson(value: unknown): string {
+function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) {
     return `[${value.map(canonicalJson).join(',')}]`;
   }
