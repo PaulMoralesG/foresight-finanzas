@@ -33,7 +33,7 @@ const BASE_DELAY_MS = 1000;
 // Las columnas de negocio son NULLABLE en el schema: los upserts de
 // tombstone solo llevan identidad + timestamps.
 
-export interface ExpenseRow {
+interface ExpenseRow {
   id: string;
   user_id: string;
   type: string | null;
@@ -48,7 +48,7 @@ export interface ExpenseRow {
   deleted_at: string | null;
 }
 
-export interface CategoryRow {
+interface CategoryRow {
   id: string;
   user_id: string;
   kind: 'expense' | 'income';
@@ -59,7 +59,7 @@ export interface CategoryRow {
   deleted_at: string | null;
 }
 
-export interface GoalRow {
+interface GoalRow {
   id: string;
   user_id: string;
   concept: string | null;
@@ -68,7 +68,7 @@ export interface GoalRow {
   deleted_at: string | null;
 }
 
-export interface BudgetRow {
+interface BudgetRow {
   user_id: string;
   month: string;
   amount: number;
@@ -84,7 +84,7 @@ export interface Snapshot {
 
 // ── Convertidores locales ↔ filas ──
 
-export function expenseToRow(t: Transaction, userId: string): ExpenseRow {
+function expenseToRow(t: Transaction, userId: string): ExpenseRow {
   return {
     id: t.id,
     user_id: userId,
@@ -101,7 +101,7 @@ export function expenseToRow(t: Transaction, userId: string): ExpenseRow {
   };
 }
 
-export function rowToExpense(r: ExpenseRow): Transaction {
+function rowToExpense(r: ExpenseRow): Transaction {
   return {
     id: r.id,
     type: (r.type === 'income' || r.type === 'expense' ? r.type : 'expense') as TransactionType,
@@ -116,7 +116,7 @@ export function rowToExpense(r: ExpenseRow): Transaction {
   };
 }
 
-export function categoryToRow(c: Category, userId: string, kind: 'expense' | 'income'): CategoryRow {
+function categoryToRow(c: Category, userId: string, kind: 'expense' | 'income'): CategoryRow {
   return {
     id: c.id,
     user_id: userId,
@@ -129,7 +129,7 @@ export function categoryToRow(c: Category, userId: string, kind: 'expense' | 'in
   };
 }
 
-export function rowToCategory(r: CategoryRow): Category {
+function rowToCategory(r: CategoryRow): Category {
   return {
     id: r.id,
     label: r.label ?? '',
@@ -139,7 +139,7 @@ export function rowToCategory(r: CategoryRow): Category {
   };
 }
 
-export function goalToRow(g: SavingsGoal, userId: string): GoalRow {
+function goalToRow(g: SavingsGoal, userId: string): GoalRow {
   return {
     id: g.id,
     user_id: userId,
@@ -150,7 +150,7 @@ export function goalToRow(g: SavingsGoal, userId: string): GoalRow {
   };
 }
 
-export function rowToGoal(r: GoalRow): SavingsGoal {
+function rowToGoal(r: GoalRow): SavingsGoal {
   return {
     id: r.id,
     concept: r.concept ?? '',
