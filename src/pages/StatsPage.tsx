@@ -11,6 +11,7 @@ import { movementsToCsv } from '@/lib/movements-csv';
 import { useStatsPeriod, pctChange } from '@/hooks/useStatsPeriod';
 import { getCategoryById } from '@/config/categories';
 import { generatePDFReport } from '@/lib/pdf-generator';
+import { EmptyState } from '@/components/ui/EmptyState';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
@@ -223,7 +224,7 @@ export function StatsPage() {
                 className="saas-btn-icon"
                 aria-label="Mes anterior"
               >
-                <ChevronLeft className="w-3 h-3" />
+                <ChevronLeft className="w-3.5 h-3.5" />
               </button>
               <select
                 value={statsMonth}
@@ -257,7 +258,7 @@ export function StatsPage() {
                 className="saas-btn-icon"
                 aria-label="Mes siguiente"
               >
-                <ChevronRight className="w-3 h-3" />
+                <ChevronRight className="w-3.5 h-3.5" />
               </button>
               {/* Volver al mes actual */}
               {(statsMonth !== currentYearMonth || statsYear !== currentYearYear) && (
@@ -318,7 +319,7 @@ export function StatsPage() {
             <button
               onClick={handleDownloadCSV}
               disabled={isExportingCSV || filteredData.length === 0}
-              className="saas-btn-sm flex items-center gap-1 text-2xs rounded-lg font-medium bg-emerald-600 hover:bg-emerald-700 text-white transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-900 focus:ring-emerald-500 shadow-sm shadow-emerald-500/20"
+              className="saas-btn-secondary saas-btn-sm flex items-center gap-1 text-2xs"
               title="Descargar Excel"
               aria-label="Descargar Excel"
             >
@@ -380,7 +381,7 @@ export function StatsPage() {
           <button
             onClick={handleDownloadCSV}
             disabled={isExportingCSV || filteredData.length === 0}
-            className="saas-btn-sm hidden md:inline-flex items-center gap-1 text-2xs md:text-2xs rounded-lg font-medium bg-emerald-600 hover:bg-emerald-700 text-white transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-900 focus:ring-emerald-500 shadow-sm shadow-emerald-500/20"
+            className="saas-btn-secondary saas-btn-sm hidden md:inline-flex items-center gap-1 text-2xs md:text-2xs"
             title="Descargar Excel"
             aria-label="Descargar Excel"
           >
@@ -398,10 +399,7 @@ export function StatsPage() {
       <div className="saas-card p-3">
         <h2 className="text-xs font-bold text-slate-900 dark:text-white mb-2">Evolución</h2>
         {trendData.every((d) => d.Ingresos === 0 && d.Gastos === 0) ? (
-          <div className="text-center py-8">
-            <TrendingUp className="w-6 h-6 text-slate-200 dark:text-slate-700 mb-1.5 block" />
-            <p className="text-xs text-slate-500 dark:text-slate-400">Sin datos para mostrar tendencia</p>
-          </div>
+          <EmptyState variant="compact" icon={TrendingUp} title="Sin datos para mostrar tendencia" />
         ) : (
           <div className="h-[240px] sm:h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -529,10 +527,7 @@ export function StatsPage() {
         <div className="saas-card p-3">
           <h2 className="text-xs font-bold text-slate-900 dark:text-white mb-2">Gastos por categoría</h2>
           {expensesByCategory.length === 0 ? (
-            <div className="text-center py-6">
-              <PieChart className="w-6 h-6 text-slate-200 dark:text-slate-700 mb-1.5 block" />
-              <p className="text-xs text-slate-500 dark:text-slate-400">Sin gastos en este período</p>
-            </div>
+            <EmptyState variant="compact" icon={PieChart} title="Sin gastos en este período" />
           ) : (
             <div className="space-y-1">
               {expensesByCategory.slice(0, 8).map(([catId, amount]) => {
@@ -558,7 +553,7 @@ export function StatsPage() {
                           </span>
                           <span className="text-slate-500 dark:text-slate-400 tabular-nums ml-2 flex-shrink-0 flex items-center gap-1">
                             {formatMoney(amount)}
-                            {isExpanded ? <ChevronUp className="inline w-2.5 h-2.5 text-slate-300 dark:text-slate-600 group-hover:text-slate-400" /> : <ChevronDown className="inline w-2.5 h-2.5 text-slate-300 dark:text-slate-600 group-hover:text-slate-400" />}
+                            {isExpanded ? <ChevronUp className="inline w-3.5 h-3.5 text-slate-300 dark:text-slate-600 group-hover:text-slate-400" /> : <ChevronDown className="inline w-3.5 h-3.5 text-slate-300 dark:text-slate-600 group-hover:text-slate-400" />}
                           </span>
                         </div>
                         <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
@@ -638,7 +633,7 @@ export function StatsPage() {
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-slate-500 dark:text-slate-400 text-center py-3">Sin gastos en este período</p>
+              <EmptyState variant="compact" title="Sin gastos en este período" />
             )}
           </div>
 
@@ -683,7 +678,7 @@ export function StatsPage() {
                 )}
               </div>
             ) : (
-              <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">Sin gastos en este período</p>
+              <EmptyState variant="compact" title="Sin gastos en este período" />
             )}
           </div>
         </div>

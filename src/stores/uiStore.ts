@@ -141,9 +141,12 @@ export const useUiStore = create<UiState>((set) => ({
   addToast: (message, type = 'info', onUndo) => {
     const id = ++toastId;
     set((state) => ({ toasts: [...state.toasts, { id, message, type, onUndo }] }));
+    // Un error de validación se lee más despacio que una confirmación de
+    // "listo" — 5s bastan para lo segundo, no siempre para lo primero.
+    const duracionMs = type === 'error' ? 8000 : 5000;
     setTimeout(() => {
       set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) }));
-    }, 5000);
+    }, duracionMs);
   },
   removeToast: (id) =>
     set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) })),

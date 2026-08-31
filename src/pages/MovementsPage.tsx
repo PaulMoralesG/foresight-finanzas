@@ -187,8 +187,9 @@ export function MovementsPage() {
           onClick={() => openModal()}
           className="saas-btn-primary saas-btn-sm flex-shrink-0 hidden sm:inline-flex"
           aria-label="Nueva transacción"
+          title="Nueva transacción (Ctrl+N)"
         >
-          <Plus className="w-3 h-3" />
+          <Plus className="w-3.5 h-3.5" />
           <span className="hidden sm:inline ml-1">Nueva transacción</span>
         </button>
       </div>
@@ -238,7 +239,7 @@ export function MovementsPage() {
             className="saas-chip-filter"
             title="Quitar búsqueda"
           >
-            <Search className="w-3 h-3" />
+            <Search className="w-3.5 h-3.5" />
             "{searchQuery}"
             <X className="text-3xs ml-0.5" />
           </button>
@@ -272,7 +273,7 @@ export function MovementsPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="flex-1 min-w-0 bg-transparent border-0 outline-none px-1.5 py-1.5 text-2xs text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400"
           />
-          {searchQuery && (
+          {searchQuery ? (
             <button
               onClick={() => setSearchQuery('')}
               className="mr-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex-shrink-0"
@@ -281,6 +282,15 @@ export function MovementsPage() {
             >
               <X className="w-3.5 h-3.5" />
             </button>
+          ) : (
+            // Ctrl+K ya enfoca este campo (useKeyboardShortcuts); sin esto no
+            // había ninguna pista en la interfaz de que existiera el atajo.
+            <kbd
+              aria-hidden="true"
+              className="mr-1.5 px-1 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-3xs font-mono text-slate-400 dark:text-slate-500 flex-shrink-0"
+            >
+              Ctrl+K
+            </kbd>
           )}
         </div>
       </div>
@@ -373,28 +383,51 @@ export function MovementsPage() {
                     </div>
                     <TransactionAmount type={tx.type} amount={tx.amount} className="text-xs font-bold flex-shrink-0" />
                   </div>
-                  {/* Row 2: badges + date */}
+                  {/* Row 2: badges + date.
+                      Antes eran <span> sin onClick: en escritorio, la misma
+                      fila de la tabla filtra al pulsar Ámbito/Categoría/Tipo,
+                      así que tocar el badge en la tarjeta móvil no hacía nada
+                      — una función que existía solo en una de las dos formas
+                      de ver la lista. El badge de Ámbito además llevaba su
+                      propio azul a mano en vez de ScopeBadge (que ya es
+                      violeta para Negocio); aquí quedaba desincronizado. */}
                   <div className="flex items-center justify-between gap-1.5">
                     <div className="flex items-center gap-1 flex-wrap">
-                      <span className={`text-2xs font-medium px-1.5 py-0.5 rounded-full ${
-                        tx.type === 'income'
-                          ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400'
-                          : 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400'
-                      }`}>
+                      <button
+                        type="button"
+                        className={`saas-cell-filter text-2xs font-medium px-1.5 py-0.5 rounded-full ${
+                          tx.type === 'income'
+                            ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400'
+                            : 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400'
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFilter(tx.type === 'income' ? 'income' : 'expense');
+                        }}
+                        title={`Filtrar solo ${tx.type === 'income' ? 'Ingresos' : 'Gastos'}`}
+                      >
                         {tx.type === 'income' ? 'Ingreso' : 'Gasto'}
-                      </span>
-                      <span className="text-2xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
+                      </button>
+                      <button
+                        type="button"
+                        className="saas-cell-filter text-2xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full"
+                        onClick={(e) => { e.stopPropagation(); setCategoryFilter(tx.category); }}
+                        title={`Filtrar solo ${category?.label || tx.category}`}
+                      >
                         {category?.label || tx.category}
-                      </span>
-                      {tx.businessType === 'business' ? (
-                        <span className="text-2xs font-medium px-1.5 py-0.5 rounded-full bg-brand-50 dark:bg-brand-950 text-brand-700 dark:text-brand-400">
-                          Negocio
-                        </span>
-                      ) : (
-                        <span className="text-2xs font-medium px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-                          Personal
-                        </span>
-                      )}
+                      </button>
+                      <button
+                        type="button"
+                        className="saas-cell-filter"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFilter(tx.businessType === 'business' ? 'business' : 'personal');
+                        }}
+                        aria-label={`Filtrar solo ${tx.businessType === 'business' ? 'Negocio' : 'Personal'}`}
+                        title={`Filtrar solo ${tx.businessType === 'business' ? 'Negocio' : 'Personal'}`}
+                      >
+                        <ScopeBadge businessType={tx.businessType} />
+                      </button>
                     </div>
                     <span className="text-2xs text-slate-500 dark:text-slate-400 flex-shrink-0">
                       {safeParseDate(tx.date).toLocaleDateString(LOCALE, {
@@ -415,15 +448,17 @@ export function MovementsPage() {
                 <thead>
                 <tr>
                   <th className="w-8 text-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.size > 0 && selectedIds.size === filtered.length}
-                      ref={(el) => { if (el) el.indeterminate = selectedIds.size > 0 && selectedIds.size < filtered.length; }}
-                      onChange={toggleSelectAll}
-                      className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-600 text-brand-600 focus:ring-brand-500 cursor-pointer"
-                      aria-label="Seleccionar todas"
-                      title="Seleccionar todas"
-                    />
+                    <span className="saas-checkbox-target">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.size > 0 && selectedIds.size === filtered.length}
+                        ref={(el) => { if (el) el.indeterminate = selectedIds.size > 0 && selectedIds.size < filtered.length; }}
+                        onChange={toggleSelectAll}
+                        className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-600 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                        aria-label="Seleccionar todas"
+                        title="Seleccionar todas"
+                      />
+                    </span>
                   </th>
                   <th className="w-10 text-center" aria-label="Icono"></th>
                   <th>Concepto</th>
@@ -482,6 +517,7 @@ export function MovementsPage() {
                       }}
                     >
                       <td className="text-center" onClick={(e) => e.stopPropagation()}>
+                        <span className="saas-checkbox-target">
                         <input
                           type="checkbox"
                           checked={isSelected}
@@ -489,6 +525,7 @@ export function MovementsPage() {
                           className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-600 text-brand-600 focus:ring-brand-500 cursor-pointer"
                           aria-label={`Seleccionar ${tx.concept}`}
                         />
+                        </span>
                       </td>
                       <td className="text-center">
                         <span className="text-base">{category?.icon || '📌'}</span>
@@ -572,9 +609,9 @@ export function MovementsPage() {
             </button>
             <button
               onClick={handleBulkDelete}
-              className="saas-btn saas-btn-sm bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400 font-semibold hover:bg-red-100 dark:hover:bg-red-900 rounded-full"
+              className="saas-btn-danger saas-btn-sm font-semibold rounded-full"
             >
-              <Trash2 className="w-3 h-3" />
+              <Trash2 className="w-3.5 h-3.5" />
               Eliminar
             </button>
           </div>

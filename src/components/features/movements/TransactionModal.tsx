@@ -13,6 +13,7 @@ import { makeCategoryId } from '@/lib/category-id';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { ModalSheet } from '@/components/ui/ModalSheet';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { TransactionType, BusinessType, PaymentMethod, Category } from '@/types';
 
 export function TransactionModal({
@@ -197,16 +198,24 @@ export function TransactionModal({
 
   async function handleDelete() {
     if (deletingId === null) return;
+    // Copia antes de borrar: es lo que permite el "Deshacer" del toast,
+    // mismo patrón que el borrado múltiple de MovementsPage.
+    const deleted = useFinanceStore.getState().expenses.find((e) => e.id === deletingId);
     deleteTransaction(deletingId);
     // Cerrar modales inmediatamente
     closeDeleteModal();
     closeModal();
-    addToast('Movimiento eliminado 🗑️', 'success');
+    addToast(
+      'Movimiento eliminado',
+      'info',
+      deleted ? () => useFinanceStore.getState().restoreTransactions([deleted]) : undefined,
+    );
     // Sync a Supabase en background
     syncToCloud(onSave, addToast);
   }
 
   return (
+    <>
     <ModalSheet
       id="transaction-modal-title"
       titulo={isEditing ? 'Editar Movimiento' : 'Nuevo Movimiento'}
@@ -317,14 +326,20 @@ export function TransactionModal({
                     onClick={() => setBusinessType(bt)}
                     className={`flex-1 py-1 rounded-md text-2xs font-semibold transition-all flex items-center justify-center gap-1 ${
                       businessType === bt
-                        ? 'bg-brand-600 text-white'
+                        // Negocio seleccionado va en violeta, como su badge en
+                        // el resto de la app (ver ScopeBadge); Personal no
+                        // tiene color semántico propio, así que conserva el
+                        // azul genérico de "opción activa".
+                        ? bt === 'business'
+                          ? 'bg-business-600 text-white'
+                          : 'bg-brand-600 text-white'
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                     }`}
                   >
                     {bt === 'business' ? (
-                      <><Building2 className="w-3 h-3" /> Negocio</>
+                      <><Building2 className="w-3.5 h-3.5" /> Negocio</>
                     ) : (
-                      <><User className="w-3 h-3" /> Personal</>
+                      <><User className="w-3.5 h-3.5" /> Personal</>
                     )}
                   </button>
                 ))}
@@ -398,7 +413,7 @@ export function TransactionModal({
                 }`}
               >
                 <span className="text-xl leading-none flex items-center justify-center h-6">
-                  {showNewCat ? <X className="w-4 h-4 text-brand-600 dark:text-brand-400" /> : <Plus className="w-4 h-4 text-slate-500 dark:text-slate-400" />}
+                  {showNewCat ? <X className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" /> : <Plus className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />}
                 </span>
                 <span className="text-2xs font-medium text-slate-500 dark:text-slate-400 leading-tight text-center">
                   {showNewCat ? 'Cancelar' : 'Nueva'}
@@ -427,7 +442,7 @@ export function TransactionModal({
                     title="Crear categoría"
                     className="saas-btn-primary saas-btn-sm flex-shrink-0"
                   >
-                    <Plus className="w-3 h-3" />
+                    <Plus className="w-3.5 h-3.5" />
                   </button>
                 </div>
                 <div className="flex gap-1.5 items-center">
@@ -453,7 +468,7 @@ export function TransactionModal({
               aria-label="Eliminar movimiento"
               title="Eliminar"
             >
-              <Trash2 className="w-3 h-3" />
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
           {isEditing && (
@@ -474,25 +489,36 @@ export function TransactionModal({
           </button>
         </div>
 
-      {/* Modal de confirmación de borrado — dentro del contenedor principal para visibilidad en móvil */}
-      {isDeleteModalOpen && (
-        <>
-          <div className="absolute inset-0 bg-black/60 z-10 animate-fade-in" onClick={closeDeleteModal} />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-[calc(100%-2rem)] max-w-xs">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-4 text-center animate-scale-in">
-              <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-red-50 dark:bg-red-950 flex items-center justify-center">
-                <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
-              </div>
-              <h3 className="font-bold text-sm text-slate-900 dark:text-white mb-1">¿Eliminar movimiento?</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">Esta acción no se puede deshacer.</p>
-              <div className="flex gap-2">
-                <button onClick={closeDeleteModal} className="saas-btn-secondary flex-1 py-1.5 text-xs">Cancelar</button>
-                <button onClick={handleDelete} className="saas-btn-danger flex-1 py-1.5 text-xs">Eliminar</button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
     </ModalSheet>
+
+    {/*
+      Antes era un diálogo hecho a mano, anidado DENTRO del panel de este
+      modal, con z-10/z-20 propios y en rojo suave (saas-btn-danger). Era la
+      acción de borrado más frecuente de la app y la única con menos
+      contraste de "esto es irreversible" que el resto (cerrar sesión, borrar
+      categoría, borrar meta ya usan este mismo ConfirmDialog, en rojo sólido).
+
+      Va como HERMANO de ModalSheet, no como hijo suyo: el panel de ModalSheet
+      anima con `animate-scale-in` (`transform: scale(1) forwards`), y un
+      transform en un ancestro — aunque sea scale(1) — crea un containing
+      block para `position: fixed`. Si ConfirmDialog quedara anidado ahí
+      dentro, su `fixed inset-0` se mediría contra el panel (que además tiene
+      `overflow-hidden`), no contra el viewport. Como hermano, y con
+      `z-dialog` ya pensado para ir sobre cualquier `z-modal`, aparece
+      correctamente centrado en toda la pantalla.
+
+      El propio ModalSheet calcula `trapActivo={isOpen && !isDeleteModalOpen}`
+      esperando justo esto: que otro diálogo se quede con el foco mientras
+      isDeleteModalOpen es true.
+    */}
+    <ConfirmDialog
+      open={isDeleteModalOpen}
+      title="¿Eliminar movimiento?"
+      message="Esta acción no se puede deshacer."
+      confirmLabel="Eliminar"
+      onConfirm={handleDelete}
+      onCancel={closeDeleteModal}
+    />
+    </>
   );
 }
