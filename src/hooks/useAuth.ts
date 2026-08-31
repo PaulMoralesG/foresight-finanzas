@@ -31,8 +31,8 @@ const OFFLINE_USER: User = {
   lastName: 'Local',
 };
 
-function basicUser(id: string, email: string, firstName?: string, lastName?: string): User {
-  return { id, email, firstName: firstName || '', lastName: lastName || '' };
+function basicUser(id: string, email: string, firstName?: string, lastName?: string, pendingEmail?: string): User {
+  return { id, email, firstName: firstName || '', lastName: lastName || '', pendingEmail };
 }
 
 /** Montajes simultáneos de useAuthSession. Debe ser siempre 0 o 1. */
@@ -88,7 +88,7 @@ export function useAuthSession(): void {
 
     let cancelled = false;
 
-    async function loadProfile(uid: string, email: string, metaFirst?: string, metaLast?: string) {
+    async function loadProfile(uid: string, email: string, metaFirst?: string, metaLast?: string, pendingEmail?: string) {
       try {
         // 1) Perfil por uid (PK nueva). Si no existe, inicializarlo con metadata.
         type ProfileRow = { email?: string | null; first_name?: string | null; last_name?: string | null };
@@ -141,6 +141,7 @@ export function useAuthSession(): void {
           // Prioridad: perfil DB → metadata Auth → vacío
           firstName: profile?.first_name || metaFirst || '',
           lastName: profile?.last_name || metaLast || '',
+          pendingEmail,
         });
         setLoading(false);
       } catch (err) {
@@ -155,7 +156,7 @@ export function useAuthSession(): void {
             '[useAuth] Esquema de Supabase no migrado — ejecutá supabase/migrations/0001_entities_and_rls.sql en el SQL Editor. Modo local-only.',
           );
           syncService.disable();
-          setUser(basicUser(uid, email, metaFirst, metaLast));
+          setUser(basicUser(uid, email, metaFirst, metaLast, pendingEmail));
           setLoading(false);
           return;
         }
@@ -166,7 +167,7 @@ export function useAuthSession(): void {
           // isSchemaError() trataba esto igual que un esquema sin migrar y
           // dejaba la cuenta en modo local-only permanente por un solo golpe.
           console.warn('[useAuth] Caché de esquema desactualizada (transitorio) al cargar perfil — reintentará solo.');
-          setUser(basicUser(uid, email, metaFirst, metaLast));
+          setUser(basicUser(uid, email, metaFirst, metaLast, pendingEmail));
           setLoading(false);
           return;
         }
@@ -181,7 +182,7 @@ export function useAuthSession(): void {
       if (cancelled) return;
       if (session?.user) {
         const meta = session.user.user_metadata as Record<string, string> | undefined;
-        loadProfile(session.user.id, session.user.email!, meta?.first_name, meta?.last_name);
+        loadProfile(session.user.id, session.user.email!, meta?.first_name, meta?.last_name, session.user.new_email);
       } else {
         // ALT-1: sin sesión → limpiar todo. Simétrico con la rama equivalente
         // de onAuthStateChange (línea ~165) — antes esta rama solo hacía
@@ -198,11 +199,20 @@ export function useAuthSession(): void {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Email change: el token de verificación ya fue procesado, actualizar profile
+      // Email change: `updateUser({ email })` dispara USER_UPDATED de inmediato,
+      // pero Supabase exige verificar AMBOS correos antes de aplicar el cambio.
+      // Ese primer evento no trae el email nuevo en `session.user.email` —lo
+      // trae en `session.user.new_email`, y ahí se queda hasta que se confirma—.
+      // Sin esta rama, `pendingEmail` nunca se fijaba de vuelta desde Supabase:
+      // dependía por completo del toast de 5 segundos que updateEmail() dispara
+      // al enviar la solicitud, y desaparecía sin dejar rastro si el usuario
+      // cerraba la pestaña antes de leerlo.
       if (event === 'USER_UPDATED' && session?.user) {
         const newEmail = session.user.email;
         const currentUser = useAuthStore.getState().user;
         if (newEmail && currentUser && newEmail !== currentUser.email) {
+          // Cambio ya confirmado (ambos correos verificados): aplicar y
+          // limpiar cualquier "pendiente" que hubiera quedado.
           try {
             await supabase!
               .from('profiles')
@@ -211,7 +221,10 @@ export function useAuthSession(): void {
           } catch (err) {
             console.warn('[useAuth] No se pudo actualizar el email en profiles:', err);
           }
-          setUser({ ...currentUser, email: newEmail });
+          setUser({ ...currentUser, email: newEmail, pendingEmail: undefined });
+        } else if (currentUser && session.user.new_email !== currentUser.pendingEmail) {
+          // Aún sin confirmar (o se canceló: new_email volvió a undefined).
+          setUser({ ...currentUser, pendingEmail: session.user.new_email });
         }
         return;
       }
@@ -228,7 +241,7 @@ export function useAuthSession(): void {
           return;
         }
         const meta = session.user.user_metadata as Record<string, string> | undefined;
-        loadProfile(session.user.id, session.user.email!, meta?.first_name, meta?.last_name);
+        loadProfile(session.user.id, session.user.email!, meta?.first_name, meta?.last_name, session.user.new_email);
       } else {
         // ALT-1: sin sesión → limpiar todo (evita contaminación entre cuentas)
         syncService.detach();

@@ -7,6 +7,14 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
+  /**
+   * Correo nuevo, todavía sin confirmar (viene de `session.user.new_email`
+   * de Supabase). Supabase exige verificar tanto el correo viejo como el
+   * nuevo antes de aplicar el cambio; mientras tanto, esto es lo único que
+   * recuerda que hay un cambio a medias — sin esto, solo quedaba un toast de
+   * 5 segundos y ningún rastro si el usuario cerraba la pestaña antes de leerlo.
+   */
+  pendingEmail?: string;
 }
 
 export type TransactionType = 'income' | 'expense';
