@@ -15,6 +15,7 @@ import { useBudget, currentMonthKey, shiftMonthKey, monthKeyLabel } from '@/hook
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { BudgetProgress } from '@/components/ui/BudgetProgress';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ModalSheet } from '@/components/ui/ModalSheet';
 import { MonthStepper } from '@/components/ui/MonthStepper';
@@ -103,7 +104,7 @@ function BudgetPlanner() {
       {/* ── Modo edición ── */}
       {isEditing ? (
         <div className="space-y-2.5">
-          <label htmlFor="budget-amount" className="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+          <label htmlFor="budget-amount" className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
             Presupuesto para {monthKeyLabel(monthKey)}
           </label>
           <div className="flex gap-2">
@@ -371,21 +372,12 @@ export function SavingsPage() {
 
       {/* ── Lista de metas ── */}
       {savingsGoals.length === 0 ? (
-        <div className="saas-card p-8 animate-slide-up text-center">
-          <span className="text-3xl">💤</span>
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white mt-2">Sin metas aún</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Creá una meta y registrá gastos con categoría <strong>"Ahorro"</strong> y el mismo concepto
-            (ej: meta "Casa" + gastos de ahorro con concepto "Casa")
-          </p>
-          <button
-            onClick={openCreate}
-            className="saas-btn saas-btn-primary saas-btn-sm flex items-center gap-1.5 mx-auto mt-4"
-          >
-            <Plus className="w-4 h-4" />
-            Crear mi primera meta
-          </button>
-        </div>
+        <EmptyState
+          emoji="💤"
+          title="Sin metas aún"
+          description={'Creá una meta y registrá gastos con categoría "Ahorro" y el mismo concepto (ej: meta "Casa" + gastos de ahorro con concepto "Casa")'}
+          action={{ label: 'Crear mi primera meta', icon: Plus, onClick: openCreate }}
+        />
       ) : (
         <div className="space-y-3">
           {savingsGoals.map((goal) => {
@@ -472,7 +464,7 @@ export function SavingsPage() {
 
             <div className="p-4 space-y-4">
               <div>
-                <label htmlFor="goal-concept" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                <label htmlFor="goal-concept" className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
                   Concepto
                 </label>
                 <input
@@ -485,7 +477,7 @@ export function SavingsPage() {
                 />
               </div>
               <div>
-                <label htmlFor="goal-target" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                <label htmlFor="goal-target" className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
                   Monto objetivo
                 </label>
                 <input

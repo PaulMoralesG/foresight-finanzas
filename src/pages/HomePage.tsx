@@ -423,6 +423,12 @@ export function HomePage() {
         </div>
       </div>
 
+      {/* Últimos movimientos: antes iba después de las tarjetas de categorías
+          y presupuesto, obligando a pasar por dos bloques de solo lectura
+          para llegar a la actividad reciente — que es lo que se revisa a
+          diario, justo después del saldo. */}
+      <RecentTransactions allData={monthlyData} />
+
       {/* Chart + Budget row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:items-start">
         <div className="space-y-4">
@@ -433,9 +439,6 @@ export function HomePage() {
           <SavingsGoalWidget totalIncome={summary.totalIncome} />
         </div>
       </div>
-
-      {/* Recent Transactions */}
-      <RecentTransactions allData={monthlyData} />
     </div>
   );
 }
@@ -465,27 +468,12 @@ function SavingsGoalWidget({ totalIncome }: { totalIncome: number }) {
 
   if (savingsByConcept.length === 0) {
     return (
-      <div className="saas-card p-4 animate-slide-up">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-            <PiggyBank className="text-brand-500 mr-2" />
-            Ahorro del mes
-          </h2>
-          <button
-            onClick={() => navigateTo('savings' as TabId)}
-            className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
-            title="Ver metas en Planes"
-          >
-            Ver metas →
-          </button>
-        </div>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          Sin movimientos de ahorro este mes
-        </p>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-          Crea una meta en Planes y aporta con el botón <strong>Aportar</strong>
-        </p>
-      </div>
+      <EmptyState
+        icon={PiggyBank}
+        title="Sin movimientos de ahorro este mes"
+        description="Crea una meta en Planes y aporta con el botón Aportar"
+        action={{ label: 'Crear meta', icon: Plus, onClick: () => navigateTo('savings' as TabId) }}
+      />
     );
   }
 
@@ -498,7 +486,7 @@ function SavingsGoalWidget({ totalIncome }: { totalIncome: number }) {
         </h2>
         <div className="flex items-center gap-2">
           {savingsPct > 0 && (
-            <span className="text-2xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded-full">
+            <span className="saas-badge-green text-2xs font-semibold px-1.5 py-0.5">
               {savingsPct}% del ingreso
             </span>
           )}
