@@ -7,9 +7,11 @@ import { Pencil, Loader2, Check, Mail, ChevronUp, ChevronRight, Send, Lock, Key,
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
+import { supabaseAvailable } from '@/config/supabase';
 import { userInitials } from '@/lib/utils';
 import { MIN_PASSWORD_LENGTH, STRENGTH_TRACK_CLASS, passwordStrength, validateNewPassword } from '@/lib/password';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { CategoryManager } from '@/components/features/categories/CategoryManager';
 
 type Section = 'profile' | 'email' | 'password' | 'categories' | null;
@@ -139,31 +141,56 @@ export function ProfilePage() {
   return (
     /* max-w-2xl dejaba una columna estrecha con mucho vacío a la derecha en
        monitores grandes, mientras Inicio y Estadísticas sí se expandían.
-       A partir de xl la tarjeta de perfil y los ajustes van lado a lado. */
-    <div className="animate-fade-in max-w-2xl xl:max-w-5xl grid grid-cols-1 xl:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] gap-5 items-start">
+       El salto a dos columnas era en xl (1280px): justo por debajo —el
+       rango más común de portátiles de trabajo, 1024-1279px— la tarjeta de
+       perfil ocupaba el ancho completo en una sola columna, con el avatar y
+       el nombre pegados a la izquierda y "Editar" empujado lejos a la
+       derecha: mucho vacío en medio, como a medio maquetar. Se adelanta a lg. */
+    <div className="animate-fade-in max-w-2xl lg:max-w-5xl grid grid-cols-1 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] gap-5 items-start">
       {/* ─── Profile Card ─── */}
       <div className="saas-card p-6">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-brand-100 dark:bg-brand-900 text-brand-700 dark:text-brand-300 flex items-center justify-center text-2xl font-bold flex-shrink-0">
-            {initials}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white truncate">
-              {fullName}
-            </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{user?.email}</p>
+        {/* flex-col en móvil: antes avatar+nombre+botón iban en una sola fila
+            y "Usuario Local" (13 caracteres) ya se truncaba a "Usuario Lo…"
+            a 375px, solo por competir con el botón "Editar" en el mismo
+            renglón. A partir de sm vuelve a la fila única de siempre. */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-16 h-16 rounded-full bg-brand-100 dark:bg-brand-900 text-brand-700 dark:text-brand-300 flex items-center justify-center text-2xl font-bold flex-shrink-0">
+              {initials}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white truncate">
+                {fullName}
+              </h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{user?.email}</p>
+            </div>
           </div>
           <button
             onClick={() => toggleSection('profile')}
             type="button"
             aria-expanded={expanded === 'profile'}
-            className={`saas-btn-sm ${expanded === 'profile' ? 'saas-btn-primary' : 'saas-btn-secondary'}`}
+            className={`saas-btn-sm flex-shrink-0 self-start sm:self-center ${expanded === 'profile' ? 'saas-btn-primary' : 'saas-btn-secondary'}`}
             aria-label="Editar perfil"
           >
             <Pencil className="w-3.5 h-3.5 mr-1.5" />
             Editar
           </button>
         </div>
+
+        {/* Correo pendiente de verificación: sin esto, el único rastro de un
+            cambio de correo en curso era un toast de 5 segundos. Supabase
+            exige confirmar el correo viejo Y el nuevo antes de aplicar el
+            cambio — mientras tanto, esto es lo que recuerda que quedó a
+            medias, incluso si el usuario cerró la pestaña y volvió después. */}
+        {user?.pendingEmail && (
+          <div className="mt-4 flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800">
+            <Mail className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-800 dark:text-amber-300">
+              Verificación pendiente para <strong>{user.pendingEmail}</strong>. Revisa ambas
+              bandejas — la actual y la nueva— para confirmar el cambio.
+            </p>
+          </div>
+        )}
 
         {/* Edit profile inline form */}
         {expanded === 'profile' && (
@@ -183,6 +210,7 @@ export function ProfilePage() {
                   onChange={(e) => setEditFirstName(e.target.value)}
                   className="saas-input"
                   placeholder="Tu nombre"
+                  autoFocus
                   onKeyDown={(e) => { if (e.key === 'Enter') handleSaveProfile(); }}
                 />
               </div>
@@ -228,22 +256,38 @@ export function ProfilePage() {
           <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Cuenta</p>
         </div>
 
-        {/* Change Email */}
+        {/* Change Email.
+            Sin comprobar supabaseAvailable, esta fila quedaba clicable en
+            modo offline: el usuario rellenaba el formulario entero y recién
+            al enviar se enteraba —por un toast genérico— de que era
+            imposible desde el principio. updateEmail()/updatePassword() ya
+            devuelven 'No disponible en modo offline'; esto evita que haga
+            falta llegar tan lejos para descubrirlo. */}
         <div>
           <button
-            onClick={() => toggleSection('email')}
+            onClick={() => { if (supabaseAvailable) toggleSection('email'); }}
             type="button"
+            disabled={!supabaseAvailable}
             aria-expanded={expanded === 'email'}
-            className="w-full flex items-center gap-4 p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded-lg"
+            aria-disabled={!supabaseAvailable}
+            className={`w-full flex items-center gap-4 p-4 text-left rounded-lg transition-colors ${
+              supabaseAvailable
+                ? 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                : 'opacity-60 cursor-not-allowed'
+            }`}
           >
             <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950 flex items-center justify-center text-blue-500 flex-shrink-0">
               <Mail className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Cambiar correo electrónico</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Actualiza tu dirección de email</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {supabaseAvailable ? 'Actualiza tu dirección de email' : 'Requiere conexión a internet'}
+              </p>
             </div>
-            {expanded === 'email' ? <ChevronUp className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" />}
+            {supabaseAvailable ? (
+              expanded === 'email' ? <ChevronUp className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" />
+            ) : null}
           </button>
 
           {expanded === 'email' && (
@@ -262,6 +306,7 @@ export function ProfilePage() {
                   onChange={(e) => setNewEmail(e.target.value)}
                   className="saas-input"
                   placeholder="nuevo@correo.com"
+                  autoFocus
                   onKeyDown={(e) => { if (e.key === 'Enter') handleSaveEmail(); }}
                 />
               </div>
@@ -286,22 +331,34 @@ export function ProfilePage() {
           )}
         </div>
 
-        {/* Change Password */}
+        {/* Change Password — mismo motivo que Cambiar correo: sin gatear por
+            supabaseAvailable, el formulario entero se podía rellenar en
+            modo offline solo para fallar al final. */}
         <div>
           <button
-            onClick={() => toggleSection('password')}
+            onClick={() => { if (supabaseAvailable) toggleSection('password'); }}
             type="button"
+            disabled={!supabaseAvailable}
             aria-expanded={expanded === 'password'}
-            className="w-full flex items-center gap-4 p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded-lg"
+            aria-disabled={!supabaseAvailable}
+            className={`w-full flex items-center gap-4 p-4 text-left rounded-lg transition-colors ${
+              supabaseAvailable
+                ? 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                : 'opacity-60 cursor-not-allowed'
+            }`}
           >
             <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-950 flex items-center justify-center text-amber-500 flex-shrink-0">
               <Lock className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Cambiar contraseña</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Mantén tu cuenta protegida</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {supabaseAvailable ? 'Mantén tu cuenta protegida' : 'Requiere conexión a internet'}
+              </p>
             </div>
-            {expanded === 'password' ? <ChevronUp className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" />}
+            {supabaseAvailable ? (
+              expanded === 'password' ? <ChevronUp className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" />
+            ) : null}
           </button>
 
           {expanded === 'password' && (
@@ -314,15 +371,14 @@ export function ProfilePage() {
                 <label htmlFor="current-password" className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                   Contraseña actual
                 </label>
-                <input
+                <PasswordInput
                   id="current-password"
                   name="current-password"
-                  type="password"
                   autoComplete="current-password"
                   value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="saas-input"
+                  onChange={setCurrentPassword}
                   placeholder="Tu contraseña de ahora"
+                  autoFocus
                   onKeyDown={(e) => { if (e.key === 'Enter') handleSavePassword(); }}
                 />
               </div>
@@ -330,14 +386,12 @@ export function ProfilePage() {
                 <label htmlFor="new-password" className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                   Nueva contraseña
                 </label>
-                <input
+                <PasswordInput
                   id="new-password"
                   name="new-password"
-                  type="password"
                   autoComplete="new-password"
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="saas-input"
+                  onChange={setNewPassword}
                   placeholder={`Mínimo ${MIN_PASSWORD_LENGTH} caracteres`}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleSavePassword(); }}
                 />
@@ -363,17 +417,27 @@ export function ProfilePage() {
                 <label htmlFor="confirm-password" className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                   Confirmar contraseña
                 </label>
-                <input
+                <PasswordInput
                   id="confirm-password"
                   name="confirm-password"
-                  type="password"
                   autoComplete="new-password"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="saas-input"
+                  onChange={setConfirmPassword}
                   placeholder="Repite la contraseña"
                   onKeyDown={(e) => { if (e.key === 'Enter') handleSavePassword(); }}
                 />
+                {/* Antes esto solo se descubría al enviar el formulario:
+                    escribías las dos contraseñas y solo al pulsar "Actualizar"
+                    te enterabas de que no coincidían. */}
+                {confirmPassword.length > 0 && (
+                  <p className={`text-2xs mt-1 font-medium ${
+                    confirmPassword === newPassword
+                      ? 'text-emerald-700 dark:text-emerald-400'
+                      : 'text-red-600 dark:text-red-400'
+                  }`}>
+                    {confirmPassword === newPassword ? '✓ Coinciden' : '✗ No coinciden'}
+                  </p>
+                )}
               </div>
               <div className="flex gap-2 justify-end">
                 <button onClick={() => setExpanded(null)} className="saas-btn-secondary saas-btn-sm">
@@ -407,9 +471,15 @@ export function ProfilePage() {
           saveData={saveData}
         />
 
-        {/* Apariencia — Toggle (no accordion) */}
+        {/* Apariencia — Toggle (no accordion).
+            El tile del icono NO sigue a isDark: seguirlo hacía que, en tema
+            oscuro, esta fila y "Cambiar contraseña" compartieran el mismo
+            ámbar — dos filas sin relación entre sí, indistinguibles por
+            color, justo el único mecanismo que tiene la lista para
+            reconocer una fila de un vistazo. El glifo sol/luna ya comunica
+            el estado; el color del tile se queda neutro siempre. */}
         <div className="flex items-center gap-4 p-4">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${isDark ? 'bg-amber-50 dark:bg-amber-950 text-amber-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-slate-100 dark:bg-slate-800 text-slate-500">
             {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </div>
           <div className="flex-1 min-w-0">
@@ -459,7 +529,7 @@ export function ProfilePage() {
 
       {/* Versión — leída de package.json vía Vite, no escrita a mano
           (el pie decía v2.0 mientras package.json ya iba por 2.1.0) */}
-      <p className="text-center text-xs text-slate-500 dark:text-slate-400 xl:col-span-2">
+      <p className="text-center text-xs text-slate-500 dark:text-slate-400 lg:col-span-2">
         Foresight Finanzas v{__APP_VERSION__} · SaaS Edition
       </p>
 
