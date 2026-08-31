@@ -151,6 +151,15 @@ input[type="checkbox"]:indeterminate {
    ================================================================ */
 
 @layer components {
+  /* ── Jerarquía de sombras: tres niveles, no doce criterios ──
+     1. Tarjeta (esta clase): sm en reposo, md al hover.
+     2. Panel flotante sobre la página (dropdown de usuario, FAB, item activo
+        del Sidebar, Toast, barra de acciones de selección múltiple): shadow-lg.
+     3. Diálogo modal que bloquea la interacción (ConfirmDialog, ModalSheet,
+        banners de PWA): shadow-2xl.
+     Un elemento no "sube" de nivel solo porque flota por encima de otras
+     cosas: la barra de selección múltiple de Movimientos, por ejemplo, es
+     nivel 2 (un panel de acciones), no nivel 3 (no bloquea nada). */
   .saas-card {
     @apply bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800;
     @apply shadow-sm hover:shadow-md transition-shadow duration-200;
@@ -198,6 +207,13 @@ input[type="checkbox"]:indeterminate {
 
   .saas-btn-sm { @apply px-2 py-1 text-xs gap-1; }
   .saas-btn-icon { @apply saas-btn p-1.5 w-8 h-8; }
+
+  /* Envoltorio de un <input type="checkbox">: el objetivo táctil de 44px lo
+     da este contenedor (ver @media pointer:coarse más abajo), no el propio
+     checkbox, que se queda con su tamaño visual normal. */
+  .saas-checkbox-target {
+    @apply inline-flex items-center justify-center cursor-pointer;
+  }
 
   /* Toggle pill: dark / light mode */
   .dark-mode-pill {
@@ -374,5 +390,13 @@ textarea {
   }
   .saas-btn-icon {
     min-width: 44px;
+  }
+  /* Igual que .saas-btn-icon, pero para un <input type="checkbox"> real: no se
+     le puede meter padding al elemento mismo sin deformar su caja de forma
+     rara en distintos navegadores, así que el objetivo de 44px lo da el
+     contenedor que lo envuelve, sin agrandar el cuadrito visible. */
+  .saas-checkbox-target {
+    min-width: 44px;
+    min-height: 44px;
   }
 }

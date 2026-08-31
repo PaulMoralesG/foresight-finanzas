@@ -42,12 +42,21 @@ export function TransactionAmount({
   );
 }
 
-/** Negocio / Personal. Un ámbito ausente cuenta como Negocio, igual que en el CSV. */
+/**
+ * Negocio / Personal. Un ámbito ausente cuenta como Negocio, igual que en el CSV.
+ *
+ * "Negocio" va en violeta (paleta `business` de tailwind.config.js), no en el
+ * azul de acción primaria: antes compartía color con cualquier botón de
+ * "acción", así que un badge de dato y un control interactivo se confundían
+ * a primera vista. Los chips de filtro (Todos/Ingresos/Gastos/Negocio/
+ * Personal) siguen en azul a propósito — ahí el azul significa "activo", no
+ * "es de negocio", y es un sistema distinto.
+ */
 export function ScopeBadge({ businessType }: { businessType: BusinessType }) {
   return businessType === 'personal' ? (
     <span className="saas-badge-slate text-2xs">Personal</span>
   ) : (
-    <span className="saas-badge-blue text-2xs">Negocio</span>
+    <span className="saas-badge-violet text-2xs">Negocio</span>
   );
 }
 
