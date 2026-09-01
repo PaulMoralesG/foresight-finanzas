@@ -87,6 +87,7 @@ vez cada una. Para un entorno nuevo hay que aplicarlas todas:
 | `0004_keep_newest_triggers.sql` | Trigger `keep_newest`: el servidor rechaza escrituras más viejas que la fila actual | Antes de desplegar |
 | `0005_composite_pks_and_date_index.sql` | PK compuesta en `expenses`, `reminders` y `savings_goals` + índices por fecha | **Antes** de desplegar (el cliente ya usa `onConflict: 'user_id,id'`) |
 | `0006_drop_reminders_and_fix_profile_timestamps.sql` | Elimina la tabla `reminders` y unifica los timestamps de `profiles` a `timestamptz` | **Después** de desplegar (el cliente nuevo ya no consulta `reminders`) |
+| `0007_rls_perf_and_security_hardening.sql` | RLS con `(select auth.uid())`, `search_path` fijo en `keep_newest`, revoca `EXECUTE` público de `handle_new_user`, y versiona dos `CHECK` + un índice que ya estaban aplicados a mano en producción | Cualquier momento (no rompe compatibilidad con ningún cliente) |
 
 Fíjate en el orden de la `0005` y la `0006`: una va antes del deploy y la otra después.
 Invertirlo deja al cliente pidiendo algo que ya no existe, o escribiendo con una clave
