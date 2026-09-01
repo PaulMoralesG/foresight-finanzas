@@ -27,13 +27,33 @@ import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
 /** Marca de que ya intentamos recuperarnos, para no entrar en bucle de recargas. */
 const CLAVE_INTENTO = 'foresight-recuperacion-chunk';
 
-/** ¿El fallo es "no pude descargar el módulo" y no un error de render? */
+/**
+ * ¿El fallo es "no pude descargar el módulo" y no un error de render?
+ *
+ * Las tres primeras frases son como Chrome/Safari envuelven CUALQUIER fallo
+ * de red de un import() dinámico, MIME incorrecto incluido. Pero el fallo más
+ * probable en este proyecto no es de red: es el rewrite catch-all de
+ * `vercel.json` (`/(.*) → /index.html`, necesario para el ruteo de la SPA).
+ * Cuando el chunk pedido —con el hash de un deploy anterior— ya no existe en
+ * el deploy actual, Vercel no responde 404: cae al fallback y sirve
+ * `index.html` con `Content-Type: text/html` y código 200. El navegador
+ * intenta ejecutar HTML como módulo JS y lo rechaza por tipo MIME.
+ *
+ * Chrome normaliza ese caso bajo el mismo "Failed to fetch..." de arriba, así
+ * que ya estaba cubierto. Firefox (y potencialmente otros) reportan el motivo
+ * real por separado, sin que ninguna de las tres frases anteriores aparezca —
+ * y como el error no encaja en `esFalloDeCarga`, la app no activa la
+ * recuperación: se queda en el estado roto que dejó el import() fallido.
+ */
 function esFalloDeCarga(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
   return (
     msg.includes('Failed to fetch dynamically imported module') ||
     msg.includes('error loading dynamically imported module') ||
-    msg.includes('Importing a module script failed')
+    msg.includes('Importing a module script failed') ||
+    msg.includes('unsupported MIME type') ||
+    msg.includes('Failed to load module script') ||
+    msg.includes('MIME type mismatch')
   );
 }
 
