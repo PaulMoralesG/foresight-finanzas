@@ -26,6 +26,48 @@ Todo desde una sola app, instalable en tu celular, que funciona incluso sin cone
 
 React · TypeScript · Vite · TailwindCSS · Zustand · Supabase · Recharts
 
+## Desarrollo local
+
+**Requisitos:** Node 22 (la versión que usa CI, ver `.github/workflows/ci.yml`) y npm.
+
+```bash
+git clone https://github.com/PaulMoralesG/foresight-finanzas.git
+cd foresight-finanzas
+npm ci
+npm run dev
+```
+
+Con eso ya funciona: la app arranca en modo offline-first (usuario local, sin
+login) aunque no exista ningún `.env`. Solo hacen falta variables de entorno
+para conectar Supabase (sincronización en la nube) y/o Sentry (monitoreo de
+errores) — copiá `.env.example` a `.env` y completá lo que necesites:
+
+| Variable | Para qué | Obligatoria |
+|---|---|---|
+| `VITE_SUPABASE_URL` / `VITE_SUPABASE_KEY` | Sincronización con Supabase | No — sin ellas, la app corre 100% local |
+| `VITE_SENTRY_DSN` / `VITE_SENTRY_ENV` | Monitoreo de errores en producción | No — Sentry solo se inicializa en build de producción (`import.meta.env.PROD`) |
+
+Si configurás Supabase, hay que aplicar las migraciones de `supabase/migrations/`
+antes de desplegar — ver la sección siguiente.
+
+**Scripts:**
+
+| Comando | Qué hace |
+|---|---|
+| `npm run dev` | Servidor de desarrollo (Vite) |
+| `npm run build` | Build de producción (`dist/`) — **no** type-checka por su cuenta |
+| `npm run preview` | Sirve el build de producción localmente |
+| `npm run lint` | ESLint |
+| `npm run test` | Suite completa de tests (Vitest, una pasada) |
+| `npm run test:watch` | Tests en modo watch |
+| `npm run test:coverage` | Tests con reporte de cobertura |
+| `npx tsc --noEmit` | Type-check (no está en `package.json`; correrlo aparte) |
+
+**Despliegue:** Vercel, automático en cada push a una rama con PR abierto
+(preview) y en cada merge a `main` (producción) — configuración en
+`vercel.json`. CI (`.github/workflows/ci.yml`) corre type-check, lint, tests
+y build en cada push/PR contra `main`.
+
 ## Migración de Supabase (v2.1)
 
 La v2.1 reemplaza el almacenamiento en blobs JSON de `profiles` por **tablas por entidad**
