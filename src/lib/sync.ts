@@ -235,6 +235,23 @@ export function isTransientSchemaError(err: unknown): boolean {
   return (err as { code?: string } | null)?.code === 'PGRST205';
 }
 
+/**
+ * Reporta un fallo de sync a Sentry (solo producción). Hasta ahora estos
+ * catches solo hacían console.warn/error: un problema real de Supabase en
+ * producción —una migración sin aplicar, RLS mal configurada, la tabla
+ * `budgets` rechazando escrituras— era invisible salvo que el propio usuario
+ * lo reportara. `tag` distingue el motivo en Sentry sin tener que leer el
+ * mensaje de cada evento.
+ */
+function reportarErrorSync(err: unknown, tag: string): void {
+  if (!import.meta.env.PROD) return;
+  import('@sentry/react')
+    .then((Sentry) => {
+      Sentry.captureException(err, { tags: { sync_failure: tag } });
+    })
+    .catch(() => {});
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -620,6 +637,7 @@ async function pushWithRetry(uid: string, fullPush = false): Promise<boolean> {
     }
   }
   console.error('[sync] Todos los reintentos fallaron:', lastError);
+  reportarErrorSync(lastError, 'reintentos-agotados');
   return false;
 }
 
@@ -739,11 +757,15 @@ export const syncService = {
         );
         syncDisabled = true;
         useUiStore.getState().setSyncState('local-only');
+        // Modo degradado intencional, pero si pasa en producción es señal de
+        // un deploy sin migrar: vale la pena saberlo aunque la app siga viva.
+        reportarErrorSync(err, 'esquema-no-migrado');
       } else if (isTransientSchemaError(err)) {
         console.warn('[sync] Caché de esquema desactualizada (transitorio) al adjuntar — se reintentará en el próximo cambio.');
         useUiStore.getState().setSyncState('error');
       } else {
         useUiStore.getState().setSyncState('error');
+        reportarErrorSync(err, 'attach-fallo');
       }
     }
   },

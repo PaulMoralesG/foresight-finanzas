@@ -18,3 +18,4 @@ vite.config.d.ts
 .env*
 # .env.example documenta las variables SIN valores — debe versionarse
 !.env.example
+.playwright-mcp/
