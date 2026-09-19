@@ -178,7 +178,23 @@ export function StatsPage() {
   // Recharts recibe colores como props, no como clases, así que el tema hay
   // que resolverlo aquí. Estaba fijo en slate-400, que sobre el fondo claro
   // del gráfico da ~2,6:1 — por debajo del mínimo de WCAG para texto.
-  const axisTickColor = isDark ? '#94a3b8' : '#475569';
+  //
+  // Los valores son los de las rampas de `tailwind.config.js` escritos a mano
+  // (Recharts no entiende clases): neutro de papel para los ejes y la rejilla,
+  // `income`/`expense` para las dos series de dinero. El Balance va en tinta
+  // neutra y de trazo discontinuo, no en un tercer color: con la marca en
+  // verde, una línea de balance verde se confundiría con la de Ingresos.
+  const chart = {
+    tick: isDark ? '#a3a099' : '#5f5e58', // slate 400 / 600
+    grid: isDark ? '#4a4944' : '#e6e4dd', // slate 700 / 200
+    tipBg: isDark ? '#232320' : '#ffffff', // slate 800 / blanco
+    tipFg: isDark ? '#f3f2ee' : '#1a1a19', // slate 100 / 900
+    tipLabel: isDark ? '#cfccc2' : '#4a4944', // slate 300 / 700
+    income: '#1baf7a', // income-500
+    expense: '#e34948', // expense-500
+    balance: isDark ? '#cfccc2' : '#4a4944', // slate 300 / 700
+  };
+  const axisTickColor = chart.tick;
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -404,11 +420,11 @@ export function StatsPage() {
           <div className="h-[240px] sm:h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trendData} margin={{ top: 10, right: 20, left: 5, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#334155' : '#e2e8f0'} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
                 <XAxis
                   dataKey="month"
                   tick={{ fontSize: 12, fill: axisTickColor }}
-                  axisLine={{ stroke: isDark ? '#334155' : '#e2e8f0' }}
+                  axisLine={{ stroke: chart.grid }}
                   tickLine={false}
                 />
                 <YAxis
@@ -426,13 +442,13 @@ export function StatsPage() {
                   formatter={(value: number) => [formatMoney(value), '']}
                   contentStyle={{
                     borderRadius: '12px',
-                    border: isDark ? '1px solid #334155' : '1px solid #e2e8f0',
+                    border: `1px solid ${chart.grid}`,
                     boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                     fontSize: '12px',
-                    backgroundColor: isDark ? '#1e293b' : '#ffffff',
-                    color: isDark ? '#f1f5f9' : '#1e293b',
+                    backgroundColor: chart.tipBg,
+                    color: chart.tipFg,
                   }}
-                  labelStyle={{ fontWeight: 600, marginBottom: '4px', color: isDark ? '#cbd5e1' : '#334155' }}
+                  labelStyle={{ fontWeight: 600, marginBottom: '4px', color: chart.tipLabel }}
                 />
                 <Legend
                   wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
@@ -440,27 +456,27 @@ export function StatsPage() {
                 <Line
                   type="monotone"
                   dataKey="Ingresos"
-                  stroke="#10b981"
+                  stroke={chart.income}
                   strokeWidth={2.5}
-                  dot={{ r: 4, fill: '#10b981', strokeWidth: 0 }}
-                  activeDot={{ r: 6, fill: '#10b981', stroke: '#fff', strokeWidth: 2 }}
+                  dot={{ r: 4, fill: chart.income, strokeWidth: 0 }}
+                  activeDot={{ r: 6, fill: chart.income, stroke: '#fff', strokeWidth: 2 }}
                 />
                 <Line
                   type="monotone"
                   dataKey="Gastos"
-                  stroke="#ef4444"
+                  stroke={chart.expense}
                   strokeWidth={2.5}
-                  dot={{ r: 4, fill: '#ef4444', strokeWidth: 0 }}
-                  activeDot={{ r: 6, fill: '#ef4444', stroke: '#fff', strokeWidth: 2 }}
+                  dot={{ r: 4, fill: chart.expense, strokeWidth: 0 }}
+                  activeDot={{ r: 6, fill: chart.expense, stroke: '#fff', strokeWidth: 2 }}
                 />
                 <Line
                   type="monotone"
                   dataKey="Balance"
-                  stroke="#3b82f6"
+                  stroke={chart.balance}
                   strokeWidth={2.5}
                   strokeDasharray="6 4"
-                  dot={{ r: 4, fill: '#3b82f6', strokeWidth: 0 }}
-                  activeDot={{ r: 6, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }}
+                  dot={{ r: 4, fill: chart.balance, strokeWidth: 0 }}
+                  activeDot={{ r: 6, fill: chart.balance, stroke: '#fff', strokeWidth: 2 }}
                 />
               </LineChart>
             </ResponsiveContainer>

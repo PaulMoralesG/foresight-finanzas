@@ -357,70 +357,69 @@ export function HomePage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <MonthNav showReport />
       </div>
-      {/* KPI Row → Hero de saldo con gradiente (fintech) + sub-KPIs clicables */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 via-brand-700 to-brand-900 text-white p-4 sm:p-5 shadow-lg shadow-brand-600/25 animate-slide-up">
-        {/* Decoración de fondo */}
-        <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-white/10 blur-2xl pointer-events-none" />
-        <div className="absolute -bottom-20 -left-10 w-56 h-56 rounded-full bg-brand-400/20 blur-3xl pointer-events-none" />
-
-        <div className="relative">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-2xs font-semibold uppercase tracking-wider text-brand-200">
-                Saldo de {(() => { const d = new Date(currentViewDate); return `${d.toLocaleDateString(LOCALE, { month: 'long' })} ${d.getFullYear()}`; })()}
-              </p>
-              <p className="text-3xl sm:text-4xl font-extrabold tabular-nums mt-1 truncate">
-                {formatMoney(summary.available)}
-              </p>
-              <p className="text-xs text-brand-200 mt-0.5">
-                Ingresos − gastos del mes
-              </p>
-            </div>
-          </div>
-
-          {/* Columnas de detalle — clicables para filtrar */}
-          <div className="mt-4 pt-4 border-t border-white/15 grid grid-cols-3 gap-2">
-            <button
-              onClick={() => { navigateTo('movements' as TabId, 'income'); }}
-              className="text-left rounded-xl p-2 -m-1 hover:bg-white/10 active:bg-white/15 transition-colors group"
-              title="Ver ingresos"
-            >
-              <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-brand-200">
-                <ArrowDown className="w-3 h-3" /> Ingresos
-              </span>
-              <span className="block text-sm sm:text-base font-bold tabular-nums mt-0.5 truncate">
-                +{formatMoney(summary.totalIncome)}
-              </span>
-            </button>
-            <button
-              onClick={() => { navigateTo('movements' as TabId, 'expense'); }}
-              className="text-left rounded-xl p-2 -m-1 hover:bg-white/10 active:bg-white/15 transition-colors"
-              title="Ver gastos"
-            >
-              <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-brand-200">
-                <ArrowUp className="w-3 h-3" /> Gastos
-              </span>
-              <span className="block text-sm sm:text-base font-bold tabular-nums mt-0.5 truncate">
-                −{formatMoney(summary.totalSpent)}
-              </span>
-            </button>
-            <button
-              onClick={() => { navigateTo('movements' as TabId, 'business'); }}
-              className="text-left rounded-xl p-2 -m-1 hover:bg-white/10 active:bg-white/15 transition-colors"
-              title="Ver movimientos de negocio"
-            >
-              <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-brand-200">
-                <Store className="w-3 h-3" /> Negocio
-              </span>
-              <span className="block text-sm sm:text-base font-bold tabular-nums mt-0.5 truncate">
-                {formatMoney(summary.businessProfit)}
-              </span>
-              <span className="block text-2xs text-brand-200/90 tabular-nums">
-                margen {summary.profitMargin.toFixed(1)}%
-              </span>
-            </button>
-          </div>
+      {/* ── Fila de KPIs ──
+          Antes esto era un héroe con degradado de marca y las tres cifras
+          dentro, en blanco sobre azul. Se cambió por cuatro fichas del mismo
+          material que el resto del tablero: un panel de estado se lee mejor
+          cuando todas las cifras tienen el mismo peso visual y se comparan
+          entre sí, y el degradado obligaba a un juego de colores propio
+          (texto blanco, brand-200) que no existía en ninguna otra pantalla. */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 animate-slide-up">
+        <div className="saas-card p-4">
+          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Saldo de {(() => { const d = new Date(currentViewDate); return `${d.toLocaleDateString(LOCALE, { month: 'long' })}`; })()}
+          </p>
+          <p className={`text-2xl font-bold tabular-nums mt-1 truncate ${summary.available >= 0 ? 'text-slate-900 dark:text-white' : 'text-expense-600 dark:text-expense-400'}`}>
+            {formatMoney(summary.available)}
+          </p>
+          <p className="text-2xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Ingresos − gastos del mes
+          </p>
         </div>
+
+        <button
+          onClick={() => { navigateTo('movements' as TabId, 'income'); }}
+          className="saas-card p-4 text-left hover:border-brand-500 dark:hover:border-brand-400 transition-colors"
+          title="Ver ingresos"
+        >
+          <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <ArrowDown className="w-3 h-3" /> Ingresos
+          </span>
+          <span className="block text-2xl font-bold tabular-nums mt-1 truncate text-income-600 dark:text-income-400">
+            {formatMoney(summary.totalIncome)}
+          </span>
+          <span className="block text-2xs text-slate-500 dark:text-slate-400 mt-0.5">del mes en curso</span>
+        </button>
+
+        <button
+          onClick={() => { navigateTo('movements' as TabId, 'expense'); }}
+          className="saas-card p-4 text-left hover:border-brand-500 dark:hover:border-brand-400 transition-colors"
+          title="Ver gastos"
+        >
+          <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <ArrowUp className="w-3 h-3" /> Gastos
+          </span>
+          <span className="block text-2xl font-bold tabular-nums mt-1 truncate text-expense-600 dark:text-expense-400">
+            {formatMoney(summary.totalSpent)}
+          </span>
+          <span className="block text-2xs text-slate-500 dark:text-slate-400 mt-0.5">del mes en curso</span>
+        </button>
+
+        <button
+          onClick={() => { navigateTo('movements' as TabId, 'business'); }}
+          className="saas-card p-4 text-left hover:border-brand-500 dark:hover:border-brand-400 transition-colors"
+          title="Ver movimientos de negocio"
+        >
+          <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <Store className="w-3 h-3" /> Resultado del negocio
+          </span>
+          <span className={`block text-2xl font-bold tabular-nums mt-1 truncate ${summary.businessProfit >= 0 ? 'text-business-600 dark:text-business-400' : 'text-expense-600 dark:text-expense-400'}`}>
+            {formatMoney(summary.businessProfit)}
+          </span>
+          <span className="block text-2xs text-slate-500 dark:text-slate-400 mt-0.5 tabular-nums">
+            margen {summary.profitMargin.toFixed(1)}%
+          </span>
+        </button>
       </div>
 
       {/* Últimos movimientos: antes iba después de las tarjetas de categorías

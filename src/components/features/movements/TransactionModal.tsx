@@ -326,10 +326,10 @@ export function TransactionModal({
                     onClick={() => setBusinessType(bt)}
                     className={`flex-1 py-1 rounded-md text-2xs font-semibold transition-all flex items-center justify-center gap-1 ${
                       businessType === bt
-                        // Negocio seleccionado va en violeta, como su badge en
-                        // el resto de la app (ver ScopeBadge); Personal no
+                        // Negocio seleccionado va en terracota, como su badge
+                        // en el resto de la app (ver ScopeBadge); Personal no
                         // tiene color semántico propio, así que conserva el
-                        // azul genérico de "opción activa".
+                        // verde genérico de "opción activa".
                         ? bt === 'business'
                           ? 'bg-business-600 text-white'
                           : 'bg-brand-600 text-white'

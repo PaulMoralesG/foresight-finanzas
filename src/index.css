@@ -1,41 +1,16 @@
-/* Inter — self-hosted (woff2 latin) para render instantáneo sin dependencia de Google Fonts.
-   Los archivos viven en /public/fonts y el service worker los precachea para uso offline. */
-
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/Inter-400.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/fonts/Inter-500.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('/fonts/Inter-600.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/Inter-700.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 800;
-  font-display: swap;
-  src: url('/fonts/Inter-800.woff2') format('woff2');
-}
+/* Fuentes autohospedadas vía @fontsource: los .woff2 entran en el bundle de
+   Vite, así que siguen funcionando sin conexión y sin tocar el CSP, igual que
+   hacía la copia manual de Inter que vivía en /public/fonts.
+   Fraunces para títulos, IBM Plex Sans para interfaz, IBM Plex Mono para cifras.
+   Solo el subconjunto `latin`: son ~120 KB en total, contra ~600 KB si se
+   importaran todos los alfabetos que trae cada paquete — y el precache del
+   service worker se los lleva todos (globPatterns incluye woff2). */
+@import '@fontsource/ibm-plex-sans/latin-400.css';
+@import '@fontsource/ibm-plex-sans/latin-500.css';
+@import '@fontsource/ibm-plex-sans/latin-600.css';
+@import '@fontsource/ibm-plex-mono/latin-400.css';
+@import '@fontsource/ibm-plex-mono/latin-500.css';
+@import '@fontsource/fraunces/latin-600.css';
 
 @tailwind base;
 @tailwind components;
@@ -43,7 +18,7 @@
 
 /* Checkbox indeterminate state — visual dash for partial selections */
 input[type="checkbox"]:indeterminate {
-  @apply bg-blue-500 border-blue-500;
+  @apply bg-brand-600 border-brand-600;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='white'%3E%3Crect x='4' y='9' width='12' height='2' rx='1'/%3E%3C/svg%3E");
 }
 
@@ -98,6 +73,24 @@ input[type="checkbox"]:indeterminate {
        monto para leerlo tiene que poder hacerlo. Si algún contenedor concreto
        necesita restringir gestos, se le aplica a ÉL, no al body. */
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  /* Los títulos van en la serif: es lo que le da el aire de libro de cuentas
+     al que se parece la app. La interfaz (botones, etiquetas, tablas) se queda
+     en la sans — mezclar las dos en controles pequeños se lee peor. */
+  h1, h2, h3, h4 {
+    /* theme() y no `@apply font-display`: Tailwind reserva `font-display`
+       para el descriptor CSS del mismo nombre y no genera esa utilidad. */
+    font-family: theme('fontFamily.display');
+    @apply font-semibold;
+    text-wrap: balance;
+  }
+
+  /* Cifras siempre en la mono, alineadas en columna. La clase `tabular-nums`
+     ya estaba repartida por toda la app; aquí además cambia de familia. */
+  .tabular-nums {
+    font-family: theme('fontFamily.mono');
+    font-variant-numeric: tabular-nums;
   }
 
   /* El contenedor raíz de React debe llenar todo el viewport */
@@ -162,7 +155,13 @@ input[type="checkbox"]:indeterminate {
      nivel 2 (un panel de acciones), no nivel 3 (no bloquea nada). */
   .saas-card {
     @apply bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800;
-    @apply shadow-sm hover:shadow-md transition-shadow duration-200;
+    /* Sombra difusa y baja en vez de la caja dura de antes: la tarjeta se
+       apoya en el papel, no flota sobre él. */
+    box-shadow: 0 1px 2px rgb(20 32 28 / 0.06), 0 8px 24px -12px rgb(20 32 28 / 0.18);
+    @apply transition-shadow duration-200;
+  }
+  html.dark .saas-card {
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -12px rgb(0 0 0 / 0.5);
   }
 
   .saas-input {
@@ -187,12 +186,16 @@ input[type="checkbox"]:indeterminate {
 
   .saas-btn-primary {
     @apply saas-btn bg-brand-600 hover:bg-brand-700 text-white;
-    @apply focus-visible:ring-brand-500 shadow-sm shadow-brand-500/20;
+    @apply focus-visible:ring-brand-500;
+  }
+  html.dark .saas-btn-primary {
+    @apply bg-brand-400 hover:bg-brand-300 text-brand-950;
   }
 
   .saas-btn-secondary {
-    @apply saas-btn bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300;
-    @apply hover:bg-slate-200 dark:hover:bg-slate-700 focus-visible:ring-slate-400;
+    @apply saas-btn bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300;
+    @apply border border-slate-300 dark:border-slate-800;
+    @apply hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:ring-slate-400;
   }
 
   .saas-btn-ghost {
@@ -201,8 +204,8 @@ input[type="checkbox"]:indeterminate {
   }
 
   .saas-btn-danger {
-    @apply saas-btn bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400;
-    @apply hover:bg-red-100 dark:hover:bg-red-900 focus-visible:ring-red-500;
+    @apply saas-btn bg-expense-600 text-white hover:bg-expense-700;
+    @apply focus-visible:ring-expense-500;
   }
 
   .saas-btn-sm { @apply px-2 py-1 text-xs gap-1; }
@@ -240,7 +243,11 @@ input[type="checkbox"]:indeterminate {
   .saas-badge-red    { @apply saas-badge bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400; }
   .saas-badge-blue   { @apply saas-badge bg-brand-50 dark:bg-brand-950 text-brand-700 dark:text-brand-400; }
   .saas-badge-slate  { @apply saas-badge bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400; }
-  .saas-badge-violet { @apply saas-badge bg-violet-50 dark:bg-violet-950 text-violet-700 dark:text-violet-400; }
+  /* Negocio. Usa la rampa `business` (terracota) y no `violet`, que era un
+     color suelto de Tailwind sin relación con el resto del sistema: el
+     selector de Ámbito del modal ya pintaba `bg-business-600`, así que el
+     badge y el control que lo produce iban en colores distintos. */
+  .saas-badge-business { @apply saas-badge bg-business-50 dark:bg-business-950 text-business-700 dark:text-business-400; }
 
   /* Chip de filtro activo (removible) */
   .saas-chip-filter {
@@ -250,7 +257,7 @@ input[type="checkbox"]:indeterminate {
     @apply hover:bg-brand-100 dark:hover:bg-brand-900 transition-colors cursor-pointer;
   }
   .saas-chip-filter-category {
-    @apply saas-chip-filter bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800;
+    @apply saas-chip-filter bg-business-50 dark:bg-business-950 text-business-700 dark:text-business-400 border-business-200 dark:border-business-800;
   }
 
   /* Celda clickeable para filtrar */
@@ -263,8 +270,8 @@ input[type="checkbox"]:indeterminate {
     @apply w-full text-sm;
   }
   .saas-table thead th {
-    @apply text-left px-4 py-2.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider;
-    @apply border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50;
+    @apply text-left px-4 py-2.5 text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider;
+    @apply border-b border-slate-200 dark:border-slate-800;
   }
   .saas-table tbody td {
     @apply px-4 py-2.5 border-b border-slate-100 dark:border-slate-800/50;

@@ -390,7 +390,7 @@ export function MovementsPage() {
                       — una función que existía solo en una de las dos formas
                       de ver la lista. El badge de Ámbito además llevaba su
                       propio azul a mano en vez de ScopeBadge (que ya es
-                      violeta para Negocio); aquí quedaba desincronizado. */}
+                      terracota para Negocio); aquí quedaba desincronizado. */}
                   <div className="flex items-center justify-between gap-1.5">
                     <div className="flex items-center gap-1 flex-wrap">
                       <button
