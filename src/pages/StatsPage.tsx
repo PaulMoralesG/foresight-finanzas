@@ -10,7 +10,7 @@ import { formatMoney, MONTH_NAMES, formatDateLong, LOCALE, safeParseDate, downlo
 import { movementsToCsv } from '@/lib/movements-csv';
 import { useStatsPeriod, pctChange } from '@/hooks/useStatsPeriod';
 import { getCategoryById } from '@/config/categories';
-import { generatePDFReport } from '@/lib/pdf-generator';
+import { imprimirReporte } from '@/lib/print-report';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { TrendChart } from '@/components/features/stats/TrendChart';
 
@@ -37,7 +37,6 @@ export function StatsPage() {
     setStatsYear(d.getFullYear());
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [isExporting, setIsExporting] = useState(false);
   const [isExportingCSV, setIsExportingCSV] = useState(false);
   const [exportFilter, setExportFilter] = useState<'all' | 'personal' | 'business'>('all');
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
@@ -106,25 +105,17 @@ export function StatsPage() {
     return `${filterLabel} - ${fmt(statsFromDate!)} - ${fmt(statsToDate!)}`;
   }, [statsMode, statsMonth, statsYear, statsFromDate, statsToDate, getFilterLabel]);
 
-  // ── PDF: download ──
-  const handleDownloadPDF = async () => {
+  // ── PDF: diálogo de impresión del navegador ("Guardar como PDF") ──
+  // Antes se generaba con jsPDF (183 KB gzip entre jspdf, autotable y
+  // html2canvas). El navegador no informa de si el usuario guardó o
+  // canceló, así que aquí no hay toast de éxito.
+  const handleDownloadPDF = () => {
     const exportData = getExportData();
     if (exportData.length === 0) return;
-    setIsExporting(true);
     try {
-      const reportLabel = getReportLabel();
-      const viewDate = getViewDate();
-      const { doc } = await generatePDFReport(exportData, viewDate, reportLabel);
-      const monthStr = viewDate.toISOString().slice(0, 7);
-      const filename = `foresight-reporte-${monthStr}-${reportLabel.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}.pdf`;
-      const blob = doc.output('blob') as unknown as Blob;
-      const outcome = await downloadBlob(blob, filename);
-      if (outcome === 'cancelled') return; // el usuario cerró el menú de compartir
-      addToast(outcome === 'shared' ? 'PDF listo para compartir ✅' : 'PDF descargado ✅', 'success');
+      imprimirReporte(exportData, getViewDate(), getReportLabel());
     } catch {
-      addToast('Error al descargar el PDF', 'error');
-    } finally {
-      setIsExporting(false);
+      addToast('Este navegador no permite imprimir desde la app', 'error');
     }
   };
 
@@ -313,20 +304,16 @@ export function StatsPage() {
             {periodLabel}
           </span>
 
-          {/* Mobile: export buttons inline (descarga directa vía Web Share API) */}
+          {/* Mobile: export buttons inline (PDF vía diálogo de impresión, Excel vía Web Share API) */}
           <div className="flex items-center gap-1 md:hidden flex-shrink-0">
             <button
               onClick={handleDownloadPDF}
-              disabled={isExporting || filteredData.length === 0}
+              disabled={filteredData.length === 0}
               className="saas-btn-primary saas-btn-sm flex items-center gap-1 text-2xs"
-              title="Descargar PDF"
-              aria-label="Descargar PDF"
+              title="Imprimir o guardar como PDF"
+              aria-label="Imprimir o guardar como PDF"
             >
-              {isExporting ? (
-                <Loader2 className="animate-spin w-3 h-3" />
-              ) : (
-                <FileText className="w-3 h-3" />
-              )}
+              <FileText className="w-3 h-3" />
               <span>PDF</span>
             </button>
             <button
@@ -374,20 +361,16 @@ export function StatsPage() {
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* PDF download button (desktop) */}
+          {/* PDF button (desktop): abre el diálogo de impresión del navegador */}
           <button
             onClick={handleDownloadPDF}
-            disabled={isExporting || filteredData.length === 0}
+            disabled={filteredData.length === 0}
             className="saas-btn-primary saas-btn-sm hidden md:inline-flex items-center gap-1 text-2xs md:text-2xs"
-            title="Descargar PDF"
-            aria-label="Descargar PDF"
+            title="Imprimir o guardar como PDF"
+            aria-label="Imprimir o guardar como PDF"
           >
-            {isExporting ? (
-              <Loader2 className="animate-spin w-3 h-3" />
-            ) : (
-              <FileText className="w-3 h-3" />
-            )}
-            <span>Descargar PDF</span>
+            <FileText className="w-3 h-3" />
+            <span>Guardar PDF</span>
           </button>
 
           {/* Excel download button (desktop) */}

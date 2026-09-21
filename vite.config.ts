@@ -78,33 +78,16 @@ export default defineConfig({
         skipWaiting: false,
         clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        // Precache solo el shell esencial. Los chunks pesados (PDF, charts,
-        // páginas lazy) se cachean on-demand vía runtimeCaching — precachearlos
-        // hacía que el SW descargara ~2.2 MB en cada visita nueva y compitiera
-        // con los assets críticos por ancho de banda (FCP/LCP peores en móvil).
-        // Fuera del precache solo lo que pesa de verdad y se pide bajo demanda
-        // explícita (exportar un reporte):
-        //
-        //   pdf-generator 414 KB · html2canvas 197 KB · index.es 155 KB · purify 28 KB
-        //   StatsPage      ~30 KB  (era 405 KB cuando arrastraba Recharts)
-        //
-        // (vendor-monitoring, el chunk de Sentry de 471 KB, ya no existe: se
-        // sustituyó por lib/error-reporter, que va dentro del bundle principal.)
-        //
-        // LoginPage (19 KB), SavingsPage (13 KB) y ReportModal (6 KB) SÍ se
-        // precachean: 38 KB entre los tres. Estaban fuera y eso los dejaba
-        // expuestos a que un despliegue borrara su chunk del servidor mientras
-        // el shell viejo seguía pidiéndolo; por 38 KB no compensa.
-        //
-        // StatsPage se queda fuera por su tamaño, así que su chunk sí puede
-        // caducar: de eso se encarga lazyConRecuperacion en src/App.tsx.
-        globIgnores: [
-          '**/html2canvas*.js',
-          '**/index.es-*.js',
-          '**/purify*.js',
-          '**/StatsPage-*.js',
-          '**/pdf-generator-*.js',
-        ],
+        // Se precachea todo. Antes había una lista de exclusiones (globIgnores)
+        // con los chunks pesados —Sentry 471 KB, jsPDF+html2canvas ~800 KB,
+        // StatsPage 405 KB con Recharts— porque precachearlos hacía que el SW
+        // descargara ~2.2 MB en cada visita nueva y compitiera con los assets
+        // críticos por ancho de banda. Esos chunks ya no existen: Sentry es
+        // lib/error-reporter, el PDF es window.print() y StatsPage pesa ~25 KB.
+        // Las páginas lazy que quedan (StatsPage, LoginPage, SavingsPage) suman
+        // ~55 KB: dejarlas fuera solo las expondría a que un despliegue borrara
+        // su chunk mientras el shell viejo lo sigue pidiendo (ver
+        // lib/lazy-recovery, que sigue como red de seguridad).
         runtimeCaching: [
           {
             // Chunks con hash (inmutables): CacheFirst, seguros para cachear siempre
@@ -134,9 +117,6 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,
     // Code-splitting: separa vendors estables del bundle principal.
-    // NOTA: NO poner jspdf en manualChunks — Rollup lo hoistea como
-    // imports estáticos al entry (rompe el lazy de ReportModal/StatsPage).
-    // Con esos módulos lazy, jspdf queda en su chunk dinámico.
     rollupOptions: {
       output: {
         manualChunks: {
