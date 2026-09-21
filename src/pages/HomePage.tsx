@@ -11,8 +11,8 @@ import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useMonthlyData } from '@/hooks/useFinance';
 import { useStatsPeriod, pctChange } from '@/hooks/useStatsPeriod';
-import { formatMoney, LOCALE, roundMoney, safeParseDate } from '@/lib/utils';
-import { computeSavingsByConcept } from '@/lib/savings';
+import { formatMoney, LOCALE, safeParseDate } from '@/lib/utils';
+import { goalMath, goalTotals } from '@/lib/goals';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, getCategoryById } from '@/config/categories';
 import { MonthNav } from '@/components/layout/MonthNav';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -570,7 +570,7 @@ export function HomePage() {
           <BudgetWatchlist />
           <DebtMiniCard />
           <NetWorthWidget />
-          <SavingsGoalWidget totalIncome={summary.totalIncome} />
+          <SavingsGoalWidget />
         </div>
       </div>
     </div>
@@ -578,34 +578,26 @@ export function HomePage() {
 }
 
 /* ─── Ahorro del Mes Widget (solo lectura + CTA a Planes) ─── */
-function SavingsGoalWidget({ totalIncome }: { totalIncome: number }) {
-  const currentViewDate = useFinanceStore((s) => s.currentViewDate);
-  const expenses = useFinanceStore((s) => s.expenses);
+/* ─── Metas de ahorro: mini-resumen con CTA a Metas (goalsMiniCard) ───
+   Antes agrupaba gastos de categoría "ahorro" por texto de concepto; desde
+   la 3.8 cada meta lleva su propio `saved`, así que esto lee directo de
+   savingsGoals en vez de escanear movimientos. */
+function SavingsGoalWidget() {
+  const savingsGoals = useFinanceStore((s) => s.savingsGoals);
   const navigateTo = useUiStore((s) => s.navigateTo);
 
-  // Agrupar ahorros del mes por concepto
-  const savingsByConcept = useMemo(() => {
-    const d = new Date(currentViewDate);
-    const byConcept = computeSavingsByConcept(expenses, {
-      year: d.getFullYear(),
-      month: d.getMonth(),
-    });
-    return Array.from(byConcept.entries())
-      .map(([concept, saved]) => ({ concept, saved }))
-      .sort((a, b) => b.saved - a.saved);
-  }, [expenses, currentViewDate]);
+  const totals = useMemo(() => goalTotals(savingsGoals), [savingsGoals]);
+  const top = useMemo(
+    () => savingsGoals.slice(0, 3).map((g) => ({ goal: g, m: goalMath(g) })),
+    [savingsGoals],
+  );
 
-  const totalSaved = roundMoney(savingsByConcept.reduce((s, g) => s + g.saved, 0));
-  const savingsPct = totalIncome > 0 ? Math.round((totalSaved / totalIncome) * 100) : 0;
-
-  const emoji = totalSaved > 10000 ? '💰' : totalSaved > 5000 ? '🐷' : totalSaved > 1000 ? '🪙' : totalSaved > 0 ? '🌱' : '💤';
-
-  if (savingsByConcept.length === 0) {
+  if (savingsGoals.length === 0) {
     return (
       <EmptyState
         icon={PiggyBank}
-        title="Sin movimientos de ahorro este mes"
-        description="Crea una meta en Planes y aporta con el botón Aportar"
+        title="Sin metas activas"
+        description="Define un fondo de emergencia o un objetivo y la app calcula el aporte mensual"
         action={{ label: 'Crear meta', icon: Plus, onClick: () => navigateTo('goals' as TabId) }}
       />
     );
@@ -614,48 +606,46 @@ function SavingsGoalWidget({ totalIncome }: { totalIncome: number }) {
   return (
     <div className="saas-card p-4 animate-slide-up">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-          <PiggyBank className="text-brand-500 mr-2" />
-          Ahorro del mes
+        <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <PiggyBank className="w-4 h-4 text-brand-500" />
+          Metas de ahorro
         </h2>
-        <div className="flex items-center gap-2">
-          {savingsPct > 0 && (
-            <span className="saas-badge-green text-2xs font-semibold px-1.5 py-0.5">
-              {savingsPct}% del ingreso
-            </span>
-          )}
-          <button
-            onClick={() => navigateTo('goals' as TabId)}
-            className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
-            title="Ver metas en Planes"
-          >
-            Ver metas →
-          </button>
-          <span className="text-lg">{emoji}</span>
+        <span className="text-2xs text-slate-500 dark:text-slate-400">
+          {savingsGoals.length} {savingsGoals.length === 1 ? 'meta activa' : 'metas activas'}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div>
+          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Ahorrado</p>
+          <p className="text-lg font-bold tabular-nums text-slate-900 dark:text-white">{formatMoney(totals.saved)}</p>
+        </div>
+        <div>
+          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">A guardar por mes</p>
+          <p className="text-lg font-bold tabular-nums text-slate-900 dark:text-white">{formatMoney(totals.monthly)}</p>
         </div>
       </div>
 
-      {/* Total */}
-      <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400 tabular-nums mb-3">
-        {formatMoney(totalSaved)}
-      </p>
-
-      {/* Conceptos individuales */}
       <div className="space-y-2.5">
-        {savingsByConcept.map((g) => (
-          <div key={g.concept} className="flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <PiggyBank className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">
-                {g.concept}
-              </span>
+        {top.map(({ goal, m }) => (
+          <div key={goal.id}>
+            <div className="flex items-center justify-between text-xs mb-0.5">
+              <span className="truncate text-slate-700 dark:text-slate-300">{goal.concept}</span>
+              <span className="text-slate-500 dark:text-slate-400 tabular-nums flex-shrink-0">{m.pct.toFixed(0)}%</span>
             </div>
-            <span className="text-xs font-bold text-slate-600 dark:text-slate-400 tabular-nums flex-shrink-0">
-              {formatMoney(g.saved)}
-            </span>
+            <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div className="h-full bg-brand-500 dark:bg-brand-400 rounded-full" style={{ width: `${m.pct}%` }} />
+            </div>
           </div>
         ))}
       </div>
+
+      <button
+        onClick={() => navigateTo('goals' as TabId)}
+        className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline mt-3 inline-block"
+      >
+        Ver metas →
+      </button>
     </div>
   );
 }
@@ -666,9 +656,10 @@ function NetWorthWidget() {
   const expenses = useFinanceStore((s) => s.expenses);
   const assets = useFinanceStore((s) => s.assets);
   const debts = useFinanceStore((s) => s.debts);
+  const savingsGoals = useFinanceStore((s) => s.savingsGoals);
   const goal = useFinanceStore((s) => s.settings.netWorthGoal);
   const navigateTo = useUiStore((s) => s.navigateTo);
-  const nw = useMemo(() => netWorthNow({ accounts, expenses, assets, debts }), [accounts, expenses, assets, debts]);
+  const nw = useMemo(() => netWorthNow({ accounts, expenses, assets, debts, savingsGoals }), [accounts, expenses, assets, debts, savingsGoals]);
 
   // Sin cuentas, activos ni deudas no hay patrimonio que mostrar.
   if (accounts.length === 0 && assets.length === 0 && debts.length === 0) return null;

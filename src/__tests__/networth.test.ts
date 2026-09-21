@@ -4,12 +4,13 @@
 
 import { describe, it, expect } from 'vitest';
 import { netWorthNow, netWorthHistory, needsSnapshot } from '@/lib/networth';
-import type { Account, Asset, Debt, Transaction } from '@/types';
+import type { Account, Asset, Debt, SavingsGoal, Transaction } from '@/types';
 
 const at = '2026-09-01T00:00:00.000Z';
 const cuenta = (id: string, initialBalance: number): Account => ({ id, name: id, kind: 'Banco', initialBalance, updated_at: at });
 const activo = (value: number): Asset => ({ id: `a${value}`, name: 'Moto', tag: 'personal', group: 'Otros activos', value, updated_at: at });
 const deuda = (balance: number): Debt => ({ id: `d${balance}`, name: 'Tarjeta', tag: 'personal', kind: 'Tarjeta de crédito', balance, annualRate: 0, minPayment: 0, payDay: null, updated_at: at });
+const meta = (savedFromAccounts: number): SavingsGoal => ({ id: `g${savedFromAccounts}`, concept: 'Meta', tag: 'personal', target: 1000, targetDate: null, saved: savedFromAccounts, savedFromAccounts, updated_at: at });
 let n = 0;
 const mov = (o: Partial<Transaction>): Transaction => ({ id: `t${++n}`, type: 'expense', amount: 100, concept: '', date: '2026-09-10', category: 'comida', method: 'card', businessType: 'personal', updated_at: at, ...o });
 
@@ -17,12 +18,12 @@ describe('netWorthNow', () => {
   it('activos = cuentas positivas + activos manuales + metas desde cuentas; pasivos = deudas + cuentas negativas', () => {
     const nw = netWorthNow({
       accounts: [cuenta('banco', 1000), cuenta('tarjeta', -200)],
-      expenses: [
-        mov({ type: 'expense', amount: 150, category: 'ahorro', accountId: 'banco' }), // meta desde cuenta: sigue siendo tuyo
-        mov({ type: 'expense', amount: 999, category: 'ahorro' }), // sin cuenta: no restó, no se suma
-      ],
+      expenses: [mov({ type: 'expense', amount: 150, category: 'ahorro', accountId: 'banco' })],
       assets: [activo(3000)],
       debts: [deuda(2400)],
+      // savedFromAccounts=150 es lo que salió de la cuenta 'banco'; el resto
+      // del aporte a la meta (si lo hubiera, sin cuenta) no cuenta dos veces.
+      savingsGoals: [meta(150)],
     });
     expect(nw.liquid).toBe(850); // 1000 − 150
     expect(nw.accountsDebt).toBe(200);
@@ -35,7 +36,7 @@ describe('netWorthNow', () => {
   });
 
   it('sin nada, todo en cero', () => {
-    const nw = netWorthNow({ accounts: [], expenses: [], assets: [], debts: [] });
+    const nw = netWorthNow({ accounts: [], expenses: [], assets: [], debts: [], savingsGoals: [] });
     expect(nw).toMatchObject({ assets: 0, liabilities: 0, net: 0 });
   });
 });
@@ -47,7 +48,7 @@ describe('cierres mensuales', () => {
   });
 
   it('needsSnapshot solo cuando cambia algo más de medio centavo', () => {
-    const now = netWorthNow({ accounts: [cuenta('b', 100)], expenses: [], assets: [], debts: [] });
+    const now = netWorthNow({ accounts: [cuenta('b', 100)], expenses: [], assets: [], debts: [], savingsGoals: [] });
     expect(needsSnapshot(undefined, now)).toBe(true);
     expect(needsSnapshot({ month: '2026-09', assets: 100, liabilities: 0, net: 100, updated_at: at }, now)).toBe(false);
     expect(needsSnapshot({ month: '2026-09', assets: 100.004, liabilities: 0, net: 100, updated_at: at }, now)).toBe(false);

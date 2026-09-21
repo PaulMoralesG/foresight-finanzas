@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { shouldImportLegacy, hasLegacyBlobs, buildImportRows, type LegacyProfileRow } from '@/lib/legacy-import';
-import type { Transaction } from '@/types';
+import type { Transaction, SavingsGoal } from '@/types';
 
 // Los blobs legacy tienen ids NUMÉRICOS (así los dejó la versión vieja)
 const legacyExpense = {
@@ -25,7 +25,8 @@ function makeProfile(overrides: Partial<LegacyProfileRow> = {}): LegacyProfileRo
     legacy_imported: false,
     expenses: [legacyExpense],
     budgets: { '2026-07': 5000 },
-    savings_goal: [{ id: 'legacy-1', concept: 'Casa', target: 100000, updated_at: '2026-07-16T10:00:00.000Z' }],
+    // Forma legacy real: sin tag/targetDate/saved/savedFromAccounts (fase 3.8).
+    savings_goal: [{ id: 'legacy-1', concept: 'Casa', target: 100000, updated_at: '2026-07-16T10:00:00.000Z' }] as unknown as SavingsGoal[],
     custom_expense_categories: [{ id: 'custom_test', label: 'Test', icon: '📌', color: 'bg-slate-100' }],
     custom_income_categories: [],
     last_synced_at: '2026-07-20T10:00:00.000Z',

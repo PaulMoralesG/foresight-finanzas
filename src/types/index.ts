@@ -77,10 +77,23 @@ export interface Category {
   updated_at?: string;
 }
 
+/**
+ * Meta de ahorro (Balance Dual: `goals`). `saved` es el total ahorrado,
+ * un número que la propia meta lleva (no se deriva escaneando gastos por
+ * texto); `savedFromAccounts` es la parte de `saved` que salió realmente
+ * de una cuenta, la que cuenta para el patrimonio (lib/networth.ts) — un
+ * aporte "solo para registrar avance" no resta de ningún saldo, así que
+ * no debe sumarse dos veces.
+ */
 export interface SavingsGoal {
   id: string; // UUID
-  concept: string;
+  concept: string; // nombre de la meta
+  tag: BusinessType;
   target: number;
+  /** Mes objetivo 'YYYY-MM', o null si no se fija fecha. */
+  targetDate: string | null;
+  saved: number;
+  savedFromAccounts: number;
   updated_at: string; // ISO — usado por el merge de sync
 }
 

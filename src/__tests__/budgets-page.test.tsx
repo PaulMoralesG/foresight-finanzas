@@ -120,7 +120,7 @@ describe('BudgetsPage — Plan 12 meses y Reporte anual', () => {
 describe('migración v12 y useBudget', () => {
   it('convierte el presupuesto global en líneas por categoría al migrar', () => {
     const opciones = useFinanceStore.persist.getOptions();
-    expect(opciones.version).toBe(12);
+    expect(opciones.version).toBeGreaterThanOrEqual(12);
     const migrado = opciones.migrate!(
       {
         expenses: [mov({ category: 'comida', amount: 300, date: '2026-08-05' }), mov({ category: 'ropa', amount: 100, date: '2026-08-06' })],

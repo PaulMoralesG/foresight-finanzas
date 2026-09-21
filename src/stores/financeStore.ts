@@ -5,8 +5,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { safeParseDate, roundMoney as roundMoneyLocal } from '@/lib/utils';
+import { computeSavingsByConcept, savingsForGoal } from '@/lib/savings';
 import { newId, nowIso } from '@/lib/ids';
-import type { Transaction, MonthlyBudget, FilterType, Category, SavingsGoal, Account, Debt, Settings, Asset, NetWorthSnapshot, BudgetLine } from '@/types';
+import type { Transaction, MonthlyBudget, FilterType, Category, SavingsGoal, Account, Debt, Settings, Asset, NetWorthSnapshot, BudgetLine, BusinessType } from '@/types';
 import { convertGlobalBudgets } from '@/lib/budget-lines';
 import type { BackupData } from '@/lib/backup';
 
@@ -62,9 +63,20 @@ interface FinanceState {
   deleteCustomCategory: (type: 'expense' | 'income', id: string) => void;
 
   // --- Metas de ahorro ---
-  addSavingsGoal: (g: Omit<SavingsGoal, 'id' | 'updated_at'>) => string;
+  /** tag/targetDate/saved son opcionales: quien no los pase obtiene una
+   *  meta personal, sin fecha y en cero, como antes de la 3.8. */
+  addSavingsGoal: (
+    g: { concept: string; target: number; tag?: BusinessType; targetDate?: string | null; saved?: number },
+  ) => string;
   updateSavingsGoal: (id: string, partial: Partial<Omit<SavingsGoal, 'id' | 'updated_at'>>) => void;
   deleteSavingsGoal: (id: string) => void;
+  /** Registrar aporte (contribForm de la referencia): suma a `saved` y, si
+   *  se elige cuenta, también a `savedFromAccounts` y deja el aporte como
+   *  gasto del mes en categoría 'ahorro' con esa cuenta. */
+  contributeToGoal: (
+    id: string,
+    contrib: { amount: number; date: string; accountId: string | null },
+  ) => void;
 
   // --- Cuentas ---
   addAccount: (a: Omit<Account, 'id' | 'updated_at'>) => string;
@@ -251,6 +263,38 @@ function migrateV12(state: Record<string, unknown>): Record<string, unknown> {
   return state;
 }
 
+/**
+ * Migración v13: metas de ahorro con el modelo de Balance Dual (fase 3.8).
+ * Antes el progreso se derivaba buscando gastos categoría 'ahorro' cuyo
+ * concepto de texto coincidiera con el nombre de la meta; ahora cada meta
+ * lleva su propio `saved`. Para no perder el progreso ya hecho, una meta
+ * sin `saved`/`tag` todavía (v12 o anterior) recibe como `saved` inicial
+ * el histórico completo por concepto (savingsForGoal), calculado una sola
+ * vez aquí. `savedFromAccounts` arranca en 0: el histórico no distinguía
+ * qué parte de esos aportes salió de una cuenta y cuál no, así que no hay
+ * un valor correcto que reconstruir — es una simplificación consciente.
+ */
+function migrateV13(state: Record<string, unknown>): Record<string, unknown> {
+  if (!Array.isArray(state.savingsGoals)) {
+    state.savingsGoals = [];
+    return state;
+  }
+  const expenses = (Array.isArray(state.expenses) ? state.expenses : []) as Transaction[];
+  const byConcept = computeSavingsByConcept(expenses);
+  state.savingsGoals = (state.savingsGoals as Array<Record<string, unknown>>).map((g) => {
+    if (typeof g.saved === 'number' && typeof g.tag === 'string') return g; // ya en v13
+    const concept = typeof g.concept === 'string' ? g.concept : '';
+    return {
+      ...g,
+      tag: typeof g.tag === 'string' ? g.tag : 'personal',
+      targetDate: typeof g.targetDate === 'string' ? g.targetDate : null,
+      saved: typeof g.saved === 'number' ? g.saved : savingsForGoal(byConcept, concept),
+      savedFromAccounts: typeof g.savedFromAccounts === 'number' ? g.savedFromAccounts : 0,
+    };
+  });
+  return state;
+}
+
 export const useFinanceStore = create<FinanceState>()(
   persist(
     (set, get) => ({
@@ -380,7 +424,19 @@ export const useFinanceStore = create<FinanceState>()(
       addSavingsGoal: (g) => {
         const id = newId();
         set((state) => ({
-          savingsGoals: [...state.savingsGoals, { ...g, id, updated_at: nowIso() }],
+          savingsGoals: [
+            ...state.savingsGoals,
+            {
+              concept: g.concept,
+              target: g.target,
+              tag: g.tag ?? 'personal',
+              targetDate: g.targetDate ?? null,
+              saved: g.saved ?? 0,
+              savedFromAccounts: 0,
+              id,
+              updated_at: nowIso(),
+            },
+          ],
         }));
         return id;
       },
@@ -398,6 +454,42 @@ export const useFinanceStore = create<FinanceState>()(
           savingsGoals: state.savingsGoals.filter((g) => g.id !== id),
           tombstones: tombstoned(state.tombstones, id),
         })),
+
+      contributeToGoal: (id, contrib) =>
+        set((state) => {
+          const goal = state.savingsGoals.find((g) => g.id === id);
+          if (!goal) return {};
+          const savingsGoals = state.savingsGoals.map((g) =>
+            g.id === id
+              ? {
+                  ...g,
+                  saved: roundMoneyLocal(g.saved + contrib.amount),
+                  savedFromAccounts: roundMoneyLocal(
+                    g.savedFromAccounts + (contrib.accountId ? contrib.amount : 0),
+                  ),
+                  updated_at: nowIso(),
+                }
+              : g,
+          );
+          // Sin cuenta: solo se registra el avance, no hay movimiento que crear
+          // (como en la referencia: "Solo registrar el avance").
+          if (!contrib.accountId) return { savingsGoals };
+          const tx: Transaction = {
+            id: newId(),
+            type: 'expense',
+            amount: contrib.amount,
+            concept: `Aporte a ${goal.concept}`,
+            date: contrib.date,
+            category: 'ahorro',
+            method: 'transfer',
+            businessType: goal.tag,
+            accountId: contrib.accountId,
+            toAccountId: null,
+            created_at: nowIso(),
+            updated_at: nowIso(),
+          };
+          return { savingsGoals, expenses: [...state.expenses, tx] };
+        }),
 
       // ── Presupuesto por categoría ──
       addBudgetLine: (l) => {
@@ -567,10 +659,10 @@ export const useFinanceStore = create<FinanceState>()(
     }),
     {
       name: 'foresight-finance-storage',
-      version: 12,
+      version: 13,
       migrate: (persistedState: unknown, _version: number) => {
         try {
-          return migrateV12(migrateV11(migrateV10(migrateV9(migrateV8(persistedState)))));
+          return migrateV13(migrateV12(migrateV11(migrateV10(migrateV9(migrateV8(persistedState))))));
         } catch (err) {
           // Estado inesperado: arrancar limpio antes que romper la app
           console.error('[financeStore] Migración de estado persistido fallida — reseteando:', err);
