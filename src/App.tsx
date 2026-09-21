@@ -3,7 +3,7 @@
 // ================================================================
 
 import { useEffect, Suspense } from 'react';
-import { Download, RefreshCw, X } from 'lucide-react';
+import { Download, RefreshCw, X } from '@/components/ui/icons.generated';
 import { useAuth, useAuthSession } from '@/hooks/useAuth';
 import { lazyConRecuperacion } from '@/lib/lazy-recovery';
 import { usePWA } from '@/hooks/usePWA';

@@ -4,7 +4,7 @@
 // ================================================================
 
 import { useMemo, useId } from 'react';
-import { X, Calendar, Printer, FileSpreadsheet, Building2, User } from 'lucide-react';
+import { X, Calendar, Printer, FileSpreadsheet, Building2, User } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { formatMoney, MONTH_NAMES, downloadBlob, roundMoney } from '@/lib/utils';

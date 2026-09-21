@@ -3,7 +3,7 @@
 // ================================================================
 
 import { useMemo, useEffect, useRef } from 'react';
-import { ChartNoAxesColumn, Plus, Receipt, ArrowDown, ArrowUp, Store, PiggyBank } from 'lucide-react';
+import { ChartNoAxesColumn, Plus, Receipt, ArrowDown, ArrowUp, Store, PiggyBank } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useMonthlyData } from '@/hooks/useFinance';

@@ -5,7 +5,7 @@
 // ================================================================
 
 import { useMemo, useState } from 'react';
-import { PiggyBank, Plus, Pencil, Trash2, X, Target, Wallet, Check } from 'lucide-react';
+import { PiggyBank, Plus, Pencil, Trash2, X, Target, Wallet, Check } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';

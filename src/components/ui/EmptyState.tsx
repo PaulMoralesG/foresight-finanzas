@@ -8,18 +8,18 @@
 // conviene que sea el mismo en todas partes.
 // ================================================================
 
-import type { LucideIcon } from 'lucide-react';
+import type { IconComponent } from '@/components/ui/Icon';
 
 interface EmptyStateProps {
-  /** Icono de lucide-react. Alternativa: `emoji`. */
-  icon?: LucideIcon;
+  /** Icono del sprite (components/ui/icons.generated). Alternativa: `emoji`. */
+  icon?: IconComponent;
   /** Emoji grande, para las pantallas que usan ese registro (metas de ahorro). */
   emoji?: string;
   title: string;
   /** Segunda línea, opcional: qué hacer para llenar esto. */
   description?: string;
   /** Llamada a la acción, opcional. */
-  action?: { label: string; onClick: () => void; icon?: LucideIcon };
+  action?: { label: string; onClick: () => void; icon?: IconComponent };
   /** `compact` para tarjetas densas (StatsPage), `card` para el resto. */
   variant?: 'card' | 'compact';
 }

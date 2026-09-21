@@ -3,7 +3,7 @@
 // Uso: <Skeleton className="h-4 w-48" /> o <Skeleton variant="card" />
 // ================================================================
 
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp } from '@/components/ui/icons.generated';
 
 interface SkeletonProps {
   className?: string;

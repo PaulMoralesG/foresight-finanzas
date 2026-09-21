@@ -12,7 +12,7 @@
 // ================================================================
 
 import type { ReactNode, CSSProperties } from 'react';
-import { X } from 'lucide-react';
+import { X } from '@/components/ui/icons.generated';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 interface ModalSheetProps {

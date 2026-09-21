@@ -3,7 +3,7 @@
 // ================================================================
 
 import { useState } from 'react';
-import { Pencil, Loader2, Check, Mail, ChevronUp, ChevronRight, Send, Lock, Key, Sun, Moon, LogOut } from 'lucide-react';
+import { Pencil, Loader2, Check, Mail, ChevronUp, ChevronRight, Send, Lock, Key, Sun, Moon, LogOut } from '@/components/ui/icons.generated';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';

@@ -12,7 +12,7 @@
 // ================================================================
 
 import { useState, type KeyboardEvent } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from '@/components/ui/icons.generated';
 
 interface PasswordInputProps {
   id: string;

@@ -3,7 +3,7 @@
 // ================================================================
 
 import { useState, useMemo, useEffect } from 'react';
-import { Layers, ArrowDown, ArrowUp, Store, User as UserIcon, Plus, X, Search, Receipt, ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
+import { Layers, ArrowDown, ArrowUp, Store, User as UserIcon, Plus, X, Search, Receipt, ChevronUp, ChevronDown, Trash2 } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';

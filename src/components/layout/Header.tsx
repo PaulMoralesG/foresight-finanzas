@@ -3,7 +3,7 @@
 // ================================================================
 
 import { useState, useEffect, useRef } from 'react';
-import { Sun, Moon, Settings, LogOut, Wifi, WifiOff, Loader2, CloudOff } from 'lucide-react';
+import { Sun, Moon, Settings, LogOut, Wifi, WifiOff, Loader2, CloudOff } from '@/components/ui/icons.generated';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useAuth } from '@/hooks/useAuth';

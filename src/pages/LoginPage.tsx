@@ -3,7 +3,7 @@
 // ================================================================
 
 import { useState, type FormEvent } from 'react';
-import { TrendingUp, Sun, Moon, MailCheck, Loader2, ArrowLeft, Gauge, FileText, PiggyBank, Smartphone } from 'lucide-react';
+import { TrendingUp, Sun, Moon, MailCheck, Loader2, ArrowLeft, Gauge, FileText, PiggyBank, Smartphone } from '@/components/ui/icons.generated';
 import { LoginForm } from '@/components/features/auth/LoginForm';
 import { SignUpForm } from '@/components/features/auth/SignUpForm';
 import { useAuth } from '@/hooks/useAuth';

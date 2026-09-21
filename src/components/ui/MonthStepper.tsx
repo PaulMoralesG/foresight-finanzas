@@ -11,7 +11,7 @@
 // Aquí vive solo la presentación; cada pantalla le pasa su propio origen.
 // ================================================================
 
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from '@/components/ui/icons.generated';
 import type { ReactNode } from 'react';
 
 interface MonthStepperProps {
