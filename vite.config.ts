@@ -78,16 +78,18 @@ export default defineConfig({
         skipWaiting: false,
         clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        // Precache solo el shell esencial. Los chunks pesados (PDF, charts, Sentry,
+        // Precache solo el shell esencial. Los chunks pesados (PDF, charts,
         // páginas lazy) se cachean on-demand vía runtimeCaching — precachearlos
         // hacía que el SW descargara ~2.2 MB en cada visita nueva y compitiera
         // con los assets críticos por ancho de banda (FCP/LCP peores en móvil).
         // Fuera del precache solo lo que pesa de verdad y se pide bajo demanda
-        // explícita (exportar un reporte) o en segundo plano (telemetría):
+        // explícita (exportar un reporte):
         //
-        //   vendor-monitoring 471 KB · pdf-generator 414 KB
-        //   html2canvas       197 KB · index.es      155 KB · purify 28 KB
-        //   StatsPage         405 KB  (arrastra Recharts entero)
+        //   pdf-generator 414 KB · html2canvas 197 KB · index.es 155 KB · purify 28 KB
+        //   StatsPage     405 KB  (arrastra Recharts entero)
+        //
+        // (vendor-monitoring, el chunk de Sentry de 471 KB, ya no existe: se
+        // sustituyó por lib/error-reporter, que va dentro del bundle principal.)
         //
         // LoginPage (19 KB), SavingsPage (13 KB) y ReportModal (6 KB) SÍ se
         // precachean: 38 KB entre los tres. Estaban fuera y eso los dejaba
@@ -97,7 +99,6 @@ export default defineConfig({
         // StatsPage se queda fuera por su tamaño, así que su chunk sí puede
         // caducar: de eso se encarga lazyConRecuperacion en src/App.tsx.
         globIgnores: [
-          '**/vendor-monitoring-*.js',
           '**/html2canvas*.js',
           '**/index.es-*.js',
           '**/purify*.js',
@@ -141,7 +142,6 @@ export default defineConfig({
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'zustand'],
           'vendor-supabase': ['@supabase/supabase-js'],
-          'vendor-monitoring': ['@sentry/react'],
         },
       },
     },

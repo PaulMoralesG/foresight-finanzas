@@ -3,6 +3,7 @@
 // ================================================================
 
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { reportarError } from '@/lib/error-reporter';
 
 interface Props {
   children: ReactNode;
@@ -27,21 +28,16 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('[ErrorBoundary] Error capturado:', error, info.componentStack);
 
-    // Sentry solo se inicializa en producción (main.tsx, tras el primer
-    // render). getDerivedStateFromError ya "atrapó" el error para React, así
-    // que nunca llega a window.onerror — sin este envío explícito, cualquier
-    // crash de render (incluida una recuperación de chunk fallida) es
-    // invisible en Sentry, y solo queda el console.error de arriba, que nadie
-    // ve fuera de la sesión de quien lo sufrió.
-    if (import.meta.env.PROD) {
-      import('@sentry/react')
-        .then((Sentry) => {
-          Sentry.captureException(error, {
-            contexts: { react: { componentStack: info.componentStack } },
-          });
-        })
-        .catch(() => {});
-    }
+    // getDerivedStateFromError ya "atrapó" el error para React, así que
+    // nunca llega al listener global de window.error — sin este envío
+    // explícito, cualquier crash de render (incluida una recuperación de
+    // chunk fallida) sería invisible en error_log, y solo quedaría el
+    // console.error de arriba, que nadie ve fuera de la sesión de quien lo
+    // sufrió. reportarError solo actúa en producción.
+    reportarError(error, {
+      tag: 'render',
+      componentStack: info.componentStack ?? undefined,
+    });
   }
 
   handleReset = () => {

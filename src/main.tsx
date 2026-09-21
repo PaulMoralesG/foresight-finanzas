@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { syncService } from './lib/sync';
+import { initErrorReporter } from './lib/error-reporter';
 import './index.css';
 
 // Inicializar listeners de ciclo de vida del servicio de sincronización
@@ -14,40 +15,13 @@ createRoot(document.getElementById('root')!).render(
 );
 
 // ================================================================
-// SENTRY — Monitoreo de errores en producción
-// Carga diferida: el chunk de Sentry (~276 KB con Replay) se descarga
-// e inicializa DESPUÉS del primer render para no bloquear FCP/LCP.
+// Monitoreo de errores en producción — reportador propio (lib/error-reporter)
+// Antes esto era Sentry, cargado diferido porque su chunk pesaba 156 KB
+// gzip. El reportador son dos listeners sobre window y un insert en
+// Supabase, así que se instala en el arranque sin esperar al idle.
+// Solo actúa en PROD: la función se protege sola con import.meta.env.PROD.
 // ================================================================
-if (import.meta.env.PROD) {
-  const initSentry = () => {
-    import('@sentry/react')
-      .then((Sentry) => {
-        Sentry.init({
-          dsn: import.meta.env.VITE_SENTRY_DSN || '',
-          environment: import.meta.env.VITE_SENTRY_ENV || 'production',
-          tracesSampleRate: 0.1,
-          replaysSessionSampleRate: 0.1,
-          replaysOnErrorSampleRate: 1.0,
-          integrations: [
-            Sentry.browserTracingIntegration(),
-            Sentry.replayIntegration({
-              // Privacidad financiera: el replay NO captura textos ni montos.
-              // Se ve el flujo de clicks/pantallas (suficiente para debug),
-              // pero los datos sensibles quedan enmascarados.
-              maskAllText: true,
-            }),
-          ],
-        });
-      })
-      .catch(() => {});
-  };
-
-  if ('requestIdleCallback' in window) {
-    (window as Window & typeof globalThis).requestIdleCallback(initSentry, { timeout: 3000 });
-  } else {
-    setTimeout(initSentry, 2000);
-  }
-}
+initErrorReporter();
 
 // Prevenir gestos de navegación izquierda/derecha en iOS (tanto Safari como PWA)
 document.documentElement.style.overscrollBehaviorX = 'none';

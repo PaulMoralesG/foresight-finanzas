@@ -39,13 +39,12 @@ npm run dev
 
 Con eso ya funciona: la app arranca en modo offline-first (usuario local, sin
 login) aunque no exista ningún `.env`. Solo hacen falta variables de entorno
-para conectar Supabase (sincronización en la nube) y/o Sentry (monitoreo de
-errores) — copiá `.env.example` a `.env` y completá lo que necesites:
+para conectar Supabase (sincronización en la nube y registro de errores) —
+copiá `.env.example` a `.env` y completá lo que necesites:
 
 | Variable | Para qué | Obligatoria |
 |---|---|---|
-| `VITE_SUPABASE_URL` / `VITE_SUPABASE_KEY` | Sincronización con Supabase | No — sin ellas, la app corre 100% local |
-| `VITE_SENTRY_DSN` / `VITE_SENTRY_ENV` | Monitoreo de errores en producción | No — Sentry solo se inicializa en build de producción (`import.meta.env.PROD`) |
+| `VITE_SUPABASE_URL` / `VITE_SUPABASE_KEY` | Sincronización con Supabase y registro de errores de producción en `error_log` | No — sin ellas, la app corre 100% local |
 
 Si configurás Supabase, hay que aplicar las migraciones de `supabase/migrations/`
 antes de desplegar — ver la sección siguiente.
@@ -88,6 +87,7 @@ vez cada una. Para un entorno nuevo hay que aplicarlas todas:
 | `0005_composite_pks_and_date_index.sql` | PK compuesta en `expenses`, `reminders` y `savings_goals` + índices por fecha | **Antes** de desplegar (el cliente ya usa `onConflict: 'user_id,id'`) |
 | `0006_drop_reminders_and_fix_profile_timestamps.sql` | Elimina la tabla `reminders` y unifica los timestamps de `profiles` a `timestamptz` | **Después** de desplegar (el cliente nuevo ya no consulta `reminders`) |
 | `0007_rls_perf_and_security_hardening.sql` | RLS con `(select auth.uid())`, `search_path` fijo en `keep_newest`, revoca `EXECUTE` público de `handle_new_user`, y versiona dos `CHECK` + un índice que ya estaban aplicados a mano en producción | Cualquier momento (no rompe compatibilidad con ningún cliente) |
+| `0008_error_log.sql` | Tabla `error_log` donde el cliente registra los errores de producción (sustituye a Sentry). RLS: insert del usuario autenticado sobre su propio `user_id`; sin select por la API — se consulta desde el SQL Editor | **Antes** de desplegar (si no, el cliente nuevo intenta insertar en una tabla que no existe; el fallo se traga, pero no se registra nada) |
 
 Fíjate en el orden de la `0005` y la `0006`: una va antes del deploy y la otra después.
 Invertirlo deja al cliente pidiendo algo que ya no existe, o escribiendo con una clave
