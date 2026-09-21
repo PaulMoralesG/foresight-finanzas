@@ -8,6 +8,7 @@ import { safeParseDate, roundMoney as roundMoneyLocal } from '@/lib/utils';
 import { newId, nowIso } from '@/lib/ids';
 import type { Transaction, MonthlyBudget, FilterType, Category, SavingsGoal, Account, Debt, Settings, Asset, NetWorthSnapshot, BudgetLine } from '@/types';
 import { convertGlobalBudgets } from '@/lib/budget-lines';
+import type { BackupData } from '@/lib/backup';
 
 interface FinanceState {
   // --- Estado ---
@@ -89,6 +90,11 @@ interface FinanceState {
 
   // --- Ajustes ---
   setSettings: (partial: Partial<Omit<Settings, 'updated_at'>>) => void;
+
+  // --- Copia de seguridad ---
+  /** Reemplaza todas las entidades por las del respaldo. Las marcas
+   *  `updated_at` se renuevan para que, con sync, lo importado gane. */
+  importBackup: (data: BackupData) => void;
 
   // --- Selectores (getters) ---
   getMonthlyData: () => Transaction[];
@@ -523,6 +529,29 @@ export const useFinanceStore = create<FinanceState>()(
       // ── Ajustes ──
       setSettings: (partial) =>
         set((state) => ({ settings: { ...state.settings, ...partial, updated_at: nowIso() } })),
+
+      // ── Copia de seguridad ──
+      importBackup: (data) => {
+        const ahora = nowIso();
+        const sellar = <T extends { updated_at?: string }>(rows: T[]): T[] => rows.map((r) => ({ ...r, updated_at: ahora }));
+        set({
+          expenses: sellar(data.expenses),
+          accounts: sellar(data.accounts),
+          debts: sellar(data.debts),
+          assets: sellar(data.assets),
+          networth: sellar(data.networth),
+          budgetLines: sellar(data.budgetLines),
+          budgets: data.budgets,
+          budgetUpdatedAt: Object.fromEntries(Object.keys(data.budgets).map((k) => [k, ahora])),
+          savingsGoals: sellar(data.savingsGoals),
+          customExpenseCategories: sellar(data.customExpenseCategories),
+          customIncomeCategories: sellar(data.customIncomeCategories),
+          settings: { ...data.settings, updated_at: ahora },
+          // Lo que no venga en el respaldo pero existiera en el servidor
+          // volverá con el próximo pull: sin tombstones no hay borrado.
+          tombstones: {},
+        });
+      },
 
       getMonthlyData: () => {
         const { expenses, currentViewDate } = get();

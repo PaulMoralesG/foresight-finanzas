@@ -13,6 +13,8 @@ import { MIN_PASSWORD_LENGTH, STRENGTH_TRACK_CLASS, passwordStrength, validateNe
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { CategoryManager } from '@/components/features/categories/CategoryManager';
+import { StrategySettings } from '@/components/features/settings/StrategySettings';
+import { BackupSettings } from '@/components/features/settings/BackupSettings';
 
 type Section = 'profile' | 'email' | 'password' | 'categories' | null;
 
@@ -471,6 +473,12 @@ export function SettingsPage() {
           )}
         </div>
 
+        {/* ─── Metas y estrategia (Balance Dual: Ajustes) ─── */}
+        <div className="px-4 pt-5 pb-2">
+          <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Metas y estrategia</p>
+        </div>
+        <StrategySettings saveData={saveData} />
+
         {/* ─── Personalización ─── */}
         <div className="px-4 pt-5 pb-2">
           <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Personalización</p>
@@ -516,6 +524,12 @@ export function SettingsPage() {
             />
           </button>
         </div>
+
+        {/* ─── Copia de seguridad ─── */}
+        <div className="px-4 pt-5 pb-2">
+          <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Datos</p>
+        </div>
+        <BackupSettings saveData={saveData} />
 
         {/* ─── Cerrar sesión ─── */}
         <div className="px-4 pt-5 pb-2">
