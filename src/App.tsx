@@ -29,7 +29,8 @@ import { AppLoadingSkeleton, PageSkeleton } from '@/components/ui/Skeleton';
 const StatsPage = lazyConRecuperacion(() => import('@/pages/StatsPage').then(m => ({ default: m.StatsPage })));
 const SavingsPage = lazyConRecuperacion(() => import('@/pages/SavingsPage').then(m => ({ default: m.SavingsPage })));
 const LoginPage = lazyConRecuperacion(() => import('@/pages/LoginPage').then(m => ({ default: m.LoginPage })));
-// Lazy: jspdf + html2canvas (~400 KB) solo se descargan al abrir el reporte
+// Lazy: el modal y la vista imprimible del reporte (compartida con StatsPage)
+// solo hacen falta al exportar; fuera de la carga inicial aunque pesen poco.
 const ReportModal = lazyConRecuperacion(() => import('@/components/features/report/ReportModal').then(m => ({ default: m.ReportModal })));
 
 export function App() {

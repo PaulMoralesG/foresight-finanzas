@@ -3,13 +3,13 @@
 // Para reportes por rango de fechas, usar la pestaña Estadísticas
 // ================================================================
 
-import { useState, useMemo, useId } from 'react';
-import { X, Calendar, Loader2, Download, FileSpreadsheet, Building2, User } from 'lucide-react';
+import { useMemo, useId } from 'react';
+import { X, Calendar, Printer, FileSpreadsheet, Building2, User } from 'lucide-react';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { formatMoney, MONTH_NAMES, downloadBlob, roundMoney } from '@/lib/utils';
 import { movementsToCsv } from '@/lib/movements-csv';
-import { generatePDFReport } from '@/lib/pdf-generator';
+import { imprimirReporte } from '@/lib/print-report';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useScrollLock } from '@/hooks/useScrollLock';
@@ -24,8 +24,6 @@ export function ReportModal() {
   const customExpenseCategories = useFinanceStore((s) => s.customExpenseCategories);
   const customIncomeCategories = useFinanceStore((s) => s.customIncomeCategories);
   const allCustomCats = [...customExpenseCategories, ...customIncomeCategories];
-
-  const [downloading, setDownloading] = useState<string | null>(null);
 
   // Cerrar modal con tecla Escape
   useEscapeKey(closeReportModal, isOpen);
@@ -79,46 +77,34 @@ export function ReportModal() {
     }
   }
 
-  async function handleDownload(type: 'business' | 'personal' | 'all') {
-    setDownloading(type);
-    try {
-      let filtered = monthData;
-      let label = '';
+  // PDF vía diálogo de impresión del navegador ("Guardar como PDF"). Antes lo
+  // generaba jsPDF; el navegador no dice si el usuario guardó o canceló, así
+  // que no hay toast de éxito.
+  function handleDownload(type: 'business' | 'personal' | 'all') {
+    let filtered = monthData;
+    let label: string;
 
-      if (type === 'business') {
-        filtered = monthData.filter(
-          (i) => i.businessType === 'business' || !i.businessType
-        );
-        label = `Negocio - ${monthLabel}`;
-      } else if (type === 'personal') {
-        filtered = monthData.filter((i) => i.businessType === 'personal');
-        label = `Personal - ${monthLabel}`;
-      } else {
-        label = `Completo - ${monthLabel}`;
-      }
-
-      if (filtered.length === 0) {
-        addToast('No hay movimientos para este filtro', 'info');
-        setDownloading(null);
-        return;
-      }
-
-      const { doc } = await generatePDFReport(filtered, viewDate, label);
-      const monthStr = viewDate.toISOString().slice(0, 7);
-      const filename = `foresight-reporte-${monthStr}-${label.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}.pdf`;
-
-      const blob = doc.output('blob') as unknown as Blob;
-      const outcome = await downloadBlob(blob, filename);
-      if (outcome === 'cancelled') return; // el usuario cerró el menú de compartir
-
-      addToast(
-        outcome === 'shared' ? 'Reporte PDF listo para compartir ✅' : 'Reporte PDF descargado ✅',
-        'success',
+    if (type === 'business') {
+      filtered = monthData.filter(
+        (i) => i.businessType === 'business' || !i.businessType
       );
+      label = `Negocio - ${monthLabel}`;
+    } else if (type === 'personal') {
+      filtered = monthData.filter((i) => i.businessType === 'personal');
+      label = `Personal - ${monthLabel}`;
+    } else {
+      label = `Completo - ${monthLabel}`;
+    }
+
+    if (filtered.length === 0) {
+      addToast('No hay movimientos para este filtro', 'info');
+      return;
+    }
+
+    try {
+      imprimirReporte(filtered, viewDate, label);
     } catch {
-      addToast('Error al generar el PDF', 'error');
-    } finally {
-      setDownloading(null);
+      addToast('Este navegador no permite imprimir desde la app', 'error');
     }
   }
 
@@ -211,19 +197,16 @@ export function ReportModal() {
         <div className="space-y-1.5">
           <button
             onClick={() => handleDownload('all')}
-            disabled={downloading !== null}
+            disabled={count === 0}
             className="saas-btn-primary w-full py-2 text-xs"
+            title="Imprimir o guardar como PDF"
           >
-            {downloading === 'all' ? (
-              <Loader2 className="animate-spin w-3 h-3" />
-            ) : (
-              <Download className="w-3 h-3" />
-            )}
+            <Printer className="w-3 h-3" />
             PDF Completo
           </button>
           <button
             onClick={handleCSV}
-            disabled={downloading !== null || count === 0}
+            disabled={count === 0}
             className="saas-btn-secondary w-full py-2 text-xs"
           >
             <FileSpreadsheet className="w-3 h-3" />
@@ -232,26 +215,20 @@ export function ReportModal() {
           <div className="flex gap-1.5">
             <button
               onClick={() => handleDownload('business')}
-              disabled={downloading !== null}
+              disabled={businessCount === 0}
               className="saas-btn-secondary flex-1 py-1.5 text-2xs"
+              title="Imprimir o guardar como PDF"
             >
-              {downloading === 'business' ? (
-                <Loader2 className="animate-spin w-3 h-3" />
-              ) : (
-                <Building2 className="w-3 h-3" />
-              )}
+              <Building2 className="w-3 h-3" />
               Negocio
             </button>
             <button
               onClick={() => handleDownload('personal')}
-              disabled={downloading !== null}
+              disabled={personalCount === 0}
               className="saas-btn-secondary flex-1 py-1.5 text-2xs"
+              title="Imprimir o guardar como PDF"
             >
-              {downloading === 'personal' ? (
-                <Loader2 className="animate-spin w-3 h-3" />
-              ) : (
-                <User className="w-3 h-3" />
-              )}
+              <User className="w-3 h-3" />
               Personal
             </button>
           </div>

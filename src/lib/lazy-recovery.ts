@@ -20,6 +20,12 @@
 // correcto y sabe pedir los chunks nuevos—, así que la salida es activarlo y
 // recargar. Recargar a secas no basta: el worker viejo seguiría sirviendo el
 // mismo shell caducado.
+//
+// Nota (fase de adelgazamiento): desde que se fueron Sentry, jsPDF y Recharts,
+// vite.config.ts precachea TODOS los chunks, así que el shell viejo siempre
+// tiene los suyos en caché y este fallo ya no debería ocurrir en condiciones
+// normales. Se conserva como red de seguridad: un precache incompleto (cuota
+// agotada, instalación interrumpida) vuelve a dejar el chunk expuesto.
 // ================================================================
 
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react';

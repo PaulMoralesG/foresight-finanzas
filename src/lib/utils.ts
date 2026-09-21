@@ -216,11 +216,12 @@ function anchorDownload(blob: Blob, filename: string): DownloadOutcome {
  * producía los dos fallos que se veían en la app:
  *
  *  · `navigator.share()` exige activación de usuario RECIENTE. Los dos flujos
- *    de PDF hacen `await generatePDFReport(...)` antes de llamar aquí, y
- *    generar el PDF tarda lo suficiente como para que la activación caduque:
- *    la llamada fallaba con NotAllowedError, la excepción subía hasta el
- *    `catch` del componente y el usuario veía "Error al generar el PDF" — sin
- *    llegar nunca a la descarga de respaldo.
+ *    de PDF (cuando aún existían: hoy el PDF sale de window.print) hacían
+ *    `await generatePDFReport(...)` antes de llamar aquí, y generar el PDF
+ *    tardaba lo suficiente como para que la activación caducara: la llamada
+ *    fallaba con NotAllowedError, la excepción subía hasta el `catch` del
+ *    componente y el usuario veía "Error al generar el PDF" — sin llegar
+ *    nunca a la descarga de respaldo. El CSV sigue pasando por aquí.
  *  · Cerrar el menú de compartir rechaza con AbortError. Cancelar no es un
  *    error, pero acababa en el mismo `catch`: "Error al descargar el Excel".
  *

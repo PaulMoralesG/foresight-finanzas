@@ -407,3 +407,57 @@ textarea {
     min-height: 44px;
   }
 }
+
+/* ================================================================
+   Impresión — el reporte de lib/print-report
+   El reporte se monta en un host fuera de #root. En pantalla ese host no
+   existe visualmente; al imprimir, es lo único que se ve: la app entera
+   (#root, con su modal abierto y sus barras fijas) se oculta mientras
+   haya un reporte montado. Sin reporte montado, Ctrl+P imprime la app
+   normal, como en cualquier web.
+   ================================================================ */
+
+.print-report-host {
+  display: none;
+}
+
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  body:has(.print-report-host) #root {
+    display: none !important;
+  }
+
+  /* Papel blanco aunque la app esté en modo oscuro: sin esto, con "Gráficos
+     de fondo" activado en el diálogo, el PDF salía con el fondo negro de
+     html.dark alrededor del reporte. */
+  html:has(.print-report-host),
+  html:has(.print-report-host) body {
+    background: #fff !important;
+    color: #1a1a19 !important;
+    color-scheme: light;
+  }
+
+  .print-report-host {
+    display: block;
+  }
+
+  .print-report {
+    color: #1a1a19;
+    background: #fff;
+    /* Que las líneas de la tabla y el gris de los rótulos sí se impriman:
+       por defecto los navegadores descartan fondos y aclaran colores. */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-report thead {
+    display: table-header-group; /* cabecera repetida en cada página */
+  }
+
+  .print-report tr {
+    break-inside: avoid;
+  }
+}

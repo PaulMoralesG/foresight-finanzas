@@ -15,7 +15,7 @@ Todo desde una sola app, instalable en tu celular, que funciona incluso sin cone
 - **Dashboard** — Saldo del mes, ingresos vs gastos, presupuesto configurable y top de categorías
 - **Movimientos** — Alta, edición y baja de transacciones. Filtros por tipo, categoría, negocio/personal y búsqueda libre
 - **Estadísticas** — Gráfica de tendencia 6 meses, distribución por categoría, día de mayor gasto y promedio diario
-- **Exportación** — Reportes en PDF y Excel, ordenados cronológicamente. En escritorio se descargan como archivo; en móvil se abre el menú nativo para guardar o compartir (WhatsApp, Archivos, AirDrop)
+- **Exportación** — Reportes en PDF y Excel, ordenados cronológicamente. El PDF sale del diálogo de impresión del navegador ("Guardar como PDF"), con una hoja de estilos de impresión propia; el Excel (CSV) se descarga como archivo en escritorio y en móvil abre el menú nativo para guardar o compartir (WhatsApp, Archivos, AirDrop)
 - **Negocio vs Personal** — Cada transacción se etiqueta. El dashboard muestra la utilidad del negocio separada de tus finanzas personales
 - **Categorías personalizadas** — Creá, edita y eliminá tus propias categorías de gasto e ingreso
 - **Modo oscuro** — Tema claro/oscuro con detección automática de la preferencia del sistema
