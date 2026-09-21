@@ -4,6 +4,7 @@
 
 import { create } from 'zustand';
 import type { TabId, TransactionType, BusinessType } from '@/types';
+import { normalizarTabId } from '@/config/views';
 
 interface Toast {
   id: number;
@@ -109,7 +110,9 @@ export const useUiStore = create<UiState>((set) => ({
     }),
 
   // Tabs — persisted on refresh (F5) so user stays on current section
-  activeTab: ((localStorage.getItem('foresight-active-tab') || 'home') as TabId),
+  // normalizarTabId traduce los ids anteriores a la reorganización
+  // (stats/savings/profile) para no caer en una vista que ya no existe.
+  activeTab: normalizarTabId(localStorage.getItem('foresight-active-tab')),
   setActiveTab: (tab) => {
     localStorage.setItem('foresight-active-tab', tab);
     // Limpiar pendingFilter si no vamos a Movements (donde se consume)

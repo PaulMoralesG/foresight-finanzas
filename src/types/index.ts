@@ -20,7 +20,16 @@ export interface User {
 export type TransactionType = 'income' | 'expense';
 export type PaymentMethod = 'cash' | 'card' | 'transfer';
 export type BusinessType = 'business' | 'personal';
-export type TabId = 'home' | 'movements' | 'stats' | 'savings' | 'profile';
+/** Las 8 vistas, en dos secciones (ver src/config/views.ts). */
+export type TabId =
+  | 'home'
+  | 'movements'
+  | 'budgets'
+  | 'debts'
+  | 'goals'
+  | 'networth'
+  | 'accounts'
+  | 'settings';
 export type FilterType = 'all' | 'income' | 'expense' | 'business' | 'personal';
 
 export interface Transaction {

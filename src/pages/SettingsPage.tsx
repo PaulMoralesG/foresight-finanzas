@@ -1,5 +1,5 @@
 // ================================================================
-// ProfilePage — Configuración SaaS con edición de perfil
+// SettingsPage — Configuración SaaS con edición de perfil
 // ================================================================
 
 import { useState } from 'react';
@@ -16,7 +16,7 @@ import { CategoryManager } from '@/components/features/categories/CategoryManage
 
 type Section = 'profile' | 'email' | 'password' | 'categories' | null;
 
-export function ProfilePage() {
+export function SettingsPage() {
   const { signOut, updateProfile, updateEmail, updatePassword, saveData } = useAuth();
   const user = useAuthStore((s) => s.user);
   const isDark = useUiStore((s) => s.isDark);

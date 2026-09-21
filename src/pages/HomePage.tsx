@@ -1,5 +1,8 @@
 // ================================================================
-// HomePage — Dashboard SaaS unificado
+// HomePage — Resumen
+// Como el dashboard de Balance Dual: KPIs del mes, últimos movimientos,
+// evolución de seis meses, categorías, presupuesto, ahorro y destacados.
+// (Lo que era la pestaña Estadísticas vive aquí desde la fase 3.)
 // ================================================================
 
 import { useMemo, useEffect, useRef } from 'react';
@@ -7,6 +10,7 @@ import { ChartNoAxesColumn, Plus, Receipt, ArrowDown, ArrowUp, Store, PiggyBank 
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useMonthlyData } from '@/hooks/useFinance';
+import { useStatsPeriod, pctChange } from '@/hooks/useStatsPeriod';
 import { useBudget } from '@/hooks/useBudget';
 import { formatMoney, LOCALE, roundMoney, safeParseDate } from '@/lib/utils';
 import { computeSavingsByConcept } from '@/lib/savings';
@@ -14,6 +18,7 @@ import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/config/categories';
 import { MonthNav } from '@/components/layout/MonthNav';
 import { BudgetProgress } from '@/components/ui/BudgetProgress';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { TrendCard, HighlightsCard } from '@/components/features/home/MonthInsights';
 import { ScopeBadge, TransactionAmount, TypePill } from '@/components/ui/TransactionBits';
 import type { Transaction, TabId } from '@/types';
 
@@ -59,12 +64,12 @@ function CategoryBreakdown({ expenses }: { expenses: Transaction[] }) {
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-bold text-slate-900 dark:text-white">Categorías principales</h2>
         <button
-          onClick={() => { setActiveTab('stats' as TabId); }}
+          onClick={() => { navigateTo('movements' as TabId, 'expense'); }}
           className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
-          title="Ver estadísticas detalladas"
-          aria-label="Ver todas las categorías"
+          title="Ver todos los gastos del mes"
+          aria-label="Ver todos los gastos"
         >
-          Ver todas →
+          Ver gastos →
         </button>
       </div>
       <div className="space-y-2.5">
@@ -301,7 +306,7 @@ function BudgetWidget() {
         <div className="flex items-center gap-1.5">
           {budget > 0 && (
             <button
-              onClick={() => navigateTo('savings' as TabId)}
+              onClick={() => navigateTo('goals' as TabId)}
               className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
               title="Ajustar presupuesto en Planes"
             >
@@ -317,7 +322,7 @@ function BudgetWidget() {
         <div className="space-y-3">
           <p className="text-sm text-slate-500 dark:text-slate-400">Define cuánto quieres gastar este mes</p>
           <button
-            onClick={() => navigateTo('savings' as TabId)}
+            onClick={() => navigateTo('goals' as TabId)}
             className="saas-btn-primary saas-btn-sm"
           >
             Definir presupuesto →
@@ -349,6 +354,20 @@ export function HomePage() {
   const { summary, monthlyData } = useMonthlyData();
   const navigateTo = useUiStore((s) => s.navigateTo);
   const currentViewDate = useFinanceStore((s) => s.currentViewDate);
+  const customExpenseCats = useFinanceStore((s) => s.customExpenseCategories);
+  const customIncomeCats = useFinanceStore((s) => s.customIncomeCategories);
+  const allCustomCats = useMemo(() => [...customExpenseCats, ...customIncomeCats], [customExpenseCats, customIncomeCats]);
+
+  // Tendencia, comparación con el mes anterior y destacados, para el mes
+  // visible. Es el mismo hook que alimentaba Estadísticas, en modo mes.
+  const vista = new Date(currentViewDate);
+  const { trendData, totals, prevTotals, largestExpense, peakDay, peakDayTransactions } = useStatsPeriod({
+    mode: 'month',
+    month: vista.getMonth(),
+    year: vista.getFullYear(),
+    fromDate: null,
+    toDate: null,
+  });
 
   // For now, we always show data since Zustand starts with defaults
   return (
@@ -388,7 +407,13 @@ export function HomePage() {
           <span className="block text-2xl font-bold tabular-nums mt-1 truncate text-income-600 dark:text-income-400">
             {formatMoney(summary.totalIncome)}
           </span>
-          <span className="block text-2xs text-slate-500 dark:text-slate-400 mt-0.5">del mes en curso</span>
+          {prevTotals.income > 0 ? (
+            <span className={`block text-2xs mt-0.5 tabular-nums ${totals.income >= prevTotals.income ? 'text-income-600 dark:text-income-400' : 'text-expense-600 dark:text-expense-400'}`}>
+              {pctChange(totals.income, prevTotals.income)} vs mes anterior
+            </span>
+          ) : (
+            <span className="block text-2xs text-slate-500 dark:text-slate-400 mt-0.5">del mes en curso</span>
+          )}
         </button>
 
         <button
@@ -402,7 +427,13 @@ export function HomePage() {
           <span className="block text-2xl font-bold tabular-nums mt-1 truncate text-expense-600 dark:text-expense-400">
             {formatMoney(summary.totalSpent)}
           </span>
-          <span className="block text-2xs text-slate-500 dark:text-slate-400 mt-0.5">del mes en curso</span>
+          {prevTotals.spent > 0 ? (
+            <span className={`block text-2xs mt-0.5 tabular-nums ${totals.spent <= prevTotals.spent ? 'text-income-600 dark:text-income-400' : 'text-expense-600 dark:text-expense-400'}`}>
+              {pctChange(totals.spent, prevTotals.spent)} vs mes anterior
+            </span>
+          ) : (
+            <span className="block text-2xs text-slate-500 dark:text-slate-400 mt-0.5">del mes en curso</span>
+          )}
         </button>
 
         <button
@@ -428,10 +459,18 @@ export function HomePage() {
           diario, justo después del saldo. */}
       <RecentTransactions allData={monthlyData} />
 
-      {/* Chart + Budget row */}
+      <TrendCard trendData={trendData} />
+
+      {/* Categorías + destacados | presupuesto + ahorro */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:items-start">
         <div className="space-y-4">
           <CategoryBreakdown expenses={monthlyData} />
+          <HighlightsCard
+            largestExpense={largestExpense}
+            peakDay={peakDay}
+            peakDayTransactions={peakDayTransactions}
+            allCustomCats={allCustomCats}
+          />
         </div>
         <div className="space-y-4">
           <BudgetWidget />
@@ -471,7 +510,7 @@ function SavingsGoalWidget({ totalIncome }: { totalIncome: number }) {
         icon={PiggyBank}
         title="Sin movimientos de ahorro este mes"
         description="Crea una meta en Planes y aporta con el botón Aportar"
-        action={{ label: 'Crear meta', icon: Plus, onClick: () => navigateTo('savings' as TabId) }}
+        action={{ label: 'Crear meta', icon: Plus, onClick: () => navigateTo('goals' as TabId) }}
       />
     );
   }
@@ -490,7 +529,7 @@ function SavingsGoalWidget({ totalIncome }: { totalIncome: number }) {
             </span>
           )}
           <button
-            onClick={() => navigateTo('savings' as TabId)}
+            onClick={() => navigateTo('goals' as TabId)}
             className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
             title="Ver metas en Planes"
           >
