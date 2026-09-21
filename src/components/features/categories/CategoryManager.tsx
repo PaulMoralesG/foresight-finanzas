@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { ChevronRight, ChevronUp, Check, Edit3, Plus, Tags, Trash2, X } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { CATEGORY_COLORS } from '@/config/categories';
+import { CATEGORY_COLORS, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/config/categories';
 import { ColorPicker, IconPicker } from '@/components/ui/CategoryStylePicker';
 import { makeCategoryId } from '@/lib/category-id';
 import { syncToCloud } from '@/lib/utils';
@@ -37,6 +37,7 @@ export function CategoryManager({ abierto, onToggle, saveData }: CategoryManager
 
   const [catType, setCatType] = useState<'expense' | 'income'>('expense');
   const [newCatLabel, setNewCatLabel] = useState('');
+  const [newCatGroup, setNewCatGroup] = useState('');
   const [newCatIcon, setNewCatIcon] = useState('📌');
   const [newCatColor, setNewCatColor] = useState(CATEGORY_COLORS[0]);
   const [pendingDeleteCat, setPendingDeleteCat] = useState<{ id: string; label: string } | null>(null);
@@ -46,6 +47,15 @@ export function CategoryManager({ abierto, onToggle, saveData }: CategoryManager
   const [editingCatIcon, setEditingCatIcon] = useState('📌');
 
   const activeCustomCats = catType === 'expense' ? customExpenseCategories : customIncomeCategories;
+  // Grupos ya existentes del tipo (por defecto + personalizadas), para sugerir
+  // en el campo de grupo: así las categorías nuevas caen donde las demás.
+  const gruposExistentes = Array.from(
+    new Set(
+      [...(catType === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES), ...activeCustomCats]
+        .map((c) => c.group)
+        .filter((g): g is string => !!g),
+    ),
+  );
 
   function handleAddCategory() {
     const label = newCatLabel.trim();
@@ -58,7 +68,7 @@ export function CategoryManager({ abierto, onToggle, saveData }: CategoryManager
       return;
     }
     const id = makeCategoryId(label);
-    addCustomCategory(catType, { id, label, icon: newCatIcon, color: newCatColor });
+    addCustomCategory(catType, { id, label, icon: newCatIcon, color: newCatColor, group: newCatGroup.trim() || undefined });
     setNewCatLabel('');
     addToast('Categoría creada ✅', 'success');
     // Sincronizar con Supabase para que la categoría persista al recargar
@@ -238,6 +248,20 @@ export function CategoryManager({ abierto, onToggle, saveData }: CategoryManager
             placeholder="Nombre de la categoría"
             onKeyDown={(e) => { if (e.key === 'Enter') handleAddCategory(); }}
           />
+          <div>
+            <input
+              type="text"
+              value={newCatGroup}
+              onChange={(e) => setNewCatGroup(e.target.value)}
+              aria-label="Grupo de la nueva categoría"
+              list="grupos-existentes"
+              className="saas-input-sm text-xs"
+              placeholder="Grupo (p. ej. Suscripciones) — opcional"
+            />
+            <datalist id="grupos-existentes">
+              {gruposExistentes.map((g) => <option key={g} value={g} />)}
+            </datalist>
+          </div>
           <div className="flex gap-2 items-center">
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Ícono:</span>
             <IconPicker value={newCatIcon} onChange={setNewCatIcon} />

@@ -71,6 +71,8 @@ export interface Category {
   label: string;
   icon: string;
   color: string;
+  /** Grupo al que pertenece (Balance Dual: "Gastos Básicos", "Suscripciones"…). Sin grupo = "Otros". */
+  group?: string;
   /** ISO — usado por el merge de sync. Las categorías por defecto no lo tienen. */
   updated_at?: string;
 }
@@ -127,4 +129,19 @@ export interface NetWorthSnapshot {
   liabilities: number;
   net: number;
   updated_at: string; // ISO — el más nuevo gana en el merge
+}
+
+/**
+ * Presupuesto por categoría (Balance Dual: `budgets`). `limit` es el
+ * límite base mensual; `plan` guarda el monto planificado de los meses
+ * que se apartan de esa base ('YYYY-MM' → monto).
+ */
+export interface BudgetLine {
+  id: string;
+  tag: BusinessType;
+  kind: 'income' | 'expense';
+  categoryId: string;
+  limit: number;
+  plan: Record<string, number>;
+  updated_at: string; // ISO — usado por el merge de sync
 }

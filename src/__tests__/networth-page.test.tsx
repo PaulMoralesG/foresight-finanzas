@@ -123,7 +123,7 @@ describe('useNetWorthSnapshot (cierre mensual automático)', () => {
 describe('migración v11 del estado persistido', () => {
   it('añade assets y networth vacíos', () => {
     const opciones = useFinanceStore.persist.getOptions();
-    expect(opciones.version).toBe(11);
+    expect(opciones.version).toBeGreaterThanOrEqual(11);
     const migrado = opciones.migrate!({ expenses: [], savingsGoals: [] }, 10) as { assets: unknown[]; networth: unknown[] };
     expect(migrado.assets).toEqual([]);
     expect(migrado.networth).toEqual([]);

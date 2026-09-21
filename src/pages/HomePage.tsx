@@ -308,9 +308,9 @@ function BudgetWidget() {
         <div className="flex items-center gap-1.5">
           {budget > 0 && (
             <button
-              onClick={() => navigateTo('goals' as TabId)}
+              onClick={() => navigateTo('budgets' as TabId)}
               className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
-              title="Ajustar presupuesto en Planes"
+              title="Ajustar en Presupuestos"
             >
               Ajustar
             </button>
@@ -322,9 +322,9 @@ function BudgetWidget() {
       {/* ── Sin presupuesto ── */}
       {budget === 0 ? (
         <div className="space-y-3">
-          <p className="text-sm text-slate-500 dark:text-slate-400">Define cuánto quieres gastar este mes</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Define cuánto quieres gastar este mes, por categoría</p>
           <button
-            onClick={() => navigateTo('goals' as TabId)}
+            onClick={() => navigateTo('budgets' as TabId)}
             className="saas-btn-primary saas-btn-sm"
           >
             Definir presupuesto →
