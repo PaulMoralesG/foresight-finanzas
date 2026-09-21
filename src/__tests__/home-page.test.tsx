@@ -199,3 +199,48 @@ describe('Resumen — lo heredado de Estadísticas', () => {
     expect(screen.queryAllByRole('heading', { level: 3 })).toHaveLength(0);
   });
 });
+
+describe('Resumen — Presupuestos a vigilar y Rumbo a cero deudas', () => {
+  beforeEach(() => {
+    useFinanceStore.setState({ budgetLines: [], debts: [], accounts: [], settings: { debtMethod: 'snowball', extraPayment: 0, netWorthGoal: 0, updated_at: '' } });
+  });
+
+  it('sin presupuestos por categoría, avisa que aún no se definen', () => {
+    verAgosto2026([]);
+    render(<HomePage />);
+    expect(screen.getByRole('heading', { name: 'Presupuestos a vigilar' })).toBeInTheDocument();
+    expect(screen.getByText('Aún no defines presupuestos')).toBeInTheDocument();
+  });
+
+  it('muestra las categorías más cerca de su límite, ordenadas de mayor a menor porcentaje', () => {
+    verAgosto2026([
+      tx({ category: 'comida', amount: 480, date: '2026-08-05' }),
+      tx({ category: 'transporte', amount: 100, date: '2026-08-06' }),
+    ]);
+    useFinanceStore.getState().addBudgetLine({ tag: 'personal', kind: 'expense', categoryId: 'comida', limit: 500, plan: {} });
+    useFinanceStore.getState().addBudgetLine({ tag: 'personal', kind: 'expense', categoryId: 'transporte', limit: 1000, plan: {} });
+    render(<HomePage />);
+
+    const card = screen.getByRole('heading', { name: 'Presupuestos a vigilar' }).closest('.saas-card') as HTMLElement;
+    const nombres = within(card).getAllByText(/Comida|Transporte/).map((el) => el.textContent);
+    expect(nombres[0]).toBe('Comida'); // 96% del límite, va primero
+    expect(within(card).getByText('Cerca del límite')).toBeInTheDocument();
+  });
+
+  it('sin deudas registradas, no muestra el mini-card de deudas', () => {
+    verAgosto2026([]);
+    render(<HomePage />);
+    expect(screen.queryByRole('heading', { name: 'Rumbo a cero deudas' })).not.toBeInTheDocument();
+  });
+
+  it('con deudas, resume método, deuda total y la siguiente en la fila', () => {
+    verAgosto2026([]);
+    useFinanceStore.getState().addDebt({ name: 'Tarjeta', tag: 'personal', kind: 'Tarjeta de crédito', balance: 500, annualRate: 0, minPayment: 100, payDay: null });
+    render(<HomePage />);
+
+    const card = screen.getByRole('heading', { name: 'Rumbo a cero deudas' }).closest('.saas-card') as HTMLElement;
+    expect(within(card).getByText('Método bola de nieve')).toBeInTheDocument();
+    expect(within(card).getByText('$500.00')).toBeInTheDocument();
+    expect(within(card).getByText(/Tarjeta/)).toBeInTheDocument();
+  });
+});
