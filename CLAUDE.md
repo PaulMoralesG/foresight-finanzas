@@ -2,6 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+@.agents/rules/project-rules.md
+
+Las reglas generales del proyecto (tipado estricto, `unknown` en los `catch`,
+Conventional Commits en español, specs en `.agents/specs/` antes de una tarea
+grande, `npm test` antes de dar nada por terminado) viven en ese archivo y se
+importan aquí; lo que sigue es lo específico de este repositorio.
+
 ## Project
 
 Foresight Finanzas — a PWA for tracking personal vs. business finances (React 19 + TypeScript + Vite + TailwindCSS + Zustand + Supabase). Offline-first: works with local storage alone and syncs to Supabase when configured. UI copy, commit messages, and code comments in this repo are in Spanish; keep that convention when editing existing files.
