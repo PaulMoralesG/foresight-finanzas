@@ -12,7 +12,7 @@ import type { Transaction } from '@/types';
 
 export interface FilaReporte {
   fecha: string;
-  tipo: 'Ingreso' | 'Gasto';
+  tipo: 'Ingreso' | 'Gasto' | 'Transferencia';
   ambito: 'Personal' | 'Negocio';
   monto: string;
   concepto: string;
@@ -55,7 +55,7 @@ export function construirReporte(movimientos: Transaction[], viewDate: Date, lab
     totales: { ingresos, gastos, saldo },
     filas: ordenados.map((item) => ({
       fecha: safeParseDate(item.date).toLocaleDateString(LOCALE),
-      tipo: item.type === 'income' ? 'Ingreso' : 'Gasto',
+      tipo: item.type === 'income' ? 'Ingreso' : item.type === 'transfer' ? 'Transferencia' : 'Gasto',
       ambito: item.businessType === 'personal' ? 'Personal' : 'Negocio',
       monto: formatMoney(item.amount),
       concepto: item.concept || '',

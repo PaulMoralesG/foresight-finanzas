@@ -3,13 +3,14 @@
 // ================================================================
 
 import { useState, useEffect, useMemo, type FormEvent } from 'react';
-import { X, Plus, Trash2, ArrowDown, ArrowUp, Building2, User, Banknote, CreditCard, Landmark, Search } from '@/components/ui/icons.generated';
+import { X, Plus, Trash2, ArrowDown, ArrowUp, ArrowLeftRight, Building2, User, Banknote, CreditCard, Landmark, Search } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_COLORS } from '@/config/categories';
 import { ColorPicker, IconPicker } from '@/components/ui/CategoryStylePicker';
 import { getTodayISO, parseMoneyInput, roundMoney, syncToCloud } from '@/lib/utils';
 import { makeCategoryId } from '@/lib/category-id';
+import { TRANSFER_CATEGORY } from '@/lib/accounts';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { ModalSheet } from '@/components/ui/ModalSheet';
@@ -37,6 +38,7 @@ export function TransactionModal({
   const customIncomeCategories = useFinanceStore((s) => s.customIncomeCategories);
   const addCustomCategory = useFinanceStore((s) => s.addCustomCategory);
   const currentViewDate = useFinanceStore((s) => s.currentViewDate);
+  const accounts = useFinanceStore((s) => s.accounts);
 
   // Fecha por defecto para nuevos movimientos: hoy si el mes visto es el actual,
   // o el mismo día del mes visto (clamped) si se está viendo otro mes
@@ -64,6 +66,11 @@ export function TransactionModal({
   const [category, setCategory] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('cash');
   const [businessType, setBusinessType] = useState<BusinessType>('personal');
+  // Cuenta: opcional en gastos e ingresos (quien no usa Cuentas sigue igual
+  // que antes); obligatoria y doble (origen → destino) en transferencias.
+  const [accountId, setAccountId] = useState('');
+  const [toAccountId, setToAccountId] = useState('');
+  const isTransfer = type === 'transfer';
 
   // ── Nueva categoría ──
   const [showNewCat, setShowNewCat] = useState(false);
@@ -72,9 +79,11 @@ export function TransactionModal({
   const [newCatColor, setNewCatColor] = useState(CATEGORY_COLORS[0]);
   const [categorySearch, setCategorySearch] = useState('');
 
+  /** Universo de categorías: ingreso o gasto (una transferencia no lleva). */
+  const catType: 'income' | 'expense' = type === 'income' ? 'income' : 'expense';
   const categories = [
-    ...(type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES),
-    ...(type === 'income' ? customIncomeCategories : customExpenseCategories),
+    ...(catType === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES),
+    ...(catType === 'income' ? customIncomeCategories : customExpenseCategories),
   ];
 
   // El tipo cambia el universo de categorías (ingreso vs gasto): una búsqueda
@@ -100,7 +109,7 @@ export function TransactionModal({
     }
     const id = makeCategoryId(label);
     const newCategory: Category = { id, label, icon: newCatIcon, color: newCatColor };
-    addCustomCategory(type, newCategory);
+    addCustomCategory(catType, newCategory);
     setCategory(id);
     setNewCatLabel('');
     setShowNewCat(false);
@@ -127,6 +136,8 @@ export function TransactionModal({
           setCategory(item.category ?? '');
           setMethod(item.method ?? 'cash');
           setBusinessType(item.businessType ?? 'personal');
+          setAccountId(item.accountId ?? '');
+          setToAccountId(item.toAccountId ?? '');
         } else {
           console.error('[TransactionModal] No se encontró transacción con id:', editingId);
         }
@@ -143,6 +154,8 @@ export function TransactionModal({
       setCategory(modalPrefill.category ?? '');
       setMethod('cash');
       setBusinessType(modalPrefill.businessType ?? 'personal');
+      setAccountId('');
+      setToAccountId('');
     } else if (!isOpen) {
       // Reset al cerrar
       setType('expense');
@@ -152,6 +165,8 @@ export function TransactionModal({
       setCategory('');
       setMethod('cash');
       setBusinessType('personal');
+      setAccountId('');
+      setToAccountId('');
       setCategorySearch('');
     }
     // Solo montar al abrir/cerrar o cambiar item
@@ -180,7 +195,16 @@ export function TransactionModal({
       addToast('Ingresa un monto mayor a 0', 'error');
       return;
     }
-    if (!category) {
+    if (isTransfer) {
+      if (!accountId || !toAccountId) {
+        addToast('Elige la cuenta de origen y la de destino', 'error');
+        return;
+      }
+      if (accountId === toAccountId) {
+        addToast('Elige dos cuentas distintas para la transferencia', 'error');
+        return;
+      }
+    } else if (!category) {
       addToast('Selecciona una categoría', 'error');
       return;
     }
@@ -190,9 +214,13 @@ export function TransactionModal({
       amount: numAmount,
       concept,
       date,
-      category,
+      // Una transferencia no tiene categoría: lleva una fija para que los
+      // filtros por categoría no la confundan con un gasto real.
+      category: isTransfer ? TRANSFER_CATEGORY : category,
       method,
       businessType,
+      accountId: accountId || null,
+      toAccountId: isTransfer && toAccountId ? toAccountId : null,
     };
 
     if (isEditing) {
@@ -252,23 +280,29 @@ export function TransactionModal({
                   nombre accesible lo pone el role="group" del contenedor. */}
               <span className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Tipo</span>
               <div className="flex gap-1" role="group" aria-label="Tipo de movimiento">
-                {(['expense', 'income'] as TransactionType[]).map((t) => (
+                {/* Transferencia solo cuando hay al menos dos cuentas entre las
+                    que mover dinero; sin cuentas, el modal es el de siempre. */}
+                {(accounts.length >= 2 ? ['expense', 'income', 'transfer'] : ['expense', 'income']).map((t) => (
                   <button
                     key={t}
                     type="button"
-                    onClick={() => { setType(t); setCategory(''); }}
+                    onClick={() => { setType(t as TransactionType); setCategory(''); }}
                     className={`flex-1 py-1 rounded-md text-2xs font-semibold transition-all flex items-center justify-center gap-1 ${
                       type === t
                         ? t === 'expense'
                           ? 'bg-red-600 text-white'
-                          : 'bg-emerald-600 text-white'
+                          : t === 'income'
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-slate-900 dark:bg-brand-600 text-white'
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                     }`}
                   >
                     {t === 'income' ? (
                       <><ArrowDown className="w-3 h-3" /> Ingreso</>
-                    ) : (
+                    ) : t === 'expense' ? (
                       <><ArrowUp className="w-3 h-3" /> Gasto</>
+                    ) : (
+                      <><ArrowLeftRight className="w-3 h-3" /> Transf.</>
                     )}
                   </button>
                 ))}
@@ -357,6 +391,8 @@ export function TransactionModal({
                 ))}
               </div>
             </div>
+            {/* En una transferencia el método lo dicen las cuentas: se oculta. */}
+            {!isTransfer && (
             <div>
               <span className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Método</span>
               <div className="flex gap-1" role="group" aria-label="Método de pago">
@@ -381,9 +417,54 @@ export function TransactionModal({
                 ))}
               </div>
             </div>
+            )}
           </div>
 
-          {/* Categorías */}
+          {/* Cuenta / cuentas: solo si el usuario tiene alguna (fase 3.1) */}
+          {accounts.length > 0 && (
+            <div className={`grid gap-2 ${isTransfer ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              <div>
+                <label htmlFor="tx-account" className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">
+                  {isTransfer ? 'Cuenta de origen' : 'Cuenta'}
+                </label>
+                <select
+                  id="tx-account"
+                  value={accountId}
+                  onChange={(e) => setAccountId(e.target.value)}
+                  className="saas-input py-1 text-sm"
+                  required={isTransfer}
+                >
+                  {!isTransfer && <option value="">Sin cuenta</option>}
+                  {isTransfer && !accountId && <option value="">Elige una cuenta</option>}
+                  {accounts.map((a) => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+              </div>
+              {isTransfer && (
+                <div>
+                  <label htmlFor="tx-to-account" className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">
+                    Cuenta destino
+                  </label>
+                  <select
+                    id="tx-to-account"
+                    value={toAccountId}
+                    onChange={(e) => setToAccountId(e.target.value)}
+                    className="saas-input py-1 text-sm"
+                    required
+                  >
+                    {!toAccountId && <option value="">Elige una cuenta</option>}
+                    {accounts.filter((a) => a.id !== accountId).map((a) => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Categorías (una transferencia no lleva: el dinero solo cambia de sitio) */}
+          {!isTransfer && (
           <div>
             <span className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">
               Categoría
@@ -484,6 +565,7 @@ export function TransactionModal({
               </div>
             )}
           </div>
+          )}
         </form>
 
         {/* Footer */}

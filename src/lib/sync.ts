@@ -21,6 +21,8 @@ import type {
   Transaction,
   Category,
   SavingsGoal,
+  Account,
+  AccountKind,
   TransactionType,
   PaymentMethod,
   BusinessType,
@@ -44,7 +46,19 @@ interface ExpenseRow {
   category: string | null;
   method: string | null;
   business_type: string | null;
+  account_id: string | null;
+  to_account_id: string | null;
   created_at: string | null;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+interface AccountRow {
+  id: string;
+  user_id: string;
+  name: string | null;
+  kind: string | null;
+  initial_balance: number | null;
   updated_at: string;
   deleted_at: string | null;
 }
@@ -81,6 +95,7 @@ export interface Snapshot {
   categories: CategoryRow[];
   goals: GoalRow[];
   budgets: BudgetRow[];
+  accounts: AccountRow[];
 }
 
 // ── Convertidores locales ↔ filas ──
@@ -96,6 +111,8 @@ function expenseToRow(t: Transaction, userId: string): ExpenseRow {
     category: t.category,
     method: t.method,
     business_type: t.businessType,
+    account_id: t.accountId ?? null,
+    to_account_id: t.toAccountId ?? null,
     created_at: t.created_at ?? null,
     updated_at: t.updated_at,
     deleted_at: null,
@@ -105,14 +122,40 @@ function expenseToRow(t: Transaction, userId: string): ExpenseRow {
 function rowToExpense(r: ExpenseRow): Transaction {
   return {
     id: r.id,
-    type: (r.type === 'income' || r.type === 'expense' ? r.type : 'expense') as TransactionType,
+    type: (r.type === 'income' || r.type === 'expense' || r.type === 'transfer' ? r.type : 'expense') as TransactionType,
     amount: r.amount ?? 0,
     concept: r.concept ?? '',
     date: r.date ?? getTodayISO(),
     category: r.category ?? 'general',
     method: (r.method === 'cash' || r.method === 'card' || r.method === 'transfer' ? r.method : 'cash') as PaymentMethod,
     businessType: (r.business_type === 'business' || r.business_type === 'personal' ? r.business_type : 'personal') as BusinessType,
+    accountId: r.account_id ?? null,
+    toAccountId: r.to_account_id ?? null,
     created_at: r.created_at ?? undefined,
+    updated_at: r.updated_at,
+  };
+}
+
+const ACCOUNT_KINDS_VALIDOS: AccountKind[] = ['Efectivo', 'Banco', 'Tarjeta', 'Ahorros'];
+
+function accountToRow(a: Account, userId: string): AccountRow {
+  return {
+    id: a.id,
+    user_id: userId,
+    name: a.name,
+    kind: a.kind,
+    initial_balance: a.initialBalance,
+    updated_at: a.updated_at,
+    deleted_at: null,
+  };
+}
+
+function rowToAccount(r: AccountRow): Account {
+  return {
+    id: r.id,
+    name: r.name ?? '',
+    kind: (ACCOUNT_KINDS_VALIDOS.includes(r.kind as AccountKind) ? r.kind : 'Banco') as AccountKind,
+    initialBalance: Number(r.initial_balance ?? 0),
     updated_at: r.updated_at,
   };
 }
@@ -252,7 +295,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-type TableName = 'expenses' | 'categories' | 'savings_goals' | 'budgets';
+type TableName = 'expenses' | 'categories' | 'savings_goals' | 'budgets' | 'accounts';
 
 // ── Pull ──
 
@@ -315,6 +358,7 @@ export function desfaseDeRelojMinutos(snapshot: Snapshot, ahoraMs = Date.now()):
   mirar(snapshot.categories);
   mirar(snapshot.goals);
   mirar(snapshot.budgets);
+  mirar(snapshot.accounts);
 
   const adelanto = masNueva - ahoraMs;
   return adelanto > DESFASE_TOLERADO_MS ? Math.round(adelanto / 60_000) : 0;
@@ -338,16 +382,17 @@ function avisarSiElRelojVaMal(snapshot: Snapshot) {
 }
 
 async function pullAll(uid: string): Promise<Snapshot> {
-  const [expenses, categories, goals, budgets] = await Promise.all([
+  const [expenses, categories, goals, budgets, accounts] = await Promise.all([
     fetchAllRows<ExpenseRow>('expenses', uid, ['updated_at', 'id']),
     fetchAllRows<CategoryRow>('categories', uid, ['updated_at', 'id']),
     fetchAllRows<GoalRow>('savings_goals', uid, ['updated_at', 'id']),
     // budgets no tiene columna `id` (PK compuesta user_id+month) — `month`
     // ya es único por usuario, así que sirve como desempate estable.
     fetchAllRows<BudgetRow>('budgets', uid, ['month']),
+    fetchAllRows<AccountRow>('accounts', uid, ['updated_at', 'id']),
   ]);
 
-  const snapshot = { expenses, categories, goals, budgets };
+  const snapshot = { expenses, categories, goals, budgets, accounts };
   avisarSiElRelojVaMal(snapshot);
   return snapshot;
 }
@@ -357,6 +402,7 @@ async function pullAll(uid: string): Promise<Snapshot> {
 interface MergeResult {
   expenses: MergeSet<Transaction>;
   goals: MergeSet<SavingsGoal>;
+  accounts: MergeSet<Account>;
   expenseCategories: MergeSet<Category>;
   incomeCategories: MergeSet<Category>;
   budgets: { budgets: Record<string, number>; updatedAt: Record<string, string> };
@@ -412,6 +458,13 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     remoteGoals,
   );
 
+  const remoteAccounts = buildRemoteSet(snapshot.accounts, rowToAccount);
+  const accountsUniverse = universeOf(state.accounts, remoteAccounts);
+  const accounts = mergeById(
+    { live: state.accounts, tombstones: scopeTombstones(state.tombstones, accountsUniverse) },
+    remoteAccounts,
+  );
+
   // Categorías por kind: los slugs pueden repetirse entre tipos
   const expenseRows = snapshot.categories.filter((r) => r.kind === 'expense');
   const incomeRows = snapshot.categories.filter((r) => r.kind === 'income');
@@ -434,6 +487,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
   const allUniverse = new Set<string>([
     ...expUniverse,
     ...goalsUniverse,
+    ...accountsUniverse,
     ...expCatsUniverse,
     ...incCatsUniverse,
   ]);
@@ -443,6 +497,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     flatTombstones,
     expenses.tombstones,
     goals.tombstones,
+    accounts.tombstones,
     expenseCategories.tombstones,
     incomeCategories.tombstones,
   );
@@ -456,6 +511,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
   const remoteTombstoneIds = new Set<string>([
     ...Object.keys(remoteExpenses.tombstones),
     ...Object.keys(remoteGoals.tombstones),
+    ...Object.keys(remoteAccounts.tombstones),
     ...Object.keys(remoteExpCats.tombstones),
     ...Object.keys(remoteIncCats.tombstones),
   ]);
@@ -471,6 +527,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
   const next = {
     expenses: expenses.live,
     savingsGoals: goals.live,
+    accounts: accounts.live,
     customExpenseCategories: expenseCategories.live,
     customIncomeCategories: incomeCategories.live,
     tombstones: flatTombstones,
@@ -480,6 +537,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
   const current = {
     expenses: state.expenses,
     savingsGoals: state.savingsGoals,
+    accounts: state.accounts,
     customExpenseCategories: state.customExpenseCategories,
     customIncomeCategories: state.customIncomeCategories,
     tombstones: state.tombstones,
@@ -504,6 +562,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
         ...next,
         expenses: keepLocalAdditions(next.expenses, currentState.expenses),
         savingsGoals: keepLocalAdditions(next.savingsGoals, currentState.savingsGoals),
+        accounts: keepLocalAdditions(next.accounts, currentState.accounts),
         customExpenseCategories: keepLocalAdditions(
           next.customExpenseCategories,
           currentState.customExpenseCategories,
@@ -516,7 +575,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     });
   }
 
-  return { expenses, goals, expenseCategories, incomeCategories, budgets, flatTombstones };
+  return { expenses, goals, accounts, expenseCategories, incomeCategories, budgets, flatTombstones };
 }
 
 // ── Push ──
@@ -580,6 +639,11 @@ async function pushAll(uid: string, merged: MergeResult, since: string | null): 
   await upsert('savings_goals', [
     ...merged.goals.live.filter((g) => changed(g.updated_at)).map((g) => goalToRow(g, uid)),
     ...tombstoneRows(merged.goals.tombstones),
+  ], 'user_id,id');
+
+  await upsert('accounts', [
+    ...merged.accounts.live.filter((a) => changed(a.updated_at)).map((a) => accountToRow(a, uid)),
+    ...tombstoneRows(merged.accounts.tombstones),
   ], 'user_id,id');
 
   await upsert('budgets', Object.entries(merged.budgets.budgets)
@@ -720,6 +784,7 @@ export const syncService = {
         state.budgets !== prev.budgets ||
         state.budgetUpdatedAt !== prev.budgetUpdatedAt ||
         state.savingsGoals !== prev.savingsGoals ||
+        state.accounts !== prev.accounts ||
         state.customExpenseCategories !== prev.customExpenseCategories ||
         state.customIncomeCategories !== prev.customIncomeCategories ||
         state.tombstones !== prev.tombstones;

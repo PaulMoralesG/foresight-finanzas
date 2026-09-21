@@ -12,6 +12,8 @@ import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/config/categories';
 import { MonthNav } from '@/components/layout/MonthNav';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ScopeBadge, TransactionAmount } from '@/components/ui/TransactionBits';
+import { typeLabel, typePillClasses } from '@/lib/transaction-labels';
+import { accountName } from '@/lib/accounts';
 import type { FilterType } from '@/types';
 
 const FILTERS: { id: FilterType; label: string; icon: React.ElementType }[] = [
@@ -109,6 +111,7 @@ export function MovementsPage() {
 
   const customExpenseCategories = useFinanceStore((s) => s.customExpenseCategories);
   const customIncomeCategories = useFinanceStore((s) => s.customIncomeCategories);
+  const accounts = useFinanceStore((s) => s.accounts);
 
   // Mapa para resolver etiquetas de categoría (por defecto + personalizadas)
   const categoryLabelMap = useMemo(() => {
@@ -380,7 +383,7 @@ export function MovementsPage() {
                   {/* Row 1: icon + concept + amount */}
                   <div className="flex items-center justify-between gap-1.5 mb-1 pr-6">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="text-lg flex-shrink-0 leading-none">{category?.icon || '📌'}</span>
+                      <span className="text-lg flex-shrink-0 leading-none">{tx.type === 'transfer' ? '🔁' : category?.icon || '📌'}</span>
                       <div className="min-w-0">
                         <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">
                           {tx.concept}
@@ -401,19 +404,20 @@ export function MovementsPage() {
                     <div className="flex items-center gap-1 flex-wrap">
                       <button
                         type="button"
-                        className={`saas-cell-filter text-2xs font-medium px-1.5 py-0.5 rounded-full ${
-                          tx.type === 'income'
-                            ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400'
-                            : 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400'
-                        }`}
+                        className={`saas-cell-filter text-2xs font-medium px-1.5 py-0.5 rounded-full ${typePillClasses(tx.type)}`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setFilter(tx.type === 'income' ? 'income' : 'expense');
+                          if (tx.type !== 'transfer') setFilter(tx.type);
                         }}
-                        title={`Filtrar solo ${tx.type === 'income' ? 'Ingresos' : 'Gastos'}`}
+                        title={tx.type === 'transfer' ? 'Transferencia entre cuentas' : `Filtrar solo ${tx.type === 'income' ? 'Ingresos' : 'Gastos'}`}
                       >
-                        {tx.type === 'income' ? 'Ingreso' : 'Gasto'}
+                        {typeLabel(tx.type)}
                       </button>
+                      {tx.type === 'transfer' ? (
+                        <span className="text-2xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
+                          {accountName(accounts, tx.accountId)} → {accountName(accounts, tx.toAccountId)}
+                        </span>
+                      ) : (
                       <button
                         type="button"
                         className="saas-cell-filter text-2xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full"
@@ -422,6 +426,7 @@ export function MovementsPage() {
                       >
                         {category?.label || tx.category}
                       </button>
+                      )}
                       <button
                         type="button"
                         className="saas-cell-filter"
@@ -534,7 +539,7 @@ export function MovementsPage() {
                         </span>
                       </td>
                       <td className="text-center">
-                        <span className="text-base">{category?.icon || '📌'}</span>
+                        <span className="text-base">{tx.type === 'transfer' ? '🔁' : category?.icon || '📌'}</span>
                       </td>
                       <td>
                         <span className="text-sm font-medium text-slate-900 dark:text-white">
@@ -555,6 +560,11 @@ export function MovementsPage() {
                         </button>
                       </td>
                       <td className="whitespace-nowrap">
+                        {tx.type === 'transfer' ? (
+                          <span className="text-xs text-slate-600 dark:text-slate-400">
+                            {accountName(accounts, tx.accountId)} <span className="text-slate-400">→</span> {accountName(accounts, tx.toAccountId)}
+                          </span>
+                        ) : (
                         <button
                           className="saas-cell-filter text-xs text-slate-600 dark:text-slate-400 cursor-pointer"
                           onClick={(e) => { e.stopPropagation(); setCategoryFilter(tx.category); }}
@@ -562,17 +572,18 @@ export function MovementsPage() {
                         >
                           {category?.label || tx.category}
                         </button>
+                        )}
                       </td>
                       <td className="whitespace-nowrap">
                         <button
-                          className={`saas-cell-filter text-xs font-medium ${tx.type === 'income' ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400'} px-2 py-0.5 rounded-full`}
+                          className={`saas-cell-filter text-xs font-medium ${typePillClasses(tx.type)} px-2 py-0.5 rounded-full`}
                           onClick={(e) => {
                             e.stopPropagation();
-                            setFilter(tx.type === 'income' ? 'income' : 'expense');
+                            if (tx.type !== 'transfer') setFilter(tx.type);
                           }}
-                          title={`Filtrar solo ${tx.type === 'income' ? 'Ingresos' : 'Gastos'}`}
+                          title={tx.type === 'transfer' ? 'Transferencia entre cuentas' : `Filtrar solo ${tx.type === 'income' ? 'Ingresos' : 'Gastos'}`}
                         >
-                          {tx.type === 'income' ? 'Ingreso' : 'Gasto'}
+                          {typeLabel(tx.type)}
                         </button>
                       </td>
                       <td className="whitespace-nowrap">

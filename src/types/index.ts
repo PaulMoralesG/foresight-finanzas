@@ -17,7 +17,8 @@ export interface User {
   pendingEmail?: string;
 }
 
-export type TransactionType = 'income' | 'expense';
+/** `transfer` mueve dinero entre dos cuentas sin contar como gasto ni ingreso. */
+export type TransactionType = 'income' | 'expense' | 'transfer';
 export type PaymentMethod = 'cash' | 'card' | 'transfer';
 export type BusinessType = 'business' | 'personal';
 /** Las 8 vistas, en dos secciones (ver src/config/views.ts). */
@@ -41,7 +42,23 @@ export interface Transaction {
   category: string;
   method: PaymentMethod;
   businessType: BusinessType;
+  /** Cuenta de la que sale (gasto), a la que entra (ingreso) o de origen (transferencia). */
+  accountId?: string | null;
+  /** Solo en transferencias: cuenta destino. */
+  toAccountId?: string | null;
   created_at?: string;
+  updated_at: string; // ISO — usado por el merge de sync
+}
+
+export type AccountKind = 'Efectivo' | 'Banco' | 'Tarjeta' | 'Ahorros';
+
+/** Cuenta (Balance Dual: `accounts`). El saldo se deriva: saldo inicial + movimientos. */
+export interface Account {
+  id: string;
+  name: string;
+  kind: AccountKind;
+  /** Lo que ya había en la cuenta al darla de alta; no vuelve a contarse en el patrimonio. */
+  initialBalance: number;
   updated_at: string; // ISO — usado por el merge de sync
 }
 

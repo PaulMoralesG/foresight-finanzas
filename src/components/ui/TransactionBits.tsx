@@ -13,6 +13,7 @@
 // ================================================================
 
 import { formatMoney } from '@/lib/utils';
+import { typeLabel, typePillClasses } from '@/lib/transaction-labels';
 import type { BusinessType, TransactionType } from '@/types';
 
 /** Importe con signo y color según sea ingreso o gasto. */
@@ -26,6 +27,15 @@ export function TransactionAmount({
   className?: string;
 }) {
   const esIngreso = type === 'income';
+  // Una transferencia no es ni entrada ni salida: va en tinta neutra y sin
+  // signo, porque el dinero solo cambió de cuenta.
+  if (type === 'transfer') {
+    return (
+      <span className={`tabular-nums text-slate-700 dark:text-slate-300 ${className}`}>
+        {formatMoney(amount)}
+      </span>
+    );
+  }
   return (
     <span
       className={`tabular-nums ${
@@ -77,14 +87,8 @@ export function TypePill({
   className?: string;
 }) {
   return (
-    <span
-      className={`font-medium ${
-        type === 'income'
-          ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400'
-          : 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400'
-      } ${className}`}
-    >
-      {type === 'income' ? 'Ingreso' : 'Gasto'}
+    <span className={`font-medium ${typePillClasses(type)} ${className}`}>
+      {typeLabel(type)}
     </span>
   );
 }

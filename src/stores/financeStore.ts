@@ -6,7 +6,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { safeParseDate } from '@/lib/utils';
 import { newId, nowIso } from '@/lib/ids';
-import type { Transaction, MonthlyBudget, FilterType, Category, SavingsGoal } from '@/types';
+import type { Transaction, MonthlyBudget, FilterType, Category, SavingsGoal, Account } from '@/types';
 
 interface FinanceState {
   // --- Estado ---
@@ -14,6 +14,7 @@ interface FinanceState {
   budgets: MonthlyBudget;
   budgetUpdatedAt: Record<string, string>; // monthKey 'YYYY-MM' → ISO (merge de sync)
   savingsGoals: SavingsGoal[];
+  accounts: Account[];
   customExpenseCategories: Category[];
   customIncomeCategories: Category[];
   /** id → deleted_at ISO. Borrados lógicos: permiten propagar deletes en el sync. */
@@ -48,6 +49,11 @@ interface FinanceState {
   updateSavingsGoal: (id: string, partial: Partial<Omit<SavingsGoal, 'id' | 'updated_at'>>) => void;
   deleteSavingsGoal: (id: string) => void;
 
+  // --- Cuentas ---
+  addAccount: (a: Omit<Account, 'id' | 'updated_at'>) => string;
+  updateAccount: (id: string, partial: Partial<Omit<Account, 'id' | 'updated_at'>>) => void;
+  deleteAccount: (id: string) => void;
+
   // --- Selectores (getters) ---
   getMonthlyData: () => Transaction[];
 
@@ -60,6 +66,7 @@ const emptyState = {
   budgets: {} as MonthlyBudget,
   budgetUpdatedAt: {} as Record<string, string>,
   savingsGoals: [] as SavingsGoal[],
+  accounts: [] as Account[],
   customExpenseCategories: [] as Category[],
   customIncomeCategories: [] as Category[],
   tombstones: {} as Record<string, string>,
@@ -138,6 +145,23 @@ function migrateV8(persistedState: unknown): Record<string, unknown> {
     state.budgetUpdatedAt = {};
   }
 
+  return state;
+}
+
+/**
+ * Migración v9: cuentas (fase 3.1). Solo añade `accounts` vacío y
+ * garantiza que ningún movimiento traiga `accountId`/`toAccountId` con un
+ * tipo que no sea string. Idempotente: se aplica después de migrateV8
+ * también a estados que ya estaban en v8.
+ */
+function migrateV9(state: Record<string, unknown>): Record<string, unknown> {
+  if (!Array.isArray(state.accounts)) state.accounts = [];
+  const limpiarId = (v: unknown): string | null => (typeof v === 'string' && v ? v : null);
+  state.expenses = (state.expenses as Array<Record<string, unknown>>).map((e) => ({
+    ...e,
+    accountId: limpiarId(e.accountId),
+    toAccountId: limpiarId(e.toAccountId),
+  }));
   return state;
 }
 
@@ -289,6 +313,29 @@ export const useFinanceStore = create<FinanceState>()(
           tombstones: tombstoned(state.tombstones, id),
         })),
 
+      // ── Cuentas ──
+      addAccount: (a) => {
+        const id = newId();
+        set((state) => ({
+          accounts: [...state.accounts, { ...a, id, updated_at: nowIso() }],
+        }));
+        return id;
+      },
+
+      updateAccount: (id, partial) =>
+        set((state) => ({
+          accounts: state.accounts.map((a) =>
+            a.id === id ? { ...a, ...partial, updated_at: nowIso() } : a
+          ),
+          tombstones: clearedTombstone(state.tombstones, id),
+        })),
+
+      deleteAccount: (id) =>
+        set((state) => ({
+          accounts: state.accounts.filter((a) => a.id !== id),
+          tombstones: tombstoned(state.tombstones, id),
+        })),
+
       getMonthlyData: () => {
         const { expenses, currentViewDate } = get();
         const d = new Date(currentViewDate);
@@ -303,10 +350,10 @@ export const useFinanceStore = create<FinanceState>()(
     }),
     {
       name: 'foresight-finance-storage',
-      version: 8,
+      version: 9,
       migrate: (persistedState: unknown, _version: number) => {
         try {
-          return migrateV8(persistedState);
+          return migrateV9(migrateV8(persistedState));
         } catch (err) {
           // Estado inesperado: arrancar limpio antes que romper la app
           console.error('[financeStore] Migración de estado persistido fallida — reseteando:', err);
@@ -321,6 +368,7 @@ export const useFinanceStore = create<FinanceState>()(
         currentViewDate: state.currentViewDate,
         currentFilter: state.currentFilter,
         savingsGoals: state.savingsGoals,
+        accounts: state.accounts,
         customExpenseCategories: state.customExpenseCategories,
         customIncomeCategories: state.customIncomeCategories,
         tombstones: state.tombstones,
