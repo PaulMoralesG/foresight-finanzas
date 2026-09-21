@@ -5,28 +5,13 @@
 // que es lo que hará falta antes de partirla en subcomponentes.
 // ================================================================
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, cleanup, within } from '@testing-library/react';
 import { StatsPage } from '@/pages/StatsPage';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import type { Transaction } from '@/types';
 
-// Recharts mide su contenedor con ResizeObserver, que jsdom no trae, y sin
-// ancho no dibuja nada. La gráfica no es lo que se prueba aquí.
-vi.mock('recharts', async () => {
-  const stub = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>;
-  return {
-    ResponsiveContainer: stub,
-    LineChart: stub,
-    Line: () => null,
-    XAxis: () => null,
-    YAxis: () => null,
-    CartesianGrid: () => null,
-    Tooltip: () => null,
-    Legend: () => null,
-  };
-});
 
 let n = 0;
 function tx(overrides: Partial<Transaction> = {}): Transaction {
@@ -61,9 +46,11 @@ function verAgosto2026(expenses: Transaction[]) {
   });
 }
 
-/** Valor de una de las cuatro tarjetas de resumen, por su rótulo. */
+/** Valor de una de las cuatro tarjetas de resumen, por su rótulo. El
+ *  selector `p` evita la leyenda del gráfico, que también dice "Ingresos"
+ *  y "Gastos" (en un `li`). */
 function kpi(rotulo: string): string {
-  const etiqueta = screen.getByText(rotulo);
+  const etiqueta = screen.getByText(rotulo, { selector: 'p' });
   const tarjeta = etiqueta.parentElement!;
   return within(tarjeta).getAllByText(/^\$|^-\$/)[0].textContent!;
 }

@@ -24,7 +24,7 @@ Todo desde una sola app, instalable en tu celular, que funciona incluso sin cone
 
 ## Stack
 
-React · TypeScript · Vite · TailwindCSS · Zustand · Supabase · Recharts
+React · TypeScript · Vite · TailwindCSS · Zustand · Supabase
 
 ## Desarrollo local
 
