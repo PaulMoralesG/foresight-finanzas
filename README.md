@@ -89,6 +89,7 @@ vez cada una. Para un entorno nuevo hay que aplicarlas todas:
 | `0007_rls_perf_and_security_hardening.sql` | RLS con `(select auth.uid())`, `search_path` fijo en `keep_newest`, revoca `EXECUTE` público de `handle_new_user`, y versiona dos `CHECK` + un índice que ya estaban aplicados a mano en producción | Cualquier momento (no rompe compatibilidad con ningún cliente) |
 | `0008_error_log.sql` | Tabla `error_log` donde el cliente registra los errores de producción (sustituye a Sentry). RLS: insert del usuario autenticado sobre su propio `user_id`; sin select por la API — se consulta desde el SQL Editor | **Antes** de desplegar (si no, el cliente nuevo intenta insertar en una tabla que no existe; el fallo se traga, pero no se registra nada) |
 | `0009_accounts.sql` | Tabla `accounts` (cuentas: efectivo, banco, tarjeta, ahorros) con RLS, grant y trigger `keep_newest`; columnas `account_id`/`to_account_id` en `expenses` y el tipo `transfer` en su `CHECK` | **Antes** de desplegar (el cliente nuevo hace pull de `accounts`; sin la tabla cae a modo local-only) |
+| `0010_debts_and_settings.sql` | Tablas `debts` (deudas: saldo, interés, mínimo, día de pago) y `settings` (una fila por usuario: método de deuda, aporte extra, meta de patrimonio), con RLS, grant y `keep_newest` | **Antes** de desplegar (el cliente hace pull de ambas) |
 
 Fíjate en el orden de la `0005` y la `0006`: una va antes del deploy y la otra después.
 Invertirlo deja al cliente pidiendo algo que ya no existe, o escribiendo con una clave

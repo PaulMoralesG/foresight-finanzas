@@ -4,9 +4,9 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { safeParseDate } from '@/lib/utils';
+import { safeParseDate, roundMoney as roundMoneyLocal } from '@/lib/utils';
 import { newId, nowIso } from '@/lib/ids';
-import type { Transaction, MonthlyBudget, FilterType, Category, SavingsGoal, Account } from '@/types';
+import type { Transaction, MonthlyBudget, FilterType, Category, SavingsGoal, Account, Debt, Settings } from '@/types';
 
 interface FinanceState {
   // --- Estado ---
@@ -15,6 +15,9 @@ interface FinanceState {
   budgetUpdatedAt: Record<string, string>; // monthKey 'YYYY-MM' → ISO (merge de sync)
   savingsGoals: SavingsGoal[];
   accounts: Account[];
+  debts: Debt[];
+  /** Ajustes sincronizados: método de deuda, aporte extra, meta de patrimonio. */
+  settings: Settings;
   customExpenseCategories: Category[];
   customIncomeCategories: Category[];
   /** id → deleted_at ISO. Borrados lógicos: permiten propagar deletes en el sync. */
@@ -54,6 +57,19 @@ interface FinanceState {
   updateAccount: (id: string, partial: Partial<Omit<Account, 'id' | 'updated_at'>>) => void;
   deleteAccount: (id: string) => void;
 
+  // --- Deudas ---
+  addDebt: (d: Omit<Debt, 'id' | 'updated_at'>) => string;
+  updateDebt: (id: string, partial: Partial<Omit<Debt, 'id' | 'updated_at'>>) => void;
+  deleteDebt: (id: string) => void;
+  /** Baja el saldo de la deuda y, si se pide, deja el pago como gasto del mes. */
+  registerDebtPayment: (
+    id: string,
+    pago: { amount: number; date: string; accountId: string | null; asExpense: boolean },
+  ) => void;
+
+  // --- Ajustes ---
+  setSettings: (partial: Partial<Omit<Settings, 'updated_at'>>) => void;
+
   // --- Selectores (getters) ---
   getMonthlyData: () => Transaction[];
 
@@ -67,6 +83,8 @@ const emptyState = {
   budgetUpdatedAt: {} as Record<string, string>,
   savingsGoals: [] as SavingsGoal[],
   accounts: [] as Account[],
+  debts: [] as Debt[],
+  settings: { debtMethod: 'snowball', extraPayment: 0, netWorthGoal: 0, updated_at: '' } as Settings,
   customExpenseCategories: [] as Category[],
   customIncomeCategories: [] as Category[],
   tombstones: {} as Record<string, string>,
@@ -162,6 +180,23 @@ function migrateV9(state: Record<string, unknown>): Record<string, unknown> {
     accountId: limpiarId(e.accountId),
     toAccountId: limpiarId(e.toAccountId),
   }));
+  return state;
+}
+
+/**
+ * Migración v10: deudas y ajustes (fase 3.2). `settings.updated_at` vacío
+ * significa "nunca tocado": en el merge pierde contra cualquier fila del
+ * servidor.
+ */
+function migrateV10(state: Record<string, unknown>): Record<string, unknown> {
+  if (!Array.isArray(state.debts)) state.debts = [];
+  const s = (state.settings ?? {}) as Record<string, unknown>;
+  state.settings = {
+    debtMethod: s.debtMethod === 'avalanche' ? 'avalanche' : 'snowball',
+    extraPayment: typeof s.extraPayment === 'number' ? s.extraPayment : 0,
+    netWorthGoal: typeof s.netWorthGoal === 'number' ? s.netWorthGoal : 0,
+    updated_at: typeof s.updated_at === 'string' ? s.updated_at : '',
+  };
   return state;
 }
 
@@ -336,6 +371,57 @@ export const useFinanceStore = create<FinanceState>()(
           tombstones: tombstoned(state.tombstones, id),
         })),
 
+      // ── Deudas ──
+      addDebt: (d) => {
+        const id = newId();
+        set((state) => ({ debts: [...state.debts, { ...d, id, updated_at: nowIso() }] }));
+        return id;
+      },
+
+      updateDebt: (id, partial) =>
+        set((state) => ({
+          debts: state.debts.map((d) => (d.id === id ? { ...d, ...partial, updated_at: nowIso() } : d)),
+          tombstones: clearedTombstone(state.tombstones, id),
+        })),
+
+      deleteDebt: (id) =>
+        set((state) => ({
+          debts: state.debts.filter((d) => d.id !== id),
+          tombstones: tombstoned(state.tombstones, id),
+        })),
+
+      registerDebtPayment: (id, pago) =>
+        set((state) => {
+          const debt = state.debts.find((d) => d.id === id);
+          if (!debt) return {};
+          const debts = state.debts.map((d) =>
+            d.id === id ? { ...d, balance: Math.max(0, roundMoneyLocal(d.balance - pago.amount)), updated_at: nowIso() } : d,
+          );
+          if (!pago.asExpense) return { debts };
+          // Como en Balance Dual: el pago queda además como gasto del mes, en
+          // la categoría que corresponde al tipo de deuda.
+          const category = debt.kind === 'Tarjeta de crédito' ? 'pago-tarjetas' : 'prestamos';
+          const tx: Transaction = {
+            id: newId(),
+            type: 'expense',
+            amount: pago.amount,
+            concept: `Pago ${debt.name}`,
+            date: pago.date,
+            category,
+            method: pago.accountId ? 'transfer' : 'cash',
+            businessType: debt.tag,
+            accountId: pago.accountId,
+            toAccountId: null,
+            created_at: nowIso(),
+            updated_at: nowIso(),
+          };
+          return { debts, expenses: [...state.expenses, tx] };
+        }),
+
+      // ── Ajustes ──
+      setSettings: (partial) =>
+        set((state) => ({ settings: { ...state.settings, ...partial, updated_at: nowIso() } })),
+
       getMonthlyData: () => {
         const { expenses, currentViewDate } = get();
         const d = new Date(currentViewDate);
@@ -350,10 +436,10 @@ export const useFinanceStore = create<FinanceState>()(
     }),
     {
       name: 'foresight-finance-storage',
-      version: 9,
+      version: 10,
       migrate: (persistedState: unknown, _version: number) => {
         try {
-          return migrateV9(migrateV8(persistedState));
+          return migrateV10(migrateV9(migrateV8(persistedState)));
         } catch (err) {
           // Estado inesperado: arrancar limpio antes que romper la app
           console.error('[financeStore] Migración de estado persistido fallida — reseteando:', err);
@@ -369,6 +455,8 @@ export const useFinanceStore = create<FinanceState>()(
         currentFilter: state.currentFilter,
         savingsGoals: state.savingsGoals,
         accounts: state.accounts,
+        debts: state.debts,
+        settings: state.settings,
         customExpenseCategories: state.customExpenseCategories,
         customIncomeCategories: state.customIncomeCategories,
         tombstones: state.tombstones,

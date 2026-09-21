@@ -525,7 +525,7 @@ describe('reloj y ciclo de vida', () => {
       mockFrom.mockClear();
       disparar();
       await vi.advanceTimersByTimeAsync(0);
-      expect(mockFrom.mock.calls.length).toBeGreaterThanOrEqual(4); // pull de las 4 tablas
+      expect(mockFrom.mock.calls.length).toBeGreaterThanOrEqual(7); // pull de las 7 tablas
     }
   });
 
