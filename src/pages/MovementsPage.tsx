@@ -42,6 +42,7 @@ export function MovementsPage() {
   const [sortField, setSortField] = useState<'date' | 'amount'>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [accountFilter, setAccountFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   // ── Selección múltiple ──
@@ -94,7 +95,7 @@ export function MovementsPage() {
   // Limpiar selección al cambiar de filtro, mes o búsqueda
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [currentFilter, currentViewDate, searchQuery, categoryFilter]);
+  }, [currentFilter, currentViewDate, searchQuery, categoryFilter, accountFilter]);
 
   // Aplicar filtro pendiente desde el dashboard (KPIs o categorías)
   useEffect(() => {
@@ -141,6 +142,9 @@ export function MovementsPage() {
     if (currentFilter === 'personal') items = items.filter((i) => i.businessType === 'personal');
 
     if (categoryFilter) items = items.filter((i) => i.category === categoryFilter);
+    // Una transferencia queda incluida si la cuenta elegida es el origen o el
+    // destino: es la misma cuenta la que "tocó" ese movimiento.
+    if (accountFilter) items = items.filter((i) => i.accountId === accountFilter || i.toAccountId === accountFilter);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       // Búsqueda global: concepto, categoría (ID + label), tipo, negocio/personal
@@ -167,7 +171,7 @@ export function MovementsPage() {
         : a.amount - b.amount;
       return sortDir === 'asc' ? val : -val;
     });
-  }, [monthlyData, currentFilter, sortField, sortDir, categoryFilter, searchQuery, categoryLabelMap]);
+  }, [monthlyData, currentFilter, sortField, sortDir, categoryFilter, accountFilter, searchQuery, categoryLabelMap]);
 
   const handleSort = (field: 'date' | 'amount') => {
     if (sortField === field) {
@@ -235,6 +239,20 @@ export function MovementsPage() {
             </button>
           );
         })()}
+        {/* Chip: filtro de cuenta */}
+        {accountFilter && (() => {
+          const acc = accounts.find((a) => a.id === accountFilter);
+          return (
+            <button
+              onClick={() => setAccountFilter(null)}
+              className="saas-chip-filter-category"
+              title="Quitar filtro de cuenta"
+            >
+              {acc?.name || accountFilter}
+              <X className="text-3xs ml-0.5" />
+            </button>
+          );
+        })()}
         {/* Chip: búsqueda activa */}
         {searchQuery && (
           <button
@@ -265,6 +283,19 @@ export function MovementsPage() {
             {f.label}
           </button>
         ))}
+        {accounts.length > 0 && (
+          <select
+            value={accountFilter ?? ''}
+            onChange={(e) => setAccountFilter(e.target.value || null)}
+            aria-label="Filtrar por cuenta"
+            className="saas-input-sm text-2xs flex-shrink-0 ml-2"
+          >
+            <option value="">Todas las cuentas</option>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>{a.name}</option>
+            ))}
+          </select>
+        )}
         <div className="flex items-center w-[260px] ml-auto flex-shrink-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus-within:ring-2 focus-within:ring-brand-500 focus-within:border-transparent">
           <Search className="ml-2.5 w-3.5 h-3.5 text-slate-500 dark:text-slate-400 flex-shrink-0" />
           <input
@@ -321,6 +352,21 @@ export function MovementsPage() {
             roto en vez de contenido con scroll. */}
         <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-slate-50 dark:from-slate-950 to-transparent" />
       </div>
+
+      {/* Cuenta mobile (own row, solo si hay cuentas) */}
+      {accounts.length > 0 && (
+        <select
+          value={accountFilter ?? ''}
+          onChange={(e) => setAccountFilter(e.target.value || null)}
+          aria-label="Filtrar por cuenta"
+          className="saas-input sm:hidden text-xs w-full"
+        >
+          <option value="">Todas las cuentas</option>
+          {accounts.map((a) => (
+            <option key={a.id} value={a.id}>{a.name}</option>
+          ))}
+        </select>
+      )}
 
       {/* Search mobile (own row, full width) */}
       <div className="flex items-center sm:hidden w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus-within:ring-2 focus-within:ring-brand-500 focus-within:border-transparent">
