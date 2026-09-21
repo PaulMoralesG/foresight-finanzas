@@ -6,7 +6,7 @@
 // ================================================================
 
 import { useMemo, useEffect, useRef } from 'react';
-import { ChartNoAxesColumn, Plus, Receipt, ArrowDown, ArrowUp, Store, PiggyBank } from '@/components/ui/icons.generated';
+import { ChartNoAxesColumn, Plus, Receipt, ArrowDown, ArrowUp, Store, PiggyBank, Wallet } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useMonthlyData } from '@/hooks/useFinance';
@@ -19,6 +19,7 @@ import { MonthNav } from '@/components/layout/MonthNav';
 import { BudgetProgress } from '@/components/ui/BudgetProgress';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { TrendCard, HighlightsCard } from '@/components/features/home/MonthInsights';
+import { totalBalance } from '@/lib/accounts';
 import { ScopeBadge, TransactionAmount, TypePill } from '@/components/ui/TransactionBits';
 import type { Transaction, TabId } from '@/types';
 
@@ -357,6 +358,11 @@ export function HomePage() {
   const customExpenseCats = useFinanceStore((s) => s.customExpenseCategories);
   const customIncomeCats = useFinanceStore((s) => s.customIncomeCategories);
   const allCustomCats = useMemo(() => [...customExpenseCats, ...customIncomeCats], [customExpenseCats, customIncomeCats]);
+  const accounts = useFinanceStore((s) => s.accounts);
+  const expenses = useFinanceStore((s) => s.expenses);
+  // "Saldo total" en cuentas, como el primer KPI del dashboard de Balance Dual.
+  // Solo cuando hay cuentas: sin ellas no hay nada que sumar.
+  const saldoCuentas = useMemo(() => totalBalance(accounts, expenses), [accounts, expenses]);
 
   // Tendencia, comparación con el mes anterior y destacados, para el mes
   // visible. Es el mismo hook que alimentaba Estadísticas, en modo mes.
@@ -383,7 +389,24 @@ export function HomePage() {
           cuando todas las cifras tienen el mismo peso visual y se comparan
           entre sí, y el degradado obligaba a un juego de colores propio
           (texto blanco, brand-200) que no existía en ninguna otra pantalla. */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 animate-slide-up">
+      <div className={`grid grid-cols-2 gap-3 animate-slide-up ${accounts.length > 0 ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
+        {accounts.length > 0 && (
+          <button
+            onClick={() => { navigateTo('accounts' as TabId); }}
+            className="saas-card p-4 text-left hover:border-brand-500 dark:hover:border-brand-400 transition-colors"
+            title="Ver cuentas"
+          >
+            <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <Wallet className="w-3 h-3" /> Saldo total
+            </span>
+            <span className={`block text-2xl font-bold tabular-nums mt-1 truncate ${saldoCuentas >= 0 ? 'text-slate-900 dark:text-white' : 'text-expense-600 dark:text-expense-400'}`}>
+              {formatMoney(saldoCuentas)}
+            </span>
+            <span className="block text-2xs text-slate-500 dark:text-slate-400 mt-0.5">
+              {accounts.length} {accounts.length === 1 ? 'cuenta' : 'cuentas'}
+            </span>
+          </button>
+        )}
         <div className="saas-card p-4">
           <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Saldo de {(() => { const d = new Date(currentViewDate); return `${d.toLocaleDateString(LOCALE, { month: 'long' })}`; })()}
