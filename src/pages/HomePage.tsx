@@ -5,24 +5,24 @@
 // (Lo que era la pestaña Estadísticas vive aquí desde la fase 3.)
 // ================================================================
 
-import { useMemo, useEffect, useRef } from 'react';
-import { ChartNoAxesColumn, Plus, Receipt, ArrowDown, ArrowUp, Store, PiggyBank, Wallet } from '@/components/ui/icons.generated';
+import { useMemo } from 'react';
+import { ChartNoAxesColumn, Plus, Receipt, ArrowDown, ArrowUp, Store, PiggyBank, Wallet, Target, CreditCard } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useMonthlyData } from '@/hooks/useFinance';
 import { useStatsPeriod, pctChange } from '@/hooks/useStatsPeriod';
-import { useBudget } from '@/hooks/useBudget';
 import { formatMoney, LOCALE, roundMoney, safeParseDate } from '@/lib/utils';
 import { computeSavingsByConcept } from '@/lib/savings';
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/config/categories';
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, getCategoryById } from '@/config/categories';
 import { MonthNav } from '@/components/layout/MonthNav';
-import { BudgetProgress } from '@/components/ui/BudgetProgress';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { TrendCard, HighlightsCard } from '@/components/features/home/MonthInsights';
 import { totalBalance } from '@/lib/accounts';
+import { planFor, actualFor, budgetStatus } from '@/lib/budget-lines';
+import { projectDebts, totalDebt, payoffDate } from '@/lib/debts';
 import { netWorthNow } from '@/lib/networth';
 import { ScopeBadge, TransactionAmount, TypePill } from '@/components/ui/TransactionBits';
-import type { Transaction, TabId } from '@/types';
+import type { Transaction, TabId, Debt } from '@/types';
 
 /* ─── Category Bar (simple, no recharts dependency for now) ─── */
 function CategoryBreakdown({ expenses }: { expenses: Transaction[] }) {
@@ -278,75 +278,145 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
 /* ─── Budget Card (solo lectura) ───
    El dashboard es un status board: muestra el estado y navega a la sección
    Planes para editar. Nada de inputs inline (principio monitor ≠ editor). */
-function BudgetWidget() {
+/* ─── Presupuestos a vigilar: las categorías más cerca de su límite ───
+   Sustituye a la barra única que promediaba todas las categorías: desde la
+   3.4 el presupuesto es por categoría, y lo que importa aquí no es el total
+   sino cuál se está a punto de pasar (budgetPreviewCard de la referencia). */
+function BudgetWatchlist() {
   const navigateTo = useUiStore((s) => s.navigateTo);
+  const budgetLines = useFinanceStore((s) => s.budgetLines);
+  const expenses = useFinanceStore((s) => s.expenses);
   const currentViewDate = useFinanceStore((s) => s.currentViewDate);
-  const addToast = useUiStore((s) => s.addToast);
+  const customExpenseCats = useFinanceStore((s) => s.customExpenseCategories);
+  const customIncomeCats = useFinanceStore((s) => s.customIncomeCategories);
+  const customCats = useMemo(
+    () => [...customExpenseCats, ...customIncomeCats],
+    [customExpenseCats, customIncomeCats],
+  );
 
-  const monthKey = (() => {
+  const monthKey = useMemo(() => {
     const d = new Date(currentViewDate);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-  })();
+  }, [currentViewDate]);
 
-  const { budget, monthSpent, pct, isCarriedOver, colorBar, emoji, message } = useBudget(monthKey);
-
-  // Toast cuando se excede el presupuesto (solo una vez por mes)
-  const exceededNotifiedRef = useRef(false);
-  useEffect(() => {
-    if (pct > 100 && !exceededNotifiedRef.current && budget > 0) {
-      addToast(`⚠️ Presupuesto excedido en ${formatMoney(monthSpent - budget)}`, 'error');
-      exceededNotifiedRef.current = true;
-    }
-    // Resetear al cambiar de mes
-    if (pct <= 100) exceededNotifiedRef.current = false;
-  }, [pct, budget, monthSpent, addToast]);
+  const top = useMemo(() => {
+    return budgetLines
+      .filter((l) => l.kind === 'expense')
+      .map((line) => {
+        const limit = planFor(line, monthKey);
+        const spent = actualFor(expenses, line, monthKey);
+        return { line, limit, spent, ...budgetStatus(spent, limit) };
+      })
+      .sort((a, b) => b.pct - a.pct)
+      .slice(0, 4);
+  }, [budgetLines, expenses, monthKey]);
 
   return (
     <div className="saas-card p-4 animate-slide-up">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-bold text-slate-900 dark:text-white">Presupuesto mensual</h2>
-        <div className="flex items-center gap-1.5">
-          {budget > 0 && (
-            <button
-              onClick={() => navigateTo('budgets' as TabId)}
-              className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
-              title="Ajustar en Presupuestos"
-            >
-              Ajustar
-            </button>
-          )}
-          <span className="text-lg">{emoji}</span>
+        <div>
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white">Presupuestos a vigilar</h2>
+          <p className="text-2xs text-slate-500 dark:text-slate-400">Los más cerca del límite este mes</p>
         </div>
+        <button
+          onClick={() => navigateTo('budgets' as TabId)}
+          className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
+        >
+          Ver todo
+        </button>
       </div>
 
-      {/* ── Sin presupuesto ── */}
-      {budget === 0 ? (
-        <div className="space-y-3">
-          <p className="text-sm text-slate-500 dark:text-slate-400">Define cuánto quieres gastar este mes, por categoría</p>
-          <button
-            onClick={() => navigateTo('budgets' as TabId)}
-            className="saas-btn-primary saas-btn-sm"
-          >
-            Definir presupuesto →
-          </button>
-        </div>
+      {top.length === 0 ? (
+        <EmptyState
+          variant="compact"
+          icon={Target}
+          title="Aún no defines presupuestos"
+          description="Ve a la pestaña Presupuestos"
+        />
       ) : (
         <div className="space-y-3">
-          {isCarriedOver && (
-            <p className="text-2xs text-slate-500 dark:text-slate-400 italic">
-              Presupuesto heredado del mes anterior
-            </p>
-          )}
-          <BudgetProgress
-            monthSpent={monthSpent}
-            budget={budget}
-            pct={pct}
-            colorBar={colorBar}
-            message={message}
-            destacarExcedido
-          />
+          {top.map(({ line, limit, spent, pct, status, label }) => {
+            const cat = getCategoryById(line.categoryId, customCats);
+            const barColor = status === 'good' ? 'bg-income-500' : status === 'warn' ? 'bg-amber-500' : 'bg-expense-500';
+            const pillColor =
+              status === 'good'
+                ? 'bg-income-100 dark:bg-income-950 text-income-700 dark:text-income-400'
+                : status === 'warn'
+                  ? 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400'
+                  : 'bg-expense-100 dark:bg-expense-950 text-expense-700 dark:text-expense-400';
+            return (
+              <div key={line.id}>
+                <div className="flex items-center justify-between gap-2 text-xs mb-1">
+                  <span className="flex items-center gap-1.5 font-medium text-slate-900 dark:text-white truncate min-w-0">
+                    <span className="flex-shrink-0">{cat.icon}</span>
+                    <span className="truncate">{cat.label}</span>
+                  </span>
+                  <span className={`text-2xs font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${pillColor}`}>{label}</span>
+                </div>
+                <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full ${barColor}`} style={{ width: `${Math.min(100, pct)}%` }} />
+                </div>
+                <p className="text-2xs text-slate-500 dark:text-slate-400 tabular-nums mt-1">
+                  {formatMoney(spent)} de {formatMoney(limit)}
+                </p>
+              </div>
+            );
+          })}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ─── Rumbo a cero deudas: mini-resumen con CTA a Deudas (debtMiniCard) ───
+   Sin deudas registradas no se muestra: no hay nada que resumir. */
+function DebtMiniCard() {
+  const navigateTo = useUiStore((s) => s.navigateTo);
+  const debts = useFinanceStore((s) => s.debts);
+  const settings = useFinanceStore((s) => s.settings);
+
+  const plan = useMemo(
+    () => projectDebts(debts, settings.extraPayment, settings.debtMethod),
+    [debts, settings.extraPayment, settings.debtMethod],
+  );
+  const siguiente = useMemo(
+    () => plan.order.map((id) => debts.find((d) => d.id === id)).find((d): d is Debt => !!d),
+    [plan.order, debts],
+  );
+
+  if (debts.length === 0) return null;
+
+  return (
+    <div className="saas-card p-4 animate-slide-up">
+      <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+        <CreditCard className="w-4 h-4 text-brand-500" />
+        Rumbo a cero deudas
+      </h2>
+      <p className="text-2xs text-slate-500 dark:text-slate-400 mb-2">
+        {settings.debtMethod === 'avalanche' ? 'Método avalancha' : 'Método bola de nieve'}
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Deuda total</p>
+          <p className="text-lg font-bold tabular-nums text-slate-900 dark:text-white">{formatMoney(totalDebt(debts))}</p>
+        </div>
+        <div>
+          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Libre de deudas</p>
+          <p className="text-lg font-bold tabular-nums text-slate-900 dark:text-white">{plan.ok ? payoffDate(plan.months) : '—'}</p>
+        </div>
+      </div>
+      {siguiente && (
+        <p className="text-xs text-slate-600 dark:text-slate-400 mt-3">
+          Siguiente en la fila: <strong className="text-slate-900 dark:text-white">{siguiente.name}</strong> — {formatMoney(siguiente.balance)}
+          {plan.payoff[siguiente.id] ? `, liquidada en ${payoffDate(plan.payoff[siguiente.id])}` : ''}.
+        </p>
+      )}
+      <button
+        onClick={() => navigateTo('debts' as TabId)}
+        className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline mt-3 inline-block"
+      >
+        Ver el plan completo →
+      </button>
     </div>
   );
 }
@@ -497,9 +567,10 @@ export function HomePage() {
           />
         </div>
         <div className="space-y-4">
-          <BudgetWidget />
-          <SavingsGoalWidget totalIncome={summary.totalIncome} />
+          <BudgetWatchlist />
+          <DebtMiniCard />
           <NetWorthWidget />
+          <SavingsGoalWidget totalIncome={summary.totalIncome} />
         </div>
       </div>
     </div>
