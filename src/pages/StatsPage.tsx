@@ -234,7 +234,7 @@ export function StatsPage() {
                 value={statsMonth}
                 onChange={(e) => setStatsMonth(Number(e.target.value))}
                 aria-label="Mes a analizar"
-                className="saas-input-sm text-2xs w-[100px]"
+                className="saas-input-sm text-2xs w-[128px]"
               >
                 {MONTH_NAMES.map((name, i) => (
                   <option key={i} value={i}>{name}</option>

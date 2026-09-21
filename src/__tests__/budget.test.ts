@@ -117,8 +117,8 @@ describe('shiftMonthKey', () => {
 });
 
 describe('monthKeyLabel', () => {
-  it('formatea el mes en español abreviado', () => {
-    expect(monthKeyLabel('2026-08')).toBe('Ago 2026');
-    expect(monthKeyLabel('2026-01')).toBe('Ene 2026');
+  it('formatea el mes en español, nombre completo (mismo formato que MonthNav)', () => {
+    expect(monthKeyLabel('2026-08')).toBe('Agosto 2026');
+    expect(monthKeyLabel('2026-01')).toBe('Enero 2026');
   });
 });

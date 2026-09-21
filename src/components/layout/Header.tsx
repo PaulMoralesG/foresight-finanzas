@@ -105,7 +105,10 @@ export function Header() {
                     <span className="sr-only">Sin conexión</span>
                   </span>
                 ) : syncState === 'syncing' ? (
-                  <span className="flex items-center gap-1 text-2xs text-amber-500" title="Sincronizando...">
+                  /* amber-600 en claro: amber-500 sobre la cabecera blanca daba
+                     2.15:1, por debajo del mínimo de 3:1 que WCAG 1.4.11 pide a
+                     un icono (el texto de este indicador es sr-only). */
+                  <span className="flex items-center gap-1 text-2xs text-amber-600 dark:text-amber-500" title="Sincronizando...">
                     <Loader2 className="w-3 h-3 animate-spin" />
                     <span className="sr-only">Sincronizando</span>
                   </span>
@@ -121,7 +124,7 @@ export function Header() {
                   </span>
                 ) : syncState === 'local-only' ? (
                   <span
-                    className="flex items-center gap-1 text-2xs text-amber-600"
+                    className="flex items-center gap-1 text-2xs text-amber-600 dark:text-amber-500"
                     title="Sincronización desactivada (falta migrar el esquema de Supabase)"
                   >
                     <CloudOff className="w-3 h-3" />

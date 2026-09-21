@@ -3,7 +3,7 @@
 // ================================================================
 
 import { useState, useEffect, useMemo, type FormEvent } from 'react';
-import { X, Plus, Trash2, ArrowDown, ArrowUp, Building2, User, Banknote, CreditCard, Landmark } from '@/components/ui/icons.generated';
+import { X, Plus, Trash2, ArrowDown, ArrowUp, Building2, User, Banknote, CreditCard, Landmark, Search } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_COLORS } from '@/config/categories';
@@ -63,18 +63,29 @@ export function TransactionModal({
   const [date, setDate] = useState(defaultDate);
   const [category, setCategory] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('cash');
-  const [businessType, setBusinessType] = useState<BusinessType>('business');
+  const [businessType, setBusinessType] = useState<BusinessType>('personal');
 
   // ── Nueva categoría ──
   const [showNewCat, setShowNewCat] = useState(false);
   const [newCatLabel, setNewCatLabel] = useState('');
   const [newCatIcon, setNewCatIcon] = useState('📌');
   const [newCatColor, setNewCatColor] = useState(CATEGORY_COLORS[0]);
+  const [categorySearch, setCategorySearch] = useState('');
 
   const categories = [
     ...(type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES),
     ...(type === 'income' ? customIncomeCategories : customExpenseCategories),
   ];
+
+  // El tipo cambia el universo de categorías (ingreso vs gasto): una búsqueda
+  // que tenía sentido en uno puede no tener ningún resultado en el otro.
+  useEffect(() => {
+    setCategorySearch('');
+  }, [type]);
+
+  const filteredCategories = categorySearch.trim()
+    ? categories.filter((c) => c.label.toLowerCase().includes(categorySearch.trim().toLowerCase()))
+    : categories;
 
   function handleAddCustomCategory() {
     const label = newCatLabel.trim();
@@ -140,7 +151,8 @@ export function TransactionModal({
       setDate(defaultDate);
       setCategory('');
       setMethod('cash');
-      setBusinessType('business');
+      setBusinessType('personal');
+      setCategorySearch('');
     }
     // Solo montar al abrir/cerrar o cambiar item
   }, [editingId, isOpen, modalPrefill, defaultDate, addToast]);
@@ -381,11 +393,27 @@ export function TransactionModal({
                 </span>
               )}
             </span>
+            {/* Buscador: con 28+ categorías, encontrar "Gasolina" a ojo en una
+                grilla estática es más lento que escribir 3 letras. Solo se
+                muestra si hay suficientes categorías para justificarlo. */}
+            {categories.length > 8 && (
+              <div className="relative mb-1.5">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                <input
+                  type="text"
+                  value={categorySearch}
+                  onChange={(e) => setCategorySearch(e.target.value)}
+                  placeholder="Buscar categoría..."
+                  aria-label="Buscar categoría"
+                  className="saas-input-sm w-full pl-7 text-xs"
+                />
+              </div>
+            )}
             {/* 3 columnas en pantallas estrechas: con 4 fijas, un iPhone SE
                 (320px) dejaba ~68px por celda y truncaba «Entretenimiento» o
                 «Transporte» a la primera palabra. */}
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5" role="group" aria-label="Categoría del movimiento">
-              {categories.map((cat) => (
+              {filteredCategories.map((cat) => (
                 <button
                   key={cat.id}
                   type="button"
