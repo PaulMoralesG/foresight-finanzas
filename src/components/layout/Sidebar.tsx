@@ -3,7 +3,7 @@
 // En móvil se usa TabBar (barra flotante inferior)
 // ================================================================
 
-import { LayoutGrid, ArrowLeftRight, BarChart3, User, TrendingUp, PiggyBank, ChevronsRight, ChevronsLeft } from 'lucide-react';
+import { LayoutGrid, ArrowLeftRight, BarChart3, User, TrendingUp, PiggyBank, ChevronsRight, ChevronsLeft } from '@/components/ui/icons.generated';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
 import { userInitials } from '@/lib/utils';

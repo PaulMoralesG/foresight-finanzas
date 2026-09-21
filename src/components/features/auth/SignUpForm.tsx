@@ -3,7 +3,7 @@
 // ================================================================
 
 import { useState, type FormEvent, useRef } from 'react';
-import { Eye, EyeOff, MailCheck, AlertCircle, Loader2, UserPlus } from 'lucide-react';
+import { Eye, EyeOff, MailCheck, AlertCircle, Loader2, UserPlus } from '@/components/ui/icons.generated';
 import { useAuth } from '@/hooks/useAuth';
 import { MIN_PASSWORD_LENGTH, STRENGTH_TRACK_CLASS, passwordStrength, validateNewPassword } from '@/lib/password';
 

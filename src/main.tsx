@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { syncService } from './lib/sync';
 import { initErrorReporter } from './lib/error-reporter';
+import { IconSprite } from './components/ui/icons.generated';
 import './index.css';
 
 // Inicializar listeners de ciclo de vida del servicio de sincronización
@@ -10,6 +11,9 @@ syncService.init();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
+    {/* Sprite de iconos: cada <Icon> hace <use> contra estos <symbol>. Va
+        fuera de <App> para que exista aunque la app caiga al ErrorBoundary. */}
+    <IconSprite />
     <App />
   </StrictMode>
 );

@@ -2,7 +2,7 @@
 // Toast - Notificación flotante
 // ================================================================
 
-import { AlertCircle, CheckCircle, X } from 'lucide-react';
+import { AlertCircle, CheckCircle, X } from '@/components/ui/icons.generated';
 import { useUiStore } from '@/stores/uiStore';
 
 export function Toast() {

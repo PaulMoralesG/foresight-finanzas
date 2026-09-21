@@ -3,7 +3,7 @@
 // ================================================================
 
 import { useState, useEffect, useMemo, type FormEvent } from 'react';
-import { X, Plus, Trash2, ArrowDown, ArrowUp, Building2, User, Banknote, CreditCard, Landmark } from 'lucide-react';
+import { X, Plus, Trash2, ArrowDown, ArrowUp, Building2, User, Banknote, CreditCard, Landmark } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_COLORS } from '@/config/categories';

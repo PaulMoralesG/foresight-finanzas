@@ -4,7 +4,7 @@
 // ================================================================
 
 import { useRef, useEffect, useLayoutEffect } from 'react';
-import { Home, ArrowLeftRight, BarChart3, User, PiggyBank, Plus } from 'lucide-react';
+import { Home, ArrowLeftRight, BarChart3, User, PiggyBank, Plus } from '@/components/ui/icons.generated';
 import { useUiStore } from '@/stores/uiStore';
 import type { TabId } from '@/types';
 

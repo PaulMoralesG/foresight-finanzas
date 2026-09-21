@@ -3,7 +3,7 @@
 // ================================================================
 
 import { useState, type FormEvent, useRef } from 'react';
-import { Eye, EyeOff, AlertCircle, Loader2, LogIn } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, Loader2, LogIn } from '@/components/ui/icons.generated';
 import { useAuth } from '@/hooks/useAuth';
 
 /** Traduce errores de Supabase a español amigable */

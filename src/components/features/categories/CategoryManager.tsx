@@ -9,7 +9,7 @@
 // ================================================================
 
 import { useState } from 'react';
-import { ChevronRight, ChevronUp, Check, Edit3, Plus, Tags, Trash2, X } from 'lucide-react';
+import { ChevronRight, ChevronUp, Check, Edit3, Plus, Tags, Trash2, X } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { CATEGORY_COLORS } from '@/config/categories';

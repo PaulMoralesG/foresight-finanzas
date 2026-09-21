@@ -5,7 +5,7 @@
 //   presupuesto de Planes, que navega por su propio monthKey.
 // ================================================================
 
-import { FileText } from 'lucide-react';
+import { FileText } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { MONTH_NAMES } from '@/lib/utils';

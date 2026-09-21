@@ -9,7 +9,7 @@
 // justo el sitio donde acaban divergiendo.
 // ================================================================
 
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle } from '@/components/ui/icons.generated';
 import { formatMoney } from '@/lib/utils';
 
 interface BudgetProgressProps {
