@@ -10,6 +10,7 @@ import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { mergeById, mergeBudgets, type MergeSet } from '@/lib/merge';
 import { nowIso } from '@/lib/ids';
+import { reportarError } from '@/lib/error-reporter';
 import { getTodayISO } from '@/lib/utils';
 import {
   shouldImportLegacy,
@@ -236,20 +237,15 @@ export function isTransientSchemaError(err: unknown): boolean {
 }
 
 /**
- * Reporta un fallo de sync a Sentry (solo producción). Hasta ahora estos
- * catches solo hacían console.warn/error: un problema real de Supabase en
- * producción —una migración sin aplicar, RLS mal configurada, la tabla
- * `budgets` rechazando escrituras— era invisible salvo que el propio usuario
- * lo reportara. `tag` distingue el motivo en Sentry sin tener que leer el
- * mensaje de cada evento.
+ * Reporta un fallo de sync a `error_log` (solo producción; la puerta está
+ * dentro de reportarError). Hasta ahora estos catches solo hacían
+ * console.warn/error: un problema real de Supabase en producción —una
+ * migración sin aplicar, RLS mal configurada, la tabla `budgets` rechazando
+ * escrituras— era invisible salvo que el propio usuario lo reportara. `tag`
+ * distingue el motivo en la tabla sin tener que leer el mensaje de cada fila.
  */
 function reportarErrorSync(err: unknown, tag: string): void {
-  if (!import.meta.env.PROD) return;
-  import('@sentry/react')
-    .then((Sentry) => {
-      Sentry.captureException(err, { tags: { sync_failure: tag } });
-    })
-    .catch(() => {});
+  reportarError(err, { tag });
 }
 
 function sleep(ms: number): Promise<void> {
