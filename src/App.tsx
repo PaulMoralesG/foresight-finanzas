@@ -8,6 +8,7 @@ import { useAuth, useAuthSession } from '@/hooks/useAuth';
 import { lazyConRecuperacion } from '@/lib/lazy-recovery';
 import { usePWA } from '@/hooks/usePWA';
 import { useIdleLogout } from '@/hooks/useIdleLogout';
+import { useNetWorthSnapshot } from '@/hooks/useNetWorthSnapshot';
 import { supabaseAvailable } from '@/config/supabase';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useUiStore } from '@/stores/uiStore';
@@ -40,6 +41,8 @@ export function App() {
   // Único punto de arranque de la sesión en toda la app. El resto de los
   // componentes usa useAuth(), que no tiene efectos.
   useAuthSession();
+  // Cierre mensual del patrimonio: se arma solo cuando cambian los datos.
+  useNetWorthSnapshot();
 
   const { user, isLoading, saveData, signOut } = useAuth();
   const activeTab = useUiStore((s) => s.activeTab);

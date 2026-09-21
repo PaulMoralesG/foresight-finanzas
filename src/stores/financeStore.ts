@@ -6,7 +6,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { safeParseDate, roundMoney as roundMoneyLocal } from '@/lib/utils';
 import { newId, nowIso } from '@/lib/ids';
-import type { Transaction, MonthlyBudget, FilterType, Category, SavingsGoal, Account, Debt, Settings } from '@/types';
+import type { Transaction, MonthlyBudget, FilterType, Category, SavingsGoal, Account, Debt, Settings, Asset, NetWorthSnapshot } from '@/types';
 
 interface FinanceState {
   // --- Estado ---
@@ -16,6 +16,9 @@ interface FinanceState {
   savingsGoals: SavingsGoal[];
   accounts: Account[];
   debts: Debt[];
+  assets: Asset[];
+  /** Cierres mensuales del patrimonio; uno por mes, se arma solo. */
+  networth: NetWorthSnapshot[];
   /** Ajustes sincronizados: método de deuda, aporte extra, meta de patrimonio. */
   settings: Settings;
   customExpenseCategories: Category[];
@@ -67,6 +70,13 @@ interface FinanceState {
     pago: { amount: number; date: string; accountId: string | null; asExpense: boolean },
   ) => void;
 
+  // --- Activos y patrimonio ---
+  addAsset: (a: Omit<Asset, 'id' | 'updated_at'>) => string;
+  updateAsset: (id: string, partial: Partial<Omit<Asset, 'id' | 'updated_at'>>) => void;
+  deleteAsset: (id: string) => void;
+  /** Guarda o reemplaza el cierre de un mes. */
+  saveNetWorthSnapshot: (snap: Omit<NetWorthSnapshot, 'updated_at'>) => void;
+
   // --- Ajustes ---
   setSettings: (partial: Partial<Omit<Settings, 'updated_at'>>) => void;
 
@@ -84,6 +94,8 @@ const emptyState = {
   savingsGoals: [] as SavingsGoal[],
   accounts: [] as Account[],
   debts: [] as Debt[],
+  assets: [] as Asset[],
+  networth: [] as NetWorthSnapshot[],
   settings: { debtMethod: 'snowball', extraPayment: 0, netWorthGoal: 0, updated_at: '' } as Settings,
   customExpenseCategories: [] as Category[],
   customIncomeCategories: [] as Category[],
@@ -197,6 +209,13 @@ function migrateV10(state: Record<string, unknown>): Record<string, unknown> {
     netWorthGoal: typeof s.netWorthGoal === 'number' ? s.netWorthGoal : 0,
     updated_at: typeof s.updated_at === 'string' ? s.updated_at : '',
   };
+  return state;
+}
+
+/** Migración v11: activos y cierres de patrimonio (fase 3.3). */
+function migrateV11(state: Record<string, unknown>): Record<string, unknown> {
+  if (!Array.isArray(state.assets)) state.assets = [];
+  if (!Array.isArray(state.networth)) state.networth = [];
   return state;
 }
 
@@ -418,6 +437,33 @@ export const useFinanceStore = create<FinanceState>()(
           return { debts, expenses: [...state.expenses, tx] };
         }),
 
+      // ── Activos y patrimonio ──
+      addAsset: (a) => {
+        const id = newId();
+        set((state) => ({ assets: [...state.assets, { ...a, id, updated_at: nowIso() }] }));
+        return id;
+      },
+
+      updateAsset: (id, partial) =>
+        set((state) => ({
+          assets: state.assets.map((a) => (a.id === id ? { ...a, ...partial, updated_at: nowIso() } : a)),
+          tombstones: clearedTombstone(state.tombstones, id),
+        })),
+
+      deleteAsset: (id) =>
+        set((state) => ({
+          assets: state.assets.filter((a) => a.id !== id),
+          tombstones: tombstoned(state.tombstones, id),
+        })),
+
+      saveNetWorthSnapshot: (snap) =>
+        set((state) => ({
+          networth: [
+            ...state.networth.filter((n) => n.month !== snap.month),
+            { ...snap, updated_at: nowIso() },
+          ],
+        })),
+
       // ── Ajustes ──
       setSettings: (partial) =>
         set((state) => ({ settings: { ...state.settings, ...partial, updated_at: nowIso() } })),
@@ -436,10 +482,10 @@ export const useFinanceStore = create<FinanceState>()(
     }),
     {
       name: 'foresight-finance-storage',
-      version: 10,
+      version: 11,
       migrate: (persistedState: unknown, _version: number) => {
         try {
-          return migrateV10(migrateV9(migrateV8(persistedState)));
+          return migrateV11(migrateV10(migrateV9(migrateV8(persistedState))));
         } catch (err) {
           // Estado inesperado: arrancar limpio antes que romper la app
           console.error('[financeStore] Migración de estado persistido fallida — reseteando:', err);
@@ -456,6 +502,8 @@ export const useFinanceStore = create<FinanceState>()(
         savingsGoals: state.savingsGoals,
         accounts: state.accounts,
         debts: state.debts,
+        assets: state.assets,
+        networth: state.networth,
         settings: state.settings,
         customExpenseCategories: state.customExpenseCategories,
         customIncomeCategories: state.customIncomeCategories,
