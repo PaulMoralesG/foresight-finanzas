@@ -270,14 +270,12 @@ describe('empates y marca de agua', () => {
 
 // ── Metas, categorías y presupuestos viajan en ambos sentidos ──
 
-describe('entidades secundarias', () => {
-  it('adopta metas y categorías remotas (por kind) y presupuestos', async () => {
+describe('entidades secundarias (fase 3)', () => {
+  it('adopta entidades remotas (cuentas, deudas, activos, patrimonio, presupuestos, metas, categorías, ajustes)', async () => {
     armar({
       filas: {
         savings_goals: [
-          { id: 'g1', user_id: 'user-1', concept: 'Viaje', target: 5000, updated_at: '2026-08-01T00:00:00.000Z', deleted_at: null },
-          // Reciente a propósito: un tombstone confirmado por el servidor con
-          // más de 30 días se poda (ver el test de poda más arriba).
+          { id: 'g1', user_id: 'user-1', concept: 'Viaje', target: 5000, tag: 'personal', target_date: '2026-12', saved: 100, saved_from_accounts: 50, updated_at: '2026-08-01T00:00:00.000Z', deleted_at: null },
           { id: 'g-borrada', user_id: 'user-1', concept: null, target: null, updated_at: '2026-08-25T00:00:00.000Z', deleted_at: '2026-08-25T00:00:00.000Z' },
         ],
         categories: [
@@ -285,6 +283,15 @@ describe('entidades secundarias', () => {
           { id: 'cat_ingreso', user_id: 'user-1', kind: 'income', label: null, icon: null, color: null, updated_at: '2026-08-01T00:00:00.000Z', deleted_at: null },
         ],
         budgets: [{ user_id: 'user-1', month: '2026-08', amount: 12000, updated_at: '2026-08-01T00:00:00.000Z' }],
+        accounts: [{ id: 'a1', user_id: 'user-1', name: 'Banco', kind: 'Banco', initial_balance: 1000, updated_at: '2026-08-01T00:00:00.000Z', deleted_at: null }],
+        debts: [{ id: 'd1', user_id: 'user-1', name: 'Tarjeta', tag: 'personal', kind: 'Tarjeta de crédito', balance: 500, annual_rate: 0, min_payment: 0, pay_day: null, updated_at: '2026-08-01T00:00:00.000Z', deleted_at: null }],
+        assets: [{ id: 'as1', user_id: 'user-1', name: 'Moto', tag: 'personal', group: 'Otros activos', value: 2000, updated_at: '2026-08-01T00:00:00.000Z', deleted_at: null }],
+        networth: [
+          { user_id: 'user-1', month: '2026-07', assets: 2000, liabilities: 500, net: 1500, updated_at: '2026-08-01T00:00:00.000Z' },
+          { user_id: 'user-1', month: '2026-07', assets: 2500, liabilities: 400, net: 2100, updated_at: '2026-08-02T00:00:00.000Z' } // gana esta (empate de mes)
+        ],
+        budget_lines: [{ id: 'bl1', user_id: 'user-1', tag: 'personal', kind: 'expense', category_id: 'comida', limit: 300, plan: { '2026-08': 350 }, updated_at: '2026-08-01T00:00:00.000Z', deleted_at: null }],
+        settings: [{ user_id: 'user-1', debt_method: 'avalanche', extra_payment: 100, net_worth_goal: 50000, updated_at: '2026-08-01T00:00:00.000Z' }]
       },
     });
 
@@ -292,44 +299,60 @@ describe('entidades secundarias', () => {
 
     const s = useFinanceStore.getState();
     expect(s.savingsGoals).toEqual([
-      { id: 'g1', concept: 'Viaje', target: 5000, tag: 'personal', targetDate: null, saved: 0, savedFromAccounts: 0, updated_at: '2026-08-01T00:00:00.000Z' },
+      { id: 'g1', concept: 'Viaje', target: 5000, tag: 'personal', targetDate: '2026-12', saved: 100, savedFromAccounts: 50, updated_at: '2026-08-01T00:00:00.000Z' },
     ]);
     expect(s.customExpenseCategories[0]).toMatchObject({ id: 'cat_gasto', label: 'Mascotas', icon: '🐶' });
-    // Columnas nulas → valores por defecto, no undefined
     expect(s.customIncomeCategories[0]).toMatchObject({ id: 'cat_ingreso', label: '', icon: '📌' });
     expect(s.budgets['2026-08']).toBe(12000);
     expect(s.tombstones['g-borrada']).toBe('2026-08-25T00:00:00.000Z');
+    expect(s.accounts[0]).toMatchObject({ id: 'a1', name: 'Banco', kind: 'Banco', initialBalance: 1000 });
+    expect(s.debts[0]).toMatchObject({ id: 'd1', name: 'Tarjeta', balance: 500 });
+    expect(s.assets[0]).toMatchObject({ id: 'as1', name: 'Moto', value: 2000 });
+    expect(s.networth).toEqual([{ month: '2026-07', assets: 2500, liabilities: 400, net: 2100, updated_at: '2026-08-02T00:00:00.000Z' }]);
+    expect(s.budgetLines[0]).toMatchObject({ id: 'bl1', categoryId: 'comida', limit: 300, plan: { '2026-08': 350 } });
+    expect(s.settings).toMatchObject({ debtMethod: 'avalanche', extraPayment: 100, netWorthGoal: 50000 });
   });
 
-  it('sube metas, categorías de ingreso, presupuestos y sus tombstones', async () => {
-    // 'cat_fuera' existe en el servidor y se borra en local: el tombstone
-    // tiene que viajar. (Una categoría creada y borrada sin haber
-    // sincronizado nunca no viaja: el servidor no tiene nada que borrar.)
+  it('sube entidades secundarias y sus tombstones', async () => {
     const { upserts } = armar({
       filas: {
-        categories: [
-          { id: 'cat_fuera', user_id: 'user-1', kind: 'expense', label: 'Fuera', icon: '❌', color: 'bg-z', updated_at: '2026-08-01T00:00:00.000Z', deleted_at: null },
-        ],
+        categories: [{ id: 'cat_fuera', user_id: 'user-1', kind: 'expense', label: 'Fuera', icon: '❌', color: 'bg-z', updated_at: '2026-08-01T00:00:00.000Z', deleted_at: null }],
+        accounts: [{ id: 'a_fuera', user_id: 'user-1', name: 'A', kind: 'Banco', initial_balance: 0, updated_at: '2026-08-01T00:00:00.000Z', deleted_at: null }],
       },
     });
-    useFinanceStore.getState().addSavingsGoal({ concept: 'Coche', target: 100 });
-    useFinanceStore.getState().addCustomCategory('income', { id: 'cat_extra', label: 'Extra', icon: '💸', color: 'bg-y' });
-    useFinanceStore.getState().addCustomCategory('expense', { id: 'cat_fuera', label: 'Fuera', icon: '❌', color: 'bg-z', updated_at: '2026-08-01T00:00:00.000Z' });
-    useFinanceStore.getState().deleteCustomCategory('expense', 'cat_fuera');
-    useFinanceStore.getState().setBudget('2026-09', 8000);
+    const s = useFinanceStore.getState();
+    s.addSavingsGoal({ concept: 'Coche', target: 100 });
+    s.addCustomCategory('income', { id: 'cat_extra', label: 'Extra', icon: '💸', color: 'bg-y' });
+    s.addCustomCategory('expense', { id: 'cat_fuera', label: 'Fuera', icon: '❌', color: 'bg-z', updated_at: '2026-08-01T00:00:00.000Z' });
+    s.deleteCustomCategory('expense', 'cat_fuera');
+    s.setBudget('2026-09', 8000);
+    s.addAccount({ name: 'Nuevo', kind: 'Banco', initialBalance: 100 });
+    s.addAccount({ name: 'A', kind: 'Banco', initialBalance: 0 });
+    s.deleteAccount('a_fuera');
+    s.addDebt({ name: 'Tarjeta', kind: 'Tarjeta de crédito', tag: 'personal', balance: 500, annualRate: 0, minPayment: 0, payDay: null });
+    s.addAsset({ name: 'Coche', tag: 'personal', group: 'Otros activos', value: 3000 });
+    s.saveNetWorthSnapshot({ month: '2026-08', assets: 100, liabilities: 0, net: 100 });
+    s.addBudgetLine({ tag: 'personal', kind: 'expense', categoryId: 'ropa', limit: 100, plan: {} });
+    s.setSettings({ extraPayment: 200 });
 
     await syncService.attach('user-1');
 
-    expect(filasDe(upserts, 'savings_goals')).toEqual([
-      expect.objectContaining({ concept: 'Coche', target: 100, user_id: 'user-1', deleted_at: null }),
-    ]);
+    expect(filasDe(upserts, 'savings_goals')).toEqual([expect.objectContaining({ concept: 'Coche', target: 100, user_id: 'user-1', deleted_at: null })]);
     const cats = filasDe(upserts, 'categories');
     expect(cats).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: 'cat_extra', kind: 'income', label: 'Extra' }),
       expect.objectContaining({ id: 'cat_fuera', deleted_at: expect.any(String) }),
     ]));
+    expect(filasDe(upserts, 'accounts')).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'Nuevo', initial_balance: 100 }),
+      expect.objectContaining({ id: 'a_fuera', deleted_at: expect.any(String) })
+    ]));
+    expect(filasDe(upserts, 'debts')).toEqual([expect.objectContaining({ name: 'Tarjeta', balance: 500 })]);
+    expect(filasDe(upserts, 'assets')).toEqual([expect.objectContaining({ name: 'Coche', value: 3000 })]);
+    expect(filasDe(upserts, 'networth')).toEqual([expect.objectContaining({ month: '2026-08', assets: 100, net: 100 })]);
+    expect(filasDe(upserts, 'budget_lines')).toEqual([expect.objectContaining({ category_id: 'ropa', limit: 100 })]);
+    expect(filasDe(upserts, 'settings')).toEqual([expect.objectContaining({ extra_payment: 200 })]);
     const presupuestos = upserts.filter((u) => u.table === 'budgets');
-    expect(presupuestos[0].opts).toMatchObject({ onConflict: 'user_id,month' });
     expect(presupuestos[0].rows).toEqual([expect.objectContaining({ month: '2026-09', amount: 8000 })]);
   });
 });

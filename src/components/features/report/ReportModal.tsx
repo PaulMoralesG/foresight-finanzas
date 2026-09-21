@@ -36,7 +36,7 @@ export function ReportModal() {
   const modalRef = useFocusTrap<HTMLDivElement>(isOpen);
   const titleId = useId();
 
-  // ── Usar getMonthlyData() que ya hace dedup de templates recurrentes ──
+  // ── Usar getMonthlyData() ──
   // (hook incondicional: no puede ir después del early return).
   // Deps "innecesarias" a propósito: getMonthlyData lee el store por dentro,
   // sin ellas el memo quedaría stale.
