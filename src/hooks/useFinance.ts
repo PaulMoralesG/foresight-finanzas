@@ -28,7 +28,6 @@ export function useMonthlyData(): {
   const currentViewDate = useFinanceStore((s) => s.currentViewDate);
 
   return useMemo(() => {
-    // getMonthlyData() ya hace el dedup: oculta templates solo si existe copia en el mismo mes
     const monthlyData = getMonthlyData();
 
     const incomeItems = monthlyData.filter((i) => i.type === 'income');
