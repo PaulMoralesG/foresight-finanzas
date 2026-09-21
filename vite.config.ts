@@ -86,7 +86,7 @@ export default defineConfig({
         // explícita (exportar un reporte):
         //
         //   pdf-generator 414 KB · html2canvas 197 KB · index.es 155 KB · purify 28 KB
-        //   StatsPage     405 KB  (arrastra Recharts entero)
+        //   StatsPage      ~30 KB  (era 405 KB cuando arrastraba Recharts)
         //
         // (vendor-monitoring, el chunk de Sentry de 471 KB, ya no existe: se
         // sustituyó por lib/error-reporter, que va dentro del bundle principal.)
@@ -134,9 +134,9 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,
     // Code-splitting: separa vendors estables del bundle principal.
-    // NOTA: NO poner jspdf/recharts en manualChunks — Rollup los hoistea como
+    // NOTA: NO poner jspdf en manualChunks — Rollup lo hoistea como
     // imports estáticos al entry (rompe el lazy de ReportModal/StatsPage).
-    // Con esos módulos lazy, jspdf/recharts quedan en sus chunks dinámicos.
+    // Con esos módulos lazy, jspdf queda en su chunk dinámico.
     rollupOptions: {
       output: {
         manualChunks: {

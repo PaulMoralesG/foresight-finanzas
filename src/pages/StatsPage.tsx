@@ -12,10 +12,7 @@ import { useStatsPeriod, pctChange } from '@/hooks/useStatsPeriod';
 import { getCategoryById } from '@/config/categories';
 import { generatePDFReport } from '@/lib/pdf-generator';
 import { EmptyState } from '@/components/ui/EmptyState';
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend,
-} from 'recharts';
+import { TrendChart } from '@/components/features/stats/TrendChart';
 
 export function StatsPage() {
   const currentViewDate = useFinanceStore((s) => s.currentViewDate);
@@ -175,15 +172,16 @@ export function StatsPage() {
         ? `${formatDateLong(statsFromDate)} → ${formatDateLong(statsToDate)}`
         : 'Selecciona un rango';
 
-  // Recharts recibe colores como props, no como clases, así que el tema hay
+  // El gráfico recibe colores como props, no como clases, así que el tema hay
   // que resolverlo aquí. Estaba fijo en slate-400, que sobre el fondo claro
   // del gráfico da ~2,6:1 — por debajo del mínimo de WCAG para texto.
   //
   // Los valores son los de las rampas de `tailwind.config.js` escritos a mano
-  // (Recharts no entiende clases): neutro de papel para los ejes y la rejilla,
-  // `income`/`expense` para las dos series de dinero. El Balance va en tinta
-  // neutra y de trazo discontinuo, no en un tercer color: con la marca en
-  // verde, una línea de balance verde se confundiría con la de Ingresos.
+  // (los atributos fill/stroke del SVG no entienden clases): neutro de papel
+  // para los ejes y la rejilla, `income`/`expense` para las dos series de
+  // dinero. El Balance va en tinta neutra y de trazo discontinuo, no en un
+  // tercer color: con la marca en verde, una línea de balance verde se
+  // confundiría con la de Ingresos.
   const chart = {
     tick: isDark ? '#a3a099' : '#5f5e58', // slate 400 / 600
     grid: isDark ? '#4a4944' : '#e6e4dd', // slate 700 / 200
@@ -194,7 +192,6 @@ export function StatsPage() {
     expense: '#e34948', // expense-500
     balance: isDark ? '#cfccc2' : '#4a4944', // slate 300 / 700
   };
-  const axisTickColor = chart.tick;
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -417,70 +414,7 @@ export function StatsPage() {
         {trendData.every((d) => d.Ingresos === 0 && d.Gastos === 0) ? (
           <EmptyState variant="compact" icon={TrendingUp} title="Sin datos para mostrar tendencia" />
         ) : (
-          <div className="h-[240px] sm:h-[260px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendData} margin={{ top: 10, right: 20, left: 5, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
-                <XAxis
-                  dataKey="month"
-                  tick={{ fontSize: 12, fill: axisTickColor }}
-                  axisLine={{ stroke: chart.grid }}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 11, fill: axisTickColor }}
-                  axisLine={false}
-                  tickLine={false}
-                  width={55}
-                  tickFormatter={(v) => {
-                    if (v >= 1000000) return `$${(v / 1000000).toFixed(1)}M`;
-                    if (v >= 1000) return `$${Math.round(v / 1000)}k`;
-                    return `$${v}`;
-                  }}
-                />
-                <Tooltip
-                  formatter={(value: number) => [formatMoney(value), '']}
-                  contentStyle={{
-                    borderRadius: '12px',
-                    border: `1px solid ${chart.grid}`,
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                    fontSize: '12px',
-                    backgroundColor: chart.tipBg,
-                    color: chart.tipFg,
-                  }}
-                  labelStyle={{ fontWeight: 600, marginBottom: '4px', color: chart.tipLabel }}
-                />
-                <Legend
-                  wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="Ingresos"
-                  stroke={chart.income}
-                  strokeWidth={2.5}
-                  dot={{ r: 4, fill: chart.income, strokeWidth: 0 }}
-                  activeDot={{ r: 6, fill: chart.income, stroke: '#fff', strokeWidth: 2 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="Gastos"
-                  stroke={chart.expense}
-                  strokeWidth={2.5}
-                  dot={{ r: 4, fill: chart.expense, strokeWidth: 0 }}
-                  activeDot={{ r: 6, fill: chart.expense, stroke: '#fff', strokeWidth: 2 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="Balance"
-                  stroke={chart.balance}
-                  strokeWidth={2.5}
-                  strokeDasharray="6 4"
-                  dot={{ r: 4, fill: chart.balance, strokeWidth: 0 }}
-                  activeDot={{ r: 6, fill: chart.balance, stroke: '#fff', strokeWidth: 2 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          <TrendChart data={trendData} colors={chart} />
         )}
       </div>
 

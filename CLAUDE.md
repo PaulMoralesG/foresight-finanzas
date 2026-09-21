@@ -84,7 +84,7 @@ detrás de cada convención).
 ## Documentación de librerías — Context7
 
 Antes de escribir código contra una API de una librería de la que no se está
-100% seguro del uso actual (Supabase JS, Recharts, Vite/vite-plugin-pwa,
+100% seguro del uso actual (Supabase JS, Vite/vite-plugin-pwa,
 Zustand, Tailwind, jsPDF, Vitest/Testing Library), consultar Context7 en vez
 de fiarse de memoria de entrenamiento:
 
