@@ -7,7 +7,7 @@
 
 import { useMemo } from 'react';
 import { useFinanceStore } from '@/stores/financeStore';
-import { roundMoney, safeParseDate } from '@/lib/utils';
+import { MONTH_NAMES, roundMoney, safeParseDate } from '@/lib/utils';
 
 export interface BudgetStatus {
   /** Presupuesto vigente (propio del mes o heredado) */
@@ -27,10 +27,6 @@ export interface BudgetStatus {
   /** Mensaje de estado legible */
   message: string;
 }
-
-const MONTH_KEYS = {
-  es: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
-};
 
 /**
  * @param monthKey Mes en formato YYYY-MM (ej. '2026-08')
@@ -105,10 +101,10 @@ export function useBudget(monthKey: string): BudgetStatus {
   }, [budgets, expenses, monthKey]);
 }
 
-/** Etiqueta legible de un mes YYYY-MM (ej. 'ago 2026') */
+/** Etiqueta legible de un mes YYYY-MM (ej. 'Agosto 2026') */
 export function monthKeyLabel(monthKey: string): string {
   const [y, m] = monthKey.split('-').map(Number);
-  return `${MONTH_KEYS.es[m - 1]} ${y}`;
+  return `${MONTH_NAMES[m - 1]} ${y}`;
 }
 
 /** Desplazar un mesKey por ±N meses */

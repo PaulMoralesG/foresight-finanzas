@@ -296,21 +296,27 @@ export function MovementsPage() {
       </div>
 
       {/* Filters mobile (pills only) */}
-      <div className="flex sm:hidden gap-1.5 overflow-x-auto scrollbar-hide items-center flex-nowrap">
-        {FILTERS.map((f) => (
-          <button
-            key={f.id}
-            onClick={() => setFilter(f.id)}
-            className={`saas-btn-sm whitespace-nowrap flex-shrink-0 ${
-              currentFilter === f.id
-                ? 'saas-btn-primary'
-                : 'saas-btn-ghost'
-            }`}
-          >
-            {(() => { const Icon = f.icon; return <Icon className="w-3.5 h-3.5" />; })()}
-            {f.label}
-          </button>
-        ))}
+      <div className="relative sm:hidden">
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-hide items-center flex-nowrap pr-6">
+          {FILTERS.map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setFilter(f.id)}
+              className={`saas-btn-sm whitespace-nowrap flex-shrink-0 ${
+                currentFilter === f.id
+                  ? 'saas-btn-primary'
+                  : 'saas-btn-ghost'
+              }`}
+            >
+              {(() => { const Icon = f.icon; return <Icon className="w-3.5 h-3.5" />; })()}
+              {f.label}
+            </button>
+          ))}
+        </div>
+        {/* Pista de que la fila se puede deslizar: sin esto, el último chip
+            ("Personal") queda cortado justo en el ícono y parece un botón
+            roto en vez de contenido con scroll. */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-slate-50 dark:from-slate-950 to-transparent" />
       </div>
 
       {/* Search mobile (own row, full width) */}
