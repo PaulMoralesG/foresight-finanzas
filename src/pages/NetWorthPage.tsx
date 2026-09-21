@@ -27,6 +27,7 @@ export function NetWorthPage() {
   const expenses = useFinanceStore((s) => s.expenses);
   const assets = useFinanceStore((s) => s.assets);
   const debts = useFinanceStore((s) => s.debts);
+  const savingsGoals = useFinanceStore((s) => s.savingsGoals);
   const networth = useFinanceStore((s) => s.networth);
   const goal = useFinanceStore((s) => s.settings.netWorthGoal);
   const addAsset = useFinanceStore((s) => s.addAsset);
@@ -35,7 +36,7 @@ export function NetWorthPage() {
   const addToast = useUiStore((s) => s.addToast);
   const { saveData } = useAuth();
 
-  const nw = useMemo(() => netWorthNow({ accounts, expenses, assets, debts }), [accounts, expenses, assets, debts]);
+  const nw = useMemo(() => netWorthNow({ accounts, expenses, assets, debts, savingsGoals }), [accounts, expenses, assets, debts, savingsGoals]);
   const history = useMemo(() => netWorthHistory(networth, 12), [networth]);
 
   const [formOpen, setFormOpen] = useState(false);

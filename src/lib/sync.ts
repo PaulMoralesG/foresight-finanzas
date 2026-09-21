@@ -141,6 +141,10 @@ interface GoalRow {
   user_id: string;
   concept: string | null;
   target: number | null;
+  tag: string | null;
+  target_date: string | null;
+  saved: number | null;
+  saved_from_accounts: number | null;
   updated_at: string;
   deleted_at: string | null;
 }
@@ -368,6 +372,10 @@ function goalToRow(g: SavingsGoal, userId: string): GoalRow {
     user_id: userId,
     concept: g.concept,
     target: g.target,
+    tag: g.tag,
+    target_date: g.targetDate,
+    saved: g.saved,
+    saved_from_accounts: g.savedFromAccounts,
     updated_at: g.updated_at,
     deleted_at: null,
   };
@@ -378,6 +386,10 @@ function rowToGoal(r: GoalRow): SavingsGoal {
     id: r.id,
     concept: r.concept ?? '',
     target: r.target ?? 0,
+    tag: r.tag === 'business' ? 'business' : 'personal',
+    targetDate: r.target_date ?? null,
+    saved: Number(r.saved ?? 0),
+    savedFromAccounts: Number(r.saved_from_accounts ?? 0),
     updated_at: r.updated_at,
   };
 }

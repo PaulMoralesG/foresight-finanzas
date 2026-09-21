@@ -4,7 +4,7 @@
 
 import { roundMoney } from './utils';
 import { accountBalance } from './accounts';
-import type { Account, Asset, AssetGroup, Debt, NetWorthSnapshot, Transaction } from '@/types';
+import type { Account, Asset, AssetGroup, Debt, NetWorthSnapshot, SavingsGoal, Transaction } from '@/types';
 
 export const ASSET_GROUPS: AssetGroup[] = ['Inversiones', 'Propiedades', 'Otros activos'];
 
@@ -29,9 +29,10 @@ interface Entrada {
   expenses: Transaction[];
   assets: Asset[];
   debts: Debt[];
+  savingsGoals: SavingsGoal[];
 }
 
-export function netWorthNow({ accounts, expenses, assets, debts }: Entrada): NetWorth {
+export function netWorthNow({ accounts, expenses, assets, debts, savingsGoals }: Entrada): NetWorth {
   let liquid = 0;
   let owed = 0;
   for (const a of accounts) {
@@ -43,10 +44,10 @@ export function netWorthNow({ accounts, expenses, assets, debts }: Entrada): Net
   const debtTotal = debts.reduce((s, d) => s + (d.balance || 0), 0);
   // Lo apartado en metas que ya salió de una cuenta sigue siendo tuyo: cuenta
   // como activo. Un aporte sin cuenta no restó de ningún saldo, así que no se
-  // suma (se contaría dos veces).
-  const goals = expenses
-    .filter((t) => t.type === 'expense' && t.category === 'ahorro' && !!t.accountId)
-    .reduce((s, t) => s + t.amount, 0);
+  // suma (se contaría dos veces). savedFromAccounts es justo esa porción,
+  // llevada por la propia meta (fase 3.8) en vez de reconstruida escaneando
+  // gastos por categoría.
+  const goals = savingsGoals.reduce((s, g) => s + (g.savedFromAccounts || 0), 0);
 
   const totalAssets = roundMoney(liquid + manual + goals);
   const liabilities = roundMoney(owed + debtTotal);

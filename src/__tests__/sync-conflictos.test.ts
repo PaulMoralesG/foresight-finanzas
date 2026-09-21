@@ -292,7 +292,7 @@ describe('entidades secundarias', () => {
 
     const s = useFinanceStore.getState();
     expect(s.savingsGoals).toEqual([
-      { id: 'g1', concept: 'Viaje', target: 5000, updated_at: '2026-08-01T00:00:00.000Z' },
+      { id: 'g1', concept: 'Viaje', target: 5000, tag: 'personal', targetDate: null, saved: 0, savedFromAccounts: 0, updated_at: '2026-08-01T00:00:00.000Z' },
     ]);
     expect(s.customExpenseCategories[0]).toMatchObject({ id: 'cat_gasto', label: 'Mascotas', icon: '🐶' });
     // Columnas nulas → valores por defecto, no undefined

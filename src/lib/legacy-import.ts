@@ -169,6 +169,11 @@ export async function buildImportRows(
       ...g,
       id: await uuidv5(`${userId}:goal:${i}`),
       target: num(g.target),
+      // Campos de la 3.8 que un blob legacy nunca trae.
+      tag: g.tag === 'business' ? 'business' as const : 'personal' as const,
+      targetDate: g.targetDate ?? null,
+      saved: num(g.saved),
+      savedFromAccounts: num(g.savedFromAccounts),
       updated_at: g.updated_at ?? fallbackStamp,
     })),
   );

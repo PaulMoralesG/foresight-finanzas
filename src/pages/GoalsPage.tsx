@@ -1,127 +1,121 @@
 // ================================================================
-// GoalsPage — Metas de ahorro: crear, editar, eliminar y progreso
-// El progreso de cada meta = gastos con categoría "Ahorro" cuyo
-// concepto coincide con el de la meta (histórico completo).
+// GoalsPage — Metas de ahorro (fase 3.8; referencia: viewMetas() de Balance Dual)
+//
+// Antes el progreso de una meta se derivaba buscando gastos categoría
+// "ahorro" cuyo concepto de texto coincidiera con el nombre de la meta.
+// Desde la 3.8 cada meta lleva su propio `saved`: se actualiza al
+// "Registrar aporte" (con o sin cuenta) o al editar la meta directamente,
+// como en la referencia. Con fecha objetivo, goalMath calcula cuántos
+// meses quedan y cuánto guardar cada mes para llegar a tiempo.
 // ================================================================
 
-import { useMemo, useState } from 'react';
-import { PiggyBank, Plus, Pencil, Trash2, Target } from '@/components/ui/icons.generated';
+import { useMemo, useState, type FormEvent } from 'react';
+import { PiggyBank, Plus, Pencil, Trash2 } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
-import { formatMoney, parseMoneyInput, roundMoney, syncToCloud } from '@/lib/utils';
-import { computeSavingsByConcept, savingsForGoal } from '@/lib/savings';
+import { formatMoney, getTodayISO, parseMoneyInput, roundMoney, MONTH_NAMES, syncToCloud } from '@/lib/utils';
+import { goalMath, isGoalLate, goalTotals } from '@/lib/goals';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ModalSheet } from '@/components/ui/ModalSheet';
-import type { SavingsGoal } from '@/types';
+import { ScopeBadge } from '@/components/ui/TransactionBits';
+import type { SavingsGoal, BusinessType } from '@/types';
+
+/** 'YYYY-MM' de hoy más `meses` meses, para precargar el mes objetivo del formulario. */
+function shiftMonthKey(meses: number, ahora = new Date()): string {
+  const d = new Date(ahora.getFullYear(), ahora.getMonth() + meses, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function monthLabel(mk: string): string {
+  const [y, m] = mk.split('-').map(Number);
+  return `${MONTH_NAMES[m - 1]} ${y}`;
+}
 
 export function GoalsPage() {
-  const expenses = useFinanceStore((s) => s.expenses);
   const savingsGoals = useFinanceStore((s) => s.savingsGoals);
+  const accounts = useFinanceStore((s) => s.accounts);
   const addSavingsGoal = useFinanceStore((s) => s.addSavingsGoal);
   const updateSavingsGoal = useFinanceStore((s) => s.updateSavingsGoal);
   const deleteSavingsGoal = useFinanceStore((s) => s.deleteSavingsGoal);
-  const updateTransaction = useFinanceStore((s) => s.updateTransaction);
+  const contributeToGoal = useFinanceStore((s) => s.contributeToGoal);
   const addToast = useUiStore((s) => s.addToast);
-  const openModal = useUiStore((s) => s.openModal);
   const { saveData } = useAuth();
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingGoal, setEditingGoal] = useState<SavingsGoal | null>(null);
+  const totals = useMemo(() => goalTotals(savingsGoals), [savingsGoals]);
+
+  // ── Formulario de meta ──
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<SavingsGoal | null>(null);
+  const [fTag, setFTag] = useState<BusinessType>('personal');
+  const [fName, setFName] = useState('');
+  const [fTarget, setFTarget] = useState('');
+  const [fDate, setFDate] = useState('');
+  const [fSaved, setFSaved] = useState('0');
+
+  // ── Registrar aporte ──
+  const [contributing, setContributing] = useState<SavingsGoal | null>(null);
+  const [cDate, setCDate] = useState(getTodayISO());
+  const [cAmount, setCAmount] = useState('');
+  const [cAccount, setCAccount] = useState('');
+
   const [confirmDelete, setConfirmDelete] = useState<SavingsGoal | null>(null);
-  const [concept, setConcept] = useState('');
-  const [targetInput, setTargetInput] = useState('');
-
-  // Histórico completo de ahorros por concepto
-  const savingsByConcept = useMemo(() => computeSavingsByConcept(expenses), [expenses]);
-
-  const totalSaved = useMemo(() => {
-    let sum = 0;
-    for (const saved of savingsByConcept.values()) sum += saved;
-    return roundMoney(sum);
-  }, [savingsByConcept]);
-
-  const totalTarget = roundMoney(savingsGoals.reduce((sum, g) => sum + g.target, 0));
-  const globalPct = totalTarget > 0 ? Math.min(100, Math.round((totalSaved / totalTarget) * 100)) : 0;
 
   function openCreate() {
-    setEditingGoal(null);
-    setConcept('');
-    setTargetInput('');
-    setIsModalOpen(true);
+    setEditing(null);
+    setFTag('personal');
+    setFName('');
+    setFTarget('');
+    setFDate(shiftMonthKey(12));
+    setFSaved('0');
+    setFormOpen(true);
   }
-
-  function openEdit(goal: SavingsGoal) {
-    setEditingGoal(goal);
-    setConcept(goal.concept);
-    setTargetInput(String(goal.target));
-    setIsModalOpen(true);
+  function openEdit(g: SavingsGoal) {
+    setEditing(g);
+    setFTag(g.tag);
+    setFName(g.concept);
+    setFTarget(String(g.target));
+    setFDate(g.targetDate ?? '');
+    setFSaved(String(g.saved));
+    setFormOpen(true);
   }
-
-  function handleSave() {
-    const name = concept.trim();
-    const target = roundMoney(parseMoneyInput(targetInput));
-    if (!name) {
-      addToast('Ingresa un concepto para la meta', 'error');
-      return;
-    }
-    if (target <= 0) {
-      addToast('El monto objetivo debe ser mayor a 0', 'error');
-      return;
-    }
-
-    // Dos metas con el mismo concepto compartirían progreso, porque el avance
-    // se empareja por texto y no por id: los aportes de una sumarían también
-    // en la otra y el usuario vería el mismo dinero contado dos veces.
-    //
-    // Atarlos por id pide una columna nueva en `expenses`, su migración de
-    // datos y tocar el sync — mucho riesgo para un caso poco frecuente.
-    // Impedir el nombre repetido elimina el síntoma sin nada de eso.
-    const yaExiste = savingsGoals.some(
-      (g) => g.id !== editingGoal?.id && g.concept.trim().toLowerCase() === name.toLowerCase(),
-    );
-    if (yaExiste) {
-      addToast('Ya tienes una meta con ese concepto', 'error');
-      return;
-    }
-
-    if (editingGoal) {
-      const conceptoAnterior = editingGoal.concept.trim();
-      updateSavingsGoal(editingGoal.id, { concept: name, target });
-
-      // El progreso de una meta se calcula emparejando su concepto con el de
-      // los gastos de categoría "ahorro" — no hay id que los ate. Sin esto,
-      // renombrar la meta la desvinculaba de todos sus aportes y el progreso
-      // volvía a cero, con el dinero aparentemente perdido.
-      const renombrada = conceptoAnterior.toLowerCase() !== name.toLowerCase();
-      if (renombrada) {
-        const aportes = useFinanceStore
-          .getState()
-          .expenses.filter(
-            (e) =>
-              e.type === 'expense' &&
-              e.category === 'ahorro' &&
-              e.concept.trim().toLowerCase() === conceptoAnterior.toLowerCase(),
-          );
-        aportes.forEach((e) => updateTransaction(e.id, { concept: name }));
-        addToast(
-          aportes.length > 0
-            ? `Meta actualizada ✅ — ${aportes.length} aporte${aportes.length > 1 ? 's' : ''} renombrado${aportes.length > 1 ? 's' : ''}`
-            : 'Meta actualizada ✅',
-          'success',
-        );
-      } else {
-        addToast('Meta actualizada ✅', 'success');
-      }
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    const concept = fName.trim();
+    if (!concept) { addToast('Ponle un nombre a la meta', 'error'); return; }
+    const target = roundMoney(parseMoneyInput(fTarget));
+    if (target <= 0) { addToast('El monto objetivo debe ser mayor a 0', 'error'); return; }
+    const data = { concept, tag: fTag, target, targetDate: fDate || null, saved: roundMoney(parseMoneyInput(fSaved)) };
+    if (editing) {
+      updateSavingsGoal(editing.id, data);
+      addToast('Meta actualizada ✅', 'success');
     } else {
-      addSavingsGoal({ concept: name, target });
+      addSavingsGoal(data);
       addToast('Meta creada ✅', 'success');
     }
     syncToCloud(saveData, addToast);
-    setIsModalOpen(false);
+    setFormOpen(false);
+  }
+
+  function openContribute(g: SavingsGoal) {
+    setContributing(g);
+    const m = goalMath(g);
+    setCDate(getTodayISO());
+    setCAmount(m.monthly ? String(m.monthly) : '');
+    setCAccount('');
+  }
+  function handleContribute(e: FormEvent) {
+    e.preventDefault();
+    if (!contributing) return;
+    const amount = roundMoney(parseMoneyInput(cAmount));
+    if (amount <= 0) { addToast('Ingresa un monto mayor a 0', 'error'); return; }
+    contributeToGoal(contributing.id, { amount, date: cDate, accountId: cAccount || null });
+    addToast(`Aporte de ${formatMoney(amount)} registrado ✅`, 'success');
+    syncToCloud(saveData, addToast);
+    setContributing(null);
   }
 
   function handleDelete() {
@@ -132,219 +126,184 @@ export function GoalsPage() {
     setConfirmDelete(null);
   }
 
+  const anyOpen = formOpen || !!contributing || !!confirmDelete;
   useEscapeKey(() => {
     if (confirmDelete) setConfirmDelete(null);
-    else if (isModalOpen) setIsModalOpen(false);
-  }, isModalOpen || !!confirmDelete);
-
-  useScrollLock(isModalOpen || !!confirmDelete);
-
+    else if (contributing) setContributing(null);
+    else if (formOpen) setFormOpen(false);
+  }, anyOpen);
+  useScrollLock(anyOpen);
 
   return (
-    <div className="space-y-4">
-      {/* ── Header metas ── */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="min-w-0">
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <PiggyBank className="w-5 h-5 text-brand-500" />
-            Metas de ahorro
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Los gastos con categoría <strong>"Ahorro"</strong> cuyo concepto coincide con la meta suman a su progreso
-          </p>
-        </div>
-        <button
-          onClick={openCreate}
-          className="saas-btn saas-btn-primary saas-btn-sm flex items-center gap-1.5"
-        >
-          <Plus className="w-4 h-4" />
+    <div className="space-y-4 animate-fade-in">
+      <div className="flex items-center justify-end">
+        <button onClick={openCreate} className="saas-btn saas-btn-primary saas-btn-sm flex items-center gap-1.5">
+          <Plus className="w-3.5 h-3.5" />
           Nueva meta
         </button>
       </div>
 
-      {/* ── KPIs ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="saas-card p-4 animate-slide-up">
-          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-            Ahorrado total
-          </span>
-          <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400 tabular-nums mt-1">
-            {formatMoney(totalSaved)}
-          </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Histórico, todos los conceptos</p>
-        </div>
-        <div className="saas-card p-4 animate-slide-up">
-          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-            Objetivo total
-          </span>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums mt-1">
-            {formatMoney(totalTarget)}
-          </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{savingsGoals.length} meta{savingsGoals.length === 1 ? '' : 's'}</p>
-        </div>
-        <div className="saas-card p-4 animate-slide-up">
-          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-            Progreso global
-          </span>
-          <p className="text-2xl font-bold text-brand-600 dark:text-brand-400 tabular-nums mt-1">
-            {globalPct}%
-          </p>
-          <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mt-2">
-            <div
-              className="h-full bg-brand-600 rounded-full transition-all duration-500"
-              style={{ width: `${globalPct}%` }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* ── Lista de metas ── */}
       {savingsGoals.length === 0 ? (
         <EmptyState
-          emoji="💤"
-          title="Sin metas aún"
-          description={'Creá una meta y registrá gastos con categoría "Ahorro" y el mismo concepto (ej: meta "Casa" + gastos de ahorro con concepto "Casa")'}
-          action={{ label: 'Crear mi primera meta', icon: Plus, onClick: openCreate }}
+          icon={PiggyBank}
+          title="Sin metas todavía"
+          description="Un fondo de emergencia, un viaje, capital para el negocio: define el monto y la fecha y la app calcula cuánto guardar cada mes."
+          action={{ label: 'Nueva meta', icon: Plus, onClick: openCreate }}
         />
       ) : (
-        <div className="space-y-3">
-          {savingsGoals.map((goal) => {
-            const saved = savingsForGoal(savingsByConcept, goal.concept);
-            const pct = goal.target > 0 ? Math.min(100, Math.round((saved / goal.target) * 100)) : 0;
-            const remaining = Math.max(0, goal.target - saved);
-            return (
-              <div key={goal.id} className="saas-card p-4 animate-slide-up">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <PiggyBank className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                    <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">
-                      {goal.concept}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button
-                      onClick={() => openEdit(goal)}
-                      aria-label={`Editar meta ${goal.concept}`}
-                      className="saas-btn saas-btn-ghost saas-btn-icon"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => setConfirmDelete(goal)}
-                      aria-label={`Eliminar meta ${goal.concept}`}
-                      className="saas-btn saas-btn-ghost saas-btn-icon text-red-600 dark:text-red-400 hover:text-red-600"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
+        <>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 animate-slide-up">
+            <Kpi label="Metas activas" value={String(savingsGoals.length)} sub={savingsGoals.length === 1 ? 'una meta' : 'en total'} />
+            <Kpi label="Ahorrado" value={formatMoney(totals.saved)} sub={`de ${formatMoney(totals.target)}`} />
+            <Kpi label="Falta" value={formatMoney(Math.max(0, roundMoney(totals.target - totals.saved)))} sub="para completar todo" />
+            <Kpi label="A guardar por mes" value={formatMoney(totals.monthly)} sub="para llegar a tiempo" />
+          </div>
 
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
-                    Ahorrado {formatMoney(saved)} de {formatMoney(goal.target)}
-                  </span>
-                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300 tabular-nums">
-                    {pct}%
-                  </span>
-                </div>
-                <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${pct >= 100 ? 'bg-emerald-500' : 'bg-brand-600'}`}
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-                {/* div y no p: un <button> dentro de <p> es HTML inválido y el
-                    navegador reubica el botón fuera del párrafo al parsear. */}
-                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex items-center justify-between gap-2 flex-wrap">
-                  <span>
-                    {remaining > 0 ? `Te falta ${formatMoney(remaining)} para cumplirla` : '🎉 ¡Meta cumplida!'}
-                  </span>
-                  <button
-                    onClick={() => openModal(undefined, {
-                      type: 'expense',
-                      category: 'ahorro',
-                      concept: goal.concept,
-                      businessType: 'personal',
-                    })}
-                    className="saas-btn-primary saas-btn-sm flex items-center gap-1"
-                    aria-label={`Aportar a la meta ${goal.concept}`}
-                    title={`Aportar a "${goal.concept}"`}
-                  >
-                    <Plus className="w-3 h-3" />
-                    Aportar
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+          <div className="saas-card p-4 animate-slide-up">
+            <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+              {savingsGoals.map((g) => {
+                const m = goalMath(g);
+                const late = isGoalLate(m);
+                const barColor = late ? 'bg-expense-500' : 'bg-brand-500 dark:bg-brand-400';
+                return (
+                  <li key={g.id} className="py-3">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-1.5 flex-wrap">
+                        {g.concept} <ScopeBadge businessType={g.tag} />
+                      </span>
+                      <span className="text-sm font-bold tabular-nums text-slate-900 dark:text-white flex-shrink-0">
+                        {formatMoney(m.saved)} / {formatMoney(m.target)}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${barColor}`} style={{ width: `${m.pct}%` }} />
+                    </div>
+                    <p className="text-2xs text-slate-500 dark:text-slate-400 mt-1 tabular-nums">
+                      {m.pct.toFixed(0)}% · faltan {formatMoney(m.missing)}
+                      {g.targetDate
+                        ? late
+                          ? ' · la fecha objetivo ya pasó'
+                          : m.months !== null
+                            ? ` · ${m.months} mes${m.months === 1 ? '' : 'es'} para ${monthLabel(g.targetDate)}`
+                            : ''
+                        : ' · sin fecha objetivo'}
+                      {m.monthly !== null && m.missing > 0 ? ` · guarda ${formatMoney(m.monthly)} al mes` : ''}
+                    </p>
+                    <div className="flex gap-1.5 mt-2 flex-wrap">
+                      <button onClick={() => openContribute(g)} className="saas-btn saas-btn-secondary saas-btn-sm text-2xs">Registrar aporte</button>
+                      <button onClick={() => openEdit(g)} className="saas-btn saas-btn-ghost saas-btn-sm text-2xs flex items-center gap-1" aria-label={`Editar ${g.concept}`}><Pencil className="w-3 h-3" /> Editar</button>
+                      <button onClick={() => setConfirmDelete(g)} className="saas-btn saas-btn-ghost saas-btn-sm text-2xs flex items-center gap-1 text-expense-600 dark:text-expense-400" aria-label={`Eliminar ${g.concept}`}><Trash2 className="w-3 h-3" /> Eliminar</button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </>
       )}
 
-      {/* ── Modal crear/editar ── */}
-      {isModalOpen && (
-        <ModalSheet
-          id="savings-goal-modal-title"
-          titulo={editingGoal ? 'Editar meta' : 'Nueva meta'}
-          onClose={() => setIsModalOpen(false)}
-          trapActivo={isModalOpen && !confirmDelete}
-          focoInicial="#goal-concept"
-        >
-
-            <div className="p-4 space-y-4">
-              <div>
-                <label htmlFor="goal-concept" className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                  Concepto
-                </label>
-                <input
-                  id="goal-concept"
-                  type="text"
-                  value={concept}
-                  onChange={(e) => setConcept(e.target.value)}
-                  placeholder="Ej: Casa, Vacaciones, Auto…"
-                  className="saas-input w-full"
-                />
-              </div>
-              <div>
-                <label htmlFor="goal-target" className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                  Monto objetivo
-                </label>
-                <input
-                  id="goal-target"
-                  type="text"
-                  inputMode="decimal"
-                  value={targetInput}
-                  onChange={(e) => setTargetInput(e.target.value)}
-                  placeholder="0.00"
-                  className="saas-input w-full"
-                />
+      {/* Modal meta */}
+      {formOpen && (
+        <ModalSheet id="goal-form-title" titulo={editing ? 'Editar meta' : 'Nueva meta de ahorro'} onClose={() => setFormOpen(false)} trapActivo={!confirmDelete} focoInicial="#g-name">
+          <form onSubmit={handleSubmit} className="p-3 space-y-3 flex-1 overflow-y-auto">
+            <div>
+              <span className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Ámbito</span>
+              <div className="flex gap-1" role="group" aria-label="Ámbito">
+                {(['personal', 'business'] as BusinessType[]).map((t) => (
+                  <button key={t} type="button" onClick={() => setFTag(t)}
+                    className={`flex-1 py-1 rounded-md text-2xs font-semibold ${fTag === t ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+                    {t === 'personal' ? 'Personal' : 'Negocio'}
+                  </button>
+                ))}
               </div>
             </div>
-
-            <div className="p-4 pt-0 flex gap-2">
-              <button onClick={handleSave} className="saas-btn saas-btn-primary flex-1">
-                <Target className="w-4 h-4" />
-                {editingGoal ? 'Guardar cambios' : 'Crear meta'}
-              </button>
-              <button onClick={() => setIsModalOpen(false)} className="saas-btn saas-btn-secondary">
-                Cancelar
-              </button>
+            <Campo id="g-name" label="Nombre">
+              <input id="g-name" type="text" value={fName} onChange={(e) => setFName(e.target.value)} placeholder="Fondo de emergencia" className="saas-input py-1.5 text-sm" required maxLength={80} />
+            </Campo>
+            <div className="grid grid-cols-2 gap-2">
+              <Campo id="g-target" label="Monto objetivo">
+                <input id="g-target" type="text" inputMode="decimal" value={fTarget} onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setFTarget(e.target.value); }} className="saas-input py-1.5 text-sm tabular-nums" required />
+              </Campo>
+              <Campo id="g-date" label="Mes objetivo">
+                <input id="g-date" type="month" value={fDate} onChange={(e) => setFDate(e.target.value)} className="saas-input py-1.5 text-sm" />
+              </Campo>
             </div>
+            <Campo id="g-saved" label="Ahorrado hasta hoy">
+              <input id="g-saved" type="text" inputMode="decimal" value={fSaved} onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setFSaved(e.target.value); }} className="saas-input py-1.5 text-sm tabular-nums" />
+            </Campo>
+            <p className="text-2xs text-slate-500 dark:text-slate-400">
+              Lo que ya tienes guardado dentro de una cuenta déjalo aquí como saldo inicial: no vuelve a contarse en tu patrimonio.
+            </p>
+            <div className="flex gap-2 pt-1">
+              <button type="button" onClick={() => setFormOpen(false)} className="saas-btn saas-btn-secondary flex-1 py-2 text-xs">Cancelar</button>
+              <button type="submit" className="saas-btn saas-btn-primary flex-1 py-2 text-xs">{editing ? 'Guardar' : 'Crear'}</button>
+            </div>
+          </form>
         </ModalSheet>
       )}
 
-      {/* ── Confirmación de borrado ──
-          Era un diálogo escrito a mano, con su propio overlay, su trampa de
-          foco y su marcado, mientras ConfirmDialog hacía exactamente esto
-          mismo en el perfil, en las categorías y al cerrar sesión. Dos
-          implementaciones de "¿seguro?" es una de más. */}
+      {/* Modal aporte */}
+      {contributing && (
+        <ModalSheet id="contrib-form-title" titulo="Registrar aporte" onClose={() => setContributing(null)} focoInicial="#gc-amount">
+          <form onSubmit={handleContribute} className="p-3 space-y-3 flex-1 overflow-y-auto">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {contributing.concept} · llevas {formatMoney(contributing.saved)} de {formatMoney(contributing.target)}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <Campo id="gc-date" label="Fecha">
+                <input id="gc-date" type="date" value={cDate} onChange={(e) => setCDate(e.target.value)} className="saas-input py-1.5 text-sm" required />
+              </Campo>
+              <Campo id="gc-amount" label="Monto">
+                <input id="gc-amount" type="text" inputMode="decimal" value={cAmount} onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setCAmount(e.target.value); }} className="saas-input py-1.5 text-sm font-bold tabular-nums" required />
+              </Campo>
+            </div>
+            {accounts.length > 0 && (
+              <Campo id="gc-acc" label="Cuenta de origen">
+                <select id="gc-acc" value={cAccount} onChange={(e) => setCAccount(e.target.value)} className="saas-input py-1.5 text-sm">
+                  <option value="">Solo registrar el avance</option>
+                  {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              </Campo>
+            )}
+            <p className="text-2xs text-slate-500 dark:text-slate-400">
+              Si eliges cuenta, el aporte sale de ese saldo y queda como movimiento en Ahorro. Tu patrimonio no cambia: el dinero solo cambia de sitio.
+            </p>
+            <div className="flex gap-2 pt-1">
+              <button type="button" onClick={() => setContributing(null)} className="saas-btn saas-btn-secondary flex-1 py-2 text-xs">Cancelar</button>
+              <button type="submit" className="saas-btn saas-btn-primary flex-1 py-2 text-xs">Registrar</button>
+            </div>
+          </form>
+        </ModalSheet>
+      )}
+
       <ConfirmDialog
-        open={confirmDelete !== null}
-        title={`¿Eliminar meta "${confirmDelete?.concept ?? ''}"?`}
-        message="Se eliminará solo la meta — tus movimientos de ahorro no se tocan."
+        open={!!confirmDelete}
+        title="¿Eliminar esta meta?"
+        message={confirmDelete ? `"${confirmDelete.concept}" desaparecerá, junto con su progreso.` : ''}
         confirmLabel="Eliminar"
+        variant="danger"
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(null)}
       />
+    </div>
+  );
+}
+
+function Campo({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label htmlFor={id} className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function Kpi({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <div className="saas-card p-4">
+      <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="text-xl font-bold tabular-nums mt-1 truncate text-slate-900 dark:text-white">{value}</p>
+      <p className="text-2xs text-slate-500 dark:text-slate-400 mt-0.5">{sub}</p>
     </div>
   );
 }
