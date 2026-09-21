@@ -20,6 +20,7 @@ import { BudgetProgress } from '@/components/ui/BudgetProgress';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { TrendCard, HighlightsCard } from '@/components/features/home/MonthInsights';
 import { totalBalance } from '@/lib/accounts';
+import { netWorthNow } from '@/lib/networth';
 import { ScopeBadge, TransactionAmount, TypePill } from '@/components/ui/TransactionBits';
 import type { Transaction, TabId } from '@/types';
 
@@ -498,6 +499,7 @@ export function HomePage() {
         <div className="space-y-4">
           <BudgetWidget />
           <SavingsGoalWidget totalIncome={summary.totalIncome} />
+          <NetWorthWidget />
         </div>
       </div>
     </div>
@@ -583,6 +585,51 @@ function SavingsGoalWidget({ totalIncome }: { totalIncome: number }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ─── Patrimonio neto (solo lectura + CTA a Patrimonio), como en la referencia ─── */
+function NetWorthWidget() {
+  const accounts = useFinanceStore((s) => s.accounts);
+  const expenses = useFinanceStore((s) => s.expenses);
+  const assets = useFinanceStore((s) => s.assets);
+  const debts = useFinanceStore((s) => s.debts);
+  const goal = useFinanceStore((s) => s.settings.netWorthGoal);
+  const navigateTo = useUiStore((s) => s.navigateTo);
+  const nw = useMemo(() => netWorthNow({ accounts, expenses, assets, debts }), [accounts, expenses, assets, debts]);
+
+  // Sin cuentas, activos ni deudas no hay patrimonio que mostrar.
+  if (accounts.length === 0 && assets.length === 0 && debts.length === 0) return null;
+  const pct = goal > 0 ? Math.max(0, Math.min(100, (nw.net / goal) * 100)) : 0;
+
+  return (
+    <div className="saas-card p-4 animate-slide-up">
+      <h2 className="text-sm font-bold text-slate-900 dark:text-white">Patrimonio neto</h2>
+      <p className="text-2xs text-slate-500 dark:text-slate-400 mb-2">Lo que tienes menos lo que debes</p>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Hoy</p>
+          <p className={`text-xl font-bold tabular-nums ${nw.net >= 0 ? 'text-slate-900 dark:text-white' : 'text-expense-600 dark:text-expense-400'}`}>{formatMoney(nw.net)}</p>
+        </div>
+        <div>
+          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Activos / pasivos</p>
+          <p className="text-sm font-bold tabular-nums text-slate-900 dark:text-white">{formatMoney(nw.assets)} / {formatMoney(nw.liabilities)}</p>
+        </div>
+      </div>
+      {goal > 0 ? (
+        <div className="mt-3">
+          <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+            <div className="h-full bg-brand-500 dark:bg-brand-400 rounded-full" style={{ width: `${pct.toFixed(1)}%` }} />
+          </div>
+          <p className="text-2xs text-slate-500 dark:text-slate-400 mt-1">{pct.toFixed(0)}% de tu meta de {formatMoney(goal)}</p>
+        </div>
+      ) : (
+        <p className="text-2xs text-slate-500 dark:text-slate-400 mt-3">Define una meta de patrimonio en Ajustes para ver el avance.</p>
+      )}
+      <button onClick={() => navigateTo('networth' as TabId)} className="saas-btn saas-btn-secondary saas-btn-sm mt-3">
+        Ver patrimonio
+      </button>
     </div>
   );
 }

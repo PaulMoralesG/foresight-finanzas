@@ -107,3 +107,24 @@ export interface Settings {
   netWorthGoal: number;
   updated_at: string; // ISO — el más nuevo gana en el merge
 }
+
+export type AssetGroup = 'Inversiones' | 'Propiedades' | 'Otros activos';
+
+/** Activo manual (Balance Dual: `assets`): lo que la app no ve en las cuentas. */
+export interface Asset {
+  id: string;
+  name: string;
+  tag: BusinessType;
+  group: AssetGroup;
+  value: number;
+  updated_at: string; // ISO — usado por el merge de sync
+}
+
+/** Cierre mensual del patrimonio (Balance Dual: `networth`). Clave: el mes. */
+export interface NetWorthSnapshot {
+  month: string; // 'YYYY-MM'
+  assets: number;
+  liabilities: number;
+  net: number;
+  updated_at: string; // ISO — el más nuevo gana en el merge
+}

@@ -100,7 +100,7 @@ describe('DebtsPage', () => {
 describe('migración v10 del estado persistido (deudas y ajustes)', () => {
   it('añade debts vacío y settings por defecto', () => {
     const opciones = useFinanceStore.persist.getOptions();
-    expect(opciones.version).toBe(10);
+    expect(opciones.version).toBeGreaterThanOrEqual(10);
     const migrado = opciones.migrate!({ expenses: [], savingsGoals: [], accounts: [] }, 9) as {
       debts: unknown[]; settings: { debtMethod: string; extraPayment: number; netWorthGoal: number; updated_at: string };
     };
