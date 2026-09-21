@@ -91,6 +91,7 @@ vez cada una. Para un entorno nuevo hay que aplicarlas todas:
 | `0009_accounts.sql` | Tabla `accounts` (cuentas: efectivo, banco, tarjeta, ahorros) con RLS, grant y trigger `keep_newest`; columnas `account_id`/`to_account_id` en `expenses` y el tipo `transfer` en su `CHECK` | **Antes** de desplegar (el cliente nuevo hace pull de `accounts`; sin la tabla cae a modo local-only) |
 | `0010_debts_and_settings.sql` | Tablas `debts` (deudas: saldo, interés, mínimo, día de pago) y `settings` (una fila por usuario: método de deuda, aporte extra, meta de patrimonio), con RLS, grant y `keep_newest` | **Antes** de desplegar (el cliente hace pull de ambas) |
 | `0011_assets_and_networth.sql` | Tablas `assets` (activos manuales por grupo) y `networth` (cierre mensual del patrimonio, una fila por mes), con RLS, grant y `keep_newest` | **Antes** de desplegar (el cliente hace pull de ambas) |
+| `0012_budget_lines.sql` | Tabla `budget_lines` (presupuesto por categoría: límite base + plan por mes en jsonb) con RLS, grant y `keep_newest`; columna `group` en `categories`. La tabla `budgets` (presupuesto global) se conserva | **Antes** de desplegar (el cliente hace pull de `budget_lines`) |
 
 Fíjate en el orden de la `0005` y la `0006`: una va antes del deploy y la otra después.
 Invertirlo deja al cliente pidiendo algo que ya no existe, o escribiendo con una clave

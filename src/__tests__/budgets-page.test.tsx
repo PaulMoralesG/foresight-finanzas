@@ -1,101 +1,145 @@
 // ================================================================
-// TESTS — BudgetsPage (presupuesto mensual)
-// Cubre el carry-forward del presupuesto y el borrado explícito. Vivía
-// en savings-page.test.tsx cuando el editor estaba en "Planes".
+// TESTS — BudgetsPage (Presupuestos por categoría), migración v12 y useBudget
+// Sustituye al test del editor de presupuesto global de "Planes".
 // ================================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BudgetsPage } from '@/pages/BudgetsPage';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { currentMonthKey, shiftMonthKey } from '@/hooks/useBudget';
+import { currentMonthKey, useBudget } from '@/hooks/useBudget';
+import { renderHook } from '@testing-library/react';
+import type { Transaction } from '@/types';
 
 const ESTE_MES = currentMonthKey();
-const MES_PASADO = shiftMonthKey(ESTE_MES, -1);
+const [Y, M] = ESTE_MES.split('-');
+
+let n = 0;
+const mov = (o: Partial<Transaction>): Transaction => ({
+  id: `t${++n}`,
+  type: 'expense',
+  amount: 100,
+  concept: '',
+  date: `${Y}-${M}-10`,
+  category: 'comida',
+  method: 'card',
+  businessType: 'personal',
+  updated_at: '2026-08-10T00:00:00.000Z',
+  ...o,
+});
 
 beforeEach(() => {
   cleanup();
-  useFinanceStore.setState({
-    expenses: [],
-    budgets: {},
-    budgetUpdatedAt: {},
-    savingsGoals: [],
-    customExpenseCategories: [],
-    customIncomeCategories: [],
-    tombstones: {},
-    currentViewDate: new Date().toISOString(),
-  });
-  useUiStore.setState({ toasts: [], isModalOpen: false, editingId: null, modalPrefill: null });
+  n = 0;
+  useFinanceStore.getState().reset();
+  useUiStore.setState({ toasts: [] });
 });
 
-
-describe('Presupuesto mensual', () => {
-  it('guarda el presupuesto del mes en curso', async () => {
-    const user = userEvent.setup();
+describe('BudgetsPage — Este mes', () => {
+  it('crea un presupuesto de gasto por categoría y lo muestra con su barra', async () => {
+    useFinanceStore.setState({ expenses: [mov({ category: 'comida', amount: 450 })] });
     render(<BudgetsPage />);
+    await userEvent.click(screen.getByRole('button', { name: 'Nuevo presupuesto' }));
+    const dialogo = screen.getByRole('dialog');
+    await userEvent.selectOptions(within(dialogo).getByLabelText('Categoría'), 'comida');
+    await userEvent.type(within(dialogo).getByLabelText('Límite mensual'), '500');
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Crear' }));
 
-    await user.type(screen.getByPlaceholderText('Ej: 15000'), '1500');
-    await user.click(screen.getByRole('button', { name: 'Guardar presupuesto' }));
-
-    expect(useFinanceStore.getState().budgets[ESTE_MES]).toBe(1500);
-    expect(screen.getByText(/de \$1,500\.00/)).toBeInTheDocument();
+    const lines = useFinanceStore.getState().budgetLines;
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({ tag: 'personal', kind: 'expense', categoryId: 'comida', limit: 500, plan: {} });
+    expect(screen.getByText(/\$450\.00 de \$500\.00 este mes/)).toBeInTheDocument();
+    expect(screen.getByText('Cerca del límite')).toBeInTheDocument(); // 90 %
   });
 
-  it('hereda el presupuesto del mes anterior cuando no hay uno propio', () => {
-    useFinanceStore.setState({ budgets: { [MES_PASADO]: 800 } });
+  it('rechaza un presupuesto duplicado para la misma categoría y ámbito', async () => {
+    useFinanceStore.getState().addBudgetLine({ tag: 'personal', kind: 'expense', categoryId: 'comida', limit: 100, plan: {} });
     render(<BudgetsPage />);
-
-    expect(screen.getByText(/de \$800\.00/)).toBeInTheDocument();
-    expect(screen.getByText(/Heredado de/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Nuevo presupuesto' }));
+    const dialogo = screen.getByRole('dialog');
+    await userEvent.selectOptions(within(dialogo).getByLabelText('Categoría'), 'comida');
+    await userEvent.type(within(dialogo).getByLabelText('Límite mensual'), '200');
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Crear' }));
+    expect(useFinanceStore.getState().budgetLines).toHaveLength(1);
+    expect(useUiStore.getState().toasts.some((t) => t.message.includes('Ya existe'))).toBe(true);
   });
 
-  it('un presupuesto de 0 se comporta como borrado, no hereda', () => {
-    // El bug: `if (!budgets[mes])` trataba el 0 igual que la ausencia, así que
-    // borrar el presupuesto hacía reaparecer el del mes anterior.
-    useFinanceStore.setState({ budgets: { [MES_PASADO]: 800, [ESTE_MES]: 0 } });
-    render(<BudgetsPage />);
-
-    expect(screen.getByText(/No hay presupuesto para/)).toBeInTheDocument();
-    expect(screen.queryByText(/Heredado de/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/de \$800\.00/)).not.toBeInTheDocument();
-  });
-
-  it('el presupuesto propio gana sobre el heredable', () => {
-    useFinanceStore.setState({ budgets: { [MES_PASADO]: 800, [ESTE_MES]: 200 } });
-    render(<BudgetsPage />);
-
-    expect(screen.getByText(/de \$200\.00/)).toBeInTheDocument();
-    expect(screen.queryByText(/Heredado de/)).not.toBeInTheDocument();
-  });
-
-  it('rechaza texto sin dígitos en vez de guardarlo como cero', async () => {
-    const user = userEvent.setup();
-    render(<BudgetsPage />);
-
-    await user.type(screen.getByPlaceholderText('Ej: 15000'), 'abc');
-    await user.click(screen.getByRole('button', { name: 'Guardar presupuesto' }));
-
-    expect(useFinanceStore.getState().budgets[ESTE_MES]).toBeUndefined();
-    expect(useUiStore.getState().toasts[0]).toMatchObject({
-      type: 'error',
-      message: 'Ingresa un monto válido',
+  it('presupuestado vs. real agrupa por grupo y calcula el resultado del mes', () => {
+    useFinanceStore.getState().addBudgetLine({ tag: 'personal', kind: 'income', categoryId: 'sueldo', limit: 2000, plan: {} });
+    useFinanceStore.getState().addBudgetLine({ tag: 'personal', kind: 'expense', categoryId: 'comida', limit: 500, plan: {} });
+    useFinanceStore.setState({
+      expenses: [mov({ type: 'income', category: 'sueldo', amount: 2100 }), mov({ category: 'restaurantes', amount: 300 })],
     });
+    render(<BudgetsPage />);
+    const tabla = screen.getByRole('heading', { name: 'Presupuestado vs. real' }).closest('.saas-card') as HTMLElement;
+    expect(within(tabla).getByText('Empleo')).toBeInTheDocument();
+    expect(within(tabla).getByText('Alimentación')).toBeInTheDocument();
+    const resultado = within(tabla).getByText('Resultado del mes').closest('tr')!;
+    expect(resultado).toHaveTextContent('$1,500.00'); // plan: 2000 − 500
+    expect(resultado).toHaveTextContent('$1,800.00'); // real: 2100 − 300
+    expect(within(tabla).getByText(/planificados sin destino/)).toBeInTheDocument();
+  });
+});
+
+describe('BudgetsPage — Plan 12 meses y Reporte anual', () => {
+  it('el plan guarda el monto de un mes al salir de la casilla', async () => {
+    const id = useFinanceStore.getState().addBudgetLine({ tag: 'personal', kind: 'expense', categoryId: 'comida', limit: 500, plan: {} });
+    render(<BudgetsPage />);
+    await userEvent.click(screen.getByRole('tab', { name: 'Plan 12 meses' }));
+    const year = new Date().getFullYear();
+    const celda = screen.getByLabelText(`Comida Enero ${year}`);
+    await userEvent.clear(celda);
+    await userEvent.type(celda, '900');
+    await userEvent.tab();
+    expect(useFinanceStore.getState().budgetLines.find((l) => l.id === id)!.plan[`${year}-01`]).toBe(900);
+    expect(screen.getByText(/base cero/)).toBeInTheDocument();
   });
 
-  it('acepta un 0 explícito como "quitar presupuesto"', async () => {
-    const user = userEvent.setup();
+  it('el reporte anual muestra lo movido por categoría y mes', async () => {
+    const year = new Date().getFullYear();
+    useFinanceStore.setState({
+      expenses: [
+        mov({ category: 'comida', amount: 120, date: `${year}-02-10` }),
+        mov({ category: 'comida', amount: 80, date: `${year}-03-10` }),
+        mov({ type: 'income', category: 'sueldo', amount: 1000, date: `${year}-02-01` }),
+      ],
+    });
     render(<BudgetsPage />);
+    await userEvent.click(screen.getByRole('tab', { name: 'Reporte anual' }));
+    const fila = screen.getByText(/Comida/).closest('tr')!;
+    expect(fila).toHaveTextContent('120.00');
+    expect(fila).toHaveTextContent('80.00');
+    expect(fila).toHaveTextContent('200.00'); // total
+    expect(fila).toHaveTextContent('100.00'); // promedio de 2 meses
+    expect(screen.getByText('Total ingresos').closest('tr')).toHaveTextContent('1,000.00');
+  });
+});
 
-    await user.type(screen.getByPlaceholderText('Ej: 15000'), '0');
-    await user.click(screen.getByRole('button', { name: 'Guardar presupuesto' }));
-
-    expect(useFinanceStore.getState().budgets[ESTE_MES]).toBe(0);
+describe('migración v12 y useBudget', () => {
+  it('convierte el presupuesto global en líneas por categoría al migrar', () => {
+    const opciones = useFinanceStore.persist.getOptions();
+    expect(opciones.version).toBe(12);
+    const migrado = opciones.migrate!(
+      {
+        expenses: [mov({ category: 'comida', amount: 300, date: '2026-08-05' }), mov({ category: 'ropa', amount: 100, date: '2026-08-06' })],
+        budgets: { '2026-08': 800 },
+        savingsGoals: [],
+      },
+      11,
+    ) as { budgetLines: Array<{ categoryId: string; plan: Record<string, number> }>; budgets: Record<string, number> };
+    expect(migrado.budgetLines.map((l) => [l.categoryId, l.plan['2026-08']]).sort()).toEqual([['comida', 600], ['ropa', 200]]);
+    expect(migrado.budgets).toEqual({ '2026-08': 800 }); // el mapa antiguo no se pierde
   });
 
-  it('el campo de presupuesto tiene nombre accesible', () => {
-    render(<BudgetsPage />);
-    expect(screen.getByLabelText(/Presupuesto para/)).toBeInTheDocument();
+  it('useBudget suma las líneas de gasto del mes y cae al mapa antiguo si no hay líneas', () => {
+    useFinanceStore.setState({ budgets: { [ESTE_MES]: 1500 }, budgetLines: [] });
+    expect(renderHook(() => useBudget(ESTE_MES)).result.current.budget).toBe(1500);
+
+    useFinanceStore.getState().addBudgetLine({ tag: 'personal', kind: 'expense', categoryId: 'comida', limit: 500, plan: {} });
+    useFinanceStore.getState().addBudgetLine({ tag: 'business', kind: 'expense', categoryId: 'impuestos', limit: 200, plan: { [ESTE_MES]: 250 } });
+    useFinanceStore.getState().addBudgetLine({ tag: 'personal', kind: 'income', categoryId: 'sueldo', limit: 9999, plan: {} });
+    expect(renderHook(() => useBudget(ESTE_MES)).result.current.budget).toBe(750);
   });
 });

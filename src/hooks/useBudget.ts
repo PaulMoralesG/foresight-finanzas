@@ -8,6 +8,7 @@
 import { useMemo } from 'react';
 import { useFinanceStore } from '@/stores/financeStore';
 import { MONTH_NAMES, roundMoney, safeParseDate } from '@/lib/utils';
+import { plannedExpenseTotal } from '@/lib/budget-lines';
 
 export interface BudgetStatus {
   /** Presupuesto vigente (propio del mes o heredado) */
@@ -33,26 +34,38 @@ export interface BudgetStatus {
  */
 export function useBudget(monthKey: string): BudgetStatus {
   const budgets = useFinanceStore((s) => s.budgets);
+  const budgetLines = useFinanceStore((s) => s.budgetLines);
   const expenses = useFinanceStore((s) => s.expenses);
 
   return useMemo(() => {
-    // Carry-forward: si no hay presupuesto para el mes, usar el más reciente del pasado.
-    // Un 0 explícito es "sin presupuesto este mes", no "no definido": heredarlo
-    // haría reaparecer el importe del mes anterior justo después de borrarlo.
-    const hasOwnBudget = budgets[monthKey] !== undefined;
-    let budget = budgets[monthKey] ?? 0;
+    let budget: number;
     let carriedFrom: string | null = null;
-    if (!hasOwnBudget) {
-      const keys = Object.keys(budgets).sort().reverse();
-      for (const k of keys) {
-        if (k < monthKey && budgets[k] > 0) {
-          budget = budgets[k];
-          carriedFrom = k;
-          break;
+    let isCarriedOver = false;
+
+    if (budgetLines.length > 0) {
+      // Desde la 3.4 el presupuesto del mes es la suma de las líneas de gasto
+      // (plan del mes o límite base de cada una). El límite base ya hace de
+      // carry-forward, así que no hay "heredado de" que mostrar.
+      budget = plannedExpenseTotal(budgetLines, monthKey);
+    } else {
+      // Respaldo: el mapa global antiguo, para un estado aún sin líneas.
+      // Carry-forward: si no hay presupuesto para el mes, usar el más reciente del pasado.
+      // Un 0 explícito es "sin presupuesto este mes", no "no definido": heredarlo
+      // haría reaparecer el importe del mes anterior justo después de borrarlo.
+      const hasOwnBudget = budgets[monthKey] !== undefined;
+      budget = budgets[monthKey] ?? 0;
+      if (!hasOwnBudget) {
+        const keys = Object.keys(budgets).sort().reverse();
+        for (const k of keys) {
+          if (k < monthKey && budgets[k] > 0) {
+            budget = budgets[k];
+            carriedFrom = k;
+            break;
+          }
         }
       }
+      isCarriedOver = budget > 0 && !hasOwnBudget;
     }
-    const isCarriedOver = budget > 0 && !hasOwnBudget;
 
     // Gastos del mes
     const [y, m] = monthKey.split('-').map(Number);
@@ -98,7 +111,7 @@ export function useBudget(monthKey: string): BudgetStatus {
       'Define tu presupuesto';
 
     return { budget, monthSpent, pct, isCarriedOver, carriedFrom, colorBar, emoji, message };
-  }, [budgets, expenses, monthKey]);
+  }, [budgets, budgetLines, expenses, monthKey]);
 }
 
 /** Etiqueta legible de un mes YYYY-MM (ej. 'Agosto 2026') */

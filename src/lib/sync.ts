@@ -29,6 +29,7 @@ import type {
   Asset,
   AssetGroup,
   NetWorthSnapshot,
+  BudgetLine,
   TransactionType,
   PaymentMethod,
   BusinessType,
@@ -103,6 +104,18 @@ interface NetWorthRow {
   updated_at: string;
 }
 
+interface BudgetLineRow {
+  id: string;
+  user_id: string;
+  tag: string | null;
+  kind: string | null;
+  category_id: string | null;
+  "limit": number | null;
+  plan: Record<string, number> | null;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
 interface SettingsRow {
   user_id: string;
   debt_method: string | null;
@@ -118,6 +131,7 @@ interface CategoryRow {
   label: string | null;
   icon: string | null;
   color: string | null;
+  "group": string | null;
   updated_at: string;
   deleted_at: string | null;
 }
@@ -148,6 +162,7 @@ export interface Snapshot {
   settings: SettingsRow[];
   assets: AssetRow[];
   networth: NetWorthRow[];
+  budgetLines: BudgetLineRow[];
 }
 
 // ── Convertidores locales ↔ filas ──
@@ -270,6 +285,29 @@ function mergeNetWorth(local: NetWorthSnapshot[], remote: NetWorthSnapshot[]): N
   return [...porMes.values()].sort((a, b) => a.month.localeCompare(b.month));
 }
 
+function budgetLineToRow(l: BudgetLine, userId: string): BudgetLineRow {
+  return { id: l.id, user_id: userId, tag: l.tag, kind: l.kind, category_id: l.categoryId, limit: l.limit, plan: l.plan, updated_at: l.updated_at, deleted_at: null };
+}
+
+function rowToBudgetLine(r: BudgetLineRow): BudgetLine {
+  const plan: Record<string, number> = {};
+  if (r.plan && typeof r.plan === 'object') {
+    for (const [k, v] of Object.entries(r.plan)) {
+      const n = Number(v);
+      if (/^\d{4}-\d{2}$/.test(k) && Number.isFinite(n) && n > 0) plan[k] = n;
+    }
+  }
+  return {
+    id: r.id,
+    tag: r.tag === 'business' ? 'business' : 'personal',
+    kind: r.kind === 'income' ? 'income' : 'expense',
+    categoryId: r.category_id ?? 'general',
+    limit: Number(r.limit ?? 0),
+    plan,
+    updated_at: r.updated_at,
+  };
+}
+
 function settingsToRow(s: Settings, userId: string): SettingsRow {
   return {
     user_id: userId,
@@ -307,6 +345,7 @@ function categoryToRow(c: Category, userId: string, kind: 'expense' | 'income'):
     label: c.label,
     icon: c.icon,
     color: c.color,
+    group: c.group ?? null,
     updated_at: c.updated_at ?? nowIso(),
     deleted_at: null,
   };
@@ -318,6 +357,7 @@ function rowToCategory(r: CategoryRow): Category {
     label: r.label ?? '',
     icon: r.icon ?? '📌',
     color: r.color ?? 'bg-slate-100 text-slate-600',
+    group: r.group ?? undefined,
     updated_at: r.updated_at,
   };
 }
@@ -434,7 +474,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-type TableName = 'expenses' | 'categories' | 'savings_goals' | 'budgets' | 'accounts' | 'debts' | 'settings' | 'assets' | 'networth';
+type TableName = 'expenses' | 'categories' | 'savings_goals' | 'budgets' | 'accounts' | 'debts' | 'settings' | 'assets' | 'networth' | 'budget_lines';
 
 // ── Pull ──
 
@@ -500,6 +540,7 @@ export function desfaseDeRelojMinutos(snapshot: Snapshot, ahoraMs = Date.now()):
   mirar(snapshot.accounts);
   mirar(snapshot.debts);
   mirar(snapshot.assets);
+  mirar(snapshot.budgetLines);
 
   const adelanto = masNueva - ahoraMs;
   return adelanto > DESFASE_TOLERADO_MS ? Math.round(adelanto / 60_000) : 0;
@@ -523,7 +564,7 @@ function avisarSiElRelojVaMal(snapshot: Snapshot) {
 }
 
 async function pullAll(uid: string): Promise<Snapshot> {
-  const [expenses, categories, goals, budgets, accounts, debts, settings, assets, networth] = await Promise.all([
+  const [expenses, categories, goals, budgets, accounts, debts, settings, assets, networth, budgetLines] = await Promise.all([
     fetchAllRows<ExpenseRow>('expenses', uid, ['updated_at', 'id']),
     fetchAllRows<CategoryRow>('categories', uid, ['updated_at', 'id']),
     fetchAllRows<GoalRow>('savings_goals', uid, ['updated_at', 'id']),
@@ -537,9 +578,10 @@ async function pullAll(uid: string): Promise<Snapshot> {
     fetchAllRows<AssetRow>('assets', uid, ['updated_at', 'id']),
     // networth: PK (user_id, month); `month` es único por usuario.
     fetchAllRows<NetWorthRow>('networth', uid, ['month']),
+    fetchAllRows<BudgetLineRow>('budget_lines', uid, ['updated_at', 'id']),
   ]);
 
-  const snapshot = { expenses, categories, goals, budgets, accounts, debts, settings, assets, networth };
+  const snapshot = { expenses, categories, goals, budgets, accounts, debts, settings, assets, networth, budgetLines };
   avisarSiElRelojVaMal(snapshot);
   return snapshot;
 }
@@ -553,6 +595,7 @@ interface MergeResult {
   debts: MergeSet<Debt>;
   assets: MergeSet<Asset>;
   networth: NetWorthSnapshot[];
+  budgetLines: MergeSet<BudgetLine>;
   /** Ajustes ganadores tras el merge (el updated_at más nuevo). */
   settings: Settings;
   expenseCategories: MergeSet<Category>;
@@ -633,6 +676,13 @@ function applyMerge(snapshot: Snapshot): MergeResult {
 
   const networth = mergeNetWorth(state.networth, snapshot.networth.map(rowToNetWorth));
 
+  const remoteLines = buildRemoteSet(snapshot.budgetLines, rowToBudgetLine);
+  const linesUniverse = universeOf(state.budgetLines, remoteLines);
+  const budgetLines = mergeById(
+    { live: state.budgetLines, tombstones: scopeTombstones(state.tombstones, linesUniverse) },
+    remoteLines,
+  );
+
   // Ajustes: una sola fila, gana la marca más nueva. Un updated_at local
   // vacío significa "nunca tocado" y pierde contra cualquier fila remota.
   const remoteSettings = snapshot.settings[0] ? rowToSettings(snapshot.settings[0]) : null;
@@ -666,6 +716,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     ...accountsUniverse,
     ...debtsUniverse,
     ...assetsUniverse,
+    ...linesUniverse,
     ...expCatsUniverse,
     ...incCatsUniverse,
   ]);
@@ -678,6 +729,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     accounts.tombstones,
     debts.tombstones,
     assets.tombstones,
+    budgetLines.tombstones,
     expenseCategories.tombstones,
     incomeCategories.tombstones,
   );
@@ -694,6 +746,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     ...Object.keys(remoteAccounts.tombstones),
     ...Object.keys(remoteDebts.tombstones),
     ...Object.keys(remoteAssets.tombstones),
+    ...Object.keys(remoteLines.tombstones),
     ...Object.keys(remoteExpCats.tombstones),
     ...Object.keys(remoteIncCats.tombstones),
   ]);
@@ -713,6 +766,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     debts: debts.live,
     assets: assets.live,
     networth,
+    budgetLines: budgetLines.live,
     settings,
     customExpenseCategories: expenseCategories.live,
     customIncomeCategories: incomeCategories.live,
@@ -727,6 +781,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     debts: state.debts,
     assets: state.assets,
     networth: state.networth,
+    budgetLines: state.budgetLines,
     settings: state.settings,
     customExpenseCategories: state.customExpenseCategories,
     customIncomeCategories: state.customIncomeCategories,
@@ -755,6 +810,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
         accounts: keepLocalAdditions(next.accounts, currentState.accounts),
         debts: keepLocalAdditions(next.debts, currentState.debts),
         assets: keepLocalAdditions(next.assets, currentState.assets),
+        budgetLines: keepLocalAdditions(next.budgetLines, currentState.budgetLines),
         customExpenseCategories: keepLocalAdditions(
           next.customExpenseCategories,
           currentState.customExpenseCategories,
@@ -767,7 +823,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     });
   }
 
-  return { expenses, goals, accounts, debts, assets, networth, settings, expenseCategories, incomeCategories, budgets, flatTombstones };
+  return { expenses, goals, accounts, debts, assets, networth, budgetLines, settings, expenseCategories, incomeCategories, budgets, flatTombstones };
 }
 
 // ── Push ──
@@ -846,6 +902,11 @@ async function pushAll(uid: string, merged: MergeResult, since: string | null): 
   await upsert('assets', [
     ...merged.assets.live.filter((a) => changed(a.updated_at)).map((a) => assetToRow(a, uid)),
     ...tombstoneRows(merged.assets.tombstones),
+  ], 'user_id,id');
+
+  await upsert('budget_lines', [
+    ...merged.budgetLines.live.filter((l) => changed(l.updated_at)).map((l) => budgetLineToRow(l, uid)),
+    ...tombstoneRows(merged.budgetLines.tombstones),
   ], 'user_id,id');
 
   await upsert('networth', merged.networth
@@ -999,6 +1060,7 @@ export const syncService = {
         state.debts !== prev.debts ||
         state.assets !== prev.assets ||
         state.networth !== prev.networth ||
+        state.budgetLines !== prev.budgetLines ||
         state.settings !== prev.settings ||
         state.customExpenseCategories !== prev.customExpenseCategories ||
         state.customIncomeCategories !== prev.customIncomeCategories ||

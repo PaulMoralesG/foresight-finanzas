@@ -2,11 +2,11 @@
 // TransactionModal - Modal para crear/editar transacciones
 // ================================================================
 
-import { useState, useEffect, useMemo, type FormEvent } from 'react';
+import { useState, useEffect, useMemo, Fragment, type FormEvent } from 'react';
 import { X, Plus, Trash2, ArrowDown, ArrowUp, ArrowLeftRight, Building2, User, Banknote, CreditCard, Landmark, Search } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_COLORS } from '@/config/categories';
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_COLORS, DEFAULT_GROUP } from '@/config/categories';
 import { ColorPicker, IconPicker } from '@/components/ui/CategoryStylePicker';
 import { getTodayISO, parseMoneyInput, roundMoney, syncToCloud } from '@/lib/utils';
 import { makeCategoryId } from '@/lib/category-id';
@@ -494,23 +494,35 @@ export function TransactionModal({
                 (320px) dejaba ~68px por celda y truncaba «Entretenimiento» o
                 «Transporte» a la primera palabra. */}
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5" role="group" aria-label="Categoría del movimiento">
-              {filteredCategories.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setCategory(cat.id)}
-                  className={`flex flex-col items-center gap-0.5 p-1.5 rounded-lg transition-all ${
-                    category === cat.id
-                      ? 'ring-2 ring-brand-500 bg-brand-50 dark:bg-brand-950'
-                      : 'bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <span className="text-xl leading-none">{cat.icon || '📌'}</span>
-                  <span className="text-2xs font-medium text-slate-600 dark:text-slate-400 leading-tight text-center line-clamp-2">
-                    {cat.label}
-                  </span>
-                </button>
-              ))}
+              {/* Con grupos, como en Balance Dual: una cabecera por grupo cuando
+                  no hay búsqueda (buscando, el orden por coincidencia manda). */}
+              {filteredCategories.map((cat, i) => {
+                const grupo = cat.group || DEFAULT_GROUP;
+                const nuevoGrupo = !categorySearch.trim() && (i === 0 || (filteredCategories[i - 1].group || DEFAULT_GROUP) !== grupo);
+                return (
+                  <Fragment key={cat.id}>
+                    {nuevoGrupo && (
+                      <p className="col-span-full text-2xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mt-1 first:mt-0">
+                        {grupo}
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setCategory(cat.id)}
+                      className={`flex flex-col items-center gap-0.5 p-1.5 rounded-lg transition-all ${
+                        category === cat.id
+                          ? 'ring-2 ring-brand-500 bg-brand-50 dark:bg-brand-950'
+                          : 'bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      <span className="text-xl leading-none">{cat.icon || '📌'}</span>
+                      <span className="text-2xs font-medium text-slate-600 dark:text-slate-400 leading-tight text-center line-clamp-2">
+                        {cat.label}
+                      </span>
+                    </button>
+                  </Fragment>
+                );
+              })}
               {/* Botón Añadir */}
               <button
                 type="button"

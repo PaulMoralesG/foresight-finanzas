@@ -6,13 +6,18 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { safeParseDate, roundMoney as roundMoneyLocal } from '@/lib/utils';
 import { newId, nowIso } from '@/lib/ids';
-import type { Transaction, MonthlyBudget, FilterType, Category, SavingsGoal, Account, Debt, Settings, Asset, NetWorthSnapshot } from '@/types';
+import type { Transaction, MonthlyBudget, FilterType, Category, SavingsGoal, Account, Debt, Settings, Asset, NetWorthSnapshot, BudgetLine } from '@/types';
+import { convertGlobalBudgets } from '@/lib/budget-lines';
 
 interface FinanceState {
   // --- Estado ---
   expenses: Transaction[];
+  /** Presupuesto global antiguo (un número por mes). Desde la v12 solo se
+   *  conserva para sync con clientes viejos; la UI usa `budgetLines`. */
   budgets: MonthlyBudget;
   budgetUpdatedAt: Record<string, string>; // monthKey 'YYYY-MM' → ISO (merge de sync)
+  /** Presupuesto por categoría (fase 3.4). */
+  budgetLines: BudgetLine[];
   savingsGoals: SavingsGoal[];
   accounts: Account[];
   debts: Debt[];
@@ -42,6 +47,11 @@ interface FinanceState {
 
   // --- Presupuestos ---
   setBudget: (monthKey: string, value: number) => void;
+  addBudgetLine: (l: Omit<BudgetLine, 'id' | 'updated_at'>) => string;
+  updateBudgetLine: (id: string, partial: Partial<Omit<BudgetLine, 'id' | 'updated_at'>>) => void;
+  deleteBudgetLine: (id: string) => void;
+  /** Fija (o borra, con 0/NaN) el plan de un mes de una línea. */
+  setBudgetPlan: (id: string, monthKey: string, value: number | null) => void;
 
   // --- Recordatorios de pago ---
 
@@ -91,6 +101,7 @@ const emptyState = {
   expenses: [] as Transaction[],
   budgets: {} as MonthlyBudget,
   budgetUpdatedAt: {} as Record<string, string>,
+  budgetLines: [] as BudgetLine[],
   savingsGoals: [] as SavingsGoal[],
   accounts: [] as Account[],
   debts: [] as Debt[],
@@ -216,6 +227,21 @@ function migrateV10(state: Record<string, unknown>): Record<string, unknown> {
 function migrateV11(state: Record<string, unknown>): Record<string, unknown> {
   if (!Array.isArray(state.assets)) state.assets = [];
   if (!Array.isArray(state.networth)) state.networth = [];
+  return state;
+}
+
+/**
+ * Migración v12: presupuesto por categoría (fase 3.4). Si el estado no
+ * trae `budgetLines`, el presupuesto global de cada mes se reparte entre
+ * las categorías en proporción al gasto real de ese mes (ver
+ * convertGlobalBudgets). El mapa global se conserva tal cual.
+ */
+function migrateV12(state: Record<string, unknown>): Record<string, unknown> {
+  if (!Array.isArray(state.budgetLines)) {
+    const budgets = (state.budgets && typeof state.budgets === 'object' ? state.budgets : {}) as MonthlyBudget;
+    const expenses = (Array.isArray(state.expenses) ? state.expenses : []) as Transaction[];
+    state.budgetLines = convertGlobalBudgets(budgets, expenses);
+  }
   return state;
 }
 
@@ -367,6 +393,36 @@ export const useFinanceStore = create<FinanceState>()(
           tombstones: tombstoned(state.tombstones, id),
         })),
 
+      // ── Presupuesto por categoría ──
+      addBudgetLine: (l) => {
+        const id = newId();
+        set((state) => ({ budgetLines: [...state.budgetLines, { ...l, id, updated_at: nowIso() }] }));
+        return id;
+      },
+
+      updateBudgetLine: (id, partial) =>
+        set((state) => ({
+          budgetLines: state.budgetLines.map((l) => (l.id === id ? { ...l, ...partial, updated_at: nowIso() } : l)),
+          tombstones: clearedTombstone(state.tombstones, id),
+        })),
+
+      deleteBudgetLine: (id) =>
+        set((state) => ({
+          budgetLines: state.budgetLines.filter((l) => l.id !== id),
+          tombstones: tombstoned(state.tombstones, id),
+        })),
+
+      setBudgetPlan: (id, monthKey, value) =>
+        set((state) => ({
+          budgetLines: state.budgetLines.map((l) => {
+            if (l.id !== id) return l;
+            const plan = { ...l.plan };
+            if (value == null || Number.isNaN(value) || value === 0) delete plan[monthKey];
+            else plan[monthKey] = value;
+            return { ...l, plan, updated_at: nowIso() };
+          }),
+        })),
+
       // ── Cuentas ──
       addAccount: (a) => {
         const id = newId();
@@ -482,10 +538,10 @@ export const useFinanceStore = create<FinanceState>()(
     }),
     {
       name: 'foresight-finance-storage',
-      version: 11,
+      version: 12,
       migrate: (persistedState: unknown, _version: number) => {
         try {
-          return migrateV11(migrateV10(migrateV9(migrateV8(persistedState))));
+          return migrateV12(migrateV11(migrateV10(migrateV9(migrateV8(persistedState)))));
         } catch (err) {
           // Estado inesperado: arrancar limpio antes que romper la app
           console.error('[financeStore] Migración de estado persistido fallida — reseteando:', err);
@@ -497,6 +553,7 @@ export const useFinanceStore = create<FinanceState>()(
         expenses: state.expenses,
         budgets: state.budgets,
         budgetUpdatedAt: state.budgetUpdatedAt,
+        budgetLines: state.budgetLines,
         currentViewDate: state.currentViewDate,
         currentFilter: state.currentFilter,
         savingsGoals: state.savingsGoals,
