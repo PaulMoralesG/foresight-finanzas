@@ -1,5 +1,5 @@
 // ================================================================
-// TESTS — src/pages/ProfilePage.tsx
+// TESTS — src/pages/SettingsPage.tsx (antes ProfilePage)
 // Fija los hallazgos de la revisión heurística: gating offline, autofoco al
 // abrir un acordeón, aviso de correo pendiente y feedback de contraseñas.
 // ================================================================
@@ -10,7 +10,7 @@ import userEvent from '@testing-library/user-event';
 import { useAuthStore } from '@/stores/authStore';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { ProfilePage } from '@/pages/ProfilePage';
+import { SettingsPage } from '@/pages/SettingsPage';
 import type { User } from '@/types';
 
 // `supabaseAvailable` se expone como getter: cada lectura reevalúa
@@ -28,7 +28,7 @@ vi.mock('@/config/supabase', () => ({
 const usuario: User = { id: 'u1', email: 'ana@ejemplo.com', firstName: 'Ana', lastName: 'Pérez' };
 
 function montar() {
-  return render(<ProfilePage />);
+  return render(<SettingsPage />);
 }
 
 beforeEach(() => {
@@ -39,7 +39,7 @@ beforeEach(() => {
   useUiStore.setState({ isDark: false, toasts: [] });
 });
 
-describe('ProfilePage — modo offline (sin Supabase)', () => {
+describe('SettingsPage — modo offline (sin Supabase)', () => {
   beforeEach(() => {
     mockSupabase.available = false;
   });
@@ -66,7 +66,7 @@ describe('ProfilePage — modo offline (sin Supabase)', () => {
   });
 });
 
-describe('ProfilePage — con Supabase disponible', () => {
+describe('SettingsPage — con Supabase disponible', () => {
   it('las secciones de correo y contraseña se abren normalmente', async () => {
     const user = userEvent.setup();
     montar();
@@ -99,7 +99,7 @@ describe('ProfilePage — con Supabase disponible', () => {
   });
 });
 
-describe('ProfilePage — correo pendiente de verificación', () => {
+describe('SettingsPage — correo pendiente de verificación', () => {
   it('sin cambio pendiente, no muestra ningún aviso', async () => {
     montar();
     expect(screen.queryByText(/Verificación pendiente/)).not.toBeInTheDocument();
@@ -113,7 +113,7 @@ describe('ProfilePage — correo pendiente de verificación', () => {
   });
 });
 
-describe('ProfilePage — cambiar contraseña', () => {
+describe('SettingsPage — cambiar contraseña', () => {
   it('confirmar coincide con la nueva contraseña muestra el check en vivo', async () => {
     const user = userEvent.setup();
     montar();
@@ -145,7 +145,7 @@ describe('ProfilePage — cambiar contraseña', () => {
   });
 });
 
-describe('ProfilePage — color de Apariencia', () => {
+describe('SettingsPage — color de Apariencia', () => {
   it('el glifo sí cambia con isDark, pero el color del tile ya no', () => {
     useUiStore.setState({ isDark: true });
     montar();

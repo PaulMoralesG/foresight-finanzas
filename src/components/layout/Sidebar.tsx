@@ -3,19 +3,11 @@
 // En móvil se usa TabBar (barra flotante inferior)
 // ================================================================
 
-import { LayoutGrid, ArrowLeftRight, BarChart3, User, TrendingUp, PiggyBank, ChevronsRight, ChevronsLeft } from '@/components/ui/icons.generated';
+import { TrendingUp, ChevronsRight, ChevronsLeft } from '@/components/ui/icons.generated';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
 import { userInitials } from '@/lib/utils';
-import type { TabId } from '@/types';
-
-const NAV_ITEMS: { id: TabId; icon: typeof LayoutGrid; label: string }[] = [
-  { id: 'home', icon: LayoutGrid, label: 'Dashboard' },
-  { id: 'movements', icon: ArrowLeftRight, label: 'Movimientos' },
-  { id: 'stats', icon: BarChart3, label: 'Estadísticas' },
-  { id: 'savings', icon: PiggyBank, label: 'Planes' },
-  { id: 'profile', icon: User, label: 'Perfil' },
-];
+import { SECCIONES, VIEWS } from '@/config/views';
 
 export function Sidebar() {
   const activeTab = useUiStore((s) => s.activeTab);
@@ -49,9 +41,20 @@ export function Sidebar() {
           )}
         </div>
 
-        {/* Navigation — overflow-visible so tooltips render outside */}
-        <nav className="flex-1 py-4 px-3 space-y-1">
-          {NAV_ITEMS.map((item) => {
+        {/* Navigation — overflow-visible so tooltips render outside.
+            Dos secciones con cabecera, como Balance Dual: "Día a día" es lo
+            que se abre cada día; "Patrimonio", lo que se revisa cada tanto. */}
+        <nav className="flex-1 py-4 px-3 space-y-1" aria-label="Secciones">
+          {SECCIONES.map((seccion) => (
+            <div key={seccion.id} className="space-y-1 [&+&]:mt-4">
+              {!collapsed ? (
+                <p className="px-3 pb-1 text-2xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  {seccion.label}
+                </p>
+              ) : (
+                <div className="mx-3 my-2 border-t border-slate-200 dark:border-slate-800 first:hidden" aria-hidden />
+              )}
+              {VIEWS.filter((v) => v.seccion === seccion.id).map((item) => {
             const isActive = activeTab === item.id;
             const Icon = item.icon;
             return (
@@ -90,7 +93,9 @@ export function Sidebar() {
                 )}
               </button>
             );
-          })}
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* User section */}

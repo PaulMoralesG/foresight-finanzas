@@ -68,9 +68,9 @@ describe('uiStore', () => {
   // ─── Tabs ─────────────────────────────────────────────────────
 
   it('setActiveTab cambia la pestaña activa', () => {
-    useUiStore.getState().setActiveTab('stats');
-    expect(useUiStore.getState().activeTab).toBe('stats');
-    expect(localStorage.getItem('foresight-active-tab')).toBe('stats');
+    useUiStore.getState().setActiveTab('budgets');
+    expect(useUiStore.getState().activeTab).toBe('budgets');
+    expect(localStorage.getItem('foresight-active-tab')).toBe('budgets');
   });
 
   it('navigateTo con filtro guarda pendingFilter', () => {

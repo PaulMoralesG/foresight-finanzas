@@ -10,15 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { supabaseAvailable } from '@/config/supabase';
 import { userInitials } from '@/lib/utils';
-import type { TabId } from '@/types';
-
-const PAGE_TITLES: Record<TabId, string> = {
-  home: 'Dashboard',
-  movements: 'Movimientos',
-  stats: 'Estadísticas',
-  savings: 'Planes',
-  profile: 'Perfil',
-};
+import { vistaPorId } from '@/config/views';
 
 export function Header() {
   const activeTab = useUiStore((s) => s.activeTab);
@@ -87,7 +79,7 @@ export function Header() {
           {/* Left: Page title */}
           <div className="flex items-center gap-2">
             <h1 className="text-base font-bold text-slate-900 dark:text-white truncate">
-              {PAGE_TITLES[activeTab]}
+              {vistaPorId(activeTab).label}
             </h1>
           </div>
 
@@ -179,7 +171,7 @@ export function Header() {
                       </p>
                     </div>
                     <button
-                      onClick={() => handleDropdownAction(() => useUiStore.getState().setActiveTab('profile'))}
+                      onClick={() => handleDropdownAction(() => useUiStore.getState().setActiveTab('settings'))}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                     >
                       <Settings className="w-4 h-4" />
