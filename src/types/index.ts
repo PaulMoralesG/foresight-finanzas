@@ -81,3 +81,29 @@ export interface SavingsGoal {
   target: number;
   updated_at: string; // ISO — usado por el merge de sync
 }
+
+export type DebtKind = 'Tarjeta de crédito' | 'Préstamo' | 'Hipoteca' | 'Otro';
+export type DebtMethod = 'snowball' | 'avalanche';
+
+/** Deuda (Balance Dual: `debts`). El saldo baja con cada pago registrado. */
+export interface Debt {
+  id: string;
+  name: string;
+  tag: BusinessType;
+  kind: DebtKind;
+  balance: number;
+  /** Interés anual en %, p. ej. 22. */
+  annualRate: number;
+  minPayment: number;
+  /** Día del mes en que se paga, 1–31, o null. */
+  payDay: number | null;
+  updated_at: string; // ISO — usado por el merge de sync
+}
+
+/** Ajustes sincronizados (Balance Dual: `meta/settings`). Una sola fila por usuario. */
+export interface Settings {
+  debtMethod: DebtMethod;
+  extraPayment: number;
+  netWorthGoal: number;
+  updated_at: string; // ISO — el más nuevo gana en el merge
+}

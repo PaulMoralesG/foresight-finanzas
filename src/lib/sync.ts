@@ -23,6 +23,9 @@ import type {
   SavingsGoal,
   Account,
   AccountKind,
+  Debt,
+  DebtKind,
+  Settings,
   TransactionType,
   PaymentMethod,
   BusinessType,
@@ -63,6 +66,28 @@ interface AccountRow {
   deleted_at: string | null;
 }
 
+interface DebtRow {
+  id: string;
+  user_id: string;
+  name: string | null;
+  tag: string | null;
+  kind: string | null;
+  balance: number | null;
+  annual_rate: number | null;
+  min_payment: number | null;
+  pay_day: number | null;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+interface SettingsRow {
+  user_id: string;
+  debt_method: string | null;
+  extra_payment: number | null;
+  net_worth_goal: number | null;
+  updated_at: string;
+}
+
 interface CategoryRow {
   id: string;
   user_id: string;
@@ -96,6 +121,8 @@ export interface Snapshot {
   goals: GoalRow[];
   budgets: BudgetRow[];
   accounts: AccountRow[];
+  debts: DebtRow[];
+  settings: SettingsRow[];
 }
 
 // ── Convertidores locales ↔ filas ──
@@ -147,6 +174,57 @@ function accountToRow(a: Account, userId: string): AccountRow {
     initial_balance: a.initialBalance,
     updated_at: a.updated_at,
     deleted_at: null,
+  };
+}
+
+const DEBT_KINDS_VALIDOS: DebtKind[] = ['Tarjeta de crédito', 'Préstamo', 'Hipoteca', 'Otro'];
+
+function debtToRow(d: Debt, userId: string): DebtRow {
+  return {
+    id: d.id,
+    user_id: userId,
+    name: d.name,
+    tag: d.tag,
+    kind: d.kind,
+    balance: d.balance,
+    annual_rate: d.annualRate,
+    min_payment: d.minPayment,
+    pay_day: d.payDay,
+    updated_at: d.updated_at,
+    deleted_at: null,
+  };
+}
+
+function rowToDebt(r: DebtRow): Debt {
+  return {
+    id: r.id,
+    name: r.name ?? '',
+    tag: r.tag === 'business' ? 'business' : 'personal',
+    kind: (DEBT_KINDS_VALIDOS.includes(r.kind as DebtKind) ? r.kind : 'Otro') as DebtKind,
+    balance: Number(r.balance ?? 0),
+    annualRate: Number(r.annual_rate ?? 0),
+    minPayment: Number(r.min_payment ?? 0),
+    payDay: r.pay_day ?? null,
+    updated_at: r.updated_at,
+  };
+}
+
+function settingsToRow(s: Settings, userId: string): SettingsRow {
+  return {
+    user_id: userId,
+    debt_method: s.debtMethod,
+    extra_payment: s.extraPayment,
+    net_worth_goal: s.netWorthGoal,
+    updated_at: s.updated_at,
+  };
+}
+
+function rowToSettings(r: SettingsRow): Settings {
+  return {
+    debtMethod: r.debt_method === 'avalanche' ? 'avalanche' : 'snowball',
+    extraPayment: Number(r.extra_payment ?? 0),
+    netWorthGoal: Number(r.net_worth_goal ?? 0),
+    updated_at: r.updated_at,
   };
 }
 
@@ -295,7 +373,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-type TableName = 'expenses' | 'categories' | 'savings_goals' | 'budgets' | 'accounts';
+type TableName = 'expenses' | 'categories' | 'savings_goals' | 'budgets' | 'accounts' | 'debts' | 'settings';
 
 // ── Pull ──
 
@@ -359,6 +437,7 @@ export function desfaseDeRelojMinutos(snapshot: Snapshot, ahoraMs = Date.now()):
   mirar(snapshot.goals);
   mirar(snapshot.budgets);
   mirar(snapshot.accounts);
+  mirar(snapshot.debts);
 
   const adelanto = masNueva - ahoraMs;
   return adelanto > DESFASE_TOLERADO_MS ? Math.round(adelanto / 60_000) : 0;
@@ -382,7 +461,7 @@ function avisarSiElRelojVaMal(snapshot: Snapshot) {
 }
 
 async function pullAll(uid: string): Promise<Snapshot> {
-  const [expenses, categories, goals, budgets, accounts] = await Promise.all([
+  const [expenses, categories, goals, budgets, accounts, debts, settings] = await Promise.all([
     fetchAllRows<ExpenseRow>('expenses', uid, ['updated_at', 'id']),
     fetchAllRows<CategoryRow>('categories', uid, ['updated_at', 'id']),
     fetchAllRows<GoalRow>('savings_goals', uid, ['updated_at', 'id']),
@@ -390,9 +469,12 @@ async function pullAll(uid: string): Promise<Snapshot> {
     // ya es único por usuario, así que sirve como desempate estable.
     fetchAllRows<BudgetRow>('budgets', uid, ['month']),
     fetchAllRows<AccountRow>('accounts', uid, ['updated_at', 'id']),
+    fetchAllRows<DebtRow>('debts', uid, ['updated_at', 'id']),
+    // settings es una fila por usuario (PK user_id): 0 o 1 resultados.
+    fetchAllRows<SettingsRow>('settings', uid, ['user_id']),
   ]);
 
-  const snapshot = { expenses, categories, goals, budgets, accounts };
+  const snapshot = { expenses, categories, goals, budgets, accounts, debts, settings };
   avisarSiElRelojVaMal(snapshot);
   return snapshot;
 }
@@ -403,6 +485,9 @@ interface MergeResult {
   expenses: MergeSet<Transaction>;
   goals: MergeSet<SavingsGoal>;
   accounts: MergeSet<Account>;
+  debts: MergeSet<Debt>;
+  /** Ajustes ganadores tras el merge (el updated_at más nuevo). */
+  settings: Settings;
   expenseCategories: MergeSet<Category>;
   incomeCategories: MergeSet<Category>;
   budgets: { budgets: Record<string, number>; updatedAt: Record<string, string> };
@@ -465,6 +550,21 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     remoteAccounts,
   );
 
+  const remoteDebts = buildRemoteSet(snapshot.debts, rowToDebt);
+  const debtsUniverse = universeOf(state.debts, remoteDebts);
+  const debts = mergeById(
+    { live: state.debts, tombstones: scopeTombstones(state.tombstones, debtsUniverse) },
+    remoteDebts,
+  );
+
+  // Ajustes: una sola fila, gana la marca más nueva. Un updated_at local
+  // vacío significa "nunca tocado" y pierde contra cualquier fila remota.
+  const remoteSettings = snapshot.settings[0] ? rowToSettings(snapshot.settings[0]) : null;
+  const settings =
+    remoteSettings && remoteSettings.updated_at > (state.settings.updated_at || '')
+      ? remoteSettings
+      : state.settings;
+
   // Categorías por kind: los slugs pueden repetirse entre tipos
   const expenseRows = snapshot.categories.filter((r) => r.kind === 'expense');
   const incomeRows = snapshot.categories.filter((r) => r.kind === 'income');
@@ -488,6 +588,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     ...expUniverse,
     ...goalsUniverse,
     ...accountsUniverse,
+    ...debtsUniverse,
     ...expCatsUniverse,
     ...incCatsUniverse,
   ]);
@@ -498,6 +599,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     expenses.tombstones,
     goals.tombstones,
     accounts.tombstones,
+    debts.tombstones,
     expenseCategories.tombstones,
     incomeCategories.tombstones,
   );
@@ -512,6 +614,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     ...Object.keys(remoteExpenses.tombstones),
     ...Object.keys(remoteGoals.tombstones),
     ...Object.keys(remoteAccounts.tombstones),
+    ...Object.keys(remoteDebts.tombstones),
     ...Object.keys(remoteExpCats.tombstones),
     ...Object.keys(remoteIncCats.tombstones),
   ]);
@@ -528,6 +631,8 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     expenses: expenses.live,
     savingsGoals: goals.live,
     accounts: accounts.live,
+    debts: debts.live,
+    settings,
     customExpenseCategories: expenseCategories.live,
     customIncomeCategories: incomeCategories.live,
     tombstones: flatTombstones,
@@ -538,6 +643,8 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     expenses: state.expenses,
     savingsGoals: state.savingsGoals,
     accounts: state.accounts,
+    debts: state.debts,
+    settings: state.settings,
     customExpenseCategories: state.customExpenseCategories,
     customIncomeCategories: state.customIncomeCategories,
     tombstones: state.tombstones,
@@ -563,6 +670,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
         expenses: keepLocalAdditions(next.expenses, currentState.expenses),
         savingsGoals: keepLocalAdditions(next.savingsGoals, currentState.savingsGoals),
         accounts: keepLocalAdditions(next.accounts, currentState.accounts),
+        debts: keepLocalAdditions(next.debts, currentState.debts),
         customExpenseCategories: keepLocalAdditions(
           next.customExpenseCategories,
           currentState.customExpenseCategories,
@@ -575,7 +683,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     });
   }
 
-  return { expenses, goals, accounts, expenseCategories, incomeCategories, budgets, flatTombstones };
+  return { expenses, goals, accounts, debts, settings, expenseCategories, incomeCategories, budgets, flatTombstones };
 }
 
 // ── Push ──
@@ -645,6 +753,16 @@ async function pushAll(uid: string, merged: MergeResult, since: string | null): 
     ...merged.accounts.live.filter((a) => changed(a.updated_at)).map((a) => accountToRow(a, uid)),
     ...tombstoneRows(merged.accounts.tombstones),
   ], 'user_id,id');
+
+  await upsert('debts', [
+    ...merged.debts.live.filter((d) => changed(d.updated_at)).map((d) => debtToRow(d, uid)),
+    ...tombstoneRows(merged.debts.tombstones),
+  ], 'user_id,id');
+
+  // Ajustes nunca tocados (updated_at vacío) no se suben: no hay nada que decir.
+  if (merged.settings.updated_at && changed(merged.settings.updated_at)) {
+    await upsert('settings', [settingsToRow(merged.settings, uid)], 'user_id');
+  }
 
   await upsert('budgets', Object.entries(merged.budgets.budgets)
     .filter(([month]) => changed(merged.budgets.updatedAt[month] ?? ''))
@@ -785,6 +903,8 @@ export const syncService = {
         state.budgetUpdatedAt !== prev.budgetUpdatedAt ||
         state.savingsGoals !== prev.savingsGoals ||
         state.accounts !== prev.accounts ||
+        state.debts !== prev.debts ||
+        state.settings !== prev.settings ||
         state.customExpenseCategories !== prev.customExpenseCategories ||
         state.customIncomeCategories !== prev.customIncomeCategories ||
         state.tombstones !== prev.tombstones;

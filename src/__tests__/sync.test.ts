@@ -79,8 +79,8 @@ describe('syncService', () => {
     await vi.advanceTimersByTimeAsync(1);
     const result = await p3; // solo el último schedule dispara el push
     expect(result).toBe(true);
-    // Un solo ciclo: pull de las 5 tablas (expenses, categories, savings_goals, budgets, accounts)
-    expect(mockFrom.mock.calls.length).toBe(before + 5);
+    // Un solo ciclo: pull de las 7 tablas (expenses, categories, savings_goals, budgets, accounts, debts, settings)
+    expect(mockFrom.mock.calls.length).toBe(before + 7);
     void p1;
     void p2;
   });
@@ -93,7 +93,7 @@ describe('syncService', () => {
     const result = await syncService.flush(); // sin avanzar timers
 
     expect(result).toBe(true);
-    expect(mockFrom.mock.calls.length).toBe(before + 5);
+    expect(mockFrom.mock.calls.length).toBe(before + 7);
     void p;
   });
 
@@ -492,7 +492,7 @@ describe('isTransientSchemaError', () => {
 
 describe('desfaseDeRelojMinutos', () => {
   const ahora = Date.parse('2026-08-30T12:00:00.000Z');
-  const vacio = { expenses: [], categories: [], goals: [], budgets: [], accounts: [] };
+  const vacio = { expenses: [], categories: [], goals: [], budgets: [], accounts: [], debts: [], settings: [] };
   const fila = (updated_at: string) => ({ updated_at }) as never;
 
   it('no avisa cuando los datos del servidor son del pasado', () => {

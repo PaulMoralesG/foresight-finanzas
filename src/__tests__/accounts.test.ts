@@ -81,7 +81,7 @@ describe('helpers', () => {
 describe('migración v9 del estado persistido (cuentas)', () => {
   it('añade accounts vacío y normaliza accountId/toAccountId en movimientos viejos', () => {
     const opciones = useFinanceStore.persist.getOptions();
-    expect(opciones.version).toBe(9);
+    expect(opciones.version).toBeGreaterThanOrEqual(9);
     const migrado = opciones.migrate!(
       {
         expenses: [{ id: 'e1', type: 'expense', amount: 1, updated_at: '2026-01-01T00:00:00.000Z', accountId: 42 }],
