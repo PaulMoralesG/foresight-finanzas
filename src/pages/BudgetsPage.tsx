@@ -94,9 +94,16 @@ export function BudgetsPage() {
   function handleDelete() {
     if (!confirmDelete) return;
     deleteBudgetLine(confirmDelete.id);
-    addToast('Presupuesto eliminado', 'info');
+    addToast('Presupuesto eliminado por completo', 'info');
     syncToCloud(saveData, addToast);
     setConfirmDelete(null);
+    if (formOpen) setFormOpen(false);
+  }
+
+  function handleClearMonth(l: BudgetLine) {
+    updateBudgetLine(l.id, { plan: { ...l.plan, [mk]: 0 } });
+    addToast(`Presupuesto de ${getCategoryById(l.categoryId, customCats).label} puesto a $0 en este mes.`, 'info');
+    syncToCloud(saveData, addToast);
   }
 
   useEscapeKey(() => { if (confirmDelete) setConfirmDelete(null); else if (formOpen) setFormOpen(false); }, formOpen || !!confirmDelete);
@@ -135,7 +142,7 @@ export function BudgetsPage() {
       </div>
 
       {tab === 'mes' && (
-        <EsteMes mk={mk} setMk={setMk} lines={budgetLines} expenses={expenses} customCats={customCats} onEdit={openEdit} onDelete={setConfirmDelete} />
+        <EsteMes mk={mk} setMk={setMk} lines={budgetLines} expenses={expenses} customCats={customCats} onEdit={openEdit} onClearMonth={handleClearMonth} />
       )}
       {tab === 'plan' && <PlanAnual year={year} setYear={setYear} lines={budgetLines} customCats={customCats} />}
       {tab === 'anual' && <ReporteAnual year={year} setYear={setYear} expenses={expenses} customCats={customCats} />}
@@ -186,6 +193,13 @@ export function BudgetsPage() {
               <button type="button" onClick={() => setFormOpen(false)} className="saas-btn saas-btn-secondary flex-1 py-2 text-xs">Cancelar</button>
               <button type="submit" className="saas-btn saas-btn-primary flex-1 py-2 text-xs">{editing ? 'Guardar' : 'Crear'}</button>
             </div>
+            {editing && (
+              <div className="pt-2 border-t border-slate-200 dark:border-slate-800 mt-2">
+                <button type="button" onClick={() => setConfirmDelete(editing)} className="saas-btn saas-btn-ghost w-full py-2 text-xs text-expense-600 dark:text-expense-400">
+                  Eliminar presupuesto de todo el año
+                </button>
+              </div>
+            )}
           </form>
         </ModalSheet>
       )}
@@ -204,9 +218,9 @@ export function BudgetsPage() {
 }
 
 /* ─── Este mes ─── */
-function EsteMes({ mk, setMk, lines, expenses, customCats, onEdit, onDelete }: {
+function EsteMes({ mk, setMk, lines, expenses, customCats, onEdit, onClearMonth }: {
   mk: string; setMk: (v: string) => void; lines: BudgetLine[]; expenses: ReturnType<typeof useFinanceStore.getState>['expenses'];
-  customCats: Category[]; onEdit: (l: BudgetLine) => void; onDelete: (l: BudgetLine) => void;
+  customCats: Category[]; onEdit: (l: BudgetLine) => void; onClearMonth: (l: BudgetLine) => void;
 }) {
   const ambito = useAmbito();
   const meses = Array.from({ length: 9 }, (_, i) => shiftMonthKey(currentMonthKey(), i - 6));
@@ -313,7 +327,7 @@ function EsteMes({ mk, setMk, lines, expenses, customCats, onEdit, onDelete }: {
                           </span>
                           <span className="flex gap-3">
                             <button onClick={() => onEdit(l)} className="saas-btn saas-btn-ghost saas-btn-sm text-xs flex items-center gap-1 whitespace-nowrap" aria-label={`Editar límite de ${cat.label}`}><Pencil className="w-3 h-3" /> Editar límite</button>
-                            <button onClick={() => onDelete(l)} className="saas-btn saas-btn-ghost saas-btn-sm text-xs flex items-center gap-1 whitespace-nowrap text-expense-600 dark:text-expense-400" aria-label={`Eliminar presupuesto de ${cat.label}`}><Trash2 className="w-3 h-3" /> Eliminar</button>
+                            <button onClick={() => onClearMonth(l)} className="saas-btn saas-btn-ghost saas-btn-sm text-xs flex items-center gap-1 whitespace-nowrap text-expense-600 dark:text-expense-400" aria-label={`Borrar presupuesto de ${cat.label} en este mes`}><Trash2 className="w-3 h-3" /> Borrar mes</button>
                           </span>
                         </div>
                       </div>
