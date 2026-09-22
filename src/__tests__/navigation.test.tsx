@@ -15,7 +15,7 @@ import { VIEWS, MOBILE_TABS, normalizarTabId } from '@/config/views';
 
 beforeEach(() => {
   cleanup();
-  useUiStore.setState({ activeTab: 'home', sidebarCollapsed: false });
+  useUiStore.setState({ activeTab: 'home' });
   useAuthStore.setState({ user: null, isLoading: false });
 });
 

@@ -18,7 +18,6 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
   const activeTab = useUiStore((s) => s.activeTab);
   const ensureCurrentMonth = useFinanceStore((s) => s.ensureCurrentMonth);
 
@@ -42,12 +41,8 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* Desktop: sidebar visible; Mobile: sidebar hidden (TabBar handles nav) */}
       <Sidebar />
 
-      {/* Main area — offset matches sidebar width dynamically (desktop only), grows to fill viewport */}
-      <div
-        className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${
-          sidebarCollapsed ? 'lg:pl-[68px]' : 'lg:pl-[240px]'
-        }`}
-      >
+      {/* Main area — el hueco de la izquierda es el ancho fijo del sidebar */}
+      <div className="flex-1 flex flex-col lg:pl-[212px]">
         <Header />
         {/* Sin `pt-safe`: el Header ya aplica env(safe-area-inset-top) y está
             encima. Tenerlo en ambos sitios metía ~47px de vacío entre la

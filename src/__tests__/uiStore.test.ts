@@ -7,7 +7,6 @@ import { useUiStore } from '@/stores/uiStore';
 
 function resetUiStore() {
   useUiStore.setState({
-    sidebarCollapsed: false,
     isDark: false,
     activeTab: 'home',
     pendingFilter: null,
@@ -31,21 +30,6 @@ function resetUiStore() {
 describe('uiStore', () => {
   beforeEach(() => {
     resetUiStore();
-  });
-
-  // ─── Sidebar ──────────────────────────────────────────────────
-
-  it('toggleSidebar alterna el colapso del sidebar', () => {
-    expect(useUiStore.getState().sidebarCollapsed).toBe(false);
-    useUiStore.getState().toggleSidebar();
-    expect(useUiStore.getState().sidebarCollapsed).toBe(true);
-    useUiStore.getState().toggleSidebar();
-    expect(useUiStore.getState().sidebarCollapsed).toBe(false);
-  });
-
-  it('toggleSidebar persiste en localStorage', () => {
-    useUiStore.getState().toggleSidebar();
-    expect(localStorage.getItem('saas-sidebar-collapsed')).toBe('true');
   });
 
   // ─── Tema ─────────────────────────────────────────────────────
