@@ -15,8 +15,6 @@ interface Toast {
 
 interface UiState {
   // --- Sidebar ---
-  sidebarCollapsed: boolean;
-  toggleSidebar: () => void;
 
   // --- Tema ---
   isDark: boolean;
@@ -81,18 +79,7 @@ interface UiState {
 
 let toastId = 0;
 
-const savedCollapsed = localStorage.getItem('saas-sidebar-collapsed');
-
 export const useUiStore = create<UiState>((set) => ({
-  // Sidebar
-  sidebarCollapsed: savedCollapsed === 'true',
-  toggleSidebar: () =>
-    set((state) => {
-      const next = !state.sidebarCollapsed;
-      localStorage.setItem('saas-sidebar-collapsed', String(next));
-      return { sidebarCollapsed: next };
-    }),
-
   // Tema — mismo orden de prioridad que el script inline en index.html
   // (evita flicker y toggles innecesarios al montar React)
   isDark: (() => {

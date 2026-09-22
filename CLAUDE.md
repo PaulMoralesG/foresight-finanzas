@@ -71,7 +71,7 @@ Breakpoints in use: `sm` 640 (chips/segmented inline), `md` 768 (tablet: KPI row
 ### Components
 - `src/components/ui/` — generic, reusable primitives (`ModalSheet`, `ConfirmDialog`, `EmptyState`, `Toast`, `Skeleton`, etc.). `ModalSheet` owns the shared overlay/panel/focus-trap chrome for both the transaction and savings-goal modals — don't duplicate that scaffolding in a new modal, compose `ModalSheet` instead.
 - `src/components/features/<domain>/` — feature-specific components (auth, categories, movements, report).
-- `src/components/layout/` — app chrome (`AppLayout`, `Header`, `Sidebar`, `TabBar`, `MonthNav`).
+- `src/components/layout/` — app chrome (`AppLayout`, `Header`, `Sidebar`, `TabBar`, `MonthNav`). The `Sidebar` copies `.sidebar` from the Balance Dual reference: fixed 212px, no collapse toggle, the page background rather than a surface of its own, and a single rule — the right border — with no dividers around the brand or the footer.
 - Design system conventions (`.saas-*` classes, icon-size scale, shadow hierarchy, the `business`/`brand` color ramps) live in `tailwind.config.js` and `src/index.css`, with comments documenting the reasoning — read those before introducing a new visual pattern, and see the "Diseño de UI" section below before any visually-significant change.
 
 ### Testing
