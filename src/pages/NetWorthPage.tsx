@@ -12,12 +12,14 @@ import { Plus, Pencil, Trash2 } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
-import { formatMoney, parseMoneyInput, roundMoney, syncToCloud, MONTH_NAMES } from '@/lib/utils';
+import { formatMoney, parseMoneyInput, roundMoney, syncToCloud } from '@/lib/utils';
+import { monthKeyLabel, monthKeyLabelCorto } from '@/lib/month-keys';
 import { netWorthNow, netWorthHistory, ASSET_GROUPS, type NetWorth } from '@/lib/networth';
 import { escalaBonita, formatoTickDinero, trazarLinea } from '@/lib/chart-geometry';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { coloresGrafica } from '@/lib/chart-colors';
 import { CardHeader } from '@/components/ui/CardHeader';
 import { ModalSheet } from '@/components/ui/ModalSheet';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -198,12 +200,9 @@ function Kpi({ label, value, sub, tone }: { label: string; value: string; sub: s
 }
 
 /* ─── Evolución del patrimonio: los cierres mensuales (SVG, como la referencia) ─── */
-export function NetWorthTrendCard({ history, goal, hoy }: { history: NetWorthSnapshot[]; goal: number; hoy: number }) {
+function NetWorthTrendCard({ history, goal, hoy }: { history: NetWorthSnapshot[]; goal: number; hoy: number }) {
   const isDark = useUiStore((s) => s.isDark);
-  const grid = isDark ? '#4a4944' : '#e6e4dd';
-  const tick = isDark ? '#a3a099' : '#5f5e58';
-  const ink = isDark ? '#f3f2ee' : '#1a1a19';
-  const linea = '#1baf7a';
+  const { grid, tick, tipFg: ink, income: linea } = coloresGrafica(isDark);
   const { ref, ancho: W } = useAnchoContenedor<HTMLDivElement>();
   const H = 190, padL = 52, padR = 12, padB = 26, padT = 12;
   const innerH = H - padT - padB;
@@ -236,13 +235,13 @@ export function NetWorthTrendCard({ history, goal, hoy }: { history: NetWorthSna
         <path d={trazarLinea(pts)} fill="none" stroke={linea} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
         {pts.map(([x, y], i) => (
           <circle key={i} cx={x} cy={y} r={i === pts.length - 1 ? 4 : 2.5} fill={linea}>
-            <title>{etiquetaMes(history[i].month)}: {formatMoney(history[i].net)}</title>
+            <title>{monthKeyLabel(history[i].month)}: {formatMoney(history[i].net)}</title>
           </circle>
         ))}
         {history.map((h, i) =>
           history.length <= 8 || i % 2 === 0 || i === history.length - 1 ? (
             <text key={h.month} x={pts[i][0]} y={H - 8} fontSize={10} fill={tick} textAnchor="middle">
-              {MONTH_NAMES[parseInt(h.month.split('-')[1], 10) - 1].slice(0, 3)}
+              {monthKeyLabelCorto(h.month).slice(0, 3)}
             </text>
           ) : null,
         )}
@@ -263,11 +262,6 @@ export function NetWorthTrendCard({ history, goal, hoy }: { history: NetWorthSna
       </p>
     </div>
   );
-}
-
-function etiquetaMes(month: string): string {
-  const [y, m] = month.split('-').map(Number);
-  return `${MONTH_NAMES[m - 1]} ${y}`;
 }
 
 /* ─── De qué se compone el patrimonio hoy ─── */

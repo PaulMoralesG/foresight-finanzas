@@ -16,11 +16,6 @@ function resetUiStore() {
     deletingId: null,
     toasts: [],
     isReportModalOpen: false,
-    statsMode: 'month',
-    statsMonth: new Date().getMonth(),
-    statsYear: new Date().getFullYear(),
-    statsFromDate: null,
-    statsToDate: null,
   });
   localStorage.clear();
   // Quitar clase dark del DOM
@@ -144,23 +139,4 @@ describe('uiStore', () => {
     expect(useUiStore.getState().isReportModalOpen).toBe(false);
   });
 
-  // ─── Estadísticas ─────────────────────────────────────────────
-
-  it('setStatsMode cambia el modo de estadísticas', () => {
-    useUiStore.getState().setStatsMode('range');
-    expect(useUiStore.getState().statsMode).toBe('range');
-  });
-
-  it('setStatsMonth/setStatsYear actualizan mes y año', () => {
-    useUiStore.getState().setStatsMonth(5);
-    useUiStore.getState().setStatsYear(2025);
-    expect(useUiStore.getState().statsMonth).toBe(5);
-    expect(useUiStore.getState().statsYear).toBe(2025);
-  });
-
-  it('setStatsRange actualiza rango de fechas', () => {
-    useUiStore.getState().setStatsRange('2026-01-01', '2026-01-31');
-    expect(useUiStore.getState().statsFromDate).toBe('2026-01-01');
-    expect(useUiStore.getState().statsToDate).toBe('2026-01-31');
-  });
 });

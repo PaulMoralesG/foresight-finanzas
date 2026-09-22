@@ -15,26 +15,17 @@ import { useFinanceStore } from '@/stores/financeStore';
 import { useGoalsEnAmbito } from '@/hooks/useAmbito';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
-import { formatMoney, getTodayISO, parseMoneyInput, roundMoney, MONTH_NAMES, syncToCloud } from '@/lib/utils';
+import { formatMoney, getTodayISO, parseMoneyInput, roundMoney, syncToCloud } from '@/lib/utils';
+import { currentMonthKey, monthKeyLabel, shiftMonthKey } from '@/lib/month-keys';
 import { goalMath, isGoalLate, goalTotals } from '@/lib/goals';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ProgressBar } from '@/components/ui/ProgressBar';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ModalSheet } from '@/components/ui/ModalSheet';
 import { ScopeBadge } from '@/components/ui/TransactionBits';
 import type { SavingsGoal, BusinessType } from '@/types';
-
-/** 'YYYY-MM' de hoy más `meses` meses, para precargar el mes objetivo del formulario. */
-function shiftMonthKey(meses: number, ahora = new Date()): string {
-  const d = new Date(ahora.getFullYear(), ahora.getMonth() + meses, 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-
-function monthLabel(mk: string): string {
-  const [y, m] = mk.split('-').map(Number);
-  return `${MONTH_NAMES[m - 1]} ${y}`;
-}
 
 export function GoalsPage() {
   const savingsGoals = useGoalsEnAmbito();
@@ -70,7 +61,7 @@ export function GoalsPage() {
     setFTag('personal');
     setFName('');
     setFTarget('');
-    setFDate(shiftMonthKey(12));
+    setFDate(shiftMonthKey(currentMonthKey(), 12));
     setFSaved('0');
     setFormOpen(true);
   }
@@ -179,16 +170,14 @@ export function GoalsPage() {
                         {formatMoney(m.saved)} <span className="font-normal text-slate-600 dark:text-slate-400">/ {formatMoney(m.target)}</span>
                       </span>
                     </div>
-                    <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full ${barColor}`} style={{ width: `${m.pct}%` }} />
-                    </div>
+                    <ProgressBar pct={m.pct} color={barColor} label={`${g.concept}: ${m.pct.toFixed(0)}% ahorrado`} />
                     <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 tabular-nums">
                       {m.pct.toFixed(0)}% · faltan {formatMoney(m.missing)}
                       {g.targetDate
                         ? late
                           ? ' · la fecha objetivo ya pasó'
                           : m.months !== null
-                            ? ` · ${m.months} mes${m.months === 1 ? '' : 'es'} para ${monthLabel(g.targetDate)}`
+                            ? ` · ${m.months} mes${m.months === 1 ? '' : 'es'} para ${monthKeyLabel(g.targetDate)}`
                             : ''
                         : ' · sin fecha objetivo'}
                       {m.monthly !== null && m.missing > 0 ? ` · guarda ${formatMoney(m.monthly)} al mes` : ''}

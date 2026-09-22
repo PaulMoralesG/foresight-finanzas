@@ -18,6 +18,7 @@ import { goalMath, goalTotals } from '@/lib/goals';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, getCategoryById } from '@/config/categories';
 import { MonthNav } from '@/components/layout/MonthNav';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ProgressBar } from '@/components/ui/ProgressBar';
 import { CardHeader } from '@/components/ui/CardHeader';
 import { TrendCard, HighlightsCard } from '@/components/features/home/MonthInsights';
 import { totalBalance } from '@/lib/accounts';
@@ -348,9 +349,7 @@ function BudgetWatchlist() {
                   </span>
                   <span className={`text-2xs font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${pillColor}`}>{label}</span>
                 </div>
-                <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full ${barColor}`} style={{ width: `${Math.min(100, pct)}%` }} />
-                </div>
+                <ProgressBar pct={pct} color={barColor} label={`${cat.label}: ${pct.toFixed(0)}% del presupuesto`} />
                 <p className="text-2xs text-slate-600 dark:text-slate-400 tabular-nums mt-1">
                   {formatMoney(spent)} de {formatMoney(limit)}
                 </p>
@@ -636,9 +635,7 @@ function SavingsGoalWidget() {
               <span className="truncate text-slate-700 dark:text-slate-300">{goal.concept}</span>
               <span className="text-slate-600 dark:text-slate-400 tabular-nums flex-shrink-0">{m.pct.toFixed(0)}%</span>
             </div>
-            <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-              <div className="h-full bg-brand-500 dark:bg-brand-400 rounded-full" style={{ width: `${m.pct}%` }} />
-            </div>
+            <ProgressBar pct={m.pct} label={`${goal.concept}: ${m.pct.toFixed(0)}% ahorrado`} />
           </div>
         ))}
       </div>
@@ -689,9 +686,7 @@ function NetWorthWidget() {
       </div>
       {goal > 0 ? (
         <div className="mt-3">
-          <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-            <div className="h-full bg-brand-500 dark:bg-brand-400 rounded-full" style={{ width: `${pct.toFixed(1)}%` }} />
-          </div>
+          <ProgressBar pct={pct} label={`Patrimonio: ${pct.toFixed(0)}% de la meta`} />
           <p className="text-2xs text-slate-600 dark:text-slate-400 mt-1">{pct.toFixed(0)}% de tu meta de {formatMoney(goal)}</p>
         </div>
       ) : (

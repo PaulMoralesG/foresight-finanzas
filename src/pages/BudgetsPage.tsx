@@ -14,13 +14,14 @@ import { useAmbito, useBudgetLinesEnAmbito, useExpensesEnAmbito } from '@/hooks/
 import { enAmbito } from '@/lib/ambito';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
-import { formatMoney, parseMoneyInput, roundMoney, syncToCloud, MONTH_NAMES } from '@/lib/utils';
-import { currentMonthKey, shiftMonthKey, monthKeyLabel, mesDeLaVista } from '@/lib/month-keys';
+import { formatMoney, parseMoneyInput, roundMoney, syncToCloud } from '@/lib/utils';
+import { currentMonthKey, shiftMonthKey, monthKeyLabel, monthKeyLabelCorto, mesDeLaVista } from '@/lib/month-keys';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, getCategoryById, DEFAULT_GROUP } from '@/config/categories';
 import { planFor, budgetStatus, actualFor, groupSummary, annualReport, monthsOfYear } from '@/lib/budget-lines';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ProgressBar } from '@/components/ui/ProgressBar';
 import { CardHeader } from '@/components/ui/CardHeader';
 import { ModalSheet } from '@/components/ui/ModalSheet';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -303,9 +304,7 @@ function EsteMes({ mk, setMk, lines, expenses, customCats, onEdit, onDelete }: {
                           </span>
                           <span className={`text-2xs font-semibold px-1.5 py-0.5 rounded-full ${pill}`}>{st.label}</span>
                         </div>
-                        <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${color}`} style={{ width: `${Math.min(100, st.pct)}%` }} />
-                        </div>
+                        <ProgressBar pct={st.pct} color={color} label={`${cat.label}: ${st.pct.toFixed(0)}% del presupuesto`} />
                         {/* Cifra a 12px (es contenido, no rótulo) y acciones en su propia
                             fila en móvil: a 360px se partían en dos líneas junto a la cifra. */}
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 mt-1">
@@ -393,7 +392,7 @@ function PlanAnual({ year, setYear, lines, customCats }: { year: number; setYear
                 <thead>
                   <tr className="text-left text-2xs uppercase tracking-wider text-slate-600 dark:text-slate-400">
                     <th className="py-1 pr-2 font-semibold min-w-[150px] saas-col-fija">Categoría</th>
-                    {months.map((m) => <th key={m} className="py-1 px-1 font-semibold text-right">{MONTH_NAMES[parseInt(m.split('-')[1], 10) - 1].slice(0, 3)}</th>)}
+                    {months.map((m) => <th key={m} className="py-1 px-1 font-semibold text-right">{monthKeyLabelCorto(m).slice(0, 3)}</th>)}
                     <th className="py-1 pl-2 font-semibold text-right">Total</th>
                   </tr>
                 </thead>
@@ -475,7 +474,7 @@ function ReporteAnual({ year, setYear, expenses, customCats }: { year: number; s
                 <thead>
                   <tr className="text-left text-2xs uppercase tracking-wider text-slate-600 dark:text-slate-400">
                     <th className="py-1 pr-2 font-semibold min-w-[150px] saas-col-fija">Categoría</th>
-                    {months.map((m) => <th key={m} className="py-1 px-1 font-semibold text-right">{MONTH_NAMES[parseInt(m.split('-')[1], 10) - 1].slice(0, 3)}</th>)}
+                    {months.map((m) => <th key={m} className="py-1 px-1 font-semibold text-right">{monthKeyLabelCorto(m).slice(0, 3)}</th>)}
                     <th className="py-1 pl-2 font-semibold text-right">Total</th>
                     <th className="py-1 pl-2 font-semibold text-right">Promedio</th>
                   </tr>
