@@ -80,8 +80,9 @@ describe('syncService', () => {
     await vi.advanceTimersByTimeAsync(1);
     const result = await p3; // solo el último schedule dispara el push
     expect(result).toBe(true);
-    // Un solo ciclo: pull de las 10 tablas (expenses, categories, savings_goals, budgets, accounts, debts, settings, assets, networth, budget_lines)
-    expect(mockFrom.mock.calls.length).toBe(before + 10);
+    // Un solo ciclo: pull de las 11 tablas (expenses, categories, savings_goals,
+    // budgets, accounts, debts, settings, assets, networth, budget_lines, recurrences)
+    expect(mockFrom.mock.calls.length).toBe(before + 11);
     void p1;
     void p2;
   });
@@ -94,7 +95,7 @@ describe('syncService', () => {
     const result = await syncService.flush(); // sin avanzar timers
 
     expect(result).toBe(true);
-    expect(mockFrom.mock.calls.length).toBe(before + 10);
+    expect(mockFrom.mock.calls.length).toBe(before + 11);
     void p;
   });
 
@@ -520,9 +521,9 @@ describe('syncService', () => {
     expect(gteCalls).toHaveLength(0);
 
     await vi.advanceTimersByTimeAsync(10);
-    await syncService.flush(); // incremental: 10 tablas filtradas
-    expect(gteCalls).toHaveLength(10);
-    expect(new Set(gteCalls.map((c) => c.table)).size).toBe(10);
+    await syncService.flush(); // incremental: las 11 tablas filtradas
+    expect(gteCalls).toHaveLength(11);
+    expect(new Set(gteCalls.map((c) => c.table)).size).toBe(11);
     expect(gteCalls.every((c) => c.col === 'updated_at')).toBe(true);
     expect(gteCalls[0].value).toBe(new Date(inicio - 5 * 60_000).toISOString());
 
@@ -610,7 +611,7 @@ describe('isTransientSchemaError', () => {
 
 describe('desfaseDeRelojMinutos', () => {
   const ahora = Date.parse('2026-08-30T12:00:00.000Z');
-  const vacio = { expenses: [], categories: [], goals: [], budgets: [], accounts: [], debts: [], settings: [], assets: [], networth: [], budgetLines: [] };
+  const vacio = { expenses: [], categories: [], goals: [], budgets: [], accounts: [], debts: [], settings: [], assets: [], networth: [], budgetLines: [], recurrences: [] };
   const fila = (updated_at: string) => ({ updated_at }) as never;
 
   it('no avisa cuando los datos del servidor son del pasado', () => {

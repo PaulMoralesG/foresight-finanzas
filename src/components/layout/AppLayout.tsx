@@ -20,6 +20,7 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const activeTab = useUiStore((s) => s.activeTab);
   const ensureCurrentMonth = useFinanceStore((s) => s.ensureCurrentMonth);
+  const materializarRecurrencias = useFinanceStore((s) => s.materializarRecurrencias);
 
   // Mismo criterio que el TabBar: el FAB solo se muestra donde registrar un
   // movimiento es la acción esperada.
@@ -28,9 +29,25 @@ export function AppLayout({ children }: AppLayoutProps) {
   // Atajos de teclado: Ctrl+N nueva transacción, Ctrl+K buscar
   useKeyboardShortcuts();
 
-  // Al montar: avanzar al mes actual si la fecha guardada es antigua
+  // Al montar, y al volver a la pestaña: avanzar al mes actual y registrar lo
+  // que las recurrencias deban haber creado.
+  //
+  // Va aquí, en un efecto sin dependencias (y en un listener), y NO en un
+  // efecto que dependa de `recurrences` o `expenses`: materializar escribe en
+  // esos mismos campos, así que esa dependencia sería un bucle de render.
+  // La función es idempotente, de modo que llamarla de más no duplica nada.
   useEffect(() => {
-    ensureCurrentMonth();
+    let corriendo = false;
+    const alDia = () => {
+      if (corriendo) return;
+      corriendo = true;
+      ensureCurrentMonth();
+      void materializarRecurrencias().finally(() => { corriendo = false; });
+    };
+    alDia();
+    const alVolver = () => { if (document.visibilityState === 'visible') alDia(); };
+    document.addEventListener('visibilitychange', alVolver);
+    return () => document.removeEventListener('visibilitychange', alVolver);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (

@@ -39,7 +39,7 @@ describe('BackupSettings', () => {
     const respaldo = buildBackup({
       expenses: [{ id: 'e1', type: 'expense', amount: 10, concept: 'Café', date: '2026-09-01', category: 'comida', method: 'cash', businessType: 'personal', updated_at: 'viejo' }],
       accounts: [{ id: 'a1', name: 'Banco', kind: 'Banco', initialBalance: 5, updated_at: 'viejo' }],
-      debts: [], assets: [], networth: [], budgetLines: [], budgets: {}, budgetUpdatedAt: {}, savingsGoals: [],
+      debts: [], assets: [], networth: [], budgetLines: [], recurrences: [], budgets: {}, budgetUpdatedAt: {}, savingsGoals: [],
       customExpenseCategories: [], customIncomeCategories: [],
       settings: { debtMethod: 'snowball', extraPayment: 0, netWorthGoal: 0, updated_at: '' },
     });

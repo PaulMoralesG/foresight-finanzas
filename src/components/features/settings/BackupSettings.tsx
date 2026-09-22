@@ -29,6 +29,7 @@ export function BackupSettings({ saveData }: { saveData: () => Promise<boolean> 
       assets: s.assets,
       networth: s.networth,
       budgetLines: s.budgetLines,
+      recurrences: s.recurrences,
       budgets: s.budgets,
       budgetUpdatedAt: s.budgetUpdatedAt,
       savingsGoals: s.savingsGoals,
