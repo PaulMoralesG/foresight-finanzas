@@ -4,7 +4,8 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act } from '@testing-library/react';
-import { imprimirReporte, CLASE_HOST } from '@/lib/print-report';
+import { imprimirReporte } from '@/lib/print-report';
+import { CLASE_HOST } from '@/lib/print';
 import type { Transaction } from '@/types';
 
 const movimientos: Transaction[] = [

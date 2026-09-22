@@ -9,13 +9,14 @@
 
 import { useMemo, useState, type FormEvent } from 'react';
 import { useAnchoContenedor } from '@/hooks/useAnchoContenedor';
-import { Plus, Pencil, Trash2, CreditCard, AlertTriangle } from '@/components/ui/icons.generated';
+import { Plus, Pencil, Trash2, CreditCard, AlertTriangle, FileSpreadsheet, Printer } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useDebtsEnAmbito } from '@/hooks/useAmbito';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
-import { formatMoney, getTodayISO, parseMoneyInput, roundMoney, syncToCloud } from '@/lib/utils';
-import { projectDebts, totalDebt, monthlyDebtPayment, payoffDate, DEBT_KINDS, type DebtPlan } from '@/lib/debts';
+import { formatMoney, getTodayISO, parseMoneyInput, roundMoney, syncToCloud, downloadBlob } from '@/lib/utils';
+import { projectDebts, totalDebt, monthlyDebtPayment, payoffDate, debtsToCsv, DEBT_KINDS, type DebtPlan } from '@/lib/debts';
+import { imprimirDeudas } from '@/lib/print-debts';
 import { escalaBonita, formatoTickDinero, trazarLinea } from '@/lib/chart-geometry';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
@@ -150,12 +151,41 @@ export function DebtsPage() {
 
   const ordered = plan.order.map((id) => debts.find((d) => d.id === id)).filter((d): d is Debt => !!d);
 
+  async function handleCSV() {
+    try {
+      const blob = debtsToCsv(debts);
+      const outcome = await downloadBlob(blob, 'foresight-deudas.csv');
+      if (outcome === 'cancelled') return;
+      addToast(outcome === 'shared' ? 'CSV listo para compartir ✅' : 'CSV descargado ✅', 'success');
+    } catch {
+      addToast('Error al generar el CSV', 'error');
+    }
+  }
+
+  function handlePDF() {
+    try {
+      imprimirDeudas(debts);
+    } catch {
+      addToast('Este navegador no permite imprimir desde la app', 'error');
+    }
+  }
+
   return (
     <div className="space-y-4 animate-fade-in">
       {/* La estrategia (método y aporte extra) vive en la tarjeta de comparación,
           como en la referencia: la primera fila de la vista es el dato, no un
           formulario. */}
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-1.5">
+        {debts.length > 0 && (
+          <>
+            <button onClick={handleCSV} className="saas-btn-icon text-slate-600 dark:text-slate-400" aria-label="Descargar CSV" title="Descargar CSV (Excel)">
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={handlePDF} className="saas-btn-icon text-slate-600 dark:text-slate-400" aria-label="Guardar como PDF" title="Guardar como PDF">
+              <Printer className="w-3.5 h-3.5" />
+            </button>
+          </>
+        )}
         <button onClick={openCreate} className="saas-btn saas-btn-primary saas-btn-sm flex items-center gap-1.5">
           <Plus className="w-3.5 h-3.5" />
           Agregar deuda

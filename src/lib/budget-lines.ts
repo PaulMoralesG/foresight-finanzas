@@ -7,7 +7,7 @@
 // una vez en la migración v12 del estado persistido.
 // ================================================================
 
-import { roundMoney, safeParseDate } from './utils';
+import { roundMoney, safeParseDate, toCsv } from './utils';
 import { categoryGroup } from '@/config/categories';
 import { newId, nowIso } from './ids';
 import type { BudgetLine, BusinessType, Category, MonthlyBudget, Transaction } from '@/types';
@@ -42,7 +42,7 @@ export function actualFor(expenses: Transaction[], line: Pick<BudgetLine, 'tag' 
   );
 }
 
-interface GroupRow {
+export interface GroupRow {
   kind: 'income' | 'expense';
   group: string;
   planned: number;
@@ -99,6 +99,20 @@ export function groupSummary(lines: BudgetLine[], expenses: Transaction[], month
     realResult: roundMoney(sums.income.actual - sums.expense.actual),
     plannedIncome: roundMoney(sums.income.planned),
   };
+}
+
+const RESUMEN_CSV_HEADERS = ['Tipo', 'Grupo', 'Presupuestado', 'Real', 'Diferencia'] as const;
+
+/** `groupSummary()` a CSV: una fila por grupo, mismo orden que en pantalla. */
+export function groupSummaryToCsv(resumen: GroupSummary): Blob {
+  const rows = resumen.rows.map((r) => [
+    r.kind === 'income' ? 'Ingreso' : 'Gasto',
+    r.group,
+    r.planned.toFixed(2),
+    r.actual.toFixed(2),
+    r.diff.toFixed(2),
+  ]);
+  return toCsv([...RESUMEN_CSV_HEADERS], rows);
 }
 
 export interface AnnualRow {

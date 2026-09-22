@@ -290,6 +290,16 @@ export function toCsv(headers: string[], rows: (string | number)[][]): Blob {
 }
 
 /**
+ * "Generado el 21/9/2026 a las 11:58", para el pie de cualquier vista de
+ * impresión (reporte de movimientos, presupuesto, deudas, patrimonio...).
+ */
+export function generadoAhora(fecha = new Date()): string {
+  const hh = String(fecha.getHours()).padStart(2, '0');
+  const mm = String(fecha.getMinutes()).padStart(2, '0');
+  return `Generado el ${fecha.getDate()}/${fecha.getMonth() + 1}/${fecha.getFullYear()} a las ${hh}:${mm}`;
+}
+
+/**
  * Iniciales para el avatar: nombre + apellido, o la primera letra del correo
  * si aún no hay nombre. La expresión estaba escrita tres veces —Header,
  * Sidebar y ProfilePage— y las tres tenían que coincidir para que el avatar no

@@ -7,10 +7,26 @@
 //   avalanche — interés más alto primero (menos intereses)
 // ================================================================
 
-import { roundMoney, MONTH_NAMES } from './utils';
+import { roundMoney, MONTH_NAMES, toCsv } from './utils';
 import type { Debt, DebtKind, DebtMethod } from '@/types';
 
 export const DEBT_KINDS: DebtKind[] = ['Tarjeta de crédito', 'Préstamo', 'Hipoteca', 'Otro'];
+
+const DEBTS_CSV_HEADERS = ['Nombre', 'Ámbito', 'Tipo', 'Saldo', 'Interés anual (%)', 'Pago mínimo', 'Día de pago'] as const;
+
+/** Lista de deudas a CSV, en el orden en que llegan (la página ya las ordena). */
+export function debtsToCsv(debts: Debt[]): Blob {
+  const rows = debts.map((d) => [
+    d.name,
+    d.tag === 'personal' ? 'Personal' : 'Negocio',
+    d.kind,
+    d.balance.toFixed(2),
+    d.annualRate.toFixed(2),
+    d.minPayment.toFixed(2),
+    d.payDay != null ? String(d.payDay) : '—',
+  ]);
+  return toCsv([...DEBTS_CSV_HEADERS], rows);
+}
 
 export interface DebtPlan {
   /** Meses hasta saldar todo (0 si no hay deudas). */

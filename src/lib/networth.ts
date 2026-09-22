@@ -2,11 +2,21 @@
 // PATRIMONIO — aritmética pura (portado de netWorthNow() de Balance Dual)
 // ================================================================
 
-import { roundMoney } from './utils';
+import { roundMoney, toCsv } from './utils';
 import { accountBalance } from './accounts';
 import type { Account, Asset, AssetGroup, Debt, NetWorthSnapshot, SavingsGoal, Transaction } from '@/types';
 
 export const ASSET_GROUPS: AssetGroup[] = ['Inversiones', 'Propiedades', 'Otros activos'];
+
+const NETWORTH_CSV_HEADERS = ['Mes', 'Activos', 'Pasivos', 'Neto'] as const;
+
+/** Cierres mensuales de patrimonio a CSV, en orden cronológico. */
+export function netWorthHistoryToCsv(history: NetWorthSnapshot[]): Blob {
+  const rows = [...history]
+    .sort((a, b) => a.month.localeCompare(b.month))
+    .map((s) => [s.month, s.assets.toFixed(2), s.liabilities.toFixed(2), s.net.toFixed(2)]);
+  return toCsv([...NETWORTH_CSV_HEADERS], rows);
+}
 
 export interface NetWorth {
   /** Saldos positivos de las cuentas. */

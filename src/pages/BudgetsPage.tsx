@@ -8,16 +8,17 @@
 // ================================================================
 
 import { useMemo, useState, type FormEvent } from 'react';
-import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight, Target } from '@/components/ui/icons.generated';
+import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight, Target, FileSpreadsheet, Printer } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useAmbito, useBudgetLinesEnAmbito, useExpensesEnAmbito } from '@/hooks/useAmbito';
 import { enAmbito } from '@/lib/ambito';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
-import { formatMoney, parseMoneyInput, roundMoney, syncToCloud } from '@/lib/utils';
+import { formatMoney, parseMoneyInput, roundMoney, syncToCloud, downloadBlob } from '@/lib/utils';
 import { currentMonthKey, shiftMonthKey, monthKeyLabel, monthKeyLabelCorto, mesDeLaVista } from '@/lib/month-keys';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, getCategoryById, DEFAULT_GROUP } from '@/config/categories';
-import { planFor, budgetStatus, actualFor, groupSummary, annualReport, monthsOfYear } from '@/lib/budget-lines';
+import { planFor, budgetStatus, actualFor, groupSummary, groupSummaryToCsv, annualReport, monthsOfYear } from '@/lib/budget-lines';
+import { imprimirPresupuesto } from '@/lib/print-budgets';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -223,9 +224,29 @@ function EsteMes({ mk, setMk, lines, expenses, customCats, onEdit, onClearMonth 
   customCats: Category[]; onEdit: (l: BudgetLine) => void; onClearMonth: (l: BudgetLine) => void;
 }) {
   const ambito = useAmbito();
+  const addToast = useUiStore((s) => s.addToast);
   const meses = Array.from({ length: 9 }, (_, i) => shiftMonthKey(currentMonthKey(), i - 6));
   const resumen = useMemo(() => groupSummary(lines, expenses, mk, customCats), [lines, expenses, mk, customCats]);
   const esActual = mk === currentMonthKey();
+
+  async function handleCSV() {
+    try {
+      const blob = groupSummaryToCsv(resumen);
+      const outcome = await downloadBlob(blob, `foresight-presupuesto-${mk}.csv`);
+      if (outcome === 'cancelled') return;
+      addToast(outcome === 'shared' ? 'CSV listo para compartir ✅' : 'CSV descargado ✅', 'success');
+    } catch {
+      addToast('Error al generar el CSV', 'error');
+    }
+  }
+
+  function handlePDF() {
+    try {
+      imprimirPresupuesto(resumen, monthKeyLabel(mk), mk);
+    } catch {
+      addToast('Este navegador no permite imprimir desde la app', 'error');
+    }
+  }
 
   return (
     <>
@@ -238,7 +259,23 @@ function EsteMes({ mk, setMk, lines, expenses, customCats, onEdit, onClearMonth 
 
       {/* Presupuestado vs. real por grupo */}
       <div className="saas-card p-4 animate-slide-up">
-        <CardHeader titulo="Presupuestado vs. real" sub={`${monthKeyLabel(mk)} · por grupo`} className="mb-2" />
+        <CardHeader
+          titulo="Presupuestado vs. real"
+          sub={`${monthKeyLabel(mk)} · por grupo`}
+          className="mb-2"
+          accion={
+            resumen.rows.length > 0 ? (
+              <div className="flex gap-1 flex-shrink-0">
+                <button onClick={handleCSV} className="saas-btn-icon text-slate-600 dark:text-slate-400" aria-label="Descargar CSV" title="Descargar CSV (Excel)">
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={handlePDF} className="saas-btn-icon text-slate-600 dark:text-slate-400" aria-label="Guardar como PDF" title="Guardar como PDF">
+                  <Printer className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : undefined
+          }
+        />
         {resumen.rows.length === 0 ? (
           <EmptyState variant="compact" title="Sin presupuestos ni movimientos en este mes." />
         ) : (

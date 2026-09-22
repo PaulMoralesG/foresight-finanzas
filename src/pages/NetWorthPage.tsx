@@ -8,13 +8,14 @@
 
 import { useMemo, useState, type FormEvent } from 'react';
 import { useAnchoContenedor } from '@/hooks/useAnchoContenedor';
-import { Plus, Pencil, Trash2 } from '@/components/ui/icons.generated';
+import { Plus, Pencil, Trash2, FileSpreadsheet, Printer } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
-import { formatMoney, parseMoneyInput, roundMoney, syncToCloud } from '@/lib/utils';
+import { formatMoney, parseMoneyInput, roundMoney, syncToCloud, downloadBlob } from '@/lib/utils';
 import { monthKeyLabel, monthKeyLabelCorto } from '@/lib/month-keys';
-import { netWorthNow, netWorthHistory, ASSET_GROUPS, type NetWorth } from '@/lib/networth';
+import { netWorthNow, netWorthHistory, netWorthHistoryToCsv, ASSET_GROUPS, type NetWorth } from '@/lib/networth';
+import { imprimirPatrimonio } from '@/lib/print-networth';
 import { escalaBonita, formatoTickDinero, trazarLinea } from '@/lib/chart-geometry';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
@@ -202,8 +203,28 @@ function Kpi({ label, value, sub, tone }: { label: string; value: string; sub: s
 /* ─── Evolución del patrimonio: los cierres mensuales (SVG, como la referencia) ─── */
 function NetWorthTrendCard({ history, goal, hoy }: { history: NetWorthSnapshot[]; goal: number; hoy: number }) {
   const isDark = useUiStore((s) => s.isDark);
+  const addToast = useUiStore((s) => s.addToast);
   const { grid, tick, tipFg: ink, income: linea } = coloresGrafica(isDark);
   const { ref, ancho: W } = useAnchoContenedor<HTMLDivElement>();
+
+  async function handleCSV() {
+    try {
+      const blob = netWorthHistoryToCsv(history);
+      const outcome = await downloadBlob(blob, 'foresight-patrimonio.csv');
+      if (outcome === 'cancelled') return;
+      addToast(outcome === 'shared' ? 'CSV listo para compartir ✅' : 'CSV descargado ✅', 'success');
+    } catch {
+      addToast('Error al generar el CSV', 'error');
+    }
+  }
+
+  function handlePDF() {
+    try {
+      imprimirPatrimonio(history);
+    } catch {
+      addToast('Este navegador no permite imprimir desde la app', 'error');
+    }
+  }
   const H = 190, padL = 52, padR = 12, padB = 26, padT = 12;
   const innerH = H - padT - padB;
 
@@ -254,7 +275,22 @@ function NetWorthTrendCard({ history, goal, hoy }: { history: NetWorthSnapshot[]
 
   return (
     <div className="saas-card p-4 animate-slide-up">
-      <CardHeader titulo="Evolución del patrimonio" sub="Se guarda solo al cierre de cada mes" />
+      <CardHeader
+        titulo="Evolución del patrimonio"
+        sub="Se guarda solo al cierre de cada mes"
+        accion={
+          history.length > 0 ? (
+            <div className="flex gap-1 flex-shrink-0">
+              <button onClick={handleCSV} className="saas-btn-icon text-slate-600 dark:text-slate-400" aria-label="Descargar CSV" title="Descargar CSV (Excel)">
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+              </button>
+              <button onClick={handlePDF} className="saas-btn-icon text-slate-600 dark:text-slate-400" aria-label="Guardar como PDF" title="Guardar como PDF">
+                <Printer className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : undefined
+        }
+      />
       <div ref={ref}>{contenido}</div>
       <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 flex items-center gap-3 flex-wrap">
         <span className="flex items-center gap-1.5"><span aria-hidden className="inline-block h-0 w-4 border-t-[3px]" style={{ borderColor: linea }} />Patrimonio neto</span>
