@@ -1,5 +1,10 @@
 # Fase 3 — Foresight con la estructura de Balance Dual
 
+> **Estado: completada.** Los pasos 3.0–3.5 de abajo están en `main`; después se
+> añadieron 3.6 (filtro por cuenta en Movimientos), 3.7 ("Presupuestos a
+> vigilar" y mini-card de Deudas en Resumen) y 3.8 (metas con `saved` propio,
+> migración `0013`). La columna "Estado hoy" describe el punto de partida.
+
 ## Objetivo
 Que Foresight quede organizado como `D:\ProyectosIA\balance-dual\index.html`:
 8 vistas en 2 secciones, y las entidades que lo hacen posible (cuentas,

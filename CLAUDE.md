@@ -42,7 +42,7 @@ Before considering any change done, this repo's own convention (see recent commi
 
 ### State: three Zustand stores, one job each
 - `src/stores/authStore.ts` — current `User` + loading flag. No persistence of its own.
-- `src/stores/financeStore.ts` — the actual financial data (`expenses`, `budgets`, `savingsGoals`, custom categories, `tombstones` for logical deletes) plus current month/filter view state. Persisted to `localStorage` via `zustand/middleware`'s `persist` (key `foresight-finance-storage`, **unencrypted by design** — see README's "Datos locales sin cifrar" section; logging out clears it).
+- `src/stores/financeStore.ts` — the actual financial data: `expenses` (incl. transfers between accounts), `accounts`, `debts`, `assets`, `networth` (monthly closes), `budgetLines` (per-category budget + 12-month plan; the legacy `budgets` map is kept only so old clients keep syncing), `savingsGoals` (each carries its own `saved`), `settings`, custom categories and `tombstones` for logical deletes, plus current month/filter view state. Persisted to `localStorage` via `zustand/middleware`'s `persist` (key `foresight-finance-storage`, **unencrypted by design** — see README's "Datos locales sin cifrar" section; logging out clears it). Every change of shape bumps `version` and adds a chained `migrateVn` with a test. Business invariants live in the store, not in a page: e.g. `deleteAccount` is a no-op while `accountIsUsed()`.
 - `src/stores/uiStore.ts` — theme, active tab, modal/toast state, sync status indicator.
 
 ### Auth + sync: two hooks, one direction of data flow
@@ -52,15 +52,18 @@ Before considering any change done, this repo's own convention (see recent commi
 
 When Supabase isn't configured (`supabaseAvailable` in `src/config/supabase.ts` is false — no `VITE_SUPABASE_URL`/`VITE_SUPABASE_KEY`), the app runs as a single `OFFLINE_USER` against `financeStore`'s local persistence only — this is a first-class supported mode, not a degraded fallback.
 
-`src/lib/sync.ts` is the actual sync engine when Supabase *is* configured: a singleton (`syncService`, initialized once in `main.tsx`) doing pull-then-push with deterministic per-row merge (`updated_at` wins; `deleted_at` tombstones propagate deletes without resurrecting them). Debounced 800ms, single-flight, retries with backoff, auto-flush on `pagehide`/`visibilitychange`/`online`/before logout. Push is incremental (only rows changed since the last confirmed push via a watermark in `localStorage`); pull is always full. `src/lib/merge.ts` holds the pure merge-set logic; `src/lib/legacy-import.ts` handles the one-time migration of the old JSON-blob profile format into the per-entity tables (idempotent via deterministic UUID v5 ids).
+`src/lib/sync.ts` is the actual sync engine when Supabase *is* configured: a singleton (`syncService`, initialized once in `main.tsx`) doing pull-then-push with deterministic per-row merge (`updated_at` wins; `deleted_at` tombstones propagate deletes without resurrecting them). Debounced 800ms, single-flight, retries with backoff. Both pull and push are **incremental** against one watermark (the start of the last confirmed cycle, per user in `localStorage`; the pull subtracts a 5-minute margin for skewed clocks). `attach` (login), returning to the tab (`visibilitychange → visible`) and `online` run a **full** cycle as the safety net; `pagehide`/hidden flush incrementally. `flush()` resolves only when nothing is in flight or scheduled — `signOut()` wipes local state right after it, so a queued cycle must not be left behind. `src/lib/merge.ts` holds the pure merge-set logic; `src/lib/legacy-import.ts` handles the one-time migration of the old JSON-blob profile format into the per-entity tables (idempotent via deterministic UUID v5 ids).
 
 If you touch `sync.ts`, `merge.ts`, or the Supabase schema assumptions, read the "Migración de Supabase" section of `README.md` first — it documents the migration ordering constraints (`supabase/migrations/*.sql`, must run in numeric order, two of them have a specific before/after-deploy requirement) and the RLS/security model.
 
 ### Routing and code-splitting
-No router library — `App.tsx` switches on `uiStore.activeTab` (`home`/`movements`/`stats`/`savings`/`profile`) and renders the matching page from `src/pages/`. Heavy pages (`StatsPage`, `SavingsPage`, `LoginPage`) and `ReportModal` are lazy-loaded via `lazyConRecuperacion` (`src/lib/lazy-recovery.ts`), not plain `React.lazy` — after a deploy, stale service-worker precache can request a chunk hash that no longer exists on the server; this wrapper detects that failure and activates the waiting service worker instead of crashing to the `ErrorBoundary`. Keep using it for any new lazy page.
+No router library — `App.tsx` switches on `uiStore.activeTab` and renders the matching page from `src/pages/`. The eight views live in one catalogue, `src/config/views.ts` (id, section, label, icon), in two sections: *Día a día* (Resumen `home`, Movimientos `movements`, Presupuestos `budgets`) and *Patrimonio* (Deudas `debts`, Metas `goals`, Patrimonio `networth`, Cuentas `accounts`, Ajustes `settings`). `Sidebar`, `TabBar` (4 tabs + "Más" sheet on mobile) and `Header` read from it; `normalizarTabId()` maps ids persisted before the restructuring. `GoalsPage`, `LoginPage` and `ReportModal` are lazy-loaded via `lazyConRecuperacion` (`src/lib/lazy-recovery.ts`), not plain `React.lazy` — after a deploy, stale service-worker precache can request a chunk hash that no longer exists on the server; this wrapper detects that failure and activates the waiting service worker instead of crashing to the `ErrorBoundary`. Keep using it for any new lazy page.
 
 ### PWA / service worker
 `vite-plugin-pwa` in `generateSW` mode, `skipWaiting: false` deliberately — the app has mid-transaction forms, so a new version doesn't force-activate and wipe unsaved input; the user opts in via the "Nueva versión disponible" banner (`usePWA` hook). Every chunk is precached now (the heavy ones — Sentry, jsPDF/html2canvas, Recharts — were removed); `vite.config.ts` has an inline comment with the history, and `lazyConRecuperacion` stays as a safety net.
+
+### Pure business logic (`src/lib/`)
+Every calculation ported from the Balance Dual reference is a pure function with its own test file, written before the UI: `accounts.ts` (balance per account, transfers), `debts.ts` (snowball/avalanche projection), `networth.ts`, `budget-lines.ts` (plan vs. actual, annual report, migration of the global budget), `goals.ts` (months left, monthly contribution), `month-keys.ts` (`YYYY-MM` helpers). Add new arithmetic there, not inside a page.
 
 ### Components
 - `src/components/ui/` — generic, reusable primitives (`ModalSheet`, `ConfirmDialog`, `EmptyState`, `Toast`, `Skeleton`, etc.). `ModalSheet` owns the shared overlay/panel/focus-trap chrome for both the transaction and savings-goal modals — don't duplicate that scaffolding in a new modal, compose `ModalSheet` instead.
@@ -109,6 +112,14 @@ donde el comportamiento cambia entre versiones (`skipWaiting`, `generateSW`,
 No hace falta para el código propio del proyecto (componentes de
 `src/components/`, stores de Zustand ya escritos aquí, utilidades de
 `src/lib/`) — eso se lee directamente del repo, no de documentación externa.
+
+## Auditoría técnica — skill `auditoria-tecnica`
+
+Para revisar seguridad (RLS/grants), integridad del sync y del store, autenticación
+y rendimiento, seguir `.agents/skills/auditoria-tecnica/SKILL.md` (también invocable
+como `/auditoria-tecnica`): lista los archivos que importan, las invariantes que hay
+que comprobar y el formato [CRÍTICO]/[ADVERTENCIA]/[OPTIMIZACIÓN] del reporte.
+Correr los advisors de Supabase antes de leer código.
 
 ## Related agent docs
 

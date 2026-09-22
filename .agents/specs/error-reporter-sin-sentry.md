@@ -1,5 +1,7 @@
 # Fase 2.1 — Quitar Sentry, reportador propio a Supabase
 
+> **Estado: completada.** `src/lib/error-reporter.ts` y migración `0008_error_log.sql`.
+
 ## Objetivo
 Eliminar `@sentry/react` (156 KB gzip diferidos, el chunk más pesado de la app)
 y sustituirlo por un reportador mínimo que inserte los errores en una tabla
