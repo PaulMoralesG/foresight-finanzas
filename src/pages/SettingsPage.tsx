@@ -147,10 +147,17 @@ export function SettingsPage() {
        rango más común de portátiles de trabajo, 1024-1279px— la tarjeta de
        perfil ocupaba el ancho completo en una sola columna, con el avatar y
        el nombre pegados a la izquierda y "Editar" empujado lejos a la
-       derecha: mucho vacío en medio, como a medio maquetar. Se adelanta a lg. */
-    <div className="animate-fade-in max-w-2xl lg:max-w-5xl grid grid-cols-1 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] gap-5 items-start">
+       derecha: mucho vacío en medio, como a medio maquetar. Se adelanta a lg.
+
+       `items-stretch` (el valor por defecto de grid, antes pisado por
+       `items-start`): con "Cuenta" mucho más alta que el perfil, `items-start`
+       dejaba la tarjeta de perfil corta flotando arriba y un vacío enorme del
+       fondo de la página debajo, en la misma fila. Al estirarla a la altura
+       de su fila, ese hueco pasa a ser parte de la propia tarjeta —con su
+       fondo y borde— en vez de verse como una fila a medio terminar. */
+    <div className="animate-fade-in max-w-2xl lg:max-w-5xl grid grid-cols-1 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] gap-5 items-stretch">
       {/* ─── Profile Card ─── */}
-      <div className="saas-card p-6">
+      <div className="saas-card p-6 flex flex-col justify-center">
         {/* flex-col en móvil: antes avatar+nombre+botón iban en una sola fila
             y "Usuario Local" (13 caracteres) ya se truncaba a "Usuario Lo…"
             a 375px, solo por competir con el botón "Editar" en el mismo
