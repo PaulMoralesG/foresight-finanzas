@@ -4,7 +4,8 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { safeParseDate, roundMoney as roundMoneyLocal } from '@/lib/utils';
+import { roundMoney as roundMoneyLocal } from '@/lib/utils';
+import { filtrarPorMes } from '@/lib/month-keys';
 import { computeSavingsByConcept, savingsForGoal } from '@/lib/savings';
 import { newId, nowIso } from '@/lib/ids';
 import type { Transaction, MonthlyBudget, FilterType, Ambito, Category, SavingsGoal, Account, Debt, Settings, Asset, NetWorthSnapshot, BudgetLine, BusinessType } from '@/types';
@@ -441,9 +442,16 @@ export const useFinanceStore = create<FinanceState>()(
 
       updateSavingsGoal: (id, partial) =>
         set((state) => ({
-          savingsGoals: state.savingsGoals.map((g) =>
-            g.id === id ? { ...g, ...partial, updated_at: nowIso() } : g
-          ),
+          savingsGoals: state.savingsGoals.map((g) => {
+            if (g.id !== id) return g;
+            const next = { ...g, ...partial, updated_at: nowIso() };
+            // `savedFromAccounts` es la parte de `saved` que salió de una
+            // cuenta y la única que el patrimonio cuenta como activo. Editar
+            // la meta a mano podía bajar `saved` dejándolo por encima, y el
+            // patrimonio quedaba inflado por la diferencia — y el cierre
+            // mensual lo dejaba grabado en la curva histórica.
+            return { ...next, savedFromAccounts: Math.min(next.savedFromAccounts, next.saved) };
+          }),
           tombstones: clearedTombstone(state.tombstones, id),
         })),
 
@@ -650,14 +658,7 @@ export const useFinanceStore = create<FinanceState>()(
 
       getMonthlyData: () => {
         const { expenses, currentViewDate } = get();
-        const d = new Date(currentViewDate);
-        const month = d.getMonth();
-        const year = d.getFullYear();
-
-        return expenses.filter((item) => {
-          const id = safeParseDate(item.date);
-          return id.getMonth() === month && id.getFullYear() === year;
-        });
+        return filtrarPorMes(expenses, currentViewDate);
       },
     }),
     {

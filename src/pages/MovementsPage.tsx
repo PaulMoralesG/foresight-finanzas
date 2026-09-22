@@ -5,7 +5,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Layers, ArrowDown, ArrowUp, Plus, X, Search, Receipt, ChevronUp, ChevronDown, Trash2 } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
-import { useExpensesEnAmbito } from '@/hooks/useAmbito';
+import { useExpensesDelMesEnAmbito } from '@/hooks/useAmbito';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
 import { formatMoney, LOCALE, roundMoney, safeParseDate, syncToCloud } from '@/lib/utils';
@@ -28,9 +28,7 @@ const FILTERS: { id: FilterType; label: string; icon: React.ElementType }[] = [
 const FILTER_TYPE_IDS = ['all', 'income', 'expense', 'business', 'personal'] as const;
 
 export function MovementsPage() {
-  const expenses = useExpensesEnAmbito();
   const setAmbito = useFinanceStore((s) => s.setAmbito);
-  const getMonthlyData = useFinanceStore((s) => s.getMonthlyData);
   const currentViewDate = useFinanceStore((s) => s.currentViewDate);
   const currentFilter = useFinanceStore((s) => s.currentFilter);
   const setFilter = useFinanceStore((s) => s.setFilter);
@@ -70,7 +68,7 @@ export function MovementsPage() {
   const handleBulkDelete = () => {
     if (selectedIds.size === 0) return;
     // Guardar copia de las transacciones antes de eliminar (para Undo)
-    const deletedItems = expenses.filter((e) => selectedIds.has(e.id));
+    const deletedItems = monthlyData.filter((e) => selectedIds.has(e.id));
     const count = selectedIds.size;
 
     try {
@@ -130,9 +128,7 @@ export function MovementsPage() {
     return map;
   }, [customExpenseCategories, customIncomeCategories]);
 
-  // Deps "innecesarias" a propósito: getMonthlyData lee el store por dentro
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const monthlyData = useMemo(() => getMonthlyData(), [getMonthlyData, expenses, currentViewDate]);
+  const monthlyData = useExpensesDelMesEnAmbito();
 
   // Todas las categorías (default + personalizadas) para el dropdown
   const allCategories = useMemo(

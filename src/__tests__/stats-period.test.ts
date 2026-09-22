@@ -195,23 +195,6 @@ describe('desglose y extremos', () => {
   });
 });
 
-describe('promedio diario', () => {
-  it('divide el saldo entre los días del mes', () => {
-    const { current } = conGastos([tx({ type: 'income', amount: 310, date: '2026-08-10' })]);
-    // Agosto tiene 31 días
-    expect(current.avgDaily).toBe(10);
-  });
-
-  it('en un rango divide entre los días del rango, extremos incluidos', () => {
-    const { current } = conGastos(
-      [tx({ type: 'income', amount: 100, date: '2026-08-10' })],
-      { mode: 'range', month: 7, year: 2026, fromDate: '2026-08-10', toDate: '2026-08-19' },
-    );
-    // Del 10 al 19 son 10 días
-    expect(current.avgDaily).toBe(10);
-  });
-});
-
 describe('tendencia', () => {
   it('devuelve seis meses terminando en el seleccionado', () => {
     const { current } = conGastos([

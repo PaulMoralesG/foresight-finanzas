@@ -105,3 +105,26 @@ describe('Deudas con ámbito', () => {
     expect(screen.getByText('Deuda total').parentElement).toHaveTextContent('$5,000.00');
   });
 });
+
+describe('Movimientos con ámbito', () => {
+  it('la lista y el resumen del mes solo cuentan el ámbito activo', async () => {
+    const { MovementsPage } = await import('@/pages/MovementsPage');
+    useFinanceStore.setState({
+      expenses: [
+        mov({ type: 'income', amount: 1000, concept: 'Sueldo', businessType: 'personal' }),
+        mov({ type: 'income', amount: 5000, concept: 'Venta del mes', businessType: 'business' }),
+      ],
+      ambito: 'personal',
+    });
+    useUiStore.setState({ activeTab: 'movements' });
+    render(<MovementsPage />);
+
+    // La página pinta la lista dos veces (tarjetas en móvil, tabla en
+    // escritorio); basta con que el movimiento del otro ámbito no esté.
+    expect(screen.getAllByText('Sueldo').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Venta del mes')).not.toBeInTheDocument();
+    // La línea de resumen: "1 transacción · $1,000.00 ingresos · $0.00 gastos"
+    expect(screen.getAllByText('$1,000.00').length).toBeGreaterThan(0);
+    expect(screen.queryByText('$6,000.00')).not.toBeInTheDocument();
+  });
+});

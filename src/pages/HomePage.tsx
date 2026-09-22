@@ -10,6 +10,7 @@ import { ChartNoAxesColumn, Plus, Receipt, ArrowDown, ArrowUp, Store, PiggyBank,
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useMonthlyData } from '@/hooks/useFinance';
+import { mesDeLaVista, monthKeyLabel } from '@/lib/month-keys';
 import { useAmbito, useBudgetLinesEnAmbito, useDebtsEnAmbito, useExpensesEnAmbito, useGoalsEnAmbito } from '@/hooks/useAmbito';
 import { useStatsPeriod, pctChange } from '@/hooks/useStatsPeriod';
 import { formatMoney, LOCALE, safeParseDate } from '@/lib/utils';
@@ -27,7 +28,7 @@ import { ScopeBadge, TransactionAmount, TypePill } from '@/components/ui/Transac
 import type { Transaction, TabId, Debt } from '@/types';
 
 /* ─── Category Bar (simple, no recharts dependency for now) ─── */
-function CategoryBreakdown({ expenses }: { expenses: Transaction[] }) {
+function CategoryBreakdown({ porCategoria }: { porCategoria: [string, number][] }) {
   const setActiveTab = useUiStore((s) => s.setActiveTab);
   const navigateTo = useUiStore((s) => s.navigateTo);
   const customExpenseCategories = useFinanceStore((s) => s.customExpenseCategories);
@@ -35,17 +36,7 @@ function CategoryBreakdown({ expenses }: { expenses: Transaction[] }) {
     () => [...EXPENSE_CATEGORIES, ...customExpenseCategories],
     [customExpenseCategories],
   );
-  const categoryTotals = useMemo(() => {
-    const map: Record<string, number> = {};
-    expenses
-      .filter((e) => e.type === 'expense')
-      .forEach((e) => {
-        map[e.category] = (map[e.category] || 0) + e.amount;
-      });
-    return Object.entries(map)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 10);
-  }, [expenses]);
+  const categoryTotals = useMemo(() => porCategoria.slice(0, 10), [porCategoria]);
 
   const max = categoryTotals[0]?.[1] || 1;
 
@@ -301,10 +292,7 @@ function BudgetWatchlist() {
     [customExpenseCats, customIncomeCats],
   );
 
-  const monthKey = useMemo(() => {
-    const d = new Date(currentViewDate);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-  }, [currentViewDate]);
+  const monthKey = useMemo(() => mesDeLaVista(currentViewDate), [currentViewDate]);
 
   const top = useMemo(() => {
     return budgetLines
@@ -322,7 +310,7 @@ function BudgetWatchlist() {
     <div className="saas-card p-4 animate-slide-up">
       <CardHeader
         titulo="Presupuestos a vigilar"
-        sub="Los más cerca del límite este mes"
+        sub={`Los más cerca del límite · ${monthKeyLabel(monthKey)}`}
         accion={
           <button
             onClick={() => navigateTo('budgets' as TabId)}
@@ -447,7 +435,7 @@ export function HomePage() {
   // Tendencia, comparación con el mes anterior y destacados, para el mes
   // visible. Es el mismo hook que alimentaba Estadísticas, en modo mes.
   const vista = new Date(currentViewDate);
-  const { trendData, totals, prevTotals, largestExpense, peakDay, peakDayTransactions } = useStatsPeriod({
+  const { trendData, prevTotals, expensesByCategory, largestExpense, peakDay, peakDayTransactions } = useStatsPeriod({
     mode: 'month',
     month: vista.getMonth(),
     year: vista.getFullYear(),
@@ -511,8 +499,8 @@ export function HomePage() {
             {formatMoney(summary.totalIncome)}
           </span>
           {prevTotals.income > 0 ? (
-            <span className={`block text-2xs mt-0.5 tabular-nums ${totals.income >= prevTotals.income ? 'text-income-600 dark:text-income-400' : 'text-expense-600 dark:text-expense-400'}`}>
-              {pctChange(totals.income, prevTotals.income)} vs mes anterior
+            <span className={`block text-2xs mt-0.5 tabular-nums ${summary.totalIncome >= prevTotals.income ? 'text-income-600 dark:text-income-400' : 'text-expense-600 dark:text-expense-400'}`}>
+              {pctChange(summary.totalIncome, prevTotals.income)} vs mes anterior
             </span>
           ) : (
             <span className="block text-2xs text-slate-600 dark:text-slate-400 mt-0.5">del mes en curso</span>
@@ -531,8 +519,8 @@ export function HomePage() {
             {formatMoney(summary.totalSpent)}
           </span>
           {prevTotals.spent > 0 ? (
-            <span className={`block text-2xs mt-0.5 tabular-nums ${totals.spent <= prevTotals.spent ? 'text-income-600 dark:text-income-400' : 'text-expense-600 dark:text-expense-400'}`}>
-              {pctChange(totals.spent, prevTotals.spent)} vs mes anterior
+            <span className={`block text-2xs mt-0.5 tabular-nums ${summary.totalSpent <= prevTotals.spent ? 'text-income-600 dark:text-income-400' : 'text-expense-600 dark:text-expense-400'}`}>
+              {pctChange(summary.totalSpent, prevTotals.spent)} vs mes anterior
             </span>
           ) : (
             <span className="block text-2xs text-slate-600 dark:text-slate-400 mt-0.5">del mes en curso</span>
@@ -573,7 +561,7 @@ export function HomePage() {
           columna termina medio vacía tenga o no deudas el usuario. */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:items-start">
         <div className="space-y-4">
-          <CategoryBreakdown expenses={monthlyData} />
+          <CategoryBreakdown porCategoria={expensesByCategory} />
           <HighlightsCard
             largestExpense={largestExpense}
             peakDay={peakDay}
@@ -667,6 +655,7 @@ function SavingsGoalWidget() {
 
 /* ─── Patrimonio neto (solo lectura + CTA a Patrimonio), como en la referencia ─── */
 function NetWorthWidget() {
+  const ambito = useAmbito();
   const accounts = useFinanceStore((s) => s.accounts);
   const expenses = useFinanceStore((s) => s.expenses);
   const assets = useFinanceStore((s) => s.assets);
@@ -682,7 +671,12 @@ function NetWorthWidget() {
 
   return (
     <div className="saas-card p-4 animate-slide-up">
-      <CardHeader titulo="Patrimonio neto" sub="Lo que tienes menos lo que debes" />
+      <CardHeader
+        titulo="Patrimonio neto"
+        sub={ambito === 'all'
+          ? 'Lo que tienes menos lo que debes'
+          : 'Lo que tienes menos lo que debes · incluye ambos ámbitos'}
+      />
       <div className="grid grid-cols-2 gap-2">
         <div>
           <p className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Hoy</p>
