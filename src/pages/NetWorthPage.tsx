@@ -3,7 +3,11 @@
 //
 // Cuatro KPIs, la curva de cierres mensuales (SVG), de qué se compone el
 // patrimonio hoy, y "Otros activos" agrupados con alta/edición/borrado.
-// La meta de patrimonio se define en Ajustes.
+// La meta de patrimonio se edita aquí mismo, junto a la gráfica que la usa
+// — antes vivía en Ajustes, lejos de donde se ve su efecto, como el único
+// campo de "Metas y estrategia" que no tenía ya un control equivalente en
+// su propia sección (el método y el aporte extra de Deudas siempre se
+// editaron en DebtsPage; Ajustes los duplicaba).
 // ================================================================
 
 import { useMemo, useState, type FormEvent } from 'react';
@@ -35,6 +39,7 @@ export function NetWorthPage() {
   const savingsGoals = useFinanceStore((s) => s.savingsGoals);
   const networth = useFinanceStore((s) => s.networth);
   const goal = useFinanceStore((s) => s.settings.netWorthGoal);
+  const setSettings = useFinanceStore((s) => s.setSettings);
   const addAsset = useFinanceStore((s) => s.addAsset);
   const updateAsset = useFinanceStore((s) => s.updateAsset);
   const deleteAsset = useFinanceStore((s) => s.deleteAsset);
@@ -51,6 +56,16 @@ export function NetWorthPage() {
   const [fGroup, setFGroup] = useState<AssetGroup>('Otros activos');
   const [fValue, setFValue] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<Asset | null>(null);
+  const [goalInput, setGoalInput] = useState(String(goal || ''));
+
+  function commitGoal() {
+    const v = roundMoney(parseMoneyInput(goalInput));
+    if (v !== goal) {
+      setSettings({ netWorthGoal: v });
+      syncToCloud(saveData, addToast);
+    }
+    setGoalInput(String(v));
+  }
 
   function openCreate() {
     setEditing(null); setFName(''); setFTag('personal'); setFGroup('Otros activos'); setFValue('');
@@ -90,12 +105,17 @@ export function NetWorthPage() {
         <Kpi
           label="Falta para la meta"
           value={goal > 0 ? formatMoney(Math.max(0, goal - nw.net)) : 'Sin meta'}
-          sub={goal > 0 ? `meta ${formatMoney(goal)}` : 'defínela en Ajustes'}
+          sub={goal > 0 ? `meta ${formatMoney(goal)}` : 'defínela abajo'}
         />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:items-start">
-        <NetWorthTrendCard history={history} goal={goal} hoy={nw.net} />
+        <NetWorthTrendCard
+          history={history}
+          goal={goal}
+          hoy={nw.net}
+          goalInput={{ value: goalInput, onChange: setGoalInput, commit: commitGoal }}
+        />
         <NetWorthBreakdownCard nw={nw} />
       </div>
 
@@ -200,8 +220,14 @@ function Kpi({ label, value, sub, tone }: { label: string; value: string; sub: s
   );
 }
 
+interface MetaInput {
+  value: string;
+  onChange: (v: string) => void;
+  commit: () => void;
+}
+
 /* ─── Evolución del patrimonio: los cierres mensuales (SVG, como la referencia) ─── */
-function NetWorthTrendCard({ history, goal, hoy }: { history: NetWorthSnapshot[]; goal: number; hoy: number }) {
+function NetWorthTrendCard({ history, goal, hoy, goalInput }: { history: NetWorthSnapshot[]; goal: number; hoy: number; goalInput: MetaInput }) {
   const isDark = useUiStore((s) => s.isDark);
   const addToast = useUiStore((s) => s.addToast);
   const { grid, tick, tipFg: ink, income: linea } = coloresGrafica(isDark);
@@ -274,12 +300,25 @@ function NetWorthTrendCard({ history, goal, hoy }: { history: NetWorthSnapshot[]
   }
 
   return (
-    <div className="saas-card p-4 animate-slide-up">
-      <CardHeader
-        titulo="Evolución del patrimonio"
-        sub="Se guarda solo al cierre de cada mes"
-        accion={
-          history.length > 0 ? (
+    <div className="saas-card p-4 animate-slide-up space-y-2">
+      <div className="flex items-end justify-between gap-3 flex-wrap">
+        <CardHeader titulo="Evolución del patrimonio" sub="Se guarda solo al cierre de cada mes" className="" />
+        <div className="flex items-end gap-2 flex-wrap">
+          <div>
+            <label htmlFor="nw-goal" className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-0.5 block">Meta de patrimonio neto</label>
+            <input
+              id="nw-goal"
+              type="text"
+              inputMode="decimal"
+              value={goalInput.value}
+              onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) goalInput.onChange(e.target.value); }}
+              onBlur={goalInput.commit}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); goalInput.commit(); } }}
+              placeholder="0"
+              className="saas-input-sm text-xs !w-28 tabular-nums"
+            />
+          </div>
+          {history.length > 0 && (
             <div className="flex gap-1 flex-shrink-0">
               <button onClick={handleCSV} className="saas-btn-icon text-slate-600 dark:text-slate-400" aria-label="Descargar CSV" title="Descargar CSV (Excel)">
                 <FileSpreadsheet className="w-3.5 h-3.5" />
@@ -288,9 +327,9 @@ function NetWorthTrendCard({ history, goal, hoy }: { history: NetWorthSnapshot[]
                 <Printer className="w-3.5 h-3.5" />
               </button>
             </div>
-          ) : undefined
-        }
-      />
+          )}
+        </div>
+      </div>
       <div ref={ref}>{contenido}</div>
       <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 flex items-center gap-3 flex-wrap">
         <span className="flex items-center gap-1.5"><span aria-hidden className="inline-block h-0 w-4 border-t-[3px]" style={{ borderColor: linea }} />Patrimonio neto</span>

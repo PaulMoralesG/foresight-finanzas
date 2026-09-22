@@ -754,7 +754,7 @@ function NetWorthWidget() {
           <p className="text-2xs text-slate-600 dark:text-slate-400 mt-1">{pct.toFixed(0)}% de tu meta de {formatMoney(goal)}</p>
         </div>
       ) : (
-        <p className="text-2xs text-slate-600 dark:text-slate-400 mt-3">Define una meta de patrimonio en Ajustes para ver el avance.</p>
+        <p className="text-2xs text-slate-600 dark:text-slate-400 mt-3">Define una meta en la sección Patrimonio para ver el avance.</p>
       )}
       <button onClick={() => navigateTo('networth' as TabId)} className="saas-btn saas-btn-secondary saas-btn-sm mt-3">
         Ver patrimonio

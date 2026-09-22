@@ -1,12 +1,15 @@
 // ================================================================
-// TESTS — Ajustes (fase 3.5): Metas y estrategia, Copia de seguridad,
-// importBackup en el store
+// TESTS — Ajustes (fase 3.5): Copia de seguridad, importBackup en el store
+//
+// La sección "Metas y estrategia" que vivía aquí se repartió a las
+// pantallas donde ya se usa: la meta de patrimonio se edita en
+// NetWorthPage (networth-page.test.tsx) y el método/aporte extra de
+// deudas ya eran editables en DebtsPage desde antes.
 // ================================================================
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { StrategySettings } from '@/components/features/settings/StrategySettings';
 import { BackupSettings } from '@/components/features/settings/BackupSettings';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
@@ -18,20 +21,6 @@ beforeEach(() => {
   cleanup();
   useFinanceStore.getState().reset();
   useUiStore.setState({ toasts: [] });
-});
-
-describe('StrategySettings', () => {
-  it('guarda meta, aporte extra y método en ajustes', async () => {
-    render(<StrategySettings abierto onToggle={() => {}} saveData={saveData} />);
-    await userEvent.type(screen.getByLabelText('Meta de patrimonio neto'), '60000');
-    await userEvent.tab();
-    await userEvent.type(screen.getByLabelText('Aporte extra mensual a deudas'), '150');
-    await userEvent.tab();
-    await userEvent.selectOptions(screen.getByLabelText('Método de pago de deudas'), 'avalanche');
-
-    expect(useFinanceStore.getState().settings).toMatchObject({ netWorthGoal: 60000, extraPayment: 150, debtMethod: 'avalanche' });
-    expect(useFinanceStore.getState().settings.updated_at).not.toBe('');
-  });
 });
 
 describe('BackupSettings', () => {
