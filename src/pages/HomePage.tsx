@@ -10,6 +10,7 @@ import { ChartNoAxesColumn, Plus, Receipt, ArrowDown, ArrowUp, Store, PiggyBank,
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useMonthlyData } from '@/hooks/useFinance';
+import { useAmbito, useBudgetLinesEnAmbito, useDebtsEnAmbito, useExpensesEnAmbito, useGoalsEnAmbito } from '@/hooks/useAmbito';
 import { useStatsPeriod, pctChange } from '@/hooks/useStatsPeriod';
 import { formatMoney, LOCALE, safeParseDate } from '@/lib/utils';
 import { goalMath, goalTotals } from '@/lib/goals';
@@ -284,8 +285,8 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
    sino cuál se está a punto de pasar (budgetPreviewCard de la referencia). */
 function BudgetWatchlist() {
   const navigateTo = useUiStore((s) => s.navigateTo);
-  const budgetLines = useFinanceStore((s) => s.budgetLines);
-  const expenses = useFinanceStore((s) => s.expenses);
+  const budgetLines = useBudgetLinesEnAmbito();
+  const expenses = useExpensesEnAmbito();
   const currentViewDate = useFinanceStore((s) => s.currentViewDate);
   const customExpenseCats = useFinanceStore((s) => s.customExpenseCategories);
   const customIncomeCats = useFinanceStore((s) => s.customIncomeCategories);
@@ -372,7 +373,7 @@ function BudgetWatchlist() {
    Sin deudas registradas no se muestra: no hay nada que resumir. */
 function DebtMiniCard() {
   const navigateTo = useUiStore((s) => s.navigateTo);
-  const debts = useFinanceStore((s) => s.debts);
+  const debts = useDebtsEnAmbito();
   const settings = useFinanceStore((s) => s.settings);
 
   const plan = useMemo(
@@ -434,6 +435,10 @@ export function HomePage() {
   // "Saldo total" en cuentas, como el primer KPI del dashboard de Balance Dual.
   // Solo cuando hay cuentas: sin ellas no hay nada que sumar.
   const saldoCuentas = useMemo(() => totalBalance(accounts, expenses), [accounts, expenses]);
+  const ambito = useAmbito();
+  // "Resultado del negocio" no dice nada mirando solo lo personal.
+  const conNegocio = ambito !== 'personal';
+  const kpis = (accounts.length > 0 ? 1 : 0) + 3 + (conNegocio ? 1 : 0);
 
   // Tendencia, comparación con el mes anterior y destacados, para el mes
   // visible. Es el mismo hook que alimentaba Estadísticas, en modo mes.
@@ -460,7 +465,7 @@ export function HomePage() {
           cuando todas las cifras tienen el mismo peso visual y se comparan
           entre sí, y el degradado obligaba a un juego de colores propio
           (texto blanco, brand-200) que no existía en ninguna otra pantalla. */}
-      <div className={`grid grid-cols-2 gap-3 animate-slide-up ${accounts.length > 0 ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
+      <div className={`grid grid-cols-2 gap-3 animate-slide-up ${kpis === 5 ? 'md:grid-cols-3 lg:grid-cols-5' : kpis === 4 ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
         {accounts.length > 0 && (
           <button
             onClick={() => { navigateTo('accounts' as TabId); }}
@@ -470,7 +475,7 @@ export function HomePage() {
             <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               <Wallet className="w-3 h-3" /> Saldo total
             </span>
-            <span className={`block text-2xl font-bold tabular-nums mt-1 truncate ${saldoCuentas >= 0 ? 'text-slate-900 dark:text-white' : 'text-expense-600 dark:text-expense-400'}`}>
+            <span className={`block text-[clamp(1.05rem,5vw,1.5rem)] lg:text-2xl font-bold tabular-nums mt-1 whitespace-nowrap ${saldoCuentas >= 0 ? 'text-slate-900 dark:text-white' : 'text-expense-600 dark:text-expense-400'}`}>
               {formatMoney(saldoCuentas)}
             </span>
             <span className="block text-2xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -482,7 +487,7 @@ export function HomePage() {
           <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Saldo de {(() => { const d = new Date(currentViewDate); return `${d.toLocaleDateString(LOCALE, { month: 'long' })}`; })()}
           </p>
-          <p className={`text-2xl font-bold tabular-nums mt-1 truncate ${summary.available >= 0 ? 'text-slate-900 dark:text-white' : 'text-expense-600 dark:text-expense-400'}`}>
+          <p className={`text-[clamp(1.05rem,5vw,1.5rem)] lg:text-2xl font-bold tabular-nums mt-1 whitespace-nowrap ${summary.available >= 0 ? 'text-slate-900 dark:text-white' : 'text-expense-600 dark:text-expense-400'}`}>
             {formatMoney(summary.available)}
           </p>
           <p className="text-2xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -498,7 +503,7 @@ export function HomePage() {
           <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             <ArrowDown className="w-3 h-3" /> Ingresos
           </span>
-          <span className="block text-2xl font-bold tabular-nums mt-1 truncate text-income-600 dark:text-income-400">
+          <span className="block text-[clamp(1.05rem,5vw,1.5rem)] lg:text-2xl font-bold tabular-nums mt-1 whitespace-nowrap text-income-600 dark:text-income-400">
             {formatMoney(summary.totalIncome)}
           </span>
           {prevTotals.income > 0 ? (
@@ -518,7 +523,7 @@ export function HomePage() {
           <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             <ArrowUp className="w-3 h-3" /> Gastos
           </span>
-          <span className="block text-2xl font-bold tabular-nums mt-1 truncate text-expense-600 dark:text-expense-400">
+          <span className="block text-[clamp(1.05rem,5vw,1.5rem)] lg:text-2xl font-bold tabular-nums mt-1 whitespace-nowrap text-expense-600 dark:text-expense-400">
             {formatMoney(summary.totalSpent)}
           </span>
           {prevTotals.spent > 0 ? (
@@ -530,6 +535,7 @@ export function HomePage() {
           )}
         </button>
 
+        {conNegocio && (
         <button
           onClick={() => { navigateTo('movements' as TabId, 'business'); }}
           className="saas-card p-4 text-left hover:border-brand-500 dark:hover:border-brand-400 transition-colors"
@@ -538,13 +544,14 @@ export function HomePage() {
           <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             <Store className="w-3 h-3" /> Resultado del negocio
           </span>
-          <span className={`block text-2xl font-bold tabular-nums mt-1 truncate ${summary.businessProfit >= 0 ? 'text-business-600 dark:text-business-400' : 'text-expense-600 dark:text-expense-400'}`}>
+          <span className={`block text-[clamp(1.05rem,5vw,1.5rem)] lg:text-2xl font-bold tabular-nums mt-1 whitespace-nowrap ${summary.businessProfit >= 0 ? 'text-business-600 dark:text-business-400' : 'text-expense-600 dark:text-expense-400'}`}>
             {formatMoney(summary.businessProfit)}
           </span>
           <span className="block text-2xs text-slate-500 dark:text-slate-400 mt-0.5 tabular-nums">
             margen {summary.profitMargin.toFixed(1)}%
           </span>
         </button>
+        )}
       </div>
 
       {/* Últimos movimientos: antes iba después de las tarjetas de categorías
@@ -556,7 +563,9 @@ export function HomePage() {
       <TrendCard trendData={trendData} />
 
       {/* Categorías + destacados | presupuesto + ahorro */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:items-start">
+      {/* Dos columnas desde tablet; las tarjetas se reparten para que ninguna
+          columna quede medio vacía en pantallas anchas. */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:items-start">
         <div className="space-y-4">
           <CategoryBreakdown expenses={monthlyData} />
           <HighlightsCard
@@ -565,12 +574,12 @@ export function HomePage() {
             peakDayTransactions={peakDayTransactions}
             allCustomCats={allCustomCats}
           />
+          <SavingsGoalWidget />
         </div>
         <div className="space-y-4">
           <BudgetWatchlist />
           <DebtMiniCard />
           <NetWorthWidget />
-          <SavingsGoalWidget />
         </div>
       </div>
     </div>
@@ -583,7 +592,7 @@ export function HomePage() {
    la 3.8 cada meta lleva su propio `saved`, así que esto lee directo de
    savingsGoals en vez de escanear movimientos. */
 function SavingsGoalWidget() {
-  const savingsGoals = useFinanceStore((s) => s.savingsGoals);
+  const savingsGoals = useGoalsEnAmbito();
   const navigateTo = useUiStore((s) => s.navigateTo);
 
   const totals = useMemo(() => goalTotals(savingsGoals), [savingsGoals]);

@@ -265,9 +265,42 @@ input[type="checkbox"]:indeterminate {
     @apply cursor-pointer rounded-md px-1.5 py-0.5 -mx-1.5 -my-0.5;
     @apply hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors;
   }
+  /* Misma intención que .saas-cell-filter pero para chips en una fila flex:
+     los márgenes negativos (pensados para celdas de tabla) montaban un chip
+     sobre el siguiente y recortaban "Gasto" a "Gast" en móvil. */
+  .saas-chip-click {
+    @apply cursor-pointer transition-colors hover:brightness-95 dark:hover:brightness-110;
+  }
 
   .saas-table {
     @apply w-full text-sm;
+  }
+
+  /* Tabla más ancha que su tarjeta (plan de 12 meses, reporte anual, "vs.
+     real" en 360px). La scrollbar está oculta en móvil, así que sin esto
+     nada indica que haya más columnas a la derecha: sombras de scroll que
+     aparecen y desaparecen solas (background-attachment: local) y la
+     primera columna fija para no perder la categoría al desplazarse. */
+  .saas-table-scroll {
+    --scroll-bg: #fff;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+    background:
+      linear-gradient(to right, var(--scroll-bg) 30%, transparent),
+      linear-gradient(to right, transparent, var(--scroll-bg) 70%) 100% 0,
+      radial-gradient(farthest-side at 0 50%, rgb(20 32 28 / 0.18), transparent),
+      radial-gradient(farthest-side at 100% 50%, rgb(20 32 28 / 0.18), transparent) 100% 0;
+    background-repeat: no-repeat;
+    background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+    background-attachment: local, local, scroll, scroll;
+  }
+  html.dark .saas-table-scroll {
+    --scroll-bg: rgb(15 23 42); /* slate-900, el fondo de .saas-card */
+  }
+  .saas-table-scroll .saas-col-fija {
+    @apply sticky left-0 z-[1];
+    background: var(--scroll-bg);
   }
   .saas-table thead th {
     @apply text-left px-4 py-2.5 text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider;

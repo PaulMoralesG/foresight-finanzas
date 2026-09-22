@@ -3,7 +3,7 @@
 // ================================================================
 
 import { describe, it, expect } from 'vitest';
-import { shiftMonthKey, monthKeyLabel, currentMonthKey } from '@/lib/month-keys';
+import { shiftMonthKey, monthKeyLabel, monthKeyLabelCorto, currentMonthKey } from '@/lib/month-keys';
 
 describe('shiftMonthKey', () => {
   it('cruza el límite de año en ambos sentidos', () => {
@@ -17,6 +17,10 @@ describe('monthKeyLabel', () => {
   it('formatea el mes en español, nombre completo (mismo formato que MonthNav)', () => {
     expect(monthKeyLabel('2026-08')).toBe('Agosto 2026');
     expect(monthKeyLabel('2026-01')).toBe('Enero 2026');
+  });
+
+  it('la versión corta abrevia el mes a tres letras', () => {
+    expect(monthKeyLabelCorto('2026-09')).toBe('Sep 2026');
   });
 });
 

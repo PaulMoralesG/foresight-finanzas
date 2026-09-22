@@ -7,6 +7,7 @@
 // ================================================================
 
 import { useMemo, useState, type FormEvent } from 'react';
+import { useAnchoContenedor } from '@/hooks/useAnchoContenedor';
 import { Plus, Pencil, Trash2 } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
@@ -78,7 +79,7 @@ export function NetWorthPage() {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 animate-slide-up">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-slide-up">
         <Kpi label="Patrimonio neto" value={formatMoney(nw.net)} sub="activos menos pasivos" tone={nw.net >= 0 ? 'good' : 'crit'} />
         <Kpi label="Total de activos" value={formatMoney(nw.assets)} sub={`${formatMoney(nw.liquid)} en cuentas`} />
         <Kpi label="Total de pasivos" value={formatMoney(nw.liabilities)} sub={`${formatMoney(nw.debts)} en deudas`} />
@@ -89,7 +90,7 @@ export function NetWorthPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:items-start">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:items-start">
         <NetWorthTrendCard history={history} goal={goal} hoy={nw.net} />
         <NetWorthBreakdownCard nw={nw} />
       </div>
@@ -188,7 +189,7 @@ function Kpi({ label, value, sub, tone }: { label: string; value: string; sub: s
   return (
     <div className="saas-card p-4">
       <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}</p>
-      <p className={`text-xl font-bold tabular-nums mt-1 truncate ${color}`}>{value}</p>
+      <p className={`text-[clamp(1rem,4.6vw,1.25rem)] md:text-xl font-bold tabular-nums mt-1 whitespace-nowrap ${color}`}>{value}</p>
       <p className="text-2xs text-slate-500 dark:text-slate-400 mt-0.5">{sub}</p>
     </div>
   );
@@ -201,7 +202,8 @@ export function NetWorthTrendCard({ history, goal, hoy }: { history: NetWorthSna
   const tick = isDark ? '#a3a099' : '#5f5e58';
   const ink = isDark ? '#f3f2ee' : '#1a1a19';
   const linea = '#1baf7a';
-  const W = 520, H = 190, padL = 52, padR = 12, padB = 26, padT = 12;
+  const { ref, ancho: W } = useAnchoContenedor<HTMLDivElement>();
+  const H = 190, padL = 52, padR = 12, padB = 26, padT = 12;
   const innerH = H - padT - padB;
 
   let contenido: React.ReactNode;
@@ -219,7 +221,7 @@ export function NetWorthTrendCard({ history, goal, hoy }: { history: NetWorthSna
     const pts = history.map((h, i) => [padL + i * stepX, yDe(h.net)] as const);
     const last = pts[pts.length - 1];
     contenido = (
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={200} role="img" aria-label="Patrimonio neto por mes">
+      <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} role="img" aria-label="Patrimonio neto por mes" className="block max-w-full">
         {escala.ticks.map((t) => (
           <g key={t}>
             <line x1={padL} y1={yDe(t)} x2={W - padR} y2={yDe(t)} stroke={grid} strokeWidth={1} strokeDasharray={t === 0 ? undefined : '3 3'} />
@@ -253,7 +255,7 @@ export function NetWorthTrendCard({ history, goal, hoy }: { history: NetWorthSna
     <div className="saas-card p-4 animate-slide-up">
       <h2 className="text-sm font-bold text-slate-900 dark:text-white">Evolución del patrimonio</h2>
       <p className="text-2xs text-slate-500 dark:text-slate-400 mb-2">Se guarda solo al cierre de cada mes</p>
-      {contenido}
+      <div ref={ref}>{contenido}</div>
       <p className="text-2xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-3 flex-wrap">
         <span className="flex items-center gap-1.5"><span aria-hidden className="inline-block h-0 w-4 border-t-[3px]" style={{ borderColor: linea }} />Patrimonio neto</span>
         {goal > 0 && <span className="flex items-center gap-1.5"><span aria-hidden className="inline-block h-0 w-4 border-t-2 border-dashed" style={{ borderColor: tick }} />Meta {formatMoney(goal)}</span>}

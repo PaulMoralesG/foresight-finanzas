@@ -10,6 +10,7 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight, Target } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
+import { useBudgetLinesEnAmbito, useExpensesEnAmbito } from '@/hooks/useAmbito';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
 import { formatMoney, parseMoneyInput, roundMoney, syncToCloud, MONTH_NAMES } from '@/lib/utils';
@@ -31,8 +32,10 @@ const tagLabel = (t: BusinessType) => (t === 'personal' ? 'Personal' : 'Negocio'
 const sinSimbolo = (v: number) => formatMoney(v).replace('$', '');
 
 export function BudgetsPage() {
-  const budgetLines = useFinanceStore((s) => s.budgetLines);
-  const expenses = useFinanceStore((s) => s.expenses);
+  // Todas las líneas (para detectar duplicados al crear) y las del ámbito (para mostrar).
+  const todasLasLineas = useFinanceStore((s) => s.budgetLines);
+  const budgetLines = useBudgetLinesEnAmbito();
+  const expenses = useExpensesEnAmbito();
   const customExpenseCategories = useFinanceStore((s) => s.customExpenseCategories);
   const customIncomeCategories = useFinanceStore((s) => s.customIncomeCategories);
   const addBudgetLine = useFinanceStore((s) => s.addBudgetLine);
@@ -70,7 +73,7 @@ export function BudgetsPage() {
     e.preventDefault();
     const limit = roundMoney(parseMoneyInput(fLimit));
     if (limit <= 0) { addToast('Ingresa un límite mayor a 0', 'error'); return; }
-    const dup = budgetLines.find((b) => b.tag === fTag && b.kind === fKind && b.categoryId === fCat && b.id !== editing?.id);
+    const dup = todasLasLineas.find((b) => b.tag === fTag && b.kind === fKind && b.categoryId === fCat && b.id !== editing?.id);
     if (dup) { addToast('Ya existe un presupuesto para esa categoría y ámbito', 'error'); return; }
     if (editing) {
       updateBudgetLine(editing.id, { tag: fTag, kind: fKind, categoryId: fCat, limit });
@@ -219,11 +222,11 @@ function EsteMes({ mk, setMk, lines, expenses, customCats, onEdit, onDelete }: {
         {resumen.rows.length === 0 ? (
           <EmptyState variant="compact" title="Sin presupuestos ni movimientos en este mes." />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="saas-table-scroll">
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-left text-2xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  <th className="py-1 font-semibold">Grupo</th>
+                  <th className="py-1 pr-2 font-semibold saas-col-fija">Grupo</th>
                   <th className="py-1 font-semibold text-right">Presupuestado</th>
                   <th className="py-1 font-semibold text-right">Real</th>
                   <th className="py-1 font-semibold text-right">Diferencia</th>
@@ -237,7 +240,7 @@ function EsteMes({ mk, setMk, lines, expenses, customCats, onEdit, onDelete }: {
                     <SeccionTabla key={kind} titulo={kind === 'income' ? 'Ingresos' : 'Gastos'} colSpan={4}>
                       {filas.map((r) => (
                         <tr key={kind + r.group} className="border-t border-slate-100 dark:border-slate-800">
-                          <td className="py-1.5 text-slate-700 dark:text-slate-300">{r.group}</td>
+                          <td className="py-1.5 pr-2 text-slate-700 dark:text-slate-300 saas-col-fija">{r.group}</td>
                           <td className="py-1.5 text-right tabular-nums">{r.planned ? formatMoney(r.planned) : '—'}</td>
                           <td className="py-1.5 text-right tabular-nums">{formatMoney(r.actual)}</td>
                           <td className={`py-1.5 text-right tabular-nums font-semibold ${r.planned === 0 ? '' : r.diff >= 0 ? 'text-income-600 dark:text-income-400' : 'text-expense-600 dark:text-expense-400'}`}>
@@ -249,7 +252,7 @@ function EsteMes({ mk, setMk, lines, expenses, customCats, onEdit, onDelete }: {
                   );
                 })}
                 <tr className="border-t-2 border-slate-200 dark:border-slate-700 font-semibold">
-                  <td className="py-1.5">Resultado del mes</td>
+                  <td className="py-1.5 pr-2 saas-col-fija">Resultado del mes</td>
                   <td className="py-1.5 text-right tabular-nums">{formatMoney(resumen.planResult)}</td>
                   <td className="py-1.5 text-right tabular-nums">{formatMoney(resumen.realResult)}</td>
                   <td className={`py-1.5 text-right tabular-nums ${resumen.realResult >= resumen.planResult ? 'text-income-600 dark:text-income-400' : 'text-expense-600 dark:text-expense-400'}`}>
@@ -298,13 +301,15 @@ function EsteMes({ mk, setMk, lines, expenses, customCats, onEdit, onDelete }: {
                         <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                           <div className={`h-full rounded-full ${color}`} style={{ width: `${Math.min(100, st.pct)}%` }} />
                         </div>
-                        <div className="flex items-center justify-between gap-2 mt-1">
-                          <span className="text-2xs text-slate-500 dark:text-slate-400 tabular-nums">
+                        {/* Cifra a 12px (es contenido, no rótulo) y acciones en su propia
+                            fila en móvil: a 360px se partían en dos líneas junto a la cifra. */}
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 mt-1">
+                          <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
                             {formatMoney(spent)} de {formatMoney(limit)}{esActual ? ' este mes' : ` en ${monthKeyLabel(mk)}`}
                           </span>
-                          <span className="flex gap-1">
-                            <button onClick={() => onEdit(l)} className="saas-btn saas-btn-ghost saas-btn-sm text-2xs flex items-center gap-1" aria-label={`Editar límite de ${cat.label}`}><Pencil className="w-3 h-3" /> Editar límite</button>
-                            <button onClick={() => onDelete(l)} className="saas-btn saas-btn-ghost saas-btn-sm text-2xs flex items-center gap-1 text-expense-600 dark:text-expense-400" aria-label={`Eliminar presupuesto de ${cat.label}`}><Trash2 className="w-3 h-3" /> Eliminar</button>
+                          <span className="flex gap-3">
+                            <button onClick={() => onEdit(l)} className="saas-btn saas-btn-ghost saas-btn-sm text-xs flex items-center gap-1 whitespace-nowrap" aria-label={`Editar límite de ${cat.label}`}><Pencil className="w-3 h-3" /> Editar límite</button>
+                            <button onClick={() => onDelete(l)} className="saas-btn saas-btn-ghost saas-btn-sm text-xs flex items-center gap-1 whitespace-nowrap text-expense-600 dark:text-expense-400" aria-label={`Eliminar presupuesto de ${cat.label}`}><Trash2 className="w-3 h-3" /> Eliminar</button>
                           </span>
                         </div>
                       </div>
@@ -378,11 +383,11 @@ function PlanAnual({ year, setYear, lines, customCats }: { year: number; setYear
           <EmptyState variant="compact" icon={Target} title="Crea presupuestos (de ingreso y de gasto) para planificar el año." />
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="saas-table-scroll">
               <table className="text-xs min-w-[900px]">
                 <thead>
                   <tr className="text-left text-2xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    <th className="py-1 pr-2 font-semibold min-w-[150px]">Categoría</th>
+                    <th className="py-1 pr-2 font-semibold min-w-[150px] saas-col-fija">Categoría</th>
                     {months.map((m) => <th key={m} className="py-1 px-1 font-semibold text-right">{MONTH_NAMES[parseInt(m.split('-')[1], 10) - 1].slice(0, 3)}</th>)}
                     <th className="py-1 pl-2 font-semibold text-right">Total</th>
                   </tr>
@@ -395,7 +400,7 @@ function PlanAnual({ year, setYear, lines, customCats }: { year: number; setYear
                         const rowTotal = roundMoney(months.reduce((s, m) => s + planFor(l, m), 0));
                         return (
                           <tr key={l.id} className="border-t border-slate-100 dark:border-slate-800">
-                            <td className="py-1 pr-2 whitespace-nowrap text-slate-700 dark:text-slate-300">{cat.icon} {cat.label}</td>
+                            <td className="py-1 pr-2 whitespace-nowrap text-slate-700 dark:text-slate-300 saas-col-fija">{cat.icon} {cat.label}</td>
                             {months.map((m) => (
                               <td key={m} className="py-0.5 px-0.5">
                                 <input
@@ -406,7 +411,7 @@ function PlanAnual({ year, setYear, lines, customCats }: { year: number; setYear
                                   onBlur={(e) => commit(l, m, e.target.value)}
                                   onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                                   aria-label={`${cat.label} ${monthKeyLabel(m)}`}
-                                  className="saas-input-sm w-20 text-right tabular-nums text-2xs py-1"
+                                  className="saas-input-sm !w-[76px] text-right tabular-nums text-xs py-1 px-1.5"
                                 />
                               </td>
                             ))}
@@ -417,7 +422,7 @@ function PlanAnual({ year, setYear, lines, customCats }: { year: number; setYear
                     </SeccionTabla>
                   ))}
                   <tr className="border-t-2 border-slate-200 dark:border-slate-700 font-semibold">
-                    <td className="py-1.5 pr-2">Resultado mensual</td>
+                    <td className="py-1.5 pr-2 saas-col-fija">Resultado mensual</td>
                     {months.map((m) => {
                       const diff = roundMoney(totals.income[m] - totals.expense[m]);
                       const cls = Math.abs(diff) < 0.005 ? '' : diff > 0 ? 'text-income-600 dark:text-income-400' : 'text-expense-600 dark:text-expense-400';
@@ -460,11 +465,11 @@ function ReporteAnual({ year, setYear, expenses, customCats }: { year: number; s
           <EmptyState variant="compact" title={`Sin movimientos registrados en ${year}.`} />
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="saas-table-scroll">
               <table className="text-xs min-w-[900px]">
                 <thead>
                   <tr className="text-left text-2xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    <th className="py-1 pr-2 font-semibold min-w-[150px]">Categoría</th>
+                    <th className="py-1 pr-2 font-semibold min-w-[150px] saas-col-fija">Categoría</th>
                     {months.map((m) => <th key={m} className="py-1 px-1 font-semibold text-right">{MONTH_NAMES[parseInt(m.split('-')[1], 10) - 1].slice(0, 3)}</th>)}
                     <th className="py-1 pl-2 font-semibold text-right">Total</th>
                     <th className="py-1 pl-2 font-semibold text-right">Promedio</th>
@@ -482,7 +487,7 @@ function ReporteAnual({ year, setYear, expenses, customCats }: { year: number; s
                           const cat = getCategoryById(r.categoryId, customCats);
                           return (
                             <tr key={r.categoryId} className="border-t border-slate-100 dark:border-slate-800">
-                              <td className="py-1 pr-2 whitespace-nowrap text-slate-700 dark:text-slate-300">{cat.icon} {cat.label}</td>
+                              <td className="py-1 pr-2 whitespace-nowrap text-slate-700 dark:text-slate-300 saas-col-fija">{cat.icon} {cat.label}</td>
                               {months.map((m) => {
                                 const v = r.byMonth[m] ?? 0;
                                 return <td key={m} className={`py-1 px-1 text-right tabular-nums ${v ? '' : 'text-slate-400 dark:text-slate-600'}`}>{v ? sinSimbolo(v) : '—'}</td>;
@@ -493,7 +498,7 @@ function ReporteAnual({ year, setYear, expenses, customCats }: { year: number; s
                           );
                         })}
                         <tr className="border-t border-slate-200 dark:border-slate-700 font-semibold">
-                          <td className="py-1.5 pr-2">Total {kind === 'income' ? 'ingresos' : 'gastos'}</td>
+                          <td className="py-1.5 pr-2 saas-col-fija">Total {kind === 'income' ? 'ingresos' : 'gastos'}</td>
                           {months.map((m) => <td key={m} className="py-1.5 px-1 text-right tabular-nums">{groupTotals[m] ? sinSimbolo(roundMoney(groupTotals[m])) : '—'}</td>)}
                           <td className="py-1.5 pl-2 text-right tabular-nums">{sinSimbolo(yearTotal)}</td>
                           <td className="py-1.5 pl-2 text-right tabular-nums">{sinSimbolo(roundMoney(yearTotal / 12))}</td>

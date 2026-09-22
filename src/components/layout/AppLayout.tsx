@@ -61,7 +61,10 @@ export function AppLayout({ children }: AppLayoutProps) {
           className="flex-1 p-4 md:p-5 lg:p-6 w-full lg:pb-6 bg-slate-50 dark:bg-slate-950"
           style={{ '--fab-clearance': showFab ? '4.5rem' : '0px' } as CSSProperties}
         >
-          {children}
+          {/* 1440px de tope: en un monitor de 1920 las tablas se abrían hasta
+              400px entre columnas y la mitad del tablero quedaba vacía. Los
+              modales van en `fixed` y no les afecta. */}
+          <div className="max-w-[1440px] mx-auto">{children}</div>
         </main>
       </div>
 

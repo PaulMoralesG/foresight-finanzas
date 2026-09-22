@@ -79,8 +79,8 @@ export function StrategySettings({ saveData }: { saveData: () => Promise<boolean
             onChange={(e) => { setSettings({ debtMethod: e.target.value as DebtMethod }); syncToCloud(saveData, addToast); }}
             className="saas-input-sm text-xs"
           >
-            <option value="snowball">Bola de nieve (saldo menor primero)</option>
-            <option value="avalanche">Avalancha (interés más alto primero)</option>
+            <option value="snowball">Bola de nieve · menor saldo primero</option>
+            <option value="avalanche">Avalancha · mayor interés primero</option>
           </select>
         </div>
       </div>

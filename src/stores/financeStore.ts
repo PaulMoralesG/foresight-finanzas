@@ -7,7 +7,7 @@ import { persist } from 'zustand/middleware';
 import { safeParseDate, roundMoney as roundMoneyLocal } from '@/lib/utils';
 import { computeSavingsByConcept, savingsForGoal } from '@/lib/savings';
 import { newId, nowIso } from '@/lib/ids';
-import type { Transaction, MonthlyBudget, FilterType, Category, SavingsGoal, Account, Debt, Settings, Asset, NetWorthSnapshot, BudgetLine, BusinessType } from '@/types';
+import type { Transaction, MonthlyBudget, FilterType, Ambito, Category, SavingsGoal, Account, Debt, Settings, Asset, NetWorthSnapshot, BudgetLine, BusinessType } from '@/types';
 import { convertGlobalBudgets } from '@/lib/budget-lines';
 import { accountIsUsed } from '@/lib/accounts';
 import type { BackupData } from '@/lib/backup';
@@ -35,10 +35,13 @@ interface FinanceState {
   tombstones: Record<string, string>;
   currentViewDate: string; // ISO string para que serialize bien
   currentFilter: FilterType;
+  /** Ámbito global: filtra Resumen, Presupuestos, Deudas y Metas. */
+  ambito: Ambito;
 
   // --- Acciones de fecha y filtro ---
   setViewDate: (step: number) => void;
   setFilter: (filter: FilterType) => void;
+  setAmbito: (ambito: Ambito) => void;
   ensureCurrentMonth: () => void;
 
   // --- CRUD de transacciones ---
@@ -130,6 +133,7 @@ const emptyState = {
   tombstones: {} as Record<string, string>,
   currentViewDate: new Date().toISOString(),
   currentFilter: 'all' as FilterType,
+  ambito: 'all' as Ambito,
 };
 
 /** Marca un id como borrado (borrado lógico para sync). */
@@ -312,6 +316,7 @@ export const useFinanceStore = create<FinanceState>()(
       },
 
       setFilter: (filter) => set({ currentFilter: filter }),
+      setAmbito: (ambito) => set({ ambito }),
 
       // Auto-avanza el mes actual si la fecha guardada es de un mes anterior
       ensureCurrentMonth: () => {
@@ -675,6 +680,7 @@ export const useFinanceStore = create<FinanceState>()(
         budgetLines: state.budgetLines,
         currentViewDate: state.currentViewDate,
         currentFilter: state.currentFilter,
+        ambito: state.ambito,
         savingsGoals: state.savingsGoals,
         accounts: state.accounts,
         debts: state.debts,

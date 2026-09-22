@@ -8,8 +8,10 @@
 // ================================================================
 
 import { useMemo, useState, type FormEvent } from 'react';
+import { useAnchoContenedor } from '@/hooks/useAnchoContenedor';
 import { Plus, Pencil, Trash2, CreditCard, AlertTriangle } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
+import { useDebtsEnAmbito } from '@/hooks/useAmbito';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
 import { formatMoney, getTodayISO, parseMoneyInput, roundMoney, syncToCloud } from '@/lib/utils';
@@ -24,7 +26,7 @@ import { ScopeBadge } from '@/components/ui/TransactionBits';
 import type { Debt, DebtKind, DebtMethod, BusinessType } from '@/types';
 
 export function DebtsPage() {
-  const debts = useFinanceStore((s) => s.debts);
+  const debts = useDebtsEnAmbito();
   const accounts = useFinanceStore((s) => s.accounts);
   const settings = useFinanceStore((s) => s.settings);
   const setSettings = useFinanceStore((s) => s.setSettings);
@@ -148,35 +150,10 @@ export function DebtsPage() {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      {/* Estrategia + alta */}
-      <div className="flex items-end justify-between gap-3 flex-wrap">
-        <div className="flex gap-2 flex-wrap">
-          <div>
-            <label htmlFor="d-method" className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-0.5 block">Método</label>
-            <select
-              id="d-method"
-              value={method}
-              onChange={(e) => { setSettings({ debtMethod: e.target.value as DebtMethod }); syncToCloud(saveData, addToast); }}
-              className="saas-input-sm text-2xs"
-            >
-              <option value="snowball">Bola de nieve (saldo menor primero)</option>
-              <option value="avalanche">Avalancha (interés más alto primero)</option>
-            </select>
-          </div>
-          <div>
-            <label htmlFor="d-extra" className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-0.5 block">Aporte extra mensual</label>
-            <input
-              id="d-extra"
-              type="text"
-              inputMode="decimal"
-              value={extraInput}
-              onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setExtraInput(e.target.value); }}
-              onBlur={commitExtra}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commitExtra(); } }}
-              className="saas-input-sm text-2xs w-28 tabular-nums"
-            />
-          </div>
-        </div>
+      {/* La estrategia (método y aporte extra) vive en la tarjeta de comparación,
+          como en la referencia: la primera fila de la vista es el dato, no un
+          formulario. */}
+      <div className="flex justify-end">
         <button onClick={openCreate} className="saas-btn saas-btn-primary saas-btn-sm flex items-center gap-1.5">
           <Plus className="w-3.5 h-3.5" />
           Agregar deuda
@@ -193,7 +170,7 @@ export function DebtsPage() {
       ) : (
         <>
           {/* KPIs */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 animate-slide-up">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-slide-up">
             <Kpi label="Deuda total" value={formatMoney(totalDebt(debts))} sub={`${debts.length} ${debts.length === 1 ? 'deuda' : 'deudas'}`} />
             <Kpi label="Pago mensual" value={formatMoney(monthlyDebtPayment(debts, extra))} sub={`mínimos + ${formatMoney(extra)} extra`} />
             <Kpi
@@ -212,37 +189,45 @@ export function DebtsPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:items-start">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:items-start">
             <DebtCurveCard plan={plan} method={method} />
-            <MethodCompareCard plan={plan} alt={alt} method={method} />
+            <MethodCompareCard
+              plan={plan}
+              alt={alt}
+              method={method}
+              onMethod={(m) => { setSettings({ debtMethod: m }); syncToCloud(saveData, addToast); }}
+              extra={{ value: extraInput, onChange: setExtraInput, commit: commitExtra }}
+            />
           </div>
 
           {/* Orden de pago */}
           <div className="saas-card p-4 animate-slide-up">
             <h2 className="text-sm font-bold text-slate-900 dark:text-white">Orden de pago</h2>
             <p className="text-2xs text-slate-500 dark:text-slate-400 mb-2">
-              {method === 'snowball' ? 'De menor a mayor saldo — el método de la plantilla.' : 'Del interés más alto al más bajo — paga menos intereses.'}
+              {method === 'snowball' ? 'De menor a mayor saldo — bola de nieve: victorias rápidas.' : 'Del interés más alto al más bajo — avalancha: menos intereses.'}
             </p>
             <ul className="divide-y divide-slate-100 dark:divide-slate-800">
               {ordered.map((d, i) => {
                 const months = plan.payoff[d.id];
                 return (
-                  <li key={d.id} className="py-2.5 flex items-start gap-3">
+                  <li key={d.id} className="py-2.5 flex flex-wrap items-start gap-x-3 gap-y-1">
                     <span className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-bold tabular-nums flex items-center justify-center flex-shrink-0">{i + 1}</span>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-[180px]">
                       <p className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-1.5 flex-wrap">
                         {d.name} <ScopeBadge businessType={d.tag} />
                       </p>
                       <p className="text-2xs text-slate-500 dark:text-slate-400">
                         {d.kind} · {d.annualRate}% anual · mínimo {formatMoney(d.minPayment)}{d.payDay ? ` · paga el ${d.payDay}` : ''}
                       </p>
-                      <div className="flex gap-1.5 mt-1.5 flex-wrap">
-                        <button onClick={() => openPay(d)} className="saas-btn saas-btn-secondary saas-btn-sm text-2xs">Registrar pago</button>
-                        <button onClick={() => openEdit(d)} className="saas-btn saas-btn-ghost saas-btn-sm text-2xs flex items-center gap-1" aria-label={`Editar ${d.name}`}><Pencil className="w-3 h-3" /> Editar</button>
-                        <button onClick={() => setConfirmDelete(d)} className="saas-btn saas-btn-ghost saas-btn-sm text-2xs flex items-center gap-1 text-expense-600 dark:text-expense-400" aria-label={`Eliminar ${d.name}`}><Trash2 className="w-3 h-3" /> Eliminar</button>
+                      <div className="flex gap-x-2 gap-y-1 mt-1.5 flex-wrap">
+                        <button onClick={() => openPay(d)} className="saas-btn saas-btn-secondary saas-btn-sm text-xs">Registrar pago</button>
+                        <button onClick={() => openEdit(d)} className="saas-btn saas-btn-ghost saas-btn-sm text-xs flex items-center gap-1" aria-label={`Editar ${d.name}`}><Pencil className="w-3 h-3" /> Editar</button>
+                        <button onClick={() => setConfirmDelete(d)} className="saas-btn saas-btn-ghost saas-btn-sm text-xs flex items-center gap-1 text-expense-600 dark:text-expense-400" aria-label={`Eliminar ${d.name}`}><Trash2 className="w-3 h-3" /> Eliminar</button>
                       </div>
                     </div>
-                    <div className="text-right flex-shrink-0">
+                    {/* En móvil las cifras bajan a su propia línea (como .debt-figs
+                        de la referencia) en vez de estrangular el nombre. */}
+                    <div className="w-full sm:w-auto flex sm:block items-baseline gap-2 sm:text-right flex-shrink-0 pl-9 sm:pl-0">
                       <p className="text-sm font-bold tabular-nums text-slate-900 dark:text-white">{formatMoney(d.balance)}</p>
                       <p className="text-2xs text-slate-500 dark:text-slate-400">{months ? `libre en ${payoffDate(months)}` : 'sin proyección'}</p>
                     </div>
@@ -362,7 +347,7 @@ function Kpi({ label, value, sub, tone }: { label: string; value: string; sub: s
   return (
     <div className="saas-card p-4">
       <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}</p>
-      <p className={`text-xl font-bold tabular-nums mt-1 truncate ${color}`}>{value}</p>
+      <p className={`text-[clamp(1rem,4.6vw,1.25rem)] md:text-xl font-bold tabular-nums mt-1 whitespace-nowrap ${color}`}>{value}</p>
       <p className="text-2xs text-slate-500 dark:text-slate-400 mt-0.5">{sub}</p>
     </div>
   );
@@ -371,8 +356,9 @@ function Kpi({ label, value, sub, tone }: { label: string; value: string; sub: s
 /* ─── "Rumbo a cero": saldo total proyectado mes a mes (SVG, como la referencia) ─── */
 function DebtCurveCard({ plan, method }: { plan: DebtPlan; method: DebtMethod }) {
   const isDark = useUiStore((s) => s.isDark);
+  const { ref, ancho: W } = useAnchoContenedor<HTMLDivElement>();
   const data = plan.schedule.slice(0, Math.min(plan.schedule.length, 121));
-  const W = 520, H = 190, padL = 52, padR = 12, padB = 26, padT = 10;
+  const H = 190, padL = 52, padR = 12, padB = 26, padT = 10;
   const innerH = H - padT - padB;
   const grid = isDark ? '#4a4944' : '#e6e4dd';
   const tick = isDark ? '#a3a099' : '#5f5e58';
@@ -388,7 +374,7 @@ function DebtCurveCard({ plan, method }: { plan: DebtPlan; method: DebtMethod })
     const line = trazarLinea(pts);
     const area = `${line} L${pts[pts.length - 1][0].toFixed(1)} ${padT + innerH} L${pts[0][0].toFixed(1)} ${padT + innerH} Z`;
     contenido = (
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={200} role="img" aria-label="Saldo de deuda proyectado hasta cero">
+      <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} role="img" aria-label="Saldo de deuda proyectado hasta cero" className="block max-w-full">
         {escala.ticks.map((t) => {
           const y = padT + innerH * (1 - t / (escala.max || 1));
           return (
@@ -411,7 +397,7 @@ function DebtCurveCard({ plan, method }: { plan: DebtPlan; method: DebtMethod })
     <div className="saas-card p-4 animate-slide-up">
       <h2 className="text-sm font-bold text-slate-900 dark:text-white">Rumbo a cero</h2>
       <p className="text-2xs text-slate-500 dark:text-slate-400 mb-2">Saldo total proyectado mes a mes</p>
-      {contenido}
+      <div ref={ref}>{contenido}</div>
       <p className="text-2xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
         <span aria-hidden className="inline-block h-0 w-4 border-t-[3px]" style={{ borderColor: linea }} />
         Saldo total ({method === 'snowball' ? 'bola de nieve' : 'avalancha'})
@@ -420,15 +406,35 @@ function DebtCurveCard({ plan, method }: { plan: DebtPlan; method: DebtMethod })
   );
 }
 
-function MethodCompareCard({ plan, alt, method }: { plan: DebtPlan; alt: DebtPlan; method: DebtMethod }) {
+interface ExtraPago {
+  value: string;
+  onChange: (v: string) => void;
+  commit: () => void;
+}
+
+function MethodCompareCard({ plan, alt, method, onMethod, extra }: {
+  plan: DebtPlan;
+  alt: DebtPlan;
+  method: DebtMethod;
+  onMethod: (m: DebtMethod) => void;
+  extra: ExtraPago;
+}) {
   const snow = method === 'snowball' ? plan : alt;
   const aval = method === 'snowball' ? alt : plan;
 
-  const bloque = (title: string, p: DebtPlan, active: boolean) => (
-    <div className={`rounded-xl p-3 ${active ? 'bg-brand-50 dark:bg-brand-950 ring-1 ring-brand-200/60 dark:ring-brand-800/40' : 'bg-slate-50 dark:bg-slate-800/50'}`}>
+  // Cada bloque es el propio selector del método: se elige tocándolo.
+  const bloque = (title: string, id: DebtMethod, p: DebtPlan, active: boolean) => (
+    <button
+      type="button"
+      onClick={() => onMethod(id)}
+      aria-pressed={active}
+      className={`w-full text-left rounded-xl p-3 transition-colors ${active ? 'bg-brand-50 dark:bg-brand-950 ring-1 ring-brand-200/60 dark:ring-brand-800/40' : 'bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+    >
       <p className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-2">
         {title}
-        {active && <span className="text-2xs font-semibold px-1.5 py-0.5 rounded-full bg-income-100 dark:bg-income-950 text-income-700 dark:text-income-400">en uso</span>}
+        {active
+          ? <span className="text-2xs font-semibold px-1.5 py-0.5 rounded-full bg-income-100 dark:bg-income-950 text-income-700 dark:text-income-400">en uso</span>
+          : <span className="text-2xs text-slate-500 dark:text-slate-400">tocar para usar</span>}
       </p>
       {!p.ok ? (
         <p className="text-2xs text-slate-500 dark:text-slate-400 mt-1">El plan no cierra con estos pagos.</p>
@@ -444,7 +450,7 @@ function MethodCompareCard({ plan, alt, method }: { plan: DebtPlan; alt: DebtPla
           </div>
         </div>
       )}
-    </div>
+    </button>
   );
 
   let msg: string | null = null;
@@ -457,12 +463,27 @@ function MethodCompareCard({ plan, alt, method }: { plan: DebtPlan; alt: DebtPla
 
   return (
     <div className="saas-card p-4 animate-slide-up space-y-2">
-      <div>
-        <h2 className="text-sm font-bold text-slate-900 dark:text-white">Bola de nieve vs. avalancha</h2>
-        <p className="text-2xs text-slate-500 dark:text-slate-400">Con el mismo aporte extra</p>
+      <div className="flex items-end justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white">Bola de nieve vs. avalancha</h2>
+          <p className="text-2xs text-slate-500 dark:text-slate-400">Con el mismo aporte extra</p>
+        </div>
+        <div>
+          <label htmlFor="d-extra" className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-0.5 block">Aporte extra mensual</label>
+          <input
+            id="d-extra"
+            type="text"
+            inputMode="decimal"
+            value={extra.value}
+            onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) extra.onChange(e.target.value); }}
+            onBlur={extra.commit}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); extra.commit(); } }}
+            className="saas-input-sm text-xs !w-28 tabular-nums"
+          />
+        </div>
       </div>
-      {bloque('Bola de nieve', snow, method === 'snowball')}
-      {bloque('Avalancha', aval, method === 'avalanche')}
+      {bloque('Bola de nieve', 'snowball', snow, method === 'snowball')}
+      {bloque('Avalancha', 'avalanche', aval, method === 'avalanche')}
       {msg && <p className="text-xs text-slate-700 dark:text-slate-300">{msg}</p>}
     </div>
   );

@@ -32,6 +32,8 @@ export type TabId =
   | 'accounts'
   | 'settings';
 export type FilterType = 'all' | 'income' | 'expense' | 'business' | 'personal';
+/** Ámbito global (Todo / Personal / Negocio), el segmentado de la cabecera. */
+export type Ambito = 'all' | 'personal' | 'business';
 
 export interface Transaction {
   id: string; // UUID

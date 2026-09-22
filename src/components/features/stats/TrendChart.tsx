@@ -11,7 +11,8 @@
 // `$12k`, leyenda debajo, y un tooltip que sigue al dedo o al ratón.
 // ================================================================
 
-import { useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useAnchoContenedor } from '@/hooks/useAnchoContenedor';
 import { formatMoney } from '@/lib/utils';
 import { escalaBonita, formatoTickDinero, trazarLinea } from '@/lib/chart-geometry';
 import type { PuntoTendencia } from '@/hooks/useStatsPeriod';
@@ -50,33 +51,6 @@ const PAD_L = 52; // sitio para "$1.5M"
 const PAD_R = 18; // que la última etiqueta de mes (centrada) no se corte
 const PAD_T = 12;
 const PAD_B = 26;
-/** Ancho de respaldo antes de medir (y en jsdom, que no mide nada). */
-const ANCHO_INICIAL = 520;
-
-/** Ancho real del contenedor, siguiendo sus cambios de tamaño. Es lo que
- *  hacía ResponsiveContainer: sin esto el SVG escalaría con su viewBox y
- *  el texto se haría ilegible en un móvil estrecho. */
-function useAnchoContenedor<T extends HTMLElement>() {
-  const ref = useRef<T>(null);
-  const [ancho, setAncho] = useState(ANCHO_INICIAL);
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const medir = () => {
-      const w = el.clientWidth;
-      if (w > 0) setAncho(w);
-    };
-    medir();
-    if (typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(medir);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  return { ref, ancho };
-}
-
 export function TrendChart({ data, colors, height = 240 }: TrendChartProps) {
   const { ref, ancho: W } = useAnchoContenedor<HTMLDivElement>();
   const H = height;

@@ -556,7 +556,7 @@ export function SettingsPage() {
       {/* Versión — leída de package.json vía Vite, no escrita a mano
           (el pie decía v2.0 mientras package.json ya iba por 2.1.0) */}
       <p className="text-center text-xs text-slate-500 dark:text-slate-400 lg:col-span-2">
-        Foresight Finanzas v{__APP_VERSION__} · SaaS Edition
+        Foresight Finanzas v{__APP_VERSION__}
       </p>
 
       <ConfirmDialog

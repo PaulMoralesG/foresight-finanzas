@@ -65,7 +65,8 @@ describe('DebtsPage', () => {
     useFinanceStore.getState().addDebt({ name: 'Cara', tag: 'personal', kind: 'Otro', balance: 3000, annualRate: 30, minPayment: 120, payDay: null });
     useFinanceStore.getState().addDebt({ name: 'Barata', tag: 'personal', kind: 'Otro', balance: 1000, annualRate: 5, minPayment: 60, payDay: null });
     render(<DebtsPage />);
-    await userEvent.selectOptions(screen.getByLabelText('Método'), 'avalanche');
+    // El método se elige tocando su bloque en "Bola de nieve vs. avalancha"
+    await userEvent.click(screen.getByRole('button', { name: /^Avalancha/ }));
     expect(useFinanceStore.getState().settings.debtMethod).toBe('avalanche');
     expect(useFinanceStore.getState().settings.updated_at).not.toBe('');
     const orden = screen.getByRole('heading', { name: 'Orden de pago' }).closest('.saas-card') as HTMLElement;

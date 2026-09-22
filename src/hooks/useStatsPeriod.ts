@@ -8,7 +8,7 @@
 // ================================================================
 
 import { useMemo } from 'react';
-import { useFinanceStore } from '@/stores/financeStore';
+import { useExpensesEnAmbito } from '@/hooks/useAmbito';
 import { MONTH_NAMES, roundMoney, safeParseDate } from '@/lib/utils';
 import type { Transaction } from '@/types';
 
@@ -86,7 +86,7 @@ function diasDelPeriodo(periodo: PeriodoStats): number {
 }
 
 export function useStatsPeriod(periodo: PeriodoStats) {
-  const expenses = useFinanceStore((s) => s.expenses);
+  const expenses = useExpensesEnAmbito();
   const { mode, month, year, fromDate, toDate } = periodo;
 
   // Tendencia de los seis meses que terminan en el mes seleccionado

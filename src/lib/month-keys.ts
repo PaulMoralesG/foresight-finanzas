@@ -11,6 +11,12 @@ export function monthKeyLabel(monthKey: string): string {
   return `${MONTH_NAMES[m - 1]} ${y}`;
 }
 
+/** Versión corta para selectores estrechos (ej. 'Sep 2026') */
+export function monthKeyLabelCorto(monthKey: string): string {
+  const [y, m] = monthKey.split('-').map(Number);
+  return `${MONTH_NAMES[m - 1].slice(0, 3)} ${y}`;
+}
+
 /** Desplazar un monthKey por ±N meses */
 export function shiftMonthKey(monthKey: string, delta: number): string {
   const [y, m] = monthKey.split('-').map(Number);
