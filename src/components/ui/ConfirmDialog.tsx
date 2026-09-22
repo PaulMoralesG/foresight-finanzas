@@ -1,8 +1,14 @@
 // ================================================================
 // ConfirmDialog — Diálogo de confirmación modal (móvil + desktop)
+//
+// Se monta con `createPortal` a `document.body`, igual que ModalSheet: si se
+// renderizara en su sitio dentro de una página con `space-y-*`, esa clase le
+// metería `margin-top` al `fixed inset-0` de aquí abajo y lo correría hacia
+// abajo, dejando el header de la página asomado por encima del overlay.
 // ================================================================
 
 import { useEffect, useId } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertTriangle } from '@/components/ui/icons.generated';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
@@ -53,7 +59,7 @@ export function ConfirmDialog({
     ? 'bg-red-600 hover:bg-red-700 text-white'
     : 'bg-amber-500 hover:bg-amber-600 text-white';
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-dialog flex items-end sm:items-center justify-center">
       {/* Overlay */}
       <div
@@ -106,6 +112,7 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
