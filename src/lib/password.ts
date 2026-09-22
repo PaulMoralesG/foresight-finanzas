@@ -68,3 +68,61 @@ export function validateNewPassword(pw: string): string | null {
   }
   return null;
 }
+
+// ── Contraseñas filtradas (HaveIBeenPwned, k-anonimato) ──
+//
+// Supabase ofrece esta comprobación en el servidor solo en el plan Pro. Aquí
+// se hace desde el cliente con la misma fuente, la API Pwned Passwords: se
+// envían únicamente los 5 primeros caracteres hexadecimales del SHA-1 de la
+// contraseña —nunca la contraseña ni el hash completo— y la comparación con
+// los ~800 sufijos que devuelve ocurre en local. Fail-open: si no hay red,
+// la API no responde o el navegador no expone SubtleCrypto, no se bloquea al
+// usuario (el resto de la política sigue aplicando).
+
+const PWNED_RANGE_URL = 'https://api.pwnedpasswords.com/range/';
+const PWNED_TIMEOUT_MS = 4000;
+
+export const LEAKED_PASSWORD_MESSAGE =
+  'Esa contraseña aparece en filtraciones de datos conocidas. Elige otra.';
+
+async function sha1Hex(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
+/**
+ * Veces que la contraseña aparece en filtraciones conocidas. 0 si no aparece
+ * o si la comprobación no pudo hacerse.
+ */
+export async function leakedPasswordCount(pw: string): Promise<number> {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return 0;
+    const hash = await sha1Hex(pw);
+    const prefix = hash.slice(0, 5);
+    const suffix = hash.slice(5);
+    const signal = typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(PWNED_TIMEOUT_MS) : undefined;
+    // Add-Padding: la respuesta trae siempre un número similar de líneas (las
+    // de relleno vienen con contador 0), para que su tamaño no delate el prefijo.
+    const res = await fetch(`${PWNED_RANGE_URL}${prefix}`, { headers: { 'Add-Padding': 'true' }, signal });
+    if (!res.ok) return 0;
+    const body = await res.text();
+    for (const line of body.split('\n')) {
+      const [suf, count] = line.trim().split(':');
+      if (suf === suffix) return Number(count) || 0;
+    }
+    return 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Validación completa de una contraseña nueva: la política local
+ * (`validateNewPassword`) y, si pasa, la comprobación de filtraciones.
+ * Devuelve el mensaje de error, o `null` si pasa.
+ */
+export async function validateNewPasswordOnline(pw: string): Promise<string | null> {
+  const local = validateNewPassword(pw);
+  if (local) return local;
+  return (await leakedPasswordCount(pw)) > 0 ? LEAKED_PASSWORD_MESSAGE : null;
+}
