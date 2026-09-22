@@ -125,7 +125,7 @@ export function CategoryManager({ abierto, onToggle, saveData }: CategoryManager
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-slate-900 dark:text-white">Categorías personalizadas</p>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-slate-600 dark:text-slate-400">
           {(() => {
             const n = customExpenseCategories.length + customIncomeCategories.length;
             if (n === 0) return 'Ninguna todavía';
@@ -133,12 +133,12 @@ export function CategoryManager({ abierto, onToggle, saveData }: CategoryManager
           })()}
         </p>
       </div>
-      {abierto ? <ChevronUp className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" />}
+      {abierto ? <ChevronUp className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400 transition-transform" />}
     </button>
 
     {abierto && (
       <div className="px-4 pb-4 space-y-3 animate-fade-in">
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-slate-600 dark:text-slate-400">
           Crea, visualiza y elimina tus categorías personalizadas. Las categorías por defecto no se pueden modificar.
         </p>
 
@@ -152,7 +152,7 @@ export function CategoryManager({ abierto, onToggle, saveData }: CategoryManager
               className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition-all ${
                 catType === t
                   ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
               }`}
             >
               {t === 'expense' ? '💸 Gastos' : '💰 Ingresos'}
@@ -188,7 +188,7 @@ export function CategoryManager({ abierto, onToggle, saveData }: CategoryManager
                     </button>
                     <button
                       onClick={cancelEditing}
-                      className="text-slate-500 dark:text-slate-400 hover:text-slate-600 p-1 flex-shrink-0"
+                      className="text-slate-600 dark:text-slate-400 hover:text-slate-600 p-1 flex-shrink-0"
                       aria-label="Cancelar edición de categoría"
                       title="Cancelar"
                     >
@@ -208,7 +208,7 @@ export function CategoryManager({ abierto, onToggle, saveData }: CategoryManager
                     <button
                       type="button"
                       onClick={() => startEditing(cat)}
-                      className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
+                      className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
                       title="Editar categoría"
                       aria-label={`Editar la categoría ${cat.label}`}
                     >
@@ -229,14 +229,14 @@ export function CategoryManager({ abierto, onToggle, saveData }: CategoryManager
             ))}
           </div>
         ) : (
-          <p className="text-xs text-slate-500 dark:text-slate-400 text-center py-2">
+          <p className="text-xs text-slate-600 dark:text-slate-400 text-center py-2">
             No tienes categorías personalizadas de {catType === 'expense' ? 'gasto' : 'ingreso'}.
           </p>
         )}
 
         {/* Form para añadir nueva */}
         <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-3">
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+          <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
             Nueva categoría
           </p>
           <input
@@ -263,11 +263,11 @@ export function CategoryManager({ abierto, onToggle, saveData }: CategoryManager
             </datalist>
           </div>
           <div className="flex gap-2 items-center">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Ícono:</span>
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Ícono:</span>
             <IconPicker value={newCatIcon} onChange={setNewCatIcon} />
           </div>
           <div className="flex gap-2 items-center flex-wrap">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Color:</span>
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Color:</span>
             <ColorPicker value={newCatColor} onChange={setNewCatColor} />
           </div>
           <button onClick={handleAddCategory} className="saas-btn-primary saas-btn-sm w-full">

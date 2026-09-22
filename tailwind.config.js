@@ -133,7 +133,6 @@ export default {
       animation: {
         'slide-up': 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         'fade-in': 'fadeIn 0.3s ease forwards',
-        'skeleton': 'skeleton 1.5s ease-in-out infinite',
         'scale-in': 'scaleIn 0.2s ease forwards',
       },
       keyframes: {
@@ -144,10 +143,6 @@ export default {
         fadeIn: {
           from: { opacity: '0' },
           to: { opacity: '1' },
-        },
-        skeleton: {
-          '0%, 100%': { opacity: '1' },
-          '50%': { opacity: '0.4' },
         },
         scaleIn: {
           from: { transform: 'scale(0.95)', opacity: '0' },

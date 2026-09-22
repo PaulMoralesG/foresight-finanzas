@@ -7,6 +7,7 @@
 import { useMemo } from 'react';
 import { useFinanceStore } from '@/stores/financeStore';
 import { filtrarPorAmbito } from '@/lib/ambito';
+import { filtrarPorMes } from '@/lib/month-keys';
 import type { Ambito, BudgetLine, Debt, SavingsGoal, Transaction } from '@/types';
 
 export function useAmbito(): Ambito {
@@ -35,4 +36,18 @@ export function useGoalsEnAmbito(): SavingsGoal[] {
   const goals = useFinanceStore((s) => s.savingsGoals);
   const ambito = useAmbito();
   return useMemo(() => filtrarPorAmbito(goals, ambito, (g) => g.tag), [goals, ambito]);
+}
+
+/**
+ * Los movimientos del mes en pantalla, ya filtrados por el ámbito activo.
+ *
+ * Es la única fuente para Movimientos, el Resumen y el reporte mensual: antes
+ * cada uno llamaba a `getMonthlyData()` del store, que lee `expenses` sin
+ * filtrar, y el segmentado Todo/Personal/Negocio —visible en esas pantallas—
+ * no surtía efecto: el Resumen decía una cifra y Movimientos otra.
+ */
+export function useExpensesDelMesEnAmbito(): Transaction[] {
+  const expenses = useExpensesEnAmbito();
+  const currentViewDate = useFinanceStore((s) => s.currentViewDate);
+  return useMemo(() => filtrarPorMes(expenses, currentViewDate), [expenses, currentViewDate]);
 }

@@ -18,6 +18,8 @@ import {
   type LegacyProfileRow,
 } from '@/lib/legacy-import';
 import type {
+  Recurrence,
+  Frecuencia,
   Transaction,
   Category,
   SavingsGoal,
@@ -55,6 +57,7 @@ interface ExpenseRow {
   business_type: string | null;
   account_id: string | null;
   to_account_id: string | null;
+  recurrence_id: string | null;
   created_at: string | null;
   updated_at: string;
   deleted_at: string | null;
@@ -116,6 +119,28 @@ interface BudgetLineRow {
   deleted_at: string | null;
 }
 
+interface RecurrenceRow {
+  id: string;
+  user_id: string;
+  type: string | null;
+  amount: number | null;
+  concept: string | null;
+  category: string | null;
+  method: string | null;
+  business_type: string | null;
+  account_id: string | null;
+  to_account_id: string | null;
+  frecuencia: string | null;
+  intervalo: number | null;
+  dia_mes: number | null;
+  desde: string | null;
+  hasta: string | null;
+  activa: boolean | null;
+  ultima_generada: string | null;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
 interface SettingsRow {
   user_id: string;
   debt_method: string | null;
@@ -167,6 +192,7 @@ export interface Snapshot {
   assets: AssetRow[];
   networth: NetWorthRow[];
   budgetLines: BudgetLineRow[];
+  recurrences: RecurrenceRow[];
 }
 
 // ── Convertidores locales ↔ filas ──
@@ -184,6 +210,7 @@ function expenseToRow(t: Transaction, userId: string): ExpenseRow {
     business_type: t.businessType,
     account_id: t.accountId ?? null,
     to_account_id: t.toAccountId ?? null,
+    recurrence_id: t.recurrenceId ?? null,
     created_at: t.created_at ?? null,
     updated_at: t.updated_at,
     deleted_at: null,
@@ -202,7 +229,12 @@ function rowToExpense(r: ExpenseRow): Transaction {
     businessType: (r.business_type === 'business' || r.business_type === 'personal' ? r.business_type : 'personal') as BusinessType,
     accountId: r.account_id ?? null,
     toAccountId: r.to_account_id ?? null,
-    created_at: r.created_at ?? undefined,
+    recurrenceId: r.recurrence_id ?? null,
+    // La clave solo aparece si hay valor: con `created_at: undefined` el objeto
+    // tenía una clave más que su equivalente local y igualEstructural (que
+    // compara el número de claves) daba "distinto" en cada ciclo, disparando
+    // un setState inútil que volvía a marcar el estado como sucio.
+    ...(r.created_at ? { created_at: r.created_at } : {}),
     updated_at: r.updated_at,
   };
 }
@@ -308,6 +340,55 @@ function rowToBudgetLine(r: BudgetLineRow): BudgetLine {
     categoryId: r.category_id ?? 'general',
     limit: Number(r.limit ?? 0),
     plan,
+    updated_at: r.updated_at,
+  };
+}
+
+const FRECUENCIAS_VALIDAS: Frecuencia[] = ['daily', 'weekly', 'monthly'];
+
+function recurrenceToRow(r: Recurrence, userId: string): RecurrenceRow {
+  return {
+    id: r.id,
+    user_id: userId,
+    type: r.type,
+    amount: r.amount,
+    concept: r.concept,
+    category: r.category,
+    method: r.method,
+    business_type: r.businessType,
+    account_id: r.accountId ?? null,
+    to_account_id: r.toAccountId ?? null,
+    frecuencia: r.frecuencia,
+    intervalo: r.intervalo,
+    dia_mes: r.diaMes,
+    desde: r.desde,
+    hasta: r.hasta,
+    activa: r.activa,
+    ultima_generada: r.ultimaGenerada,
+    updated_at: r.updated_at,
+    deleted_at: null,
+  };
+}
+
+function rowToRecurrence(r: RecurrenceRow): Recurrence {
+  const dia = Number(r.dia_mes);
+  return {
+    id: r.id,
+    type: (r.type === 'income' || r.type === 'expense' || r.type === 'transfer' ? r.type : 'expense') as TransactionType,
+    amount: Number(r.amount ?? 0),
+    concept: r.concept ?? '',
+    category: r.category ?? 'general',
+    method: (r.method === 'cash' || r.method === 'card' || r.method === 'transfer' ? r.method : 'cash') as PaymentMethod,
+    businessType: (r.business_type === 'business' ? 'business' : 'personal') as BusinessType,
+    accountId: r.account_id ?? null,
+    toAccountId: r.to_account_id ?? null,
+    frecuencia: (FRECUENCIAS_VALIDAS.includes(r.frecuencia as Frecuencia) ? r.frecuencia : 'monthly') as Frecuencia,
+    intervalo: Math.max(1, Math.floor(Number(r.intervalo ?? 1)) || 1),
+    diaMes: Number.isFinite(dia) && dia >= 1 && dia <= 31 ? dia : null,
+    desde: r.desde ?? getTodayISO(),
+    hasta: r.hasta ?? null,
+    activa: r.activa !== false,
+    ultimaGenerada: r.ultima_generada ?? null,
     updated_at: r.updated_at,
   };
 }
@@ -500,7 +581,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-type TableName = 'expenses' | 'categories' | 'savings_goals' | 'budgets' | 'accounts' | 'debts' | 'settings' | 'assets' | 'networth' | 'budget_lines';
+type TableName = 'expenses' | 'categories' | 'savings_goals' | 'budgets' | 'accounts' | 'debts' | 'settings' | 'assets' | 'networth' | 'budget_lines' | 'recurrences';
 
 // ── Pull ──
 
@@ -570,6 +651,7 @@ export function desfaseDeRelojMinutos(snapshot: Snapshot, ahoraMs = Date.now()):
   mirar(snapshot.debts);
   mirar(snapshot.assets);
   mirar(snapshot.budgetLines);
+  mirar(snapshot.recurrences);
 
   const adelanto = masNueva - ahoraMs;
   return adelanto > DESFASE_TOLERADO_MS ? Math.round(adelanto / 60_000) : 0;
@@ -594,7 +676,7 @@ function avisarSiElRelojVaMal(snapshot: Snapshot) {
 
 /** @param since  null = pull completo; si no, solo filas con `updated_at >= since`. */
 async function pullAll(uid: string, since: string | null): Promise<Snapshot> {
-  const [expenses, categories, goals, budgets, accounts, debts, settings, assets, networth, budgetLines] = await Promise.all([
+  const [expenses, categories, goals, budgets, accounts, debts, settings, assets, networth, budgetLines, recurrences] = await Promise.all([
     fetchAllRows<ExpenseRow>('expenses', uid, ['updated_at', 'id'], since),
     fetchAllRows<CategoryRow>('categories', uid, ['updated_at', 'id'], since),
     fetchAllRows<GoalRow>('savings_goals', uid, ['updated_at', 'id'], since),
@@ -609,9 +691,10 @@ async function pullAll(uid: string, since: string | null): Promise<Snapshot> {
     // networth: PK (user_id, month); `month` es único por usuario.
     fetchAllRows<NetWorthRow>('networth', uid, ['month'], since),
     fetchAllRows<BudgetLineRow>('budget_lines', uid, ['updated_at', 'id'], since),
+    fetchAllRows<RecurrenceRow>('recurrences', uid, ['updated_at', 'id'], since),
   ]);
 
-  const snapshot = { expenses, categories, goals, budgets, accounts, debts, settings, assets, networth, budgetLines };
+  const snapshot = { expenses, categories, goals, budgets, accounts, debts, settings, assets, networth, budgetLines, recurrences };
   avisarSiElRelojVaMal(snapshot);
   return snapshot;
 }
@@ -626,6 +709,7 @@ interface MergeResult {
   assets: MergeSet<Asset>;
   networth: NetWorthSnapshot[];
   budgetLines: MergeSet<BudgetLine>;
+  recurrences: MergeSet<Recurrence>;
   /** Ajustes ganadores tras el merge (el updated_at más nuevo). */
   settings: Settings;
   expenseCategories: MergeSet<Category>;
@@ -742,6 +826,13 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     remoteLines,
   );
 
+  const remoteRecurrences = buildRemoteSet(snapshot.recurrences, rowToRecurrence);
+  const recUniverse = universeOf(state.recurrences, remoteRecurrences);
+  const recurrences = mergeById(
+    { live: state.recurrences, tombstones: scopeTombstones(state.tombstones, recUniverse) },
+    remoteRecurrences,
+  );
+
   // Ajustes: una sola fila, gana la marca más nueva. Un updated_at local
   // vacío significa "nunca tocado" y pierde contra cualquier fila remota.
   const remoteSettings = snapshot.settings[0] ? rowToSettings(snapshot.settings[0]) : null;
@@ -776,6 +867,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     ...debtsUniverse,
     ...assetsUniverse,
     ...linesUniverse,
+    ...recUniverse,
     ...expCatsUniverse,
     ...incCatsUniverse,
   ]);
@@ -789,6 +881,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     debts.tombstones,
     assets.tombstones,
     budgetLines.tombstones,
+    recurrences.tombstones,
     expenseCategories.tombstones,
     incomeCategories.tombstones,
   );
@@ -806,6 +899,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     ...Object.keys(remoteDebts.tombstones),
     ...Object.keys(remoteAssets.tombstones),
     ...Object.keys(remoteLines.tombstones),
+    ...Object.keys(remoteRecurrences.tombstones),
     ...Object.keys(remoteExpCats.tombstones),
     ...Object.keys(remoteIncCats.tombstones),
   ]);
@@ -826,6 +920,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     assets: assets.live,
     networth,
     budgetLines: budgetLines.live,
+    recurrences: recurrences.live,
     settings,
     customExpenseCategories: expenseCategories.live,
     customIncomeCategories: incomeCategories.live,
@@ -841,6 +936,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     assets: state.assets,
     networth: state.networth,
     budgetLines: state.budgetLines,
+    recurrences: state.recurrences,
     settings: state.settings,
     customExpenseCategories: state.customExpenseCategories,
     customIncomeCategories: state.customIncomeCategories,
@@ -870,6 +966,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
         debts: keepLocalAdditions(next.debts, currentState.debts),
         assets: keepLocalAdditions(next.assets, currentState.assets),
         budgetLines: keepLocalAdditions(next.budgetLines, currentState.budgetLines),
+        recurrences: keepLocalAdditions(next.recurrences, currentState.recurrences),
         customExpenseCategories: keepLocalAdditions(
           next.customExpenseCategories,
           currentState.customExpenseCategories,
@@ -882,7 +979,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     });
   }
 
-  return { expenses, goals, accounts, debts, assets, networth, budgetLines, settings, expenseCategories, incomeCategories, budgets, flatTombstones };
+  return { expenses, goals, accounts, debts, assets, networth, budgetLines, recurrences, settings, expenseCategories, incomeCategories, budgets, flatTombstones };
 }
 
 // ── Push ──
@@ -966,6 +1063,11 @@ async function pushAll(uid: string, merged: MergeResult, since: string | null): 
   await upsert('budget_lines', [
     ...merged.budgetLines.live.filter((l) => changed(l.updated_at)).map((l) => budgetLineToRow(l, uid)),
     ...tombstoneRows(merged.budgetLines.tombstones),
+  ], 'user_id,id');
+
+  await upsert('recurrences', [
+    ...merged.recurrences.live.filter((r) => changed(r.updated_at)).map((r) => recurrenceToRow(r, uid)),
+    ...tombstoneRows(merged.recurrences.tombstones),
   ], 'user_id,id');
 
   await upsert('networth', merged.networth
@@ -1123,6 +1225,7 @@ export const syncService = {
         state.assets !== prev.assets ||
         state.networth !== prev.networth ||
         state.budgetLines !== prev.budgetLines ||
+        state.recurrences !== prev.recurrences ||
         state.settings !== prev.settings ||
         state.customExpenseCategories !== prev.customExpenseCategories ||
         state.customIncomeCategories !== prev.customIncomeCategories ||

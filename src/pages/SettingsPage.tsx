@@ -165,7 +165,7 @@ export function SettingsPage() {
               <h2 className="text-lg font-bold text-slate-900 dark:text-white truncate">
                 {fullName}
               </h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{user?.email}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400 truncate">{user?.email}</p>
             </div>
           </div>
           <button
@@ -209,7 +209,7 @@ export function SettingsPage() {
         {/* Edit profile inline form */}
         {expanded === 'profile' && (
           <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-800 space-y-3 animate-fade-in">
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
               Editar información personal
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -267,7 +267,7 @@ export function SettingsPage() {
       {/* ─── Cuenta ─── */}
       <div className="saas-card divide-y divide-slate-100 dark:divide-slate-800">
         <div className="px-4 pt-4 pb-2">
-          <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Cuenta</p>
+          <p className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Cuenta</p>
         </div>
 
         {/* Change Email.
@@ -295,18 +295,18 @@ export function SettingsPage() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Cambiar correo electrónico</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-600 dark:text-slate-400">
                 {supabaseAvailable ? 'Actualiza tu dirección de email' : 'Requiere conexión a internet'}
               </p>
             </div>
             {supabaseAvailable ? (
-              expanded === 'email' ? <ChevronUp className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" />
+              expanded === 'email' ? <ChevronUp className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400 transition-transform" />
             ) : null}
           </button>
 
           {expanded === 'email' && (
             <div className="px-4 pb-4 space-y-3 animate-fade-in">
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-600 dark:text-slate-400">
                 Te enviaremos un enlace de verificación a tu nuevo correo. El cambio se aplica al confirmar ambos emails.
               </p>
               <div>
@@ -366,18 +366,18 @@ export function SettingsPage() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Cambiar contraseña</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-600 dark:text-slate-400">
                 {supabaseAvailable ? 'Mantén tu cuenta protegida' : 'Requiere conexión a internet'}
               </p>
             </div>
             {supabaseAvailable ? (
-              expanded === 'password' ? <ChevronUp className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform" />
+              expanded === 'password' ? <ChevronUp className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400 transition-transform" />
             ) : null}
           </button>
 
           {expanded === 'password' && (
             <div className="px-4 pb-4 space-y-3 animate-fade-in">
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-600 dark:text-slate-400">
                 Por seguridad, confirma tu contraseña actual antes de elegir una nueva
                 de al menos {MIN_PASSWORD_LENGTH} caracteres.
               </p>
@@ -476,13 +476,13 @@ export function SettingsPage() {
 
         {/* ─── Metas y estrategia (Balance Dual: Ajustes) ─── */}
         <div className="px-4 pt-5 pb-2">
-          <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Metas y estrategia</p>
+          <p className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Metas y estrategia</p>
         </div>
         <StrategySettings saveData={saveData} />
 
         {/* ─── Personalización ─── */}
         <div className="px-4 pt-5 pb-2">
-          <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Personalización</p>
+          <p className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Personalización</p>
         </div>
 
         <CategoryManager
@@ -504,7 +504,7 @@ export function SettingsPage() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-slate-900 dark:text-white">Apariencia</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               {isDark ? 'Tema oscuro' : 'Tema claro'}
             </p>
           </div>
@@ -528,13 +528,13 @@ export function SettingsPage() {
 
         {/* ─── Copia de seguridad ─── */}
         <div className="px-4 pt-5 pb-2">
-          <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Datos</p>
+          <p className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Datos</p>
         </div>
         <BackupSettings saveData={saveData} />
 
         {/* ─── Cerrar sesión ─── */}
         <div className="px-4 pt-5 pb-2">
-          <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Sesión</p>
+          <p className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Sesión</p>
         </div>
 
         {/* Sign Out */}
@@ -547,15 +547,15 @@ export function SettingsPage() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-red-600 dark:text-red-400">Cerrar sesión</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Finaliza tu sesión actual</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400">Finaliza tu sesión actual</p>
           </div>
-          <ChevronRight className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+          <ChevronRight className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
         </button>
       </div>
 
       {/* Versión — leída de package.json vía Vite, no escrita a mano
           (el pie decía v2.0 mientras package.json ya iba por 2.1.0) */}
-      <p className="text-center text-xs text-slate-500 dark:text-slate-400 lg:col-span-2">
+      <p className="text-center text-xs text-slate-600 dark:text-slate-400 lg:col-span-2">
         Foresight Finanzas v{__APP_VERSION__}
       </p>
 

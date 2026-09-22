@@ -12,6 +12,7 @@ const datos: BackupData = {
   assets: [],
   networth: [{ month: '2026-08', assets: 1, liabilities: 0, net: 1, updated_at: 'x' }],
   budgetLines: [],
+  recurrences: [],
   budgets: { '2026-08': 100 },
   budgetUpdatedAt: {},
   savingsGoals: [],

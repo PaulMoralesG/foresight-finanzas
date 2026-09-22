@@ -55,11 +55,11 @@ export class ErrorBoundary extends Component<Props, State> {
             <h1 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
               Algo salió mal
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 mb-6 text-sm">
+            <p className="text-slate-600 dark:text-slate-400 mb-6 text-sm">
               Ocurrió un error inesperado. No te preocupes, tus datos están a salvo.
             </p>
             <details className="text-left mb-6">
-              <summary className="text-xs text-slate-500 dark:text-slate-400 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300">
+              <summary className="text-xs text-slate-600 dark:text-slate-400 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300">
                 Detalles técnicos
               </summary>
               <pre className="mt-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 p-3 rounded-lg overflow-auto max-h-32">

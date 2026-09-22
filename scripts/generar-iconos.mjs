@@ -29,7 +29,7 @@ const ICONOS = [
   'Banknote', 'Building2', 'Calendar', 'ChartNoAxesColumn',
   'Check', 'CheckCircle', 'ChevronDown', 'ChevronLeft', 'ChevronRight', 'ChevronUp',
   'CloudOff', 'CreditCard', 'Download',
-  'Edit3', 'Ellipsis', 'Eye', 'EyeOff', 'FileSpreadsheet', 'FileText', 'Gauge', 'Home', 'Key',
+  'Edit3', 'Ellipsis', 'Eye', 'EyeOff', 'FileSpreadsheet', 'FileText', 'Gauge', 'Key',
   'Landmark', 'Layers', 'LayoutGrid', 'Loader2', 'Lock', 'LogIn', 'LogOut', 'Mail',
   'MailCheck', 'Moon', 'Pencil', 'PiggyBank', 'Plus', 'Printer', 'Receipt',
   'RefreshCw', 'Search', 'Send', 'Settings', 'Smartphone', 'Store', 'Sun', 'Tags', 'Target',
