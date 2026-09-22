@@ -10,7 +10,7 @@
 import { formatMoney, LOCALE, roundMoney, safeParseDate, sortByDateAsc } from './utils';
 import type { Transaction } from '@/types';
 
-export interface FilaReporte {
+interface FilaReporte {
   fecha: string;
   tipo: 'Ingreso' | 'Gasto' | 'Transferencia';
   ambito: 'Personal' | 'Negocio';
