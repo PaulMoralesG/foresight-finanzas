@@ -215,9 +215,9 @@ function EsteMes({ mk, setMk, lines, expenses, customCats, onEdit, onDelete }: {
 
   return (
     <>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 mb-4">
         <label htmlFor="sum-month" className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Mes</label>
-        <select id="sum-month" value={mk} onChange={(e) => setMk(e.target.value)} className="saas-input-sm text-2xs">
+        <select id="sum-month" value={mk} onChange={(e) => setMk(e.target.value)} className="saas-input-sm text-2xs w-40">
           {meses.map((m) => <option key={m} value={m}>{monthKeyLabel(m)}</option>)}
         </select>
       </div>
@@ -342,7 +342,7 @@ function SeccionTabla({ titulo, colSpan, children }: { titulo: string; colSpan: 
 
 function BarraAnio({ year, setYear, hint }: { year: number; setYear: (y: number) => void; hint?: string }) {
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div className="flex items-center gap-2 flex-wrap mb-4">
       <button onClick={() => setYear(year - 1)} className="saas-btn-icon" aria-label="Año anterior"><ChevronLeft className="w-4 h-4" /></button>
       <strong className="tabular-nums text-sm">{year}</strong>
       <button onClick={() => setYear(year + 1)} className="saas-btn-icon" aria-label="Año siguiente"><ChevronRight className="w-4 h-4" /></button>
