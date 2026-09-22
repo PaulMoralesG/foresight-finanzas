@@ -141,23 +141,20 @@ export function SettingsPage() {
   };
 
   return (
-    /* max-w-2xl dejaba una columna estrecha con mucho vacío a la derecha en
-       monitores grandes, mientras Inicio y Estadísticas sí se expandían.
-       El salto a dos columnas era en xl (1280px): justo por debajo —el
-       rango más común de portátiles de trabajo, 1024-1279px— la tarjeta de
-       perfil ocupaba el ancho completo en una sola columna, con el avatar y
-       el nombre pegados a la izquierda y "Editar" empujado lejos a la
-       derecha: mucho vacío en medio, como a medio maquetar. Se adelanta a lg.
-
-       `items-stretch` (el valor por defecto de grid, antes pisado por
-       `items-start`): con "Cuenta" mucho más alta que el perfil, `items-start`
-       dejaba la tarjeta de perfil corta flotando arriba y un vacío enorme del
-       fondo de la página debajo, en la misma fila. Al estirarla a la altura
-       de su fila, ese hueco pasa a ser parte de la propia tarjeta —con su
-       fondo y borde— en vez de verse como una fila a medio terminar. */
-    <div className="animate-fade-in max-w-2xl lg:max-w-5xl grid grid-cols-1 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] gap-5 items-stretch">
+    /* Dos columnas desde lg, para no obligar a un scroll larguísimo con
+       las ocho secciones de Ajustes apiladas una sobre otra. La primera
+       versión de esta grilla ponía TODO (Cuenta, Personalización, Datos,
+       Sesión) en la columna derecha y solo el perfil a la izquierda: la
+       derecha quedaba muchísimo más alta y la tarjeta de perfil parecía
+       flotar sobre un vacío. Repartir "Cuenta" a la izquierda (identidad:
+       perfil + credenciales) y el resto a la derecha (app: categorías,
+       apariencia, respaldo, sesión) deja ambas columnas parecidas en alto
+       sin inventar espacio de más. */
+    <div className="animate-fade-in max-w-2xl lg:max-w-5xl grid grid-cols-1 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] gap-5 items-start">
+      {/* ─── Columna izquierda: identidad (perfil + cuenta) ─── */}
+      <div className="space-y-5">
       {/* ─── Profile Card ─── */}
-      <div className="saas-card p-6 flex flex-col justify-center">
+      <div className="saas-card p-6">
         {/* flex-col en móvil: antes avatar+nombre+botón iban en una sola fila
             y "Usuario Local" (13 caracteres) ya se truncaba a "Usuario Lo…"
             a 375px, solo por competir con el botón "Editar" en el mismo
@@ -479,9 +476,13 @@ export function SettingsPage() {
             </div>
           )}
         </div>
+      </div>
+      </div>
 
+      {/* ─── Columna derecha: app (personalización, datos, sesión) ─── */}
+      <div className="saas-card divide-y divide-slate-100 dark:divide-slate-800">
         {/* ─── Personalización ─── */}
-        <div className="px-4 pt-5 pb-2">
+        <div className="px-4 pt-4 pb-2">
           <p className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Personalización</p>
         </div>
 
