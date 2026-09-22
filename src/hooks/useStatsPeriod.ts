@@ -74,17 +74,6 @@ export function pctChange(current: number, previous: number): string {
   return `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
 }
 
-/** Días que abarca el periodo, para el promedio diario. */
-function diasDelPeriodo(periodo: PeriodoStats): number {
-  if (periodo.mode === 'range' && periodo.fromDate && periodo.toDate) {
-    const from = safeParseDate(periodo.fromDate);
-    const to = safeParseDate(periodo.toDate);
-    return Math.max(1, Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-  }
-  // Día 0 del mes siguiente = último día de este mes
-  return Math.max(1, new Date(periodo.year, periodo.month + 1, 0).getDate());
-}
-
 export function useStatsPeriod(periodo: PeriodoStats) {
   const expenses = useExpensesEnAmbito();
   const { mode, month, year, fromDate, toDate } = periodo;
@@ -190,16 +179,11 @@ export function useStatsPeriod(periodo: PeriodoStats) {
       .sort((a, b) => b.amount - a.amount);
   }, [filteredData, peakDay]);
 
-  const avgDaily = useMemo(
-    () => roundMoney(totals.balance / diasDelPeriodo(periodo)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [totals.balance, mode, month, year, fromDate, toDate],
-  );
-
+  // El hook devolvía además `filteredData`, `previousData`, `avgDaily` y el
+  // universo de días del periodo: se calculaban en cada render y no los leía
+  // nadie más que sus propios tests.
   return {
     trendData,
-    filteredData,
-    previousData,
     totals,
     prevTotals,
     expensesByCategory,
@@ -207,6 +191,5 @@ export function useStatsPeriod(periodo: PeriodoStats) {
     largestExpense,
     peakDay,
     peakDayTransactions,
-    avgDaily,
   };
 }

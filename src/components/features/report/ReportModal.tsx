@@ -1,11 +1,11 @@
 // ================================================================
-// ReportModal — Reporte rápido del mes actual (PDF/CSV)
-// Para reportes por rango de fechas, usar la pestaña Estadísticas
+// ReportModal — Reporte del mes en pantalla (PDF/CSV), en el ámbito activo
 // ================================================================
 
-import { useMemo, useId } from 'react';
+import { useId } from 'react';
 import { X, Calendar, Printer, FileSpreadsheet, Building2, User } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
+import { useExpensesDelMesEnAmbito } from '@/hooks/useAmbito';
 import { useUiStore } from '@/stores/uiStore';
 import { formatMoney, MONTH_NAMES, downloadBlob, roundMoney } from '@/lib/utils';
 import { movementsToCsv } from '@/lib/movements-csv';
@@ -18,8 +18,6 @@ export function ReportModal() {
   const isOpen = useUiStore((s) => s.isReportModalOpen);
   const closeReportModal = useUiStore((s) => s.closeReportModal);
   const addToast = useUiStore((s) => s.addToast);
-  const expenses = useFinanceStore((s) => s.expenses);
-  const getMonthlyData = useFinanceStore((s) => s.getMonthlyData);
   const currentViewDate = useFinanceStore((s) => s.currentViewDate);
   const customExpenseCategories = useFinanceStore((s) => s.customExpenseCategories);
   const customIncomeCategories = useFinanceStore((s) => s.customIncomeCategories);
@@ -36,12 +34,10 @@ export function ReportModal() {
   const modalRef = useFocusTrap<HTMLDivElement>(isOpen);
   const titleId = useId();
 
-  // ── Usar getMonthlyData() ──
-  // (hook incondicional: no puede ir después del early return).
-  // Deps "innecesarias" a propósito: getMonthlyData lee el store por dentro,
-  // sin ellas el memo quedaría stale.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const monthData = useMemo(() => getMonthlyData(), [getMonthlyData, expenses, currentViewDate]);
+  // El mismo universo que la pantalla desde la que se abre el reporte: mes en
+  // pantalla y ámbito activo. Leyendo el store crudo, el reporte sumaba también
+  // el otro ámbito y contradecía al KPI que tenía justo debajo.
+  const monthData = useExpensesDelMesEnAmbito();
 
   if (!isOpen) return null;
 

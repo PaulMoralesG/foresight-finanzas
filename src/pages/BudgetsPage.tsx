@@ -10,11 +10,12 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight, Target } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
-import { useBudgetLinesEnAmbito, useExpensesEnAmbito } from '@/hooks/useAmbito';
+import { useAmbito, useBudgetLinesEnAmbito, useExpensesEnAmbito } from '@/hooks/useAmbito';
+import { enAmbito } from '@/lib/ambito';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
 import { formatMoney, parseMoneyInput, roundMoney, syncToCloud, MONTH_NAMES } from '@/lib/utils';
-import { currentMonthKey, shiftMonthKey, monthKeyLabel } from '@/lib/month-keys';
+import { currentMonthKey, shiftMonthKey, monthKeyLabel, mesDeLaVista } from '@/lib/month-keys';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, getCategoryById, DEFAULT_GROUP } from '@/config/categories';
 import { planFor, budgetStatus, actualFor, groupSummary, annualReport, monthsOfYear } from '@/lib/budget-lines';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
@@ -47,7 +48,10 @@ export function BudgetsPage() {
   const customCats = useMemo(() => [...customExpenseCategories, ...customIncomeCategories], [customExpenseCategories, customIncomeCategories]);
 
   const [tab, setTab] = useState<Tab>('mes');
-  const [mk, setMk] = useState(currentMonthKey());
+  // Arranca en el mes que se esté viendo en el resto de la app (el MonthNav
+  // del Resumen), no siempre en el actual: con el Resumen en julio, "Ver todo"
+  // abría septiembre y las mismas categorías mostraban otras cifras.
+  const [mk, setMk] = useState(() => mesDeLaVista(useFinanceStore.getState().currentViewDate));
   const [year, setYear] = useState(new Date().getFullYear());
 
   // ── Formulario ──
@@ -203,6 +207,7 @@ function EsteMes({ mk, setMk, lines, expenses, customCats, onEdit, onDelete }: {
   mk: string; setMk: (v: string) => void; lines: BudgetLine[]; expenses: ReturnType<typeof useFinanceStore.getState>['expenses'];
   customCats: Category[]; onEdit: (l: BudgetLine) => void; onDelete: (l: BudgetLine) => void;
 }) {
+  const ambito = useAmbito();
   const meses = Array.from({ length: 9 }, (_, i) => shiftMonthKey(currentMonthKey(), i - 6));
   const resumen = useMemo(() => groupSummary(lines, expenses, mk, customCats), [lines, expenses, mk, customCats]);
   const esActual = mk === currentMonthKey();
@@ -274,7 +279,7 @@ function EsteMes({ mk, setMk, lines, expenses, customCats, onEdit, onDelete }: {
 
       {/* Líneas de gasto por ámbito */}
       <div className="saas-card p-4 animate-slide-up space-y-4">
-        {TAGS.map((tag) => {
+        {TAGS.filter((tag) => enAmbito(ambito, tag)).map((tag) => {
           const lista = lines.filter((l) => l.tag === tag && l.kind === 'expense');
           return (
             <div key={tag}>
