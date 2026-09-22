@@ -2,16 +2,26 @@
 // StrategySettings — "Metas y estrategia" (fase 3.5; Balance Dual viewAjustes)
 // Meta de patrimonio neto, aporte extra mensual a deudas y método de
 // pago. Se aplican a Patrimonio y a Deudas; se guardan al salir del campo.
+//
+// Es un acordeón como "Cambiar correo" o "Categorías personalizadas" —
+// antes quedaba siempre expandido, la única sección de Ajustes que no
+// seguía ese patrón, ocupando espacio permanente aunque nadie la tocara.
 // ================================================================
 
 import { useEffect, useState } from 'react';
-import { Target } from '@/components/ui/icons.generated';
+import { ChevronRight, ChevronUp, Target } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { parseMoneyInput, roundMoney, syncToCloud } from '@/lib/utils';
 import type { DebtMethod } from '@/types';
 
-export function StrategySettings({ saveData }: { saveData: () => Promise<boolean> }) {
+interface StrategySettingsProps {
+  abierto: boolean;
+  onToggle: () => void;
+  saveData: () => Promise<boolean>;
+}
+
+export function StrategySettings({ abierto, onToggle, saveData }: StrategySettingsProps) {
   const settings = useFinanceStore((s) => s.settings);
   const setSettings = useFinanceStore((s) => s.setSettings);
   const addToast = useUiStore((s) => s.addToast);
@@ -32,8 +42,13 @@ export function StrategySettings({ saveData }: { saveData: () => Promise<boolean
   }
 
   return (
-    <div className="p-4 space-y-3">
-      <div className="flex items-center gap-4">
+    <div>
+      <button
+        onClick={() => onToggle()}
+        type="button"
+        aria-expanded={abierto}
+        className="w-full flex items-center gap-4 p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded-lg"
+      >
         <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-slate-100 dark:bg-slate-800 text-slate-500">
           <Target className="w-5 h-5" />
         </div>
@@ -41,49 +56,61 @@ export function StrategySettings({ saveData }: { saveData: () => Promise<boolean
           <p className="text-sm font-semibold text-slate-900 dark:text-white">Metas y estrategia</p>
           <p className="text-xs text-slate-600 dark:text-slate-400">Se aplican a Patrimonio y a Deudas</p>
         </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div>
-          <label htmlFor="set-goal" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Meta de patrimonio neto</label>
-          <input
-            id="set-goal"
-            type="text"
-            inputMode="decimal"
-            value={goal}
-            onChange={(e) => { if (soloDecimal(e.target.value)) setGoal(e.target.value); }}
-            onBlur={(e) => commit('netWorthGoal', e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-            placeholder="0"
-            className="saas-input-sm text-xs tabular-nums"
-          />
+        {abierto ? <ChevronUp className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400 transition-transform" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400 transition-transform" />}
+      </button>
+
+      {abierto && (
+        <div className="px-4 pb-4 space-y-3 animate-fade-in">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="set-goal" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Meta de patrimonio neto</label>
+              <input
+                id="set-goal"
+                type="text"
+                inputMode="decimal"
+                value={goal}
+                onChange={(e) => { if (soloDecimal(e.target.value)) setGoal(e.target.value); }}
+                onBlur={(e) => commit('netWorthGoal', e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                placeholder="0"
+                className="saas-input-sm text-xs tabular-nums"
+              />
+            </div>
+            <div>
+              <label htmlFor="set-extra" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Aporte extra mensual a deudas</label>
+              <input
+                id="set-extra"
+                type="text"
+                inputMode="decimal"
+                value={extra}
+                onChange={(e) => { if (soloDecimal(e.target.value)) setExtra(e.target.value); }}
+                onBlur={(e) => commit('extraPayment', e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                placeholder="0"
+                className="saas-input-sm text-xs tabular-nums"
+              />
+            </div>
+          </div>
+          {/* Fila propia y ancho completo: el texto de las opciones
+              ("Bola de nieve · menor saldo primero") se recortaba a la mitad
+              sin puntos suspensivos cuando compartía columna con los otros
+              dos campos en una grilla de 3 — un <select> nativo no envuelve
+              ni trunca con "…" por su cuenta, así que necesita todo el ancho
+              disponible en vez de un tercio de él. */}
+          <div>
+            <label htmlFor="set-method" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Método de pago de deudas</label>
+            <select
+              id="set-method"
+              value={settings.debtMethod}
+              onChange={(e) => { setSettings({ debtMethod: e.target.value as DebtMethod }); syncToCloud(saveData, addToast); }}
+              className="saas-input-sm text-xs w-full"
+            >
+              <option value="snowball">Bola de nieve · menor saldo primero</option>
+              <option value="avalanche">Avalancha · mayor interés primero</option>
+            </select>
+          </div>
         </div>
-        <div>
-          <label htmlFor="set-extra" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Aporte extra mensual a deudas</label>
-          <input
-            id="set-extra"
-            type="text"
-            inputMode="decimal"
-            value={extra}
-            onChange={(e) => { if (soloDecimal(e.target.value)) setExtra(e.target.value); }}
-            onBlur={(e) => commit('extraPayment', e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-            placeholder="0"
-            className="saas-input-sm text-xs tabular-nums"
-          />
-        </div>
-        <div>
-          <label htmlFor="set-method" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Método de pago de deudas</label>
-          <select
-            id="set-method"
-            value={settings.debtMethod}
-            onChange={(e) => { setSettings({ debtMethod: e.target.value as DebtMethod }); syncToCloud(saveData, addToast); }}
-            className="saas-input-sm text-xs"
-          >
-            <option value="snowball">Bola de nieve · menor saldo primero</option>
-            <option value="avalanche">Avalancha · mayor interés primero</option>
-          </select>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

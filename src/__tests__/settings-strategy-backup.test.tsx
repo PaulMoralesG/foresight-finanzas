@@ -22,7 +22,7 @@ beforeEach(() => {
 
 describe('StrategySettings', () => {
   it('guarda meta, aporte extra y método en ajustes', async () => {
-    render(<StrategySettings saveData={saveData} />);
+    render(<StrategySettings abierto onToggle={() => {}} saveData={saveData} />);
     await userEvent.type(screen.getByLabelText('Meta de patrimonio neto'), '60000');
     await userEvent.tab();
     await userEvent.type(screen.getByLabelText('Aporte extra mensual a deudas'), '150');
