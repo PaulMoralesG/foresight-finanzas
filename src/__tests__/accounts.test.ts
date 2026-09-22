@@ -78,6 +78,27 @@ describe('helpers', () => {
   });
 });
 
+describe('financeStore.deleteAccount', () => {
+  it('no borra una cuenta con movimientos (ni como origen ni como destino) y no deja tombstone', () => {
+    const s = useFinanceStore.getState();
+    s.reset();
+    const origen = s.addAccount({ name: 'Origen', kind: 'Banco', initialBalance: 0 });
+    const destino = s.addAccount({ name: 'Destino', kind: 'Efectivo', initialBalance: 0 });
+    const libre = s.addAccount({ name: 'Libre', kind: 'Ahorros', initialBalance: 0 });
+    useFinanceStore.setState((st) => ({
+      expenses: [...st.expenses, mov({ type: 'transfer', amount: 10, accountId: origen, toAccountId: destino })],
+    }));
+
+    s.deleteAccount(origen);
+    s.deleteAccount(destino);
+    s.deleteAccount(libre);
+
+    const { accounts, tombstones } = useFinanceStore.getState();
+    expect(accounts.map((a) => a.id).sort()).toEqual([origen, destino].sort());
+    expect(Object.keys(tombstones)).toEqual([libre]);
+  });
+});
+
 describe('migración v9 del estado persistido (cuentas)', () => {
   it('añade accounts vacío y normaliza accountId/toAccountId en movimientos viejos', () => {
     const opciones = useFinanceStore.persist.getOptions();

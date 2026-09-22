@@ -400,29 +400,43 @@ let userId: string | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
 let pushInFlight: Promise<boolean> | null = null;
 let queuedAfterPush = false;
+let queuedFull = false; // el ciclo encolado debe ser completo
 let isSyncing = false; // evita auto-schedule durante merges internos
 let dirtyDuringSync = false; // el usuario editó mientras sincronizábamos
 let syncDisabled = false; // esquema no migrado → modo local-only
 let initialized = false;
 
-// ── Marca de agua del push (DAT-01) ──
+// ── Marca de agua del ciclo (DAT-01) ──
 //
-// pushAll() subía TODAS las filas vivas de las cinco tablas en cada ciclo, sin
-// distinguir qué había cambiado. Con 200 movimientos es imperceptible; con
-// 2000 —tres años de uso— cada guardado movía megabytes, y el debounce de
-// 800ms hace que ocurra a menudo: batería, plan de datos y cuota de Supabase.
+// pushAll() subía y pullAll() bajaba TODAS las filas de todas las tablas en
+// cada ciclo, sin distinguir qué había cambiado. Con 200 movimientos es
+// imperceptible; con 2000 —tres años de uso— cada guardado movía megabytes,
+// y el debounce de 800ms hace que ocurra a menudo: batería, plan de datos y
+// cuota de Supabase.
 //
-// Ahora solo se suben las filas con `updated_at` posterior al último push
-// confirmado. Es deliberadamente conservador y solo se aplica al PUSH:
+// La marca es el instante en que ARRANCÓ el último ciclo confirmado. Con ella:
 //
-//   · Subir de más es inofensivo (el trigger keep_newest de la migración 0004
-//     descarta lo rancio y el upsert es idempotente).
-//   · Subir de menos sí perdería datos — por eso cada `attach` (login) fuerza
-//     un push completo que reconcilia cualquier divergencia acumulada.
-//   · El PULL sigue siendo completo: leer de menos dejaría al cliente con un
-//     snapshot incompleto y el merge podría interpretar filas ausentes como
-//     inexistentes. Ese lado necesita un diseño aparte.
+//   · PUSH: solo se suben filas con `updated_at >= marca`. Subir de más es
+//     inofensivo (keep_newest descarta lo rancio, el upsert es idempotente).
+//   · PULL: solo se bajan filas con `updated_at >= marca − 5 min`. El merge
+//     tolera un snapshot parcial: una fila que no llega es "sin novedad
+//     remota" y gana la copia local, que es exactamente la que el servidor
+//     tiene. El margen cubre a otro dispositivo con el reloj algo atrasado
+//     (sus escrituras llevan marca de SU reloj). Un desfase mayor ya dispara
+//     el aviso de avisarSiElRelojVaMal.
+//   · Bajar o subir de menos sí perdería datos: por eso cada `attach`
+//     (login), cada vuelta a la pestaña y cada reconexión hacen un ciclo
+//     COMPLETO que reconcilia lo que el filtrado haya dejado atrás.
 let pushWatermark: string | null = null;
+
+/** Margen del pull incremental frente a relojes desfasados entre dispositivos. */
+const MARGEN_PULL_MS = 5 * 60_000;
+
+function marcaDePull(marca: string | null): string | null {
+  if (!marca) return null;
+  const t = Date.parse(marca);
+  return Number.isNaN(t) ? null : new Date(t - MARGEN_PULL_MS).toISOString();
+}
 
 function watermarkKey(uid: string): string {
   return `foresight-sync-watermark:${uid}`;
@@ -497,17 +511,20 @@ type TableName = 'expenses' | 'categories' | 'savings_goals' | 'budgets' | 'acco
 // pull y el siguiente.
 const PAGE_SIZE = 1000;
 
-/** Trae TODAS las filas de una tabla para un usuario, paginando en bloques
- *  de PAGE_SIZE con un orden estable (para que el corte entre páginas sea
- *  siempre el mismo, incluso si hay escrituras concurrentes). */
+/** Trae las filas de una tabla para un usuario (todas, o solo las
+ *  modificadas desde `since`), paginando en bloques de PAGE_SIZE con un
+ *  orden estable (para que el corte entre páginas sea siempre el mismo,
+ *  incluso si hay escrituras concurrentes). */
 async function fetchAllRows<T>(
   table: TableName,
   uid: string,
   orderColumns: string[],
+  since: string | null,
 ): Promise<T[]> {
   const out: T[] = [];
   for (let from = 0; ; from += PAGE_SIZE) {
     let query = supabase!.from(table).select('*').eq('user_id', uid);
+    if (since) query = query.gte('updated_at', since);
     for (const col of orderColumns) {
       query = query.order(col, { ascending: true });
     }
@@ -575,22 +592,23 @@ function avisarSiElRelojVaMal(snapshot: Snapshot) {
     );
 }
 
-async function pullAll(uid: string): Promise<Snapshot> {
+/** @param since  null = pull completo; si no, solo filas con `updated_at >= since`. */
+async function pullAll(uid: string, since: string | null): Promise<Snapshot> {
   const [expenses, categories, goals, budgets, accounts, debts, settings, assets, networth, budgetLines] = await Promise.all([
-    fetchAllRows<ExpenseRow>('expenses', uid, ['updated_at', 'id']),
-    fetchAllRows<CategoryRow>('categories', uid, ['updated_at', 'id']),
-    fetchAllRows<GoalRow>('savings_goals', uid, ['updated_at', 'id']),
+    fetchAllRows<ExpenseRow>('expenses', uid, ['updated_at', 'id'], since),
+    fetchAllRows<CategoryRow>('categories', uid, ['updated_at', 'id'], since),
+    fetchAllRows<GoalRow>('savings_goals', uid, ['updated_at', 'id'], since),
     // budgets no tiene columna `id` (PK compuesta user_id+month) — `month`
     // ya es único por usuario, así que sirve como desempate estable.
-    fetchAllRows<BudgetRow>('budgets', uid, ['month']),
-    fetchAllRows<AccountRow>('accounts', uid, ['updated_at', 'id']),
-    fetchAllRows<DebtRow>('debts', uid, ['updated_at', 'id']),
+    fetchAllRows<BudgetRow>('budgets', uid, ['month'], since),
+    fetchAllRows<AccountRow>('accounts', uid, ['updated_at', 'id'], since),
+    fetchAllRows<DebtRow>('debts', uid, ['updated_at', 'id'], since),
     // settings es una fila por usuario (PK user_id): 0 o 1 resultados.
-    fetchAllRows<SettingsRow>('settings', uid, ['user_id']),
-    fetchAllRows<AssetRow>('assets', uid, ['updated_at', 'id']),
+    fetchAllRows<SettingsRow>('settings', uid, ['user_id'], since),
+    fetchAllRows<AssetRow>('assets', uid, ['updated_at', 'id'], since),
     // networth: PK (user_id, month); `month` es único por usuario.
-    fetchAllRows<NetWorthRow>('networth', uid, ['month']),
-    fetchAllRows<BudgetLineRow>('budget_lines', uid, ['updated_at', 'id']),
+    fetchAllRows<NetWorthRow>('networth', uid, ['month'], since),
+    fetchAllRows<BudgetLineRow>('budget_lines', uid, ['updated_at', 'id'], since),
   ]);
 
   const snapshot = { expenses, categories, goals, budgets, accounts, debts, settings, assets, networth, budgetLines };
@@ -638,6 +656,35 @@ function scopeTombstones(flat: Record<string, string>, ids: Set<string>): Record
     if (at) scoped[id] = at;
   }
   return scoped;
+}
+
+/**
+ * Igualdad profunda que corta en cuanto encuentra la misma referencia.
+ * Tras un merge sin novedades cada item ganador ES el objeto local, así que
+ * el recorrido se queda en el `===` de cada elemento; solo baja al detalle
+ * en lo que de verdad cambió. Reemplaza a comparar `JSON.stringify` de todo
+ * el estado, que serializaba dos veces el historial completo en cada ciclo.
+ */
+export function igualEstructural(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  if (Array.isArray(a)) {
+    const arrB = b as unknown[];
+    if (a.length !== arrB.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (!igualEstructural(a[i], arrB[i])) return false;
+    }
+    return true;
+  }
+  const objA = a as Record<string, unknown>;
+  const objB = b as Record<string, unknown>;
+  const keysA = Object.keys(objA);
+  if (keysA.length !== Object.keys(objB).length) return false;
+  for (const k of keysA) {
+    if (!(k in objB) || !igualEstructural(objA[k], objB[k])) return false;
+  }
+  return true;
 }
 
 function universeOf<T extends { id: string }>(localLive: T[], remote: MergeSet<T>): Set<string> {
@@ -801,7 +848,7 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     budgets: state.budgets,
     budgetUpdatedAt: state.budgetUpdatedAt,
   };
-  if (JSON.stringify(next) !== JSON.stringify(current)) {
+  if (!igualEstructural(next, current)) {
     useFinanceStore.setState((currentState) => {
       // Preservar mutaciones locales que pudieron haber ocurrido mientras se
       // procesaba el merge: si una fila local no salió viva del merge y tampoco
@@ -952,7 +999,7 @@ async function pushWithRetry(uid: string, fullPush = false): Promise<boolean> {
       const startedAt = nowIso();
       const since = fullPush ? null : pushWatermark;
 
-      const snapshot = await pullAll(uid);
+      const snapshot = await pullAll(uid, marcaDePull(since));
       const merged = applyMerge(snapshot);
       await pushAll(uid, merged, since);
 
@@ -1049,15 +1096,18 @@ export const syncService = {
     if (initialized) return;
     initialized = true;
 
-    // ALT-3: flush del último cambio al cerrar/ocultar la pestaña o al volver online
+    // ALT-3: flush del último cambio al cerrar/ocultar la pestaña. Al volver a
+    // la pestaña o recuperar la red, ciclo COMPLETO: es el momento en que otro
+    // dispositivo pudo haber escrito mucho, y la red de seguridad del pull
+    // incremental (ver marca de agua).
     window.addEventListener('pagehide', () => {
       void syncService.flush();
     });
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') void syncService.flush();
+      void syncService.flush(document.visibilityState === 'visible');
     });
     window.addEventListener('online', () => {
-      void syncService.flush();
+      void syncService.flush(true);
     });
 
     // Auto-save: cualquier cambio de datos agenda un push (debounced)
@@ -1133,13 +1183,34 @@ export const syncService = {
     });
   },
 
-  /** Cancela el timer pendiente y pushea de inmediato (single-flight). */
-  flush(): Promise<boolean> {
+  /**
+   * Cancela el timer pendiente y sincroniza de inmediato. Resuelve cuando no
+   * queda NADA en vuelo: si mientras esperábamos se encoló otro ciclo (una
+   * edición que llegó con un push a medias), también lo espera. Antes
+   * devolvía la promesa del ciclo en curso, y signOut() borraba el estado
+   * local con esa última edición todavía sin subir.
+   *
+   * @param full  ciclo completo (pull y push sin marca de agua).
+   */
+  async flush(full = false): Promise<boolean> {
     if (timer) {
       clearTimeout(timer);
       timer = null;
     }
-    return performPush();
+    // Con un ciclo en vuelo, performPush encola uno y devuelve el actual.
+    let ok = await performPush(full);
+    // Al resolverse, el finally del ciclo pudo arrancar el encolado
+    // (pushInFlight) o agendar otro (timer) por una edición en vuelo: se
+    // esperan directamente —llamar a performPush encolaría uno más— hasta
+    // que un ciclo termine sin dejar nada detrás.
+    while (timer || pushInFlight) {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      ok = pushInFlight ? await pushInFlight : await performPush();
+    }
+    return ok;
   },
 
   /** Cancela el timer sin pushear. */
@@ -1157,6 +1228,7 @@ export const syncService = {
   detach(): void {
     syncService.cancel();
     queuedAfterPush = false;
+    queuedFull = false;
     dirtyDuringSync = false;
     // Borrar la marca de agua junto con el resto del estado de sesión: el
     // logout limpia los datos locales, así que conservarla solo abriría la
@@ -1179,6 +1251,7 @@ export const syncService = {
 async function performPush(fullPush = false): Promise<boolean> {
   if (pushInFlight) {
     queuedAfterPush = true;
+    queuedFull = queuedFull || fullPush;
     return pushInFlight;
   }
   if (!supabase || syncDisabled) return true;
@@ -1203,7 +1276,11 @@ async function performPush(fullPush = false): Promise<boolean> {
       }
       if (queuedAfterPush) {
         queuedAfterPush = false;
-        void performPush();
+        // El ciclo que arranca ahora ya ve todo lo editado durante éste.
+        dirtyDuringSync = false;
+        const full = queuedFull;
+        queuedFull = false;
+        void performPush(full);
       } else if (dirtyDuringSync) {
         dirtyDuringSync = false;
         void syncService.schedule();

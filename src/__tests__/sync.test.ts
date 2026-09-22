@@ -16,7 +16,7 @@ vi.mock('@/config/supabase', () => ({
   supabaseAvailable: true,
 }));
 
-import { syncService, isSchemaError, isTransientSchemaError, desfaseDeRelojMinutos } from '@/lib/sync';
+import { syncService, isSchemaError, isTransientSchemaError, desfaseDeRelojMinutos, igualEstructural } from '@/lib/sync';
 import { useFinanceStore } from '@/stores/financeStore';
 
 const mockFrom = (mocks.supabase as { from: ReturnType<typeof vi.fn> }).from;
@@ -34,6 +34,7 @@ function makeBuilder(resultByTable: Record<string, unknown[]> = {}) {
       eq: vi.fn(() => {
         const chain = {
           maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
+          gte: vi.fn(() => chain),
           order: vi.fn(() => chain),
           range: vi.fn(() => Promise.resolve({ data: resultByTable[table] ?? [], error: null })),
         };
@@ -219,6 +220,7 @@ describe('syncService', () => {
         eq: vi.fn(() => {
           const chain = {
             maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
+            gte: vi.fn(() => chain),
             order: vi.fn(() => chain),
             range: vi.fn((from: number, to: number) => {
               if (table !== 'expenses') return Promise.resolve({ data: [], error: null });
@@ -266,6 +268,7 @@ describe('syncService', () => {
               data: table === 'profiles' ? { legacy_imported: false } : null,
               error: null,
             })),
+            gte: vi.fn(() => chain),
             order: vi.fn(() => chain),
             range: vi.fn(() => Promise.resolve({ data: rows, error: null })),
           };
@@ -312,6 +315,7 @@ describe('syncService', () => {
             : [];
           const chain = {
             maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
+            gte: vi.fn(() => chain),
             order: vi.fn(() => chain),
             range: vi.fn(() => Promise.resolve({ data: rows, error: null })),
           };
@@ -367,6 +371,7 @@ describe('syncService', () => {
               data: table === 'profiles' ? { legacy_imported: true } : null,
               error: null,
             })),
+            gte: vi.fn(() => chain),
             order: vi.fn(() => chain),
             range: vi.fn(() => Promise.resolve({ data: [], error: null })),
           };
@@ -428,6 +433,118 @@ describe('syncService', () => {
     expect(thirdPush[0].rows.length).toBe(1); // solo la nueva, no las dos
   });
 
+  // Auditoría 2026-09: signOut() hace `await flush()` y luego borra el estado
+  // local. flush devolvía la promesa del ciclo EN CURSO, no la del encolado
+  // por una edición llegada a mitad de ciclo: esa edición se perdía.
+  it('flush no resuelve hasta que el ciclo encolado por una edición en vuelo también terminó', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((res) => {
+      release = res;
+    });
+    const upsertCalls: { table: string; rows: unknown[] }[] = [];
+
+    mockFrom.mockImplementation((table: string) => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => {
+          const chain = {
+            maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
+            gte: vi.fn(() => chain),
+            order: vi.fn(() => chain),
+            range: vi.fn(() => Promise.resolve({ data: [], error: null })),
+          };
+          return chain;
+        }),
+      })),
+      upsert: vi.fn((rows: unknown[]) => {
+        upsertCalls.push({ table, rows: rows as unknown[] });
+        return gate.then(() => ({ error: null }));
+      }),
+      update: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) })),
+    }));
+
+    useFinanceStore.getState().addTransaction({
+      type: 'expense', amount: 1, concept: 'Antes', date: '2026-08-01', category: 'food', method: 'cash', businessType: 'personal',
+    });
+    await vi.advanceTimersByTimeAsync(10);
+
+    const attachP = syncService.attach('user-1');
+    await tick(30);
+    expect(upsertCalls.filter((c) => c.table === 'expenses')).toHaveLength(1); // en vuelo, colgado en el gate
+
+    useFinanceStore.getState().addTransaction({
+      type: 'expense', amount: 42, concept: 'Editado durante el push', date: '2026-08-19', category: 'food', method: 'cash', businessType: 'personal',
+    });
+
+    const flushP = syncService.flush();
+    release();
+    await attachP;
+    await flushP;
+
+    // Sin ticks ni timers extra: al resolverse flush, la segunda edición ya viajó.
+    const expensesPushes = upsertCalls.filter((c) => c.table === 'expenses');
+    expect(expensesPushes).toHaveLength(2);
+    expect(expensesPushes[1].rows).toEqual([expect.objectContaining({ concept: 'Editado durante el push' })]);
+
+    // Y no queda nada pendiente que un reset() pudiera pisar.
+    upsertCalls.length = 0;
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(upsertCalls.filter((c) => c.table === 'expenses')).toHaveLength(0);
+  });
+
+  it('el pull es incremental (updated_at >= marca − 5 min) salvo en attach, al volver a la pestaña y al reconectar', async () => {
+    const gteCalls: { table: string; col: string; value: string }[] = [];
+    mockFrom.mockImplementation((table: string) => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => {
+          const chain = {
+            maybeSingle: vi.fn(() => Promise.resolve({
+              data: table === 'profiles' ? { legacy_imported: true } : null,
+              error: null,
+            })),
+            gte: vi.fn((col: string, value: string) => {
+              gteCalls.push({ table, col, value });
+              return chain;
+            }),
+            order: vi.fn(() => chain),
+            range: vi.fn(() => Promise.resolve({ data: [], error: null })),
+          };
+          return chain;
+        }),
+      })),
+      upsert: vi.fn(() => Promise.resolve({ error: null })),
+      update: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) })),
+    }));
+
+    const inicio = Date.now();
+    await syncService.attach('user-1'); // completo
+    expect(gteCalls).toHaveLength(0);
+
+    await vi.advanceTimersByTimeAsync(10);
+    await syncService.flush(); // incremental: 10 tablas filtradas
+    expect(gteCalls).toHaveLength(10);
+    expect(new Set(gteCalls.map((c) => c.table)).size).toBe(10);
+    expect(gteCalls.every((c) => c.col === 'updated_at')).toBe(true);
+    expect(gteCalls[0].value).toBe(new Date(inicio - 5 * 60_000).toISOString());
+
+    gteCalls.length = 0;
+    await syncService.flush(true); // completo explícito
+    expect(gteCalls).toHaveLength(0);
+
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    await vi.advanceTimersByTimeAsync(100);
+    expect(gteCalls).toHaveLength(0); // volver a la pestaña → completo
+
+    window.dispatchEvent(new Event('online'));
+    await vi.advanceTimersByTimeAsync(100);
+    expect(gteCalls).toHaveLength(0); // reconectar → completo
+
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    await vi.advanceTimersByTimeAsync(100);
+    expect(gteCalls.length).toBeGreaterThan(0); // ocultar → incremental, como siempre
+  });
+
   it('upsert de categories usa onConflict compuesto user_id,id', async () => {
     const upsertSpy = vi.fn(() => Promise.resolve({ error: null }));
     mockFrom.mockImplementation((_table: string) => ({
@@ -435,6 +552,7 @@ describe('syncService', () => {
         eq: vi.fn(() => {
           const chain = {
             maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
+            gte: vi.fn(() => chain),
             order: vi.fn(() => chain),
             range: vi.fn(() => Promise.resolve({ data: [], error: null })),
           };
@@ -533,5 +651,18 @@ describe('desfaseDeRelojMinutos', () => {
       categories: [fila(''), { updated_at: null } as never, fila('no es una fecha')],
     };
     expect(desfaseDeRelojMinutos(snap, ahora)).toBe(0);
+  });
+});
+
+describe('igualEstructural', () => {
+  it('compara por contenido y corta en la misma referencia', () => {
+    const item = { id: 'a', plan: { '2026-01': 1 } };
+    expect(igualEstructural({ x: [item] }, { x: [item] })).toBe(true);
+    expect(igualEstructural({ x: [item] }, { x: [{ id: 'a', plan: { '2026-01': 1 } }] })).toBe(true);
+    expect(igualEstructural({ x: [item] }, { x: [{ id: 'a', plan: { '2026-01': 2 } }] })).toBe(false);
+    expect(igualEstructural({ x: [item] }, { x: [item, item] })).toBe(false);
+    expect(igualEstructural({ a: 1 }, { a: 1, b: undefined })).toBe(false);
+    expect(igualEstructural([], {})).toBe(false);
+    expect(igualEstructural(null, {})).toBe(false);
   });
 });
