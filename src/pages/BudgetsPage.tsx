@@ -20,6 +20,7 @@ import { planFor, budgetStatus, actualFor, groupSummary, annualReport, monthsOfY
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { CardHeader } from '@/components/ui/CardHeader';
 import { ModalSheet } from '@/components/ui/ModalSheet';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ScopeBadge } from '@/components/ui/TransactionBits';
@@ -139,7 +140,7 @@ export function BudgetsPage() {
           <form onSubmit={handleSubmit} className="p-3 space-y-3 flex-1 overflow-y-auto">
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <span className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Ámbito</span>
+                <span className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Ámbito</span>
                 <div className="flex gap-1" role="group" aria-label="Ámbito">
                   {TAGS.map((t) => (
                     <button key={t} type="button" onClick={() => setFTag(t)}
@@ -150,7 +151,7 @@ export function BudgetsPage() {
                 </div>
               </div>
               <div>
-                <span className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Tipo</span>
+                <span className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Tipo</span>
                 <div className="flex gap-1" role="group" aria-label="Tipo de presupuesto">
                   {(['expense', 'income'] as const).map((k) => (
                     <button key={k} type="button" onClick={() => { setFKind(k); setFCat(catsFor(k)[0]?.id ?? ''); }}
@@ -162,7 +163,7 @@ export function BudgetsPage() {
               </div>
             </div>
             <div>
-              <label htmlFor="b-cat" className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Categoría</label>
+              <label htmlFor="b-cat" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Categoría</label>
               <select id="b-cat" value={fCat} onChange={(e) => setFCat(e.target.value)} className="saas-input py-1.5 text-sm">
                 {grupos(fKind).map(([g, cats]) => (
                   <optgroup key={g} label={g}>
@@ -172,9 +173,9 @@ export function BudgetsPage() {
               </select>
             </div>
             <div>
-              <label htmlFor="b-limit" className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Límite mensual</label>
+              <label htmlFor="b-limit" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Límite mensual</label>
               <input id="b-limit" type="text" inputMode="decimal" value={fLimit} onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setFLimit(e.target.value); }} className="saas-input py-1.5 text-sm font-bold tabular-nums" required />
-              <p className="text-2xs text-slate-500 dark:text-slate-400 mt-1">Es la base de cada mes; en "Plan 12 meses" puedes ajustar meses concretos.</p>
+              <p className="text-2xs text-slate-600 dark:text-slate-400 mt-1">Es la base de cada mes; en "Plan 12 meses" puedes ajustar meses concretos.</p>
             </div>
             <div className="flex gap-2 pt-1">
               <button type="button" onClick={() => setFormOpen(false)} className="saas-btn saas-btn-secondary flex-1 py-2 text-xs">Cancelar</button>
@@ -209,7 +210,7 @@ function EsteMes({ mk, setMk, lines, expenses, customCats, onEdit, onDelete }: {
   return (
     <>
       <div className="flex items-center gap-2">
-        <label htmlFor="sum-month" className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Mes</label>
+        <label htmlFor="sum-month" className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Mes</label>
         <select id="sum-month" value={mk} onChange={(e) => setMk(e.target.value)} className="saas-input-sm text-2xs">
           {meses.map((m) => <option key={m} value={m}>{monthKeyLabel(m)}</option>)}
         </select>
@@ -217,15 +218,14 @@ function EsteMes({ mk, setMk, lines, expenses, customCats, onEdit, onDelete }: {
 
       {/* Presupuestado vs. real por grupo */}
       <div className="saas-card p-4 animate-slide-up">
-        <h2 className="text-sm font-bold text-slate-900 dark:text-white">Presupuestado vs. real</h2>
-        <p className="text-2xs text-slate-500 dark:text-slate-400 mb-2">{monthKeyLabel(mk)} · por grupo</p>
+        <CardHeader titulo="Presupuestado vs. real" sub={`${monthKeyLabel(mk)} · por grupo`} className="mb-2" />
         {resumen.rows.length === 0 ? (
           <EmptyState variant="compact" title="Sin presupuestos ni movimientos en este mes." />
         ) : (
           <div className="saas-table-scroll">
             <table className="w-full text-xs">
               <thead>
-                <tr className="text-left text-2xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <tr className="text-left text-2xs uppercase tracking-wider text-slate-600 dark:text-slate-400">
                   <th className="py-1 pr-2 font-semibold saas-col-fija">Grupo</th>
                   <th className="py-1 font-semibold text-right">Presupuestado</th>
                   <th className="py-1 font-semibold text-right">Real</th>
@@ -264,7 +264,7 @@ function EsteMes({ mk, setMk, lines, expenses, customCats, onEdit, onDelete }: {
           </div>
         )}
         {resumen.plannedIncome > 0 && Math.abs(resumen.planResult) > 0.005 && (
-          <p className="text-2xs text-slate-500 dark:text-slate-400 mt-3">
+          <p className="text-2xs text-slate-600 dark:text-slate-400 mt-3">
             {resumen.planResult > 0
               ? `Te quedan ${formatMoney(resumen.planResult)} planificados sin destino. En base cero eso va a ahorro, inversión o deuda.`
               : `Tu plan gasta ${formatMoney(Math.abs(resumen.planResult))} más de lo que planificaste ingresar este mes.`}
@@ -278,9 +278,9 @@ function EsteMes({ mk, setMk, lines, expenses, customCats, onEdit, onDelete }: {
           const lista = lines.filter((l) => l.tag === tag && l.kind === 'expense');
           return (
             <div key={tag}>
-              <h3 className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">{tagLabel(tag)}</h3>
+              <h3 className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">{tagLabel(tag)}</h3>
               {lista.length === 0 ? (
-                <p className="text-xs text-slate-500 dark:text-slate-400 py-2">Sin presupuestos en {tagLabel(tag).toLowerCase()} todavía.</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400 py-2">Sin presupuestos en {tagLabel(tag).toLowerCase()} todavía.</p>
               ) : (
                 <div className="space-y-3">
                   {lista.map((l) => {
@@ -304,7 +304,7 @@ function EsteMes({ mk, setMk, lines, expenses, customCats, onEdit, onDelete }: {
                         {/* Cifra a 12px (es contenido, no rótulo) y acciones en su propia
                             fila en móvil: a 360px se partían en dos líneas junto a la cifra. */}
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 mt-1">
-                          <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
+                          <span className="text-xs text-slate-600 dark:text-slate-400 tabular-nums">
                             {formatMoney(spent)} de {formatMoney(limit)}{esActual ? ' este mes' : ` en ${monthKeyLabel(mk)}`}
                           </span>
                           <span className="flex gap-3">
@@ -329,7 +329,7 @@ function SeccionTabla({ titulo, colSpan, children }: { titulo: string; colSpan: 
   return (
     <>
       <tr>
-        <td colSpan={colSpan} className="pt-2 pb-0.5 text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{titulo}</td>
+        <td colSpan={colSpan} className="pt-2 pb-0.5 text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">{titulo}</td>
       </tr>
       {children}
     </>
@@ -342,7 +342,7 @@ function BarraAnio({ year, setYear, hint }: { year: number; setYear: (y: number)
       <button onClick={() => setYear(year - 1)} className="saas-btn-icon" aria-label="Año anterior"><ChevronLeft className="w-4 h-4" /></button>
       <strong className="tabular-nums text-sm">{year}</strong>
       <button onClick={() => setYear(year + 1)} className="saas-btn-icon" aria-label="Año siguiente"><ChevronRight className="w-4 h-4" /></button>
-      {hint && <span className="text-2xs text-slate-500 dark:text-slate-400">{hint}</span>}
+      {hint && <span className="text-2xs text-slate-600 dark:text-slate-400">{hint}</span>}
     </div>
   );
 }
@@ -386,7 +386,7 @@ function PlanAnual({ year, setYear, lines, customCats }: { year: number; setYear
             <div className="saas-table-scroll">
               <table className="text-xs min-w-[900px]">
                 <thead>
-                  <tr className="text-left text-2xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <tr className="text-left text-2xs uppercase tracking-wider text-slate-600 dark:text-slate-400">
                     <th className="py-1 pr-2 font-semibold min-w-[150px] saas-col-fija">Categoría</th>
                     {months.map((m) => <th key={m} className="py-1 px-1 font-semibold text-right">{MONTH_NAMES[parseInt(m.split('-')[1], 10) - 1].slice(0, 3)}</th>)}
                     <th className="py-1 pl-2 font-semibold text-right">Total</th>
@@ -468,7 +468,7 @@ function ReporteAnual({ year, setYear, expenses, customCats }: { year: number; s
             <div className="saas-table-scroll">
               <table className="text-xs min-w-[900px]">
                 <thead>
-                  <tr className="text-left text-2xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <tr className="text-left text-2xs uppercase tracking-wider text-slate-600 dark:text-slate-400">
                     <th className="py-1 pr-2 font-semibold min-w-[150px] saas-col-fija">Categoría</th>
                     {months.map((m) => <th key={m} className="py-1 px-1 font-semibold text-right">{MONTH_NAMES[parseInt(m.split('-')[1], 10) - 1].slice(0, 3)}</th>)}
                     <th className="py-1 pl-2 font-semibold text-right">Total</th>
@@ -509,7 +509,7 @@ function ReporteAnual({ year, setYear, expenses, customCats }: { year: number; s
                 </tbody>
               </table>
             </div>
-            <p className="text-2xs text-slate-500 dark:text-slate-400 mt-3">
+            <p className="text-2xs text-slate-600 dark:text-slate-400 mt-3">
               El promedio considera solo los meses con movimiento en esa categoría; el de los totales usa los 12 meses.
             </p>
           </>

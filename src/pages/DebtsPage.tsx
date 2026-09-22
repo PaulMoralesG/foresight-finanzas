@@ -20,6 +20,7 @@ import { escalaBonita, formatoTickDinero, trazarLinea } from '@/lib/chart-geomet
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { CardHeader } from '@/components/ui/CardHeader';
 import { ModalSheet } from '@/components/ui/ModalSheet';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ScopeBadge } from '@/components/ui/TransactionBits';
@@ -202,10 +203,10 @@ export function DebtsPage() {
 
           {/* Orden de pago */}
           <div className="saas-card p-4 animate-slide-up">
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white">Orden de pago</h2>
-            <p className="text-2xs text-slate-500 dark:text-slate-400 mb-2">
-              {method === 'snowball' ? 'De menor a mayor saldo — bola de nieve: victorias rápidas.' : 'Del interés más alto al más bajo — avalancha: menos intereses.'}
-            </p>
+            <CardHeader
+              titulo="Orden de pago"
+              sub={method === 'snowball' ? 'De menor a mayor saldo — bola de nieve: victorias rápidas.' : 'Del interés más alto al más bajo — avalancha: menos intereses.'}
+            />
             <ul className="divide-y divide-slate-100 dark:divide-slate-800">
               {ordered.map((d, i) => {
                 const months = plan.payoff[d.id];
@@ -216,7 +217,7 @@ export function DebtsPage() {
                       <p className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-1.5 flex-wrap">
                         {d.name} <ScopeBadge businessType={d.tag} />
                       </p>
-                      <p className="text-2xs text-slate-500 dark:text-slate-400">
+                      <p className="text-2xs text-slate-600 dark:text-slate-400">
                         {d.kind} · {d.annualRate}% anual · mínimo {formatMoney(d.minPayment)}{d.payDay ? ` · paga el ${d.payDay}` : ''}
                       </p>
                       <div className="flex gap-x-2 gap-y-1 mt-1.5 flex-wrap">
@@ -229,7 +230,7 @@ export function DebtsPage() {
                         de la referencia) en vez de estrangular el nombre. */}
                     <div className="w-full sm:w-auto flex sm:block items-baseline gap-2 sm:text-right flex-shrink-0 pl-9 sm:pl-0">
                       <p className="text-sm font-bold tabular-nums text-slate-900 dark:text-white">{formatMoney(d.balance)}</p>
-                      <p className="text-2xs text-slate-500 dark:text-slate-400">{months ? `libre en ${payoffDate(months)}` : 'sin proyección'}</p>
+                      <p className="text-2xs text-slate-600 dark:text-slate-400">{months ? `libre en ${payoffDate(months)}` : 'sin proyección'}</p>
                     </div>
                   </li>
                 );
@@ -244,7 +245,7 @@ export function DebtsPage() {
         <ModalSheet id="debt-form-title" titulo={editing ? 'Editar deuda' : 'Nueva deuda'} onClose={() => setFormOpen(false)} trapActivo={!confirmDelete} focoInicial="#d-name">
           <form onSubmit={handleSubmit} className="p-3 space-y-3 flex-1 overflow-y-auto">
             <div>
-              <span className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Ámbito</span>
+              <span className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Ámbito</span>
               <div className="flex gap-1" role="group" aria-label="Ámbito">
                 {(['personal', 'business'] as BusinessType[]).map((t) => (
                   <button key={t} type="button" onClick={() => setFTag(t)}
@@ -288,7 +289,7 @@ export function DebtsPage() {
       {paying && (
         <ModalSheet id="pay-form-title" titulo="Registrar pago" onClose={() => setPaying(null)} focoInicial="#p-amount">
           <form onSubmit={handlePay} className="p-3 space-y-3 flex-1 overflow-y-auto">
-            <p className="text-xs text-slate-500 dark:text-slate-400">{paying.name} · saldo actual {formatMoney(paying.balance)}</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400">{paying.name} · saldo actual {formatMoney(paying.balance)}</p>
             <div className="grid grid-cols-2 gap-2">
               <Campo id="p-date" label="Fecha">
                 <input id="p-date" type="date" value={pDate} onChange={(e) => setPDate(e.target.value)} className="saas-input py-1.5 text-sm" required />
@@ -309,7 +310,7 @@ export function DebtsPage() {
                 </select>
               </Campo>
             )}
-            <p className="text-2xs text-slate-500 dark:text-slate-400">
+            <p className="text-2xs text-slate-600 dark:text-slate-400">
               Baja el saldo de la deuda y, si lo registras como gasto, queda además como movimiento del mes{accounts.length > 0 ? ' (descontado de la cuenta que elijas)' : ''}.
             </p>
             <div className="flex gap-2 pt-1">
@@ -336,7 +337,7 @@ export function DebtsPage() {
 function Campo({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label htmlFor={id} className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">{label}</label>
+      <label htmlFor={id} className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">{label}</label>
       {children}
     </div>
   );
@@ -346,9 +347,9 @@ function Kpi({ label, value, sub, tone }: { label: string; value: string; sub: s
   const color = tone === 'good' ? 'text-income-600 dark:text-income-400' : tone === 'crit' ? 'text-expense-600 dark:text-expense-400' : 'text-slate-900 dark:text-white';
   return (
     <div className="saas-card p-4">
-      <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">{label}</p>
       <p className={`text-[clamp(1rem,4.6vw,1.25rem)] md:text-xl font-bold tabular-nums mt-1 whitespace-nowrap ${color}`}>{value}</p>
-      <p className="text-2xs text-slate-500 dark:text-slate-400 mt-0.5">{sub}</p>
+      <p className="text-2xs text-slate-600 dark:text-slate-400 mt-0.5">{sub}</p>
     </div>
   );
 }
@@ -395,10 +396,9 @@ function DebtCurveCard({ plan, method }: { plan: DebtPlan; method: DebtMethod })
 
   return (
     <div className="saas-card p-4 animate-slide-up">
-      <h2 className="text-sm font-bold text-slate-900 dark:text-white">Rumbo a cero</h2>
-      <p className="text-2xs text-slate-500 dark:text-slate-400 mb-2">Saldo total proyectado mes a mes</p>
+      <CardHeader titulo="Rumbo a cero" sub="Saldo total proyectado mes a mes" />
       <div ref={ref}>{contenido}</div>
-      <p className="text-2xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
+      <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 flex items-center gap-1.5">
         <span aria-hidden className="inline-block h-0 w-4 border-t-[3px]" style={{ borderColor: linea }} />
         Saldo total ({method === 'snowball' ? 'bola de nieve' : 'avalancha'})
       </p>
@@ -434,18 +434,18 @@ function MethodCompareCard({ plan, alt, method, onMethod, extra }: {
         {title}
         {active
           ? <span className="text-2xs font-semibold px-1.5 py-0.5 rounded-full bg-income-100 dark:bg-income-950 text-income-700 dark:text-income-400">en uso</span>
-          : <span className="text-2xs text-slate-500 dark:text-slate-400">tocar para usar</span>}
+          : <span className="text-2xs text-slate-600 dark:text-slate-400">tocar para usar</span>}
       </p>
       {!p.ok ? (
-        <p className="text-2xs text-slate-500 dark:text-slate-400 mt-1">El plan no cierra con estos pagos.</p>
+        <p className="text-2xs text-slate-600 dark:text-slate-400 mt-1">El plan no cierra con estos pagos.</p>
       ) : (
         <div className="grid grid-cols-2 gap-2 mt-1.5">
           <div>
-            <p className="text-2xs text-slate-500 dark:text-slate-400">Libre en</p>
+            <p className="text-2xs text-slate-600 dark:text-slate-400">Libre en</p>
             <p className="text-sm font-bold tabular-nums">{p.months} meses</p>
           </div>
           <div>
-            <p className="text-2xs text-slate-500 dark:text-slate-400">Intereses</p>
+            <p className="text-2xs text-slate-600 dark:text-slate-400">Intereses</p>
             <p className="text-sm font-bold tabular-nums">{formatMoney(p.totalInterest)}</p>
           </div>
         </div>
@@ -464,12 +464,9 @@ function MethodCompareCard({ plan, alt, method, onMethod, extra }: {
   return (
     <div className="saas-card p-4 animate-slide-up space-y-2">
       <div className="flex items-end justify-between gap-3 flex-wrap">
+        <CardHeader titulo="Bola de nieve vs. avalancha" sub="Con el mismo aporte extra" className="" />
         <div>
-          <h2 className="text-sm font-bold text-slate-900 dark:text-white">Bola de nieve vs. avalancha</h2>
-          <p className="text-2xs text-slate-500 dark:text-slate-400">Con el mismo aporte extra</p>
-        </div>
-        <div>
-          <label htmlFor="d-extra" className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-0.5 block">Aporte extra mensual</label>
+          <label htmlFor="d-extra" className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-0.5 block">Aporte extra mensual</label>
           <input
             id="d-extra"
             type="text"

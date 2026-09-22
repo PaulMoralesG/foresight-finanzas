@@ -230,7 +230,7 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
             onClick={() => setShowPassword(!showPassword)}
             aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
             aria-pressed={showPassword}
-            className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+            className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
           >
             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
@@ -300,7 +300,7 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
         )}
       </button>
 
-      <p className="text-center text-xs text-slate-500 dark:text-slate-400">
+      <p className="text-center text-xs text-slate-600 dark:text-slate-400">
         ¿Ya tienes cuenta?{' '}
         <button
           type="button"

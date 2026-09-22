@@ -43,18 +43,18 @@ export function EmptyState({
         <div
           className={
             compacto
-              ? 'mx-auto mb-1.5 w-6 h-6 text-slate-400 dark:text-slate-500'
+              ? 'mx-auto mb-1.5 w-6 h-6 text-slate-600 dark:text-slate-400'
               : 'w-12 h-12 mx-auto mb-3 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center'
           }
         >
-          <Icon className={compacto ? 'w-6 h-6' : 'text-slate-500 dark:text-slate-400 w-5 h-5'} />
+          <Icon className={compacto ? 'w-6 h-6' : 'text-slate-600 dark:text-slate-400 w-5 h-5'} />
         </div>
       ) : null}
 
       <p
         className={
           compacto
-            ? 'text-xs text-slate-500 dark:text-slate-400'
+            ? 'text-xs text-slate-600 dark:text-slate-400'
             : 'text-sm font-medium text-slate-600 dark:text-slate-400'
         }
       >
@@ -62,7 +62,7 @@ export function EmptyState({
       </p>
 
       {description && (
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 max-w-sm mx-auto">
+        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1.5 max-w-sm mx-auto">
           {description}
         </p>
       )}

@@ -84,7 +84,7 @@ export function BackupSettings({ saveData }: { saveData: () => Promise<boolean> 
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-slate-900 dark:text-white">Copia de seguridad</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">Descarga un respaldo cada cierto tiempo. Importar reemplaza lo que haya.</p>
+          <p className="text-xs text-slate-600 dark:text-slate-400">Descarga un respaldo cada cierto tiempo. Importar reemplaza lo que haya.</p>
         </div>
       </div>
       <div className="flex gap-2 flex-wrap">
