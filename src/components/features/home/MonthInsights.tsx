@@ -13,6 +13,7 @@ import { useUiStore } from '@/stores/uiStore';
 import { formatMoney, LOCALE, safeParseDate } from '@/lib/utils';
 import { getCategoryById } from '@/config/categories';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { coloresGrafica } from '@/lib/chart-colors';
 import { CardHeader } from '@/components/ui/CardHeader';
 import { TrendChart } from '@/components/features/stats/TrendChart';
 import type { PuntoTendencia } from '@/hooks/useStatsPeriod';
@@ -34,18 +35,7 @@ const metodo = (m: Transaction['method']) =>
 
 export function TrendCard({ trendData }: { trendData: PuntoTendencia[] }) {
   const isDark = useUiStore((s) => s.isDark);
-  // Colores resueltos aquí porque los atributos fill/stroke del SVG no
-  // entienden clases (ver TrendChart). Mismos valores que tenía Estadísticas.
-  const chart = {
-    tick: isDark ? '#a3a099' : '#5f5e58',
-    grid: isDark ? '#4a4944' : '#e6e4dd',
-    tipBg: isDark ? '#232320' : '#ffffff',
-    tipFg: isDark ? '#f3f2ee' : '#1a1a19',
-    tipLabel: isDark ? '#cfccc2' : '#4a4944',
-    income: '#1baf7a',
-    expense: '#e34948',
-    balance: isDark ? '#cfccc2' : '#4a4944',
-  };
+  const chart = coloresGrafica(isDark);
 
   return (
     <div className="saas-card p-4 animate-slide-up">

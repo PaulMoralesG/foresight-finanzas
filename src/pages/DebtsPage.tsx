@@ -20,6 +20,7 @@ import { escalaBonita, formatoTickDinero, trazarLinea } from '@/lib/chart-geomet
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { coloresGrafica } from '@/lib/chart-colors';
 import { CardHeader } from '@/components/ui/CardHeader';
 import { ModalSheet } from '@/components/ui/ModalSheet';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -361,9 +362,7 @@ function DebtCurveCard({ plan, method }: { plan: DebtPlan; method: DebtMethod })
   const data = plan.schedule.slice(0, Math.min(plan.schedule.length, 121));
   const H = 190, padL = 52, padR = 12, padB = 26, padT = 10;
   const innerH = H - padT - padB;
-  const grid = isDark ? '#4a4944' : '#e6e4dd';
-  const tick = isDark ? '#a3a099' : '#5f5e58';
-  const linea = '#1baf7a';
+  const { grid, tick, income: linea } = coloresGrafica(isDark);
 
   let contenido: React.ReactNode;
   if (data.length < 2) {

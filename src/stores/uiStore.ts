@@ -65,16 +65,6 @@ interface UiState {
   syncState: 'idle' | 'syncing' | 'error' | 'local-only';
   setSyncState: (state: UiState['syncState']) => void;
 
-  // --- Filtros de estadísticas ---
-  statsMode: 'month' | 'range';
-  statsMonth: number;
-  statsYear: number;
-  statsFromDate: string | null;
-  statsToDate: string | null;
-  setStatsMode: (mode: 'month' | 'range') => void;
-  setStatsMonth: (month: number) => void;
-  setStatsYear: (year: number) => void;
-  setStatsRange: (from: string | null, to: string | null) => void;
 }
 
 let toastId = 0;
@@ -154,14 +144,4 @@ export const useUiStore = create<UiState>((set) => ({
   syncState: 'idle',
   setSyncState: (state) => set({ syncState: state }),
 
-  // Stats filters
-  statsMode: 'month',
-  statsMonth: new Date().getMonth(),
-  statsYear: new Date().getFullYear(),
-  statsFromDate: null,
-  statsToDate: null,
-  setStatsMode: (mode) => set({ statsMode: mode }),
-  setStatsMonth: (month) => set({ statsMonth: month }),
-  setStatsYear: (year) => set({ statsYear: year }),
-  setStatsRange: (from, to) => set({ statsFromDate: from, statsToDate: to }),
 }));
