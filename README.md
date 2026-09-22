@@ -12,12 +12,19 @@ Todo desde una sola app, instalable en tu celular, que funciona incluso sin cone
 
 ## Qué incluye
 
-- **Dashboard** — Saldo del mes, ingresos vs gastos, presupuesto configurable y top de categorías
-- **Movimientos** — Alta, edición y baja de transacciones. Filtros por tipo, categoría, negocio/personal y búsqueda libre
-- **Estadísticas** — Gráfica de tendencia 6 meses, distribución por categoría, día de mayor gasto y promedio diario
-- **Exportación** — Reportes en PDF y Excel, ordenados cronológicamente. El PDF sale del diálogo de impresión del navegador ("Guardar como PDF"), con una hoja de estilos de impresión propia; el Excel (CSV) se descarga como archivo en escritorio y en móvil abre el menú nativo para guardar o compartir (WhatsApp, Archivos, AirDrop)
-- **Negocio vs Personal** — Cada transacción se etiqueta. El dashboard muestra la utilidad del negocio separada de tus finanzas personales
-- **Categorías personalizadas** — Creá, edita y eliminá tus propias categorías de gasto e ingreso
+Ocho vistas en dos secciones, **Día a día** y **Patrimonio**:
+
+- **Resumen** — Saldo total y del mes, ingresos vs gastos, resultado del negocio, evolución de seis meses, categorías principales, presupuestos a vigilar, deudas y metas
+- **Movimientos** — Alta, edición y baja de transacciones y transferencias entre cuentas. Filtros por tipo, categoría, cuenta, negocio/personal y búsqueda libre
+- **Presupuestos** — Presupuesto por categoría y ámbito, plan de 12 meses y reporte anual (matriz categoría × mes)
+- **Deudas** — Saldo, interés y mínimo por deuda; orden de pago bola de nieve / avalancha y curva "rumbo a cero"
+- **Metas** — Metas de ahorro con fecha objetivo, aporte mensual necesario y registro de aportes desde una cuenta
+- **Patrimonio** — Cuentas + activos − deudas, con cierre mensual automático y curva histórica
+- **Cuentas** — Efectivo, banco, tarjeta y ahorros con saldo derivado de los movimientos
+- **Ajustes** — Método de deuda, aporte extra, meta de patrimonio, copia de seguridad JSON y cuenta
+- **Exportación** — Reporte mensual en PDF y Excel. El PDF sale del diálogo de impresión del navegador ("Guardar como PDF"), con una hoja de estilos de impresión propia; el Excel (CSV) se descarga como archivo en escritorio y en móvil abre el menú nativo para guardar o compartir
+- **Negocio vs Personal** — Cada transacción, presupuesto, deuda, activo y meta se etiqueta; el resumen muestra la utilidad del negocio separada de tus finanzas personales
+- **Categorías personalizadas** — Creá, edita y eliminá tus propias categorías de gasto e ingreso, agrupadas como en el reporte
 - **Modo oscuro** — Tema claro/oscuro con detección automática de la preferencia del sistema
 - **PWA** — Se instala en el celular como una app nativa. Funciona offline con almacenamiento local
 - **Nube** — Sincronización con Supabase. Si no hay conexión, sigue funcionando y sincroniza después
@@ -67,10 +74,11 @@ antes de desplegar — ver la sección siguiente.
 `vercel.json`. CI (`.github/workflows/ci.yml`) corre type-check, lint, tests
 y build en cada push/PR contra `main`.
 
-## Migración de Supabase (v2.1)
+## Migración de Supabase
 
-La v2.1 reemplaza el almacenamiento en blobs JSON de `profiles` por **tablas por entidad**
-(`expenses`, `categories`, `savings_goals`, `budgets`) con RLS por fila
+La v2.1 reemplazó el almacenamiento en blobs JSON de `profiles` por **tablas por entidad**
+(`expenses`, `categories`, `savings_goals`, `budgets`; la fase 3 añadió `accounts`,
+`debts`, `settings`, `assets`, `networth` y `budget_lines`) con RLS por fila
 (`user_id = auth.uid()`) y `profiles` claveado por `id` (auth.uid).
 
 **Orden de deploy (importante):**
@@ -105,28 +113,23 @@ en modo local-only y lo indica en consola.
 
 **Sync:** pull-then-push con merge determinista por fila (`updated_at` más nuevo gana;
 borrados lógicos con `deleted_at` para propagar eliminaciones sin resurrecciones).
-Flush automático en `pagehide` / `visibilitychange` / `online` y antes de cerrar sesión.
 
-El **push es incremental**: solo viajan las filas modificadas desde el último push
-confirmado. El **pull sigue siendo completo** a propósito — leer de menos dejaría al
-cliente con un snapshot parcial y el merge podría interpretar filas ausentes como
-inexistentes. Cada login fuerza un push completo que reconcilia cualquier divergencia.
-
-### Recordatorios de pago (retirados en la 0006)
-
-Existió una tabla `reminders` con su lógica de store, pero **ninguna pantalla llegó a
-usarla**: solo estaba cableado el lado de lectura (un badge y un aviso), así que no había
-forma de crear un recordatorio. Mientras tanto costaba tabla, RLS, índice, tombstones y un
-viaje de ida y vuelta en cada sincronización.
-
-No se retiró por considerarla una mala función —los avisos de vencimiento son estándar en
-la categoría—, sino porque una versión inalcanzable no compensa su coste. Si se retoma,
-el diseño correcto son gastos recurrentes con aviso real (notificaciones push), no lo que
-había. El código sigue en el historial de git.
+Pull y push son **incrementales**: solo viajan las filas modificadas desde el inicio del
+último ciclo confirmado (el pull resta 5 minutos de margen por relojes desfasados entre
+dispositivos). Iniciar sesión, volver a la pestaña y recuperar la red hacen un ciclo
+**completo** que reconcilia lo que el filtrado haya dejado atrás. Al ocultar o cerrar la
+pestaña, y antes de cerrar sesión, se hace flush; el flush no termina hasta que no queda
+ningún ciclo en vuelo ni agendado, porque el cierre de sesión borra la copia local justo
+después.
 
 ## Seguridad
 
-- **RLS** en las cinco tablas con `USING` y `WITH CHECK` (`auth.uid() = user_id`).
+- **RLS** en todas las tablas con `USING` y `WITH CHECK` (`(select auth.uid()) = user_id`),
+  `grant` explícito por tabla (la 0004 revocó los privilegios por defecto) y trigger
+  `keep_newest` contra escrituras rancias. `error_log` solo admite `insert`.
+- **Protección contra contraseñas filtradas**: activarla en Supabase → Authentication →
+  Policies (*Leaked password protection*, comprueba contra HaveIBeenPwned). Es un ajuste
+  del panel, no del código; el advisor de seguridad de Supabase lo señala si está apagada.
 - **Cambio de contraseña con reautenticación**: exige la contraseña actual. Conviene
   además activar *Secure password change* en Supabase → Authentication → Providers.
 - **Política de contraseñas** en `src/lib/password.ts` (mínimo 8 caracteres). El valor
