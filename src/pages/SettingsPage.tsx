@@ -16,7 +16,7 @@ import { CategoryManager } from '@/components/features/categories/CategoryManage
 import { StrategySettings } from '@/components/features/settings/StrategySettings';
 import { BackupSettings } from '@/components/features/settings/BackupSettings';
 
-type Section = 'profile' | 'email' | 'password' | 'categories' | null;
+type Section = 'profile' | 'email' | 'password' | 'strategy' | 'categories' | null;
 
 export function SettingsPage() {
   const { signOut, updateProfile, updateEmail, updatePassword, saveData } = useAuth();
@@ -478,7 +478,11 @@ export function SettingsPage() {
         <div className="px-4 pt-5 pb-2">
           <p className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Metas y estrategia</p>
         </div>
-        <StrategySettings saveData={saveData} />
+        <StrategySettings
+          abierto={expanded === 'strategy'}
+          onToggle={() => toggleSection('strategy')}
+          saveData={saveData}
+        />
 
         {/* ─── Personalización ─── */}
         <div className="px-4 pt-5 pb-2">
