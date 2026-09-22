@@ -32,6 +32,7 @@ detectan tablas sin RLS y políticas rotas sin leer una línea:
 - `error_log`: solo `insert`; sin política de `select`.
 - Funciones `security definer` con `search_path` fijo y sin `execute` público.
 - Nada sensible en `error-reporter.ts` más allá de mensaje/stack/url/user-agent.
+- Contraseñas nuevas pasan por `validateNewPasswordOnline` (política local + HaveIBeenPwned por k-anonimato) en `SignUpForm` y `SettingsPage`; `api.pwnedpasswords.com` en el `connect-src` de `vercel.json`. El WARN *leaked password protection* del advisor es del plan Free (la opción es Pro), no un pendiente.
 
 ### Integridad (carreras y escrituras sin control)
 - `flush()` no resuelve hasta que **no queda nada en vuelo ni agendado**: `signOut()` borra el estado local justo después (`useAuth.ts`). Test: `sync.test.ts` "flush no resuelve hasta que el ciclo encolado…".

@@ -127,9 +127,15 @@ después.
 - **RLS** en todas las tablas con `USING` y `WITH CHECK` (`(select auth.uid()) = user_id`),
   `grant` explícito por tabla (la 0004 revocó los privilegios por defecto) y trigger
   `keep_newest` contra escrituras rancias. `error_log` solo admite `insert`.
-- **Protección contra contraseñas filtradas**: activarla en Supabase → Authentication →
-  Policies (*Leaked password protection*, comprueba contra HaveIBeenPwned). Es un ajuste
-  del panel, no del código; el advisor de seguridad de Supabase lo señala si está apagada.
+- **Contraseñas filtradas**: al registrarse y al cambiar la contraseña, el cliente la
+  comprueba contra la API *Pwned Passwords* de HaveIBeenPwned por k-anonimato (viajan
+  solo los 5 primeros caracteres del SHA-1; la comparación es local) y rechaza las que
+  aparecen en filtraciones (`leakedPasswordCount` en `src/lib/password.ts`). Es
+  *fail-open*: sin red o con la API caída no bloquea. La opción equivalente de Supabase
+  (*Leaked password protection*, en Authentication → Sign In / Providers → Email) valida en
+  el servidor pero exige plan Pro; el advisor de seguridad seguirá señalándola apagada en
+  el plan Free. Los usuarios existentes no se ven afectados: solo se comprueba una
+  contraseña nueva.
 - **Cambio de contraseña con reautenticación**: exige la contraseña actual. Conviene
   además activar *Secure password change* en Supabase → Authentication → Providers.
 - **Política de contraseñas** en `src/lib/password.ts` (mínimo 8 caracteres). El valor

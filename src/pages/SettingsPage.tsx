@@ -9,7 +9,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
 import { supabaseAvailable } from '@/config/supabase';
 import { userInitials } from '@/lib/utils';
-import { MIN_PASSWORD_LENGTH, STRENGTH_TRACK_CLASS, passwordStrength, validateNewPassword } from '@/lib/password';
+import { MIN_PASSWORD_LENGTH, STRENGTH_TRACK_CLASS, passwordStrength, validateNewPasswordOnline } from '@/lib/password';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { CategoryManager } from '@/components/features/categories/CategoryManager';
@@ -111,17 +111,18 @@ export function SettingsPage() {
       addToast('Ingresa tu contraseña actual', 'error');
       return;
     }
-    const pwError = validateNewPassword(newPassword);
-    if (pwError) {
-      addToast(pwError, 'error');
-      return;
-    }
     if (newPassword !== confirmPassword) {
       addToast('Las contraseñas no coinciden', 'error');
       return;
     }
     setSavingPassword(true);
     try {
+      // Política local + filtraciones conocidas (HaveIBeenPwned)
+      const pwError = await validateNewPasswordOnline(newPassword);
+      if (pwError) {
+        addToast(pwError, 'error');
+        return;
+      }
       const result = await updatePassword(currentPassword, newPassword);
       if (result.success) {
         addToast(result.message, 'success');

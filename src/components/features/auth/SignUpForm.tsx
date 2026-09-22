@@ -5,7 +5,7 @@
 import { useState, type FormEvent, useRef } from 'react';
 import { Eye, EyeOff, MailCheck, AlertCircle, Loader2, UserPlus } from '@/components/ui/icons.generated';
 import { useAuth } from '@/hooks/useAuth';
-import { MIN_PASSWORD_LENGTH, STRENGTH_TRACK_CLASS, passwordStrength, validateNewPassword } from '@/lib/password';
+import { MIN_PASSWORD_LENGTH, STRENGTH_TRACK_CLASS, passwordStrength, validateNewPassword, leakedPasswordCount, LEAKED_PASSWORD_MESSAGE } from '@/lib/password';
 
 /** Traduce errores de Supabase a español amigable */
 function signUpErrorToSpanish(err: unknown): string {
@@ -110,6 +110,13 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
     }
 
     setLoading(true);
+    // Filtraciones conocidas (HaveIBeenPwned): antes de tocar Supabase y sin
+    // contar como intento fallido de registro.
+    if ((await leakedPasswordCount(password)) > 0) {
+      setError(LEAKED_PASSWORD_MESSAGE);
+      setLoading(false);
+      return;
+    }
     try {
       const data = await signUp(email.trim(), password, firstName.trim(), lastName.trim());
       attemptRef.current = 0;
