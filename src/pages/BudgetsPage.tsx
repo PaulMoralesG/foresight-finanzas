@@ -13,7 +13,7 @@ import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
 import { formatMoney, parseMoneyInput, roundMoney, syncToCloud, MONTH_NAMES } from '@/lib/utils';
-import { currentMonthKey, shiftMonthKey, monthKeyLabel } from '@/hooks/useBudget';
+import { currentMonthKey, shiftMonthKey, monthKeyLabel } from '@/lib/month-keys';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, getCategoryById, DEFAULT_GROUP } from '@/config/categories';
 import { planFor, budgetStatus, actualFor, groupSummary, annualReport, monthsOfYear } from '@/lib/budget-lines';
 import { useEscapeKey } from '@/hooks/useEscapeKey';

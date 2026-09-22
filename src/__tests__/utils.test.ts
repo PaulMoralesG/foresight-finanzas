@@ -10,7 +10,6 @@ import {
   getTodayISO,
   MONTH_NAMES,
   safeParseDate,
-  formatDateLong,
   userInitials,
 } from '@/lib/utils';
 
@@ -132,16 +131,6 @@ describe('safeParseDate', () => {
     expect(result.getFullYear()).toBe(2026);
     expect(result.getMonth()).toBe(1);
     expect(result.getDate()).toBe(13);
-  });
-});
-
-// ─── formatDateLong ─────────────────────────────────────────────
-
-describe('formatDateLong', () => {
-  it('formatea fecha en español', () => {
-    expect(formatDateLong('2026-07-15')).toBe('15 de Julio 2026');
-    expect(formatDateLong('2026-01-01')).toBe('1 de Enero 2026');
-    expect(formatDateLong('2026-12-31')).toBe('31 de Diciembre 2026');
   });
 });
 

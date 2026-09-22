@@ -152,17 +152,6 @@ export function safeParseDate(iso: string): Date {
   return new Date(y, m - 1, d);
 }
 
-/**
- * Formatea una fecha ISO en texto largo: "1 de Mayo 2026".
- * Parsea manualmente para evitar bugs de zona horaria (new Date(iso+'T00:00:00') trata como UTC).
- */
-export function formatDateLong(iso: string): string {
-  // Tomar solo YYYY-MM-DD (soporta ISO completo)
-  const datePart = iso.substring(0, 10);
-  const [year, month, day] = datePart.split('-').map(Number);
-  return `${day} de ${MONTH_NAMES[month - 1]} ${year}`;
-}
-
 export type DownloadOutcome = 'downloaded' | 'shared' | 'cancelled';
 
 /**

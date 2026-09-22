@@ -1,5 +1,5 @@
 // ================================================================
-// TESTS — BudgetsPage (Presupuestos por categoría), migración v12 y useBudget
+// TESTS — BudgetsPage (Presupuestos por categoría) y migración v12
 // Sustituye al test del editor de presupuesto global de "Planes".
 // ================================================================
 
@@ -9,8 +9,7 @@ import userEvent from '@testing-library/user-event';
 import { BudgetsPage } from '@/pages/BudgetsPage';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { currentMonthKey, useBudget } from '@/hooks/useBudget';
-import { renderHook } from '@testing-library/react';
+import { currentMonthKey } from '@/lib/month-keys';
 import type { Transaction } from '@/types';
 
 const ESTE_MES = currentMonthKey();
@@ -117,7 +116,7 @@ describe('BudgetsPage — Plan 12 meses y Reporte anual', () => {
   });
 });
 
-describe('migración v12 y useBudget', () => {
+describe('migración v12', () => {
   it('convierte el presupuesto global en líneas por categoría al migrar', () => {
     const opciones = useFinanceStore.persist.getOptions();
     expect(opciones.version).toBeGreaterThanOrEqual(12);
@@ -131,15 +130,5 @@ describe('migración v12 y useBudget', () => {
     ) as { budgetLines: Array<{ categoryId: string; plan: Record<string, number> }>; budgets: Record<string, number> };
     expect(migrado.budgetLines.map((l) => [l.categoryId, l.plan['2026-08']]).sort()).toEqual([['comida', 600], ['ropa', 200]]);
     expect(migrado.budgets).toEqual({ '2026-08': 800 }); // el mapa antiguo no se pierde
-  });
-
-  it('useBudget suma las líneas de gasto del mes y cae al mapa antiguo si no hay líneas', () => {
-    useFinanceStore.setState({ budgets: { [ESTE_MES]: 1500 }, budgetLines: [] });
-    expect(renderHook(() => useBudget(ESTE_MES)).result.current.budget).toBe(1500);
-
-    useFinanceStore.getState().addBudgetLine({ tag: 'personal', kind: 'expense', categoryId: 'comida', limit: 500, plan: {} });
-    useFinanceStore.getState().addBudgetLine({ tag: 'business', kind: 'expense', categoryId: 'impuestos', limit: 200, plan: { [ESTE_MES]: 250 } });
-    useFinanceStore.getState().addBudgetLine({ tag: 'personal', kind: 'income', categoryId: 'sueldo', limit: 9999, plan: {} });
-    expect(renderHook(() => useBudget(ESTE_MES)).result.current.budget).toBe(750);
   });
 });

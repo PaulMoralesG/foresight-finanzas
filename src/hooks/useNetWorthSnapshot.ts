@@ -11,7 +11,7 @@
 import { useEffect } from 'react';
 import { useFinanceStore } from '@/stores/financeStore';
 import { netWorthNow, needsSnapshot } from '@/lib/networth';
-import { currentMonthKey } from '@/hooks/useBudget';
+import { currentMonthKey } from '@/lib/month-keys';
 
 const DEBOUNCE_MS = 1200;
 
