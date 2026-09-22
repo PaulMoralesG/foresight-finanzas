@@ -11,9 +11,11 @@ import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useMonthlyData } from '@/hooks/useFinance';
 import { mesDeLaVista, monthKeyLabel } from '@/lib/month-keys';
+import { proximaFecha } from '@/lib/recurrence';
+import { filtrarPorAmbito } from '@/lib/ambito';
 import { useAmbito, useBudgetLinesEnAmbito, useDebtsEnAmbito, useExpensesEnAmbito, useGoalsEnAmbito } from '@/hooks/useAmbito';
 import { useStatsPeriod, pctChange } from '@/hooks/useStatsPeriod';
-import { formatMoney, LOCALE, safeParseDate } from '@/lib/utils';
+import { formatMoney, LOCALE, safeParseDate, getTodayISO, roundMoney } from '@/lib/utils';
 import { goalMath, goalTotals } from '@/lib/goals';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, getCategoryById } from '@/config/categories';
 import { MonthNav } from '@/components/layout/MonthNav';
@@ -572,6 +574,7 @@ export function HomePage() {
         </div>
         <div className="space-y-4">
           <BudgetWatchlist />
+          <ProximosCargos />
           <SavingsGoalWidget />
         </div>
       </div>
@@ -646,6 +649,67 @@ function SavingsGoalWidget() {
       >
         Ver metas →
       </button>
+    </div>
+  );
+}
+
+/* ─── Próximos cargos: lo que las recurrencias registrarán solas ─── */
+function ProximosCargos() {
+  const recurrences = useFinanceStore((s) => s.recurrences);
+  const ambito = useAmbito();
+  const navigateTo = useUiStore((s) => s.navigateTo);
+
+  const proximos = useMemo(() => {
+    const hoy = getTodayISO();
+    const limite = new Date();
+    limite.setDate(limite.getDate() + 30);
+    const hasta = `${limite.getFullYear()}-${String(limite.getMonth() + 1).padStart(2, '0')}-${String(limite.getDate()).padStart(2, '0')}`;
+    return filtrarPorAmbito(recurrences, ambito, (r) => r.businessType)
+      .map((r) => ({ r, fecha: proximaFecha(r, hoy) }))
+      .filter((x): x is { r: typeof recurrences[number]; fecha: string } => !!x.fecha && x.fecha <= hasta)
+      .sort((a, b) => a.fecha.localeCompare(b.fecha));
+  }, [recurrences, ambito]);
+
+  if (proximos.length === 0) return null;
+
+  const salidas = roundMoney(
+    proximos.filter((x) => x.r.type === 'expense').reduce((acc, x) => acc + x.r.amount, 0),
+  );
+
+  return (
+    <div className="saas-card p-4 animate-slide-up">
+      <CardHeader
+        titulo="Próximos cargos"
+        sub="Lo que se registrará solo en los próximos 30 días"
+        accion={
+          <button
+            onClick={() => navigateTo('movements' as TabId)}
+            className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline flex-shrink-0"
+          >
+            Ver todo
+          </button>
+        }
+      />
+      <ul className="space-y-1.5">
+        {proximos.slice(0, 4).map(({ r, fecha }) => (
+          <li key={r.id} className="flex items-center justify-between gap-2 text-xs">
+            <span className="truncate text-slate-700 dark:text-slate-300">
+              {r.concept || r.category}{' '}
+              <span className="text-slate-600 dark:text-slate-400">
+                · {safeParseDate(fecha).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })}
+              </span>
+            </span>
+            <span className={`tabular-nums flex-shrink-0 font-semibold ${r.type === 'income' ? 'text-income-600 dark:text-income-400' : 'text-slate-900 dark:text-white'}`}>
+              {r.type === 'income' ? '+' : '−'}{formatMoney(r.amount)}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {salidas > 0 && (
+        <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 tabular-nums">
+          Salidas previstas: {formatMoney(salidas)}
+        </p>
+      )}
     </div>
   );
 }

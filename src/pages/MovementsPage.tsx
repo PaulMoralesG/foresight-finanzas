@@ -6,6 +6,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Layers, ArrowDown, ArrowUp, Plus, X, Search, Receipt, ChevronUp, ChevronDown, Trash2 } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useExpensesDelMesEnAmbito } from '@/hooks/useAmbito';
+import { RecurrencesPanel } from '@/components/features/movements/RecurrencesPanel';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
 import { formatMoney, LOCALE, roundMoney, safeParseDate, syncToCloud } from '@/lib/utils';
@@ -29,6 +30,7 @@ const FILTER_TYPE_IDS = ['all', 'income', 'expense', 'business', 'personal'] as 
 
 export function MovementsPage() {
   const setAmbito = useFinanceStore((s) => s.setAmbito);
+  const recurrences = useFinanceStore((s) => s.recurrences);
   const currentViewDate = useFinanceStore((s) => s.currentViewDate);
   const currentFilter = useFinanceStore((s) => s.currentFilter);
   const setFilter = useFinanceStore((s) => s.setFilter);
@@ -41,6 +43,7 @@ export function MovementsPage() {
 
   const [sortField, setSortField] = useState<'date' | 'amount'>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [vista, setVista] = useState<'lista' | 'recurrentes'>('lista');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [accountFilter, setAccountFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -188,8 +191,19 @@ export function MovementsPage() {
   const totalIncome = roundMoney(filtered.filter((i) => i.type === 'income').reduce((s, i) => s + i.amount, 0));
   const totalExpense = roundMoney(filtered.filter((i) => i.type === 'expense').reduce((s, i) => s + i.amount, 0));
 
+  if (vista === 'recurrentes') {
+    return (
+      <div className="space-y-2.5 animate-fade-in">
+        <SubPestanas vista={vista} setVista={setVista} recurrentes={recurrences.length} />
+        <RecurrencesPanel />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2 sm:space-y-2.5 animate-fade-in">
+      <SubPestanas vista={vista} setVista={setVista} recurrentes={recurrences.length} />
+
       {/* Page header: MonthNav + contextual "Nueva" */}
       <div className="flex items-center justify-between gap-2">
         <MonthNav />
@@ -685,6 +699,32 @@ export function MovementsPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ─── Sub-pestañas: la lista del mes y las reglas que se repiten ─── */
+function SubPestanas({ vista, setVista, recurrentes }: {
+  vista: 'lista' | 'recurrentes';
+  setVista: (v: 'lista' | 'recurrentes') => void;
+  recurrentes: number;
+}) {
+  return (
+    <div className="flex gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 w-fit" role="tablist" aria-label="Vista de movimientos">
+      {([['lista', 'Movimientos'], ['recurrentes', 'Recurrentes']] as ['lista' | 'recurrentes', string][]).map(([id, label]) => (
+        <button
+          key={id}
+          role="tab"
+          aria-selected={vista === id}
+          onClick={() => setVista(id)}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${vista === id ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-400'}`}
+        >
+          {label}
+          {id === 'recurrentes' && recurrentes > 0 && (
+            <span className="ml-1.5 text-2xs tabular-nums text-slate-600 dark:text-slate-400">{recurrentes}</span>
+          )}
+        </button>
+      ))}
     </div>
   );
 }

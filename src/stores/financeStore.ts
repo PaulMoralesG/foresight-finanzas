@@ -4,13 +4,14 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { roundMoney as roundMoneyLocal } from '@/lib/utils';
+import { roundMoney as roundMoneyLocal, getTodayISO } from '@/lib/utils';
 import { filtrarPorMes } from '@/lib/month-keys';
 import { computeSavingsByConcept, savingsForGoal } from '@/lib/savings';
-import { newId, nowIso } from '@/lib/ids';
-import type { Transaction, MonthlyBudget, FilterType, Ambito, Category, SavingsGoal, Account, Debt, Settings, Asset, NetWorthSnapshot, BudgetLine, BusinessType } from '@/types';
+import { newId, nowIso, uuidv5 } from '@/lib/ids';
+import type { Transaction, MonthlyBudget, FilterType, Ambito, Category, SavingsGoal, Account, Debt, Settings, Asset, NetWorthSnapshot, BudgetLine, BusinessType, Recurrence } from '@/types';
 import { convertGlobalBudgets } from '@/lib/budget-lines';
 import { accountIsUsed } from '@/lib/accounts';
+import { fechasPendientes } from '@/lib/recurrence';
 import type { BackupData } from '@/lib/backup';
 
 interface FinanceState {
@@ -22,6 +23,7 @@ interface FinanceState {
   budgetUpdatedAt: Record<string, string>; // monthKey 'YYYY-MM' → ISO (merge de sync)
   /** Presupuesto por categoría (fase 3.4). */
   budgetLines: BudgetLine[];
+  recurrences: Recurrence[];
   savingsGoals: SavingsGoal[];
   accounts: Account[];
   debts: Debt[];
@@ -58,6 +60,16 @@ interface FinanceState {
   deleteBudgetLine: (id: string) => void;
   /** Fija (o borra, con 0/NaN) el plan de un mes de una línea. */
   setBudgetPlan: (id: string, monthKey: string, value: number | null) => void;
+
+  // --- Movimientos recurrentes ---
+  addRecurrence: (r: Omit<Recurrence, 'id' | 'updated_at' | 'ultimaGenerada'>) => string;
+  updateRecurrence: (id: string, partial: Partial<Omit<Recurrence, 'id' | 'updated_at'>>) => void;
+  deleteRecurrence: (id: string) => void;
+  /**
+   * Registra los movimientos que las recurrencias activas deban haber creado
+   * hasta hoy. Idempotente: volver a llamarla no duplica nada.
+   */
+  materializarRecurrencias: () => Promise<number>;
 
   // --- Categorías personalizadas ---
   addCustomCategory: (type: 'expense' | 'income', category: Category) => void;
@@ -118,11 +130,18 @@ interface FinanceState {
   reset: () => void;
 }
 
+/** v14: entra `recurrences` (movimientos que se repiten). */
+function migrateV14(state: Record<string, unknown>): Record<string, unknown> {
+  if (!Array.isArray(state.recurrences)) state.recurrences = [];
+  return state;
+}
+
 const emptyState = {
   expenses: [] as Transaction[],
   budgets: {} as MonthlyBudget,
   budgetUpdatedAt: {} as Record<string, string>,
   budgetLines: [] as BudgetLine[],
+  recurrences: [] as Recurrence[],
   savingsGoals: [] as SavingsGoal[],
   accounts: [] as Account[],
   debts: [] as Debt[],
@@ -498,6 +517,83 @@ export const useFinanceStore = create<FinanceState>()(
         }),
 
       // ── Presupuesto por categoría ──
+      addRecurrence: (r) => {
+        const id = newId();
+        set((state) => ({
+          recurrences: [...state.recurrences, { ...r, id, ultimaGenerada: null, updated_at: nowIso() }],
+        }));
+        return id;
+      },
+
+      updateRecurrence: (id, partial) =>
+        set((state) => ({
+          recurrences: state.recurrences.map((r) => (r.id === id ? { ...r, ...partial, updated_at: nowIso() } : r)),
+          tombstones: clearedTombstone(state.tombstones, id),
+        })),
+
+      deleteRecurrence: (id) =>
+        set((state) => ({
+          recurrences: state.recurrences.filter((r) => r.id !== id),
+          tombstones: tombstoned(state.tombstones, id),
+        })),
+
+      materializarRecurrencias: async () => {
+        const hoy = getTodayISO();
+        const { recurrences } = get();
+        if (recurrences.length === 0) return 0;
+
+        // Los ids se calculan fuera del `set` porque uuidv5 es asíncrono
+        // (Web Crypto). El estado se escribe después, de una sola vez.
+        const nuevas: Array<{ regla: string; fecha: string; id: string }> = [];
+        for (const regla of recurrences) {
+          for (const fecha of fechasPendientes(regla, hoy)) {
+            nuevas.push({ regla: regla.id, fecha, id: await uuidv5(`recurrencia:${regla.id}:${fecha}`) });
+          }
+        }
+        if (nuevas.length === 0) return 0;
+
+        let creadas = 0;
+        set((state) => {
+          const existentes = new Set(state.expenses.map((e) => e.id));
+          const movimientos: Transaction[] = [];
+          const marca: Record<string, string> = {};
+
+          for (const { regla: reglaId, fecha, id } of nuevas) {
+            const regla = state.recurrences.find((r) => r.id === reglaId);
+            if (!regla) continue;
+            // La marca de agua avanza aunque la ocurrencia no se cree: si el
+            // usuario borró ese movimiento (tombstone) y no avanzáramos, se
+            // volvería a crear en cada arranque.
+            marca[reglaId] = fecha;
+            if (existentes.has(id) || id in state.tombstones) continue;
+            movimientos.push({
+              id,
+              type: regla.type,
+              amount: regla.amount,
+              concept: regla.concept,
+              date: fecha,
+              category: regla.category,
+              method: regla.method,
+              businessType: regla.businessType,
+              accountId: regla.accountId ?? null,
+              toAccountId: regla.toAccountId ?? null,
+              recurrenceId: regla.id,
+              created_at: nowIso(),
+              updated_at: nowIso(),
+            });
+          }
+          creadas = movimientos.length;
+
+          return {
+            expenses: movimientos.length > 0 ? [...state.expenses, ...movimientos] : state.expenses,
+            recurrences: state.recurrences.map((r) =>
+              marca[r.id] ? { ...r, ultimaGenerada: marca[r.id], updated_at: nowIso() } : r
+            ),
+          };
+        });
+        return creadas;
+      },
+
       addBudgetLine: (l) => {
         const id = newId();
         set((state) => ({ budgetLines: [...state.budgetLines, { ...l, id, updated_at: nowIso() }] }));
@@ -644,6 +740,7 @@ export const useFinanceStore = create<FinanceState>()(
           assets: sellar(data.assets),
           networth: sellar(data.networth),
           budgetLines: sellar(data.budgetLines),
+          recurrences: sellar(data.recurrences),
           budgets: data.budgets,
           budgetUpdatedAt: Object.fromEntries(Object.keys(data.budgets).map((k) => [k, ahora])),
           savingsGoals: sellar(data.savingsGoals),
@@ -663,10 +760,10 @@ export const useFinanceStore = create<FinanceState>()(
     }),
     {
       name: 'foresight-finance-storage',
-      version: 13,
+      version: 14,
       migrate: (persistedState: unknown, _version: number) => {
         try {
-          return migrateV13(migrateV12(migrateV11(migrateV10(migrateV9(migrateV8(persistedState))))));
+          return migrateV14(migrateV13(migrateV12(migrateV11(migrateV10(migrateV9(migrateV8(persistedState)))))));
         } catch (err) {
           // Estado inesperado: arrancar limpio antes que romper la app
           console.error('[financeStore] Migración de estado persistido fallida — reseteando:', err);
@@ -679,6 +776,7 @@ export const useFinanceStore = create<FinanceState>()(
         budgets: state.budgets,
         budgetUpdatedAt: state.budgetUpdatedAt,
         budgetLines: state.budgetLines,
+        recurrences: state.recurrences,
         currentViewDate: state.currentViewDate,
         currentFilter: state.currentFilter,
         ambito: state.ambito,

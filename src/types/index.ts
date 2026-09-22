@@ -48,6 +48,8 @@ export interface Transaction {
   accountId?: string | null;
   /** Solo en transferencias: cuenta destino. */
   toAccountId?: string | null;
+  /** Si salió de una recurrencia, el id de la regla que la generó. */
+  recurrenceId?: string | null;
   created_at?: string;
   updated_at: string; // ISO — usado por el merge de sync
 }
@@ -158,5 +160,41 @@ export interface BudgetLine {
   categoryId: string;
   limit: number;
   plan: Record<string, number>;
+  updated_at: string; // ISO — usado por el merge de sync
+}
+
+/** Con qué cadencia se repite un movimiento. */
+export type Frecuencia = 'daily' | 'weekly' | 'monthly';
+
+/**
+ * Plantilla de un movimiento que se repite (la renta, el sueldo, una
+ * suscripción). El store la materializa en transacciones reales; cada
+ * ocurrencia lleva un id determinista derivado de (regla, fecha), que es lo
+ * que impide duplicarla al reabrir la app o al abrirla en dos dispositivos.
+ */
+export interface Recurrence {
+  id: string;
+  // Plantilla del movimiento
+  type: TransactionType;
+  amount: number;
+  concept: string;
+  category: string;
+  method: PaymentMethod;
+  businessType: BusinessType;
+  accountId?: string | null;
+  toAccountId?: string | null;
+  // Regla
+  frecuencia: Frecuencia;
+  /** Cada cuántos días/semanas/meses; mínimo 1. */
+  intervalo: number;
+  /** Día del mes en las mensuales (1–31; se recorta a la longitud del mes). */
+  diaMes: number | null;
+  /** Primera fecha posible, 'YYYY-MM-DD'. */
+  desde: string;
+  /** Última fecha posible inclusive, o null si no termina. */
+  hasta: string | null;
+  activa: boolean;
+  /** Marca de agua: última fecha ya materializada. */
+  ultimaGenerada: string | null;
   updated_at: string; // ISO — usado por el merge de sync
 }

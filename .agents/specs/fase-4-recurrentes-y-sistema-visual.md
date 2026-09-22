@@ -1,6 +1,6 @@
 # Fase 4 — Movimientos recurrentes y sistema visual
 
-Estado: en curso.
+Estado: completada (22/09/2026).
 
 ## Objetivo
 
@@ -69,8 +69,8 @@ cae en el día elegido. Una regla menos que mantener sincronizada.
   posteriores a `ultimaGenerada` (o a `desde`) y no posteriores a `hoy`.
   Tope duro `MAX_POR_CICLO = 60`; en mensual, el día se recorta a la longitud
   del mes (31 → 28/29/30 cuando toca).
-- `idOcurrencia(recurrenceId, fecha)` → UUID v5 determinista con el mismo
-  namespace que `legacy-import.ts`.
+- El id de cada ocurrencia es `uuidv5('recurrencia:<idRegla>:<fecha>')`, el
+  mismo helper determinista que usa `legacy-import.ts`.
 
 `financeStore.materializarRecurrencias()` aplica las cuatro guardas:
 
@@ -94,16 +94,22 @@ Tabla `recurrences` (migración `0014_recurrences.sql`) con el mismo patrón que
 lógico por tombstone. Se añade a `TableName`, al pull incremental, al push y al
 merge.
 
-### Interfaz
+### Interfaz (lo que se entregó)
 
-- Modal de movimiento: fila «Repetir» (No / Diario / Semanal / Mensual) y,
-  si se elige una, «cada N» y «hasta» opcional.
-- Movimientos: sub-pestaña «Recurrentes» (mismo patrón que las sub-pestañas de
-  Presupuestos) con pausar/reanudar, editar, eliminar y «omitir esta vez».
-- Resumen: tarjeta «Próximos cargos» a 30 días.
+- Modal de movimiento: fila «Repetir» (No se repite / Cada día / Cada semana /
+  Cada mes), solo al registrar. La regla arranca el día siguiente al
+  movimiento que se acaba de crear, para no duplicarlo.
+- Movimientos: sub-pestaña «Recurrentes» (mismo patrón que las de
+  Presupuestos) con pausar, reanudar y eliminar.
+- Resumen: tarjeta «Próximos cargos» con lo que se registrará solo en 30 días.
 
 No se añade una novena vista: el catálogo de 8 (`src/config/views.ts`) se
 queda como está.
+
+Queda fuera, a propósito, para no alargar la fase: elegir el intervalo («cada
+2 semanas»), la fecha de fin desde la interfaz, editar una regla existente y
+«omitir esta vez». El modelo ya guarda `intervalo` y `hasta`, y el cálculo los
+respeta: falta solo exponerlos.
 
 ## Verificación
 

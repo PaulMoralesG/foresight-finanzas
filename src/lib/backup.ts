@@ -8,6 +8,7 @@
 // ================================================================
 
 import type {
+  Recurrence,
   Account, Asset, BudgetLine, Category, Debt, MonthlyBudget, NetWorthSnapshot, SavingsGoal, Settings, Transaction,
 } from '@/types';
 
@@ -24,6 +25,7 @@ export interface Backup {
   assets: Asset[];
   networth: NetWorthSnapshot[];
   budgetLines: BudgetLine[];
+  recurrences: Recurrence[];
   budgets: MonthlyBudget;
   budgetUpdatedAt: Record<string, string>;
   savingsGoals: SavingsGoal[];
@@ -103,6 +105,8 @@ export function parseBackup(texto: string): BackupData {
     assets: lista<Asset>('assets'),
     networth: (networthRaw ?? []) as NetWorthSnapshot[],
     budgetLines: lista<BudgetLine>('budgetLines'),
+    // Un respaldo de antes de la v14 no trae recurrencias: lista() devuelve [].
+    recurrences: lista<Recurrence>('recurrences'),
     budgets: mapa<MonthlyBudget>('budgets'),
     budgetUpdatedAt: mapa<Record<string, string>>('budgetUpdatedAt'),
     savingsGoals: lista<SavingsGoal>('savingsGoals'),
