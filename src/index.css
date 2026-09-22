@@ -282,7 +282,7 @@ input[type="checkbox"]:indeterminate {
      aparecen y desaparecen solas (background-attachment: local) y la
      primera columna fija para no perder la categoría al desplazarse. */
   .saas-table-scroll {
-    --scroll-bg: #fff;
+    --scroll-bg: #fff; /* el fondo de .saas-card */
     overflow-x: auto;
     scrollbar-width: thin;
     -webkit-overflow-scrolling: touch;
@@ -296,7 +296,7 @@ input[type="checkbox"]:indeterminate {
     background-attachment: local, local, scroll, scroll;
   }
   html.dark .saas-table-scroll {
-    --scroll-bg: rgb(15 23 42); /* slate-900, el fondo de .saas-card */
+    --scroll-bg: theme('colors.slate.900'); /* el fondo de .saas-card en oscuro */
   }
   .saas-table-scroll .saas-col-fija {
     @apply sticky left-0 z-[1];
