@@ -826,6 +826,45 @@ function applyMerge(snapshot: Snapshot): MergeResult {
     remoteLines,
   );
 
+  // Deduplicación semántica de BudgetLines por (tag, kind, categoryId)
+  // Evita filas duplicadas por carreras de red cuando dos dispositivos crean la línea a la vez.
+  const linesByKey = new Map<string, BudgetLine[]>();
+  for (const line of budgetLines.live) {
+    const key = `${line.tag}|${line.kind}|${line.categoryId}`;
+    if (!linesByKey.has(key)) linesByKey.set(key, []);
+    linesByKey.get(key)!.push(line);
+  }
+
+  const deduplicatedLines: BudgetLine[] = [];
+  const extraTombstones: Record<string, string> = {};
+
+  for (const group of linesByKey.values()) {
+    if (group.length === 1) {
+      deduplicatedLines.push(group[0]);
+    } else {
+      group.sort((a, b) => ((b.updated_at ?? '') > (a.updated_at ?? '') ? 1 : (b.updated_at ?? '') < (a.updated_at ?? '') ? -1 : 0));
+      let winner = group[0];
+      let merged = false;
+      let newPlan = { ...(winner.plan || {}) };
+
+      for (let i = 1; i < group.length; i++) {
+        const loser = group[i];
+        if (loser.plan) {
+          newPlan = { ...loser.plan, ...newPlan };
+          merged = true;
+        }
+        extraTombstones[loser.id] = nowIso();
+      }
+
+      if (merged) {
+        winner = { ...winner, plan: newPlan, updated_at: nowIso() };
+      }
+      deduplicatedLines.push(winner);
+    }
+  }
+  budgetLines.live = deduplicatedLines;
+  Object.assign(budgetLines.tombstones, extraTombstones);
+
   const remoteRecurrences = buildRemoteSet(snapshot.recurrences, rowToRecurrence);
   const recUniverse = universeOf(state.recurrences, remoteRecurrences);
   const recurrences = mergeById(
