@@ -176,13 +176,13 @@ export function GoalsPage() {
                         {g.concept} <ScopeBadge businessType={g.tag} />
                       </span>
                       <span className="text-sm font-bold tabular-nums text-slate-900 dark:text-white flex-shrink-0">
-                        {formatMoney(m.saved)} <span className="font-normal text-slate-500 dark:text-slate-400">/ {formatMoney(m.target)}</span>
+                        {formatMoney(m.saved)} <span className="font-normal text-slate-600 dark:text-slate-400">/ {formatMoney(m.target)}</span>
                       </span>
                     </div>
                     <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                       <div className={`h-full rounded-full ${barColor}`} style={{ width: `${m.pct}%` }} />
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 tabular-nums">
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 tabular-nums">
                       {m.pct.toFixed(0)}% · faltan {formatMoney(m.missing)}
                       {g.targetDate
                         ? late
@@ -211,7 +211,7 @@ export function GoalsPage() {
         <ModalSheet id="goal-form-title" titulo={editing ? 'Editar meta' : 'Nueva meta de ahorro'} onClose={() => setFormOpen(false)} trapActivo={!confirmDelete} focoInicial="#g-name">
           <form onSubmit={handleSubmit} className="p-3 space-y-3 flex-1 overflow-y-auto">
             <div>
-              <span className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Ámbito</span>
+              <span className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Ámbito</span>
               <div className="flex gap-1" role="group" aria-label="Ámbito">
                 {(['personal', 'business'] as BusinessType[]).map((t) => (
                   <button key={t} type="button" onClick={() => setFTag(t)}
@@ -235,7 +235,7 @@ export function GoalsPage() {
             <Campo id="g-saved" label="Ahorrado hasta hoy">
               <input id="g-saved" type="text" inputMode="decimal" value={fSaved} onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setFSaved(e.target.value); }} className="saas-input py-1.5 text-sm tabular-nums" />
             </Campo>
-            <p className="text-2xs text-slate-500 dark:text-slate-400">
+            <p className="text-2xs text-slate-600 dark:text-slate-400">
               Lo que ya tienes guardado dentro de una cuenta déjalo aquí como saldo inicial: no vuelve a contarse en tu patrimonio.
             </p>
             <div className="flex gap-2 pt-1">
@@ -250,7 +250,7 @@ export function GoalsPage() {
       {contributing && (
         <ModalSheet id="contrib-form-title" titulo="Registrar aporte" onClose={() => setContributing(null)} focoInicial="#gc-amount">
           <form onSubmit={handleContribute} className="p-3 space-y-3 flex-1 overflow-y-auto">
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               {contributing.concept} · llevas {formatMoney(contributing.saved)} de {formatMoney(contributing.target)}
             </p>
             <div className="grid grid-cols-2 gap-2">
@@ -269,7 +269,7 @@ export function GoalsPage() {
                 </select>
               </Campo>
             )}
-            <p className="text-2xs text-slate-500 dark:text-slate-400">
+            <p className="text-2xs text-slate-600 dark:text-slate-400">
               Si eliges cuenta, el aporte sale de ese saldo y queda como movimiento en Ahorro. Tu patrimonio no cambia: el dinero solo cambia de sitio.
             </p>
             <div className="flex gap-2 pt-1">
@@ -296,7 +296,7 @@ export function GoalsPage() {
 function Campo({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label htmlFor={id} className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">{label}</label>
+      <label htmlFor={id} className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">{label}</label>
       {children}
     </div>
   );
@@ -305,9 +305,9 @@ function Campo({ id, label, children }: { id: string; label: string; children: R
 function Kpi({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
     <div className="saas-card p-4">
-      <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">{label}</p>
       <p className="text-[clamp(1rem,4.6vw,1.25rem)] md:text-xl font-bold tabular-nums mt-1 whitespace-nowrap text-slate-900 dark:text-white">{value}</p>
-      <p className="text-2xs text-slate-500 dark:text-slate-400 mt-0.5">{sub}</p>
+      <p className="text-2xs text-slate-600 dark:text-slate-400 mt-0.5">{sub}</p>
     </div>
   );
 }

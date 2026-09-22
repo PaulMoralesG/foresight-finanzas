@@ -17,6 +17,7 @@ import { goalMath, goalTotals } from '@/lib/goals';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, getCategoryById } from '@/config/categories';
 import { MonthNav } from '@/components/layout/MonthNav';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { CardHeader } from '@/components/ui/CardHeader';
 import { TrendCard, HighlightsCard } from '@/components/features/home/MonthInsights';
 import { totalBalance } from '@/lib/accounts';
 import { planFor, actualFor, budgetStatus } from '@/lib/budget-lines';
@@ -64,17 +65,19 @@ function CategoryBreakdown({ expenses }: { expenses: Transaction[] }) {
 
   return (
     <div className="saas-card p-4 animate-slide-up">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-bold text-slate-900 dark:text-white">Categorías principales</h2>
-        <button
-          onClick={() => { navigateTo('movements' as TabId, 'expense'); }}
-          className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
-          title="Ver todos los gastos del mes"
-          aria-label="Ver todos los gastos"
-        >
-          Ver gastos →
-        </button>
-      </div>
+      <CardHeader
+        titulo="Categorías principales"
+        accion={
+          <button
+            onClick={() => { navigateTo('movements' as TabId, 'expense'); }}
+            className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline flex-shrink-0"
+            title="Ver todos los gastos del mes"
+            aria-label="Ver todos los gastos"
+          >
+            Ver gastos →
+          </button>
+        }
+      />
       <div className="space-y-2.5">
         {categoryTotals.map(([catId, total]) => {
           const cat = allExpenseCats.find((c) => c.id === catId);
@@ -99,7 +102,7 @@ function CategoryBreakdown({ expenses }: { expenses: Transaction[] }) {
                   <span>{cat?.icon || '📌'}</span>
                   {cat?.label || catId}
                 </span>
-                <span className="text-slate-500 dark:text-slate-400 tabular-nums">
+                <span className="text-slate-600 dark:text-slate-400 tabular-nums">
                   {formatMoney(total)}
                 </span>
               </div>
@@ -146,17 +149,20 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
   return (
     <div className="saas-card animate-slide-up overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-slate-100 dark:border-slate-800">
-        <h2 className="text-sm font-bold text-slate-900 dark:text-white">Últimos movimientos</h2>
-        <button
-          onClick={() => { setActiveTab('movements' as TabId); }}
-          className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline active:scale-95 transition-transform"
-          title="Ver todos los movimientos"
-          aria-label="Ver todos los movimientos"
-        >
-          Ver todos →
-        </button>
-      </div>
+      <CardHeader
+        className="p-3 border-b border-slate-100 dark:border-slate-800"
+        titulo="Últimos movimientos"
+        accion={
+          <button
+            onClick={() => { setActiveTab('movements' as TabId); }}
+            className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline active:scale-95 transition-transform flex-shrink-0"
+            title="Ver todos los movimientos"
+            aria-label="Ver todos los movimientos"
+          >
+            Ver todos →
+          </button>
+        }
+      />
 
       {/* Desktop: table — same columns as MovementsPage */}
       <div className="hidden md:block overflow-x-auto ios-scroll">
@@ -210,7 +216,7 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
                     <TypePill type={tx.type} />
                   </td>
                   <td className="whitespace-nowrap">
-                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                    <span className="text-xs text-slate-600 dark:text-slate-400">
                       {safeParseDate(tx.date).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short', year: 'numeric' })}
                     </span>
                   </td>
@@ -258,13 +264,13 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
               </div>
               <div className="flex items-center gap-1 mt-1 flex-wrap">
                 <TypePill type={tx.type} className="text-2xs px-1.5 py-0.5 rounded" />
-                <span className="text-2xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                <span className="text-2xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
                   {cat?.label || tx.category}
                 </span>
-                <span className={`text-2xs font-medium px-1.5 py-0.5 rounded ${tx.businessType === 'business' ? 'bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
+                <span className={`text-2xs font-medium px-1.5 py-0.5 rounded ${tx.businessType === 'business' ? 'bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
                   {tx.businessType === 'business' ? 'Negocio' : 'Personal'}
                 </span>
-                <span className="text-2xs text-slate-500 dark:text-slate-400 ml-auto">
+                <span className="text-2xs text-slate-600 dark:text-slate-400 ml-auto">
                   {safeParseDate(tx.date).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })}
                 </span>
               </div>
@@ -314,18 +320,18 @@ function BudgetWatchlist() {
 
   return (
     <div className="saas-card p-4 animate-slide-up">
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <h2 className="text-sm font-bold text-slate-900 dark:text-white">Presupuestos a vigilar</h2>
-          <p className="text-2xs text-slate-500 dark:text-slate-400">Los más cerca del límite este mes</p>
-        </div>
-        <button
-          onClick={() => navigateTo('budgets' as TabId)}
-          className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
-        >
-          Ver todo
-        </button>
-      </div>
+      <CardHeader
+        titulo="Presupuestos a vigilar"
+        sub="Los más cerca del límite este mes"
+        accion={
+          <button
+            onClick={() => navigateTo('budgets' as TabId)}
+            className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline flex-shrink-0"
+          >
+            Ver todo
+          </button>
+        }
+      />
 
       {top.length === 0 ? (
         <EmptyState
@@ -357,7 +363,7 @@ function BudgetWatchlist() {
                 <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                   <div className={`h-full rounded-full ${barColor}`} style={{ width: `${Math.min(100, pct)}%` }} />
                 </div>
-                <p className="text-2xs text-slate-500 dark:text-slate-400 tabular-nums mt-1">
+                <p className="text-2xs text-slate-600 dark:text-slate-400 tabular-nums mt-1">
                   {formatMoney(spent)} de {formatMoney(limit)}
                 </p>
               </div>
@@ -389,20 +395,18 @@ function DebtMiniCard() {
 
   return (
     <div className="saas-card p-4 animate-slide-up">
-      <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-        <CreditCard className="w-4 h-4 text-brand-500" />
-        Rumbo a cero deudas
-      </h2>
-      <p className="text-2xs text-slate-500 dark:text-slate-400 mb-2">
-        {settings.debtMethod === 'avalanche' ? 'Método avalancha' : 'Método bola de nieve'}
-      </p>
+      <CardHeader
+        icono={CreditCard}
+        titulo="Rumbo a cero deudas"
+        sub={settings.debtMethod === 'avalanche' ? 'Método avalancha' : 'Método bola de nieve'}
+      />
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Deuda total</p>
+          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Deuda total</p>
           <p className="text-lg font-bold tabular-nums text-slate-900 dark:text-white">{formatMoney(totalDebt(debts))}</p>
         </div>
         <div>
-          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Libre de deudas</p>
+          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Libre de deudas</p>
           <p className="text-lg font-bold tabular-nums text-slate-900 dark:text-white">{plan.ok ? payoffDate(plan.months) : '—'}</p>
         </div>
       </div>
@@ -472,25 +476,25 @@ export function HomePage() {
             className="saas-card p-4 text-left hover:border-brand-500 dark:hover:border-brand-400 transition-colors"
             title="Ver cuentas"
           >
-            <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
               <Wallet className="w-3 h-3" /> Saldo total
             </span>
             <span className={`block text-[clamp(1.05rem,5vw,1.5rem)] lg:text-2xl font-bold tabular-nums mt-1 whitespace-nowrap ${saldoCuentas >= 0 ? 'text-slate-900 dark:text-white' : 'text-expense-600 dark:text-expense-400'}`}>
               {formatMoney(saldoCuentas)}
             </span>
-            <span className="block text-2xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <span className="block text-2xs text-slate-600 dark:text-slate-400 mt-0.5">
               {accounts.length} {accounts.length === 1 ? 'cuenta' : 'cuentas'}
             </span>
           </button>
         )}
         <div className="saas-card p-4">
-          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
             Saldo de {(() => { const d = new Date(currentViewDate); return `${d.toLocaleDateString(LOCALE, { month: 'long' })}`; })()}
           </p>
           <p className={`text-[clamp(1.05rem,5vw,1.5rem)] lg:text-2xl font-bold tabular-nums mt-1 whitespace-nowrap ${summary.available >= 0 ? 'text-slate-900 dark:text-white' : 'text-expense-600 dark:text-expense-400'}`}>
             {formatMoney(summary.available)}
           </p>
-          <p className="text-2xs text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-2xs text-slate-600 dark:text-slate-400 mt-0.5">
             Ingresos − gastos del mes
           </p>
         </div>
@@ -500,7 +504,7 @@ export function HomePage() {
           className="saas-card p-4 text-left hover:border-brand-500 dark:hover:border-brand-400 transition-colors"
           title="Ver ingresos"
         >
-          <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
             <ArrowDown className="w-3 h-3" /> Ingresos
           </span>
           <span className="block text-[clamp(1.05rem,5vw,1.5rem)] lg:text-2xl font-bold tabular-nums mt-1 whitespace-nowrap text-income-600 dark:text-income-400">
@@ -511,7 +515,7 @@ export function HomePage() {
               {pctChange(totals.income, prevTotals.income)} vs mes anterior
             </span>
           ) : (
-            <span className="block text-2xs text-slate-500 dark:text-slate-400 mt-0.5">del mes en curso</span>
+            <span className="block text-2xs text-slate-600 dark:text-slate-400 mt-0.5">del mes en curso</span>
           )}
         </button>
 
@@ -520,7 +524,7 @@ export function HomePage() {
           className="saas-card p-4 text-left hover:border-brand-500 dark:hover:border-brand-400 transition-colors"
           title="Ver gastos"
         >
-          <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
             <ArrowUp className="w-3 h-3" /> Gastos
           </span>
           <span className="block text-[clamp(1.05rem,5vw,1.5rem)] lg:text-2xl font-bold tabular-nums mt-1 whitespace-nowrap text-expense-600 dark:text-expense-400">
@@ -531,7 +535,7 @@ export function HomePage() {
               {pctChange(totals.spent, prevTotals.spent)} vs mes anterior
             </span>
           ) : (
-            <span className="block text-2xs text-slate-500 dark:text-slate-400 mt-0.5">del mes en curso</span>
+            <span className="block text-2xs text-slate-600 dark:text-slate-400 mt-0.5">del mes en curso</span>
           )}
         </button>
 
@@ -541,13 +545,13 @@ export function HomePage() {
           className="saas-card p-4 text-left hover:border-brand-500 dark:hover:border-brand-400 transition-colors"
           title="Ver movimientos de negocio"
         >
-          <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
             <Store className="w-3 h-3" /> Resultado del negocio
           </span>
           <span className={`block text-[clamp(1.05rem,5vw,1.5rem)] lg:text-2xl font-bold tabular-nums mt-1 whitespace-nowrap ${summary.businessProfit >= 0 ? 'text-business-600 dark:text-business-400' : 'text-expense-600 dark:text-expense-400'}`}>
             {formatMoney(summary.businessProfit)}
           </span>
-          <span className="block text-2xs text-slate-500 dark:text-slate-400 mt-0.5 tabular-nums">
+          <span className="block text-2xs text-slate-600 dark:text-slate-400 mt-0.5 tabular-nums">
             margen {summary.profitMargin.toFixed(1)}%
           </span>
         </button>
@@ -616,23 +620,23 @@ function SavingsGoalWidget() {
 
   return (
     <div className="saas-card p-4 animate-slide-up">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          <PiggyBank className="w-4 h-4 text-brand-500" />
-          Metas de ahorro
-        </h2>
-        <span className="text-2xs text-slate-500 dark:text-slate-400">
-          {savingsGoals.length} {savingsGoals.length === 1 ? 'meta activa' : 'metas activas'}
-        </span>
-      </div>
+      <CardHeader
+        icono={PiggyBank}
+        titulo="Metas de ahorro"
+        accion={
+          <span className="text-xs text-slate-600 dark:text-slate-400 flex-shrink-0">
+            {savingsGoals.length} {savingsGoals.length === 1 ? 'meta activa' : 'metas activas'}
+          </span>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div>
-          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Ahorrado</p>
+          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Ahorrado</p>
           <p className="text-lg font-bold tabular-nums text-slate-900 dark:text-white">{formatMoney(totals.saved)}</p>
         </div>
         <div>
-          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">A guardar por mes</p>
+          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">A guardar por mes</p>
           <p className="text-lg font-bold tabular-nums text-slate-900 dark:text-white">{formatMoney(totals.monthly)}</p>
         </div>
       </div>
@@ -642,7 +646,7 @@ function SavingsGoalWidget() {
           <div key={goal.id}>
             <div className="flex items-center justify-between text-xs mb-0.5">
               <span className="truncate text-slate-700 dark:text-slate-300">{goal.concept}</span>
-              <span className="text-slate-500 dark:text-slate-400 tabular-nums flex-shrink-0">{m.pct.toFixed(0)}%</span>
+              <span className="text-slate-600 dark:text-slate-400 tabular-nums flex-shrink-0">{m.pct.toFixed(0)}%</span>
             </div>
             <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
               <div className="h-full bg-brand-500 dark:bg-brand-400 rounded-full" style={{ width: `${m.pct}%` }} />
@@ -678,15 +682,14 @@ function NetWorthWidget() {
 
   return (
     <div className="saas-card p-4 animate-slide-up">
-      <h2 className="text-sm font-bold text-slate-900 dark:text-white">Patrimonio neto</h2>
-      <p className="text-2xs text-slate-500 dark:text-slate-400 mb-2">Lo que tienes menos lo que debes</p>
+      <CardHeader titulo="Patrimonio neto" sub="Lo que tienes menos lo que debes" />
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Hoy</p>
+          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Hoy</p>
           <p className={`text-xl font-bold tabular-nums ${nw.net >= 0 ? 'text-slate-900 dark:text-white' : 'text-expense-600 dark:text-expense-400'}`}>{formatMoney(nw.net)}</p>
         </div>
         <div>
-          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Activos / pasivos</p>
+          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Activos / pasivos</p>
           <p className="text-sm font-bold tabular-nums text-slate-900 dark:text-white">{formatMoney(nw.assets)} / {formatMoney(nw.liabilities)}</p>
         </div>
       </div>
@@ -695,10 +698,10 @@ function NetWorthWidget() {
           <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
             <div className="h-full bg-brand-500 dark:bg-brand-400 rounded-full" style={{ width: `${pct.toFixed(1)}%` }} />
           </div>
-          <p className="text-2xs text-slate-500 dark:text-slate-400 mt-1">{pct.toFixed(0)}% de tu meta de {formatMoney(goal)}</p>
+          <p className="text-2xs text-slate-600 dark:text-slate-400 mt-1">{pct.toFixed(0)}% de tu meta de {formatMoney(goal)}</p>
         </div>
       ) : (
-        <p className="text-2xs text-slate-500 dark:text-slate-400 mt-3">Define una meta de patrimonio en Ajustes para ver el avance.</p>
+        <p className="text-2xs text-slate-600 dark:text-slate-400 mt-3">Define una meta de patrimonio en Ajustes para ver el avance.</p>
       )}
       <button onClick={() => navigateTo('networth' as TabId)} className="saas-btn saas-btn-secondary saas-btn-sm mt-3">
         Ver patrimonio

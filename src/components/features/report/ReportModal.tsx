@@ -137,24 +137,24 @@ export function ReportModal() {
           <h2 id={titleId} className="font-bold text-sm text-slate-900 dark:text-white">
             Reporte Mensual
           </h2>
-          <button onClick={closeReportModal} aria-label="Cerrar" className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+          <button onClick={closeReportModal} aria-label="Cerrar" className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        <p className="text-2xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">
+        <p className="text-2xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
           <Calendar className="inline w-3.5 h-3.5 mr-1" />
           {monthLabel}
         </p>
 
-        <p className="text-2xs font-medium text-slate-500 dark:text-slate-400 mb-3 uppercase tracking-wider">
+        <p className="text-2xs font-medium text-slate-600 dark:text-slate-400 mb-3 uppercase tracking-wider">
           {count} mov. · {businessCount} neg, {personalCount} pers
         </p>
 
         {/* Summary grid */}
         <div className="grid grid-cols-2 gap-1.5 mb-3">
           <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-2">
-            <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <p className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
               Ingresos
             </p>
             <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">
@@ -162,7 +162,7 @@ export function ReportModal() {
             </p>
           </div>
           <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-2">
-            <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <p className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
               Gastos
             </p>
             <p className="text-sm font-bold text-red-600 dark:text-red-400 tabular-nums">
@@ -170,7 +170,7 @@ export function ReportModal() {
             </p>
           </div>
           <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-2">
-            <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <p className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
               Saldo
             </p>
             <p
@@ -184,7 +184,7 @@ export function ReportModal() {
             </p>
           </div>
           <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-2">
-            <p className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <p className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
               Movimientos
             </p>
             <p className="text-sm font-bold text-slate-900 dark:text-white tabular-nums">
@@ -235,7 +235,7 @@ export function ReportModal() {
         </div>
 
         {count === 0 && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-2">
+          <p className="text-xs text-slate-600 dark:text-slate-400 text-center mt-2">
             No hay movimientos registrados en este mes.
           </p>
         )}

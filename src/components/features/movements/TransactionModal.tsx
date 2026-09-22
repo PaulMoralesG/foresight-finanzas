@@ -278,7 +278,7 @@ export function TransactionModal({
               {/* span y no label: estos grupos son botones, no un control de
                   formulario, así que un <label> sin `for` no nombra nada. El
                   nombre accesible lo pone el role="group" del contenedor. */}
-              <span className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Tipo</span>
+              <span className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Tipo</span>
               <div className="flex gap-1" role="group" aria-label="Tipo de movimiento">
                 {/* Transferencia solo cuando hay al menos dos cuentas entre las
                     que mover dinero; sin cuentas, el modal es el de siempre. */}
@@ -309,7 +309,7 @@ export function TransactionModal({
               </div>
             </div>
             <div>
-              <label htmlFor="tx-amount" className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">
+              <label htmlFor="tx-amount" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">
                 Monto
               </label>
               <input
@@ -335,7 +335,7 @@ export function TransactionModal({
           {/* Row 2: Concepto + Fecha */}
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label htmlFor="tx-concept" className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Concepto</label>
+              <label htmlFor="tx-concept" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Concepto</label>
               <input
                 id="tx-concept"
                 type="text"
@@ -346,7 +346,7 @@ export function TransactionModal({
               />
             </div>
             <div>
-              <label htmlFor="tx-date" className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Fecha</label>
+              <label htmlFor="tx-date" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Fecha</label>
               <input
                 id="tx-date"
                 type="date"
@@ -363,7 +363,7 @@ export function TransactionModal({
               cortaba contra el borde. A partir de sm vuelven a ir en paralelo. */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>
-              <span className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Ámbito</span>
+              <span className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Ámbito</span>
               <div className="flex gap-1" role="group" aria-label="Ámbito del movimiento">
                 {(['business', 'personal'] as BusinessType[]).map((bt) => (
                   <button
@@ -394,7 +394,7 @@ export function TransactionModal({
             {/* En una transferencia el método lo dicen las cuentas: se oculta. */}
             {!isTransfer && (
             <div>
-              <span className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Método</span>
+              <span className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Método</span>
               <div className="flex gap-1" role="group" aria-label="Método de pago">
                 {([
                   { id: 'cash', label: 'Efectivo', icon: Banknote },
@@ -424,7 +424,7 @@ export function TransactionModal({
           {accounts.length > 0 && (
             <div className={`grid gap-2 ${isTransfer ? 'grid-cols-2' : 'grid-cols-1'}`}>
               <div>
-                <label htmlFor="tx-account" className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">
+                <label htmlFor="tx-account" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">
                   {isTransfer ? 'Cuenta de origen' : 'Cuenta'}
                 </label>
                 <select
@@ -443,7 +443,7 @@ export function TransactionModal({
               </div>
               {isTransfer && (
                 <div>
-                  <label htmlFor="tx-to-account" className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">
+                  <label htmlFor="tx-to-account" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">
                     Cuenta destino
                   </label>
                   <select
@@ -466,10 +466,10 @@ export function TransactionModal({
           {/* Categorías (una transferencia no lleva: el dinero solo cambia de sitio) */}
           {!isTransfer && (
           <div>
-            <span className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">
+            <span className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">
               Categoría
               {categories.length > 0 && (
-                <span className="ml-1 font-normal normal-case text-slate-500 dark:text-slate-400">
+                <span className="ml-1 font-normal normal-case text-slate-600 dark:text-slate-400">
                   ({categories.length})
                 </span>
               )}
@@ -479,7 +479,7 @@ export function TransactionModal({
                 muestra si hay suficientes categorías para justificarlo. */}
             {categories.length > 8 && (
               <div className="relative mb-1.5">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600 dark:text-slate-400 pointer-events-none" />
                 <input
                   type="text"
                   value={categorySearch}
@@ -502,7 +502,7 @@ export function TransactionModal({
                 return (
                   <Fragment key={cat.id}>
                     {nuevoGrupo && (
-                      <p className="col-span-full text-2xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mt-1 first:mt-0">
+                      <p className="col-span-full text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mt-1 first:mt-0">
                         {grupo}
                       </p>
                     )}
@@ -534,9 +534,9 @@ export function TransactionModal({
                 }`}
               >
                 <span className="text-xl leading-none flex items-center justify-center h-6">
-                  {showNewCat ? <X className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" /> : <Plus className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />}
+                  {showNewCat ? <X className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" /> : <Plus className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />}
                 </span>
-                <span className="text-2xs font-medium text-slate-500 dark:text-slate-400 leading-tight text-center">
+                <span className="text-2xs font-medium text-slate-600 dark:text-slate-400 leading-tight text-center">
                   {showNewCat ? 'Cancelar' : 'Nueva'}
                 </span>
               </button>
@@ -567,11 +567,11 @@ export function TransactionModal({
                   </button>
                 </div>
                 <div className="flex gap-1.5 items-center">
-                  <span className="text-2xs font-medium text-slate-500 dark:text-slate-400 flex-shrink-0">Ícono:</span>
+                  <span className="text-2xs font-medium text-slate-600 dark:text-slate-400 flex-shrink-0">Ícono:</span>
                   <IconPicker value={newCatIcon} onChange={setNewCatIcon} />
                 </div>
                 <div className="flex gap-1.5 items-center flex-wrap">
-                  <span className="text-2xs font-medium text-slate-500 dark:text-slate-400">Color:</span>
+                  <span className="text-2xs font-medium text-slate-600 dark:text-slate-400">Color:</span>
                   <ColorPicker value={newCatColor} onChange={setNewCatColor} />
                 </div>
               </div>

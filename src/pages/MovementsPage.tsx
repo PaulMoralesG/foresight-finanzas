@@ -210,7 +210,7 @@ export function MovementsPage() {
 
       {/* Summary line + active filter chips */}
       <div className="flex items-center gap-2 flex-wrap">
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-slate-600 dark:text-slate-400">
           {filtered.length} {filtered.length === 1 ? 'transacción' : 'transacciones'} ·{' '}
           <span className="text-income-600 dark:text-income-400 font-medium">{formatMoney(totalIncome)}</span>
           {' '}ingresos ·{' '}
@@ -304,7 +304,7 @@ export function MovementsPage() {
           </select>
         )}
         <div className="flex items-center w-[260px] ml-auto flex-shrink-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus-within:ring-2 focus-within:ring-brand-500 focus-within:border-transparent">
-          <Search className="ml-2.5 w-3.5 h-3.5 text-slate-500 dark:text-slate-400 flex-shrink-0" />
+          <Search className="ml-2.5 w-3.5 h-3.5 text-slate-600 dark:text-slate-400 flex-shrink-0" />
           <input
             type="text"
             placeholder="Buscar..."
@@ -317,7 +317,7 @@ export function MovementsPage() {
           {searchQuery ? (
             <button
               onClick={() => setSearchQuery('')}
-              className="mr-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex-shrink-0"
+              className="mr-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex-shrink-0"
               aria-label="Limpiar búsqueda"
               title="Limpiar búsqueda"
             >
@@ -328,7 +328,7 @@ export function MovementsPage() {
             // había ninguna pista en la interfaz de que existiera el atajo.
             <kbd
               aria-hidden="true"
-              className="mr-1.5 px-1 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-3xs font-mono text-slate-400 dark:text-slate-500 flex-shrink-0"
+              className="mr-1.5 px-1 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-3xs font-mono text-slate-600 dark:text-slate-400 flex-shrink-0"
             >
               Ctrl+K
             </kbd>
@@ -377,7 +377,7 @@ export function MovementsPage() {
 
       {/* Search mobile (own row, full width) */}
       <div className="flex items-center sm:hidden w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus-within:ring-2 focus-within:ring-brand-500 focus-within:border-transparent">
-        <Search className="ml-2.5 w-3.5 h-3.5 text-slate-500 dark:text-slate-400 flex-shrink-0" />
+        <Search className="ml-2.5 w-3.5 h-3.5 text-slate-600 dark:text-slate-400 flex-shrink-0" />
         <input
           type="text"
           placeholder="Buscar..."
@@ -390,7 +390,7 @@ export function MovementsPage() {
         {searchQuery && (
           <button
             onClick={() => setSearchQuery('')}
-            className="mr-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex-shrink-0"
+            className="mr-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex-shrink-0"
             aria-label="Limpiar búsqueda"
             title="Limpiar búsqueda"
           >
@@ -467,13 +467,13 @@ export function MovementsPage() {
                         {typeLabel(tx.type)}
                       </button>
                       {tx.type === 'transfer' ? (
-                        <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
+                        <span className="text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
                           {accountName(accounts, tx.accountId)} → {accountName(accounts, tx.toAccountId)}
                         </span>
                       ) : (
                       <button
                         type="button"
-                        className="saas-chip-click text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full"
+                        className="saas-chip-click text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full"
                         onClick={(e) => { e.stopPropagation(); setCategoryFilter(tx.category); }}
                         title={`Filtrar solo ${category?.label || tx.category}`}
                       >
@@ -493,7 +493,7 @@ export function MovementsPage() {
                         <ScopeBadge businessType={tx.businessType} />
                       </button>
                     </div>
-                    <span className="text-2xs text-slate-500 dark:text-slate-400 flex-shrink-0">
+                    <span className="text-2xs text-slate-600 dark:text-slate-400 flex-shrink-0">
                       {safeParseDate(tx.date).toLocaleDateString(LOCALE, {
                         day: 'numeric',
                         month: 'short',
@@ -642,7 +642,7 @@ export function MovementsPage() {
                         </button>
                       </td>
                       <td className="whitespace-nowrap">
-                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                        <span className="text-xs text-slate-600 dark:text-slate-400">
                           {safeParseDate(tx.date).toLocaleDateString(LOCALE, {
                             day: 'numeric',
                             month: 'short',

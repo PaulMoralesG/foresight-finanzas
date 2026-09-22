@@ -41,7 +41,7 @@ export function Sidebar() {
           <p className="font-display text-[1.15rem] font-semibold leading-tight text-slate-900 dark:text-white">
             Foresight
           </p>
-          <p className="text-[0.7rem] text-slate-400 dark:text-slate-500 truncate">
+          <p className="text-[0.7rem] text-slate-600 dark:text-slate-400 truncate">
             Personal y negocio
           </p>
         </div>
@@ -52,7 +52,7 @@ export function Sidebar() {
       <nav className="flex flex-col gap-0.5" aria-label="Secciones">
         {SECCIONES.map((seccion) => (
           <div key={seccion.id} className="flex flex-col gap-0.5">
-            <p className="px-2 pt-2.5 pb-0.5 first:pt-0 text-[0.66rem] font-semibold uppercase tracking-[0.07em] text-slate-400 dark:text-slate-500">
+            <p className="px-2 pt-2.5 pb-0.5 first:pt-0 text-[0.66rem] font-semibold uppercase tracking-[0.07em] text-slate-600 dark:text-slate-400">
               {seccion.label}
             </p>
             {VIEWS.filter((v) => v.seccion === seccion.id).map((item) => {
@@ -88,7 +88,7 @@ export function Sidebar() {
           <div className="w-7 h-7 rounded-full bg-brand-100 dark:bg-brand-900 text-brand-700 dark:text-brand-300 flex items-center justify-center text-2xs font-bold flex-shrink-0">
             {initials}
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+          <p className="text-xs text-slate-600 dark:text-slate-400 truncate">
             {user.firstName} {user.lastName}
           </p>
         </div>
