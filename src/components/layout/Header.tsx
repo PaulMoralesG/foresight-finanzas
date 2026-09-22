@@ -78,7 +78,11 @@ export function Header() {
   return (
     <>
       <header
-        className="sticky top-0 z-sticky bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200 dark:border-slate-800"
+        /* Sin línea inferior ni superficie propia: el mismo plano que el
+           resto de la página, como el `.topline` de la referencia. El fondo
+           va opaco (no translúcido) porque, sin borde, el contenido que pasa
+           por debajo al desplazarse se transparentaría sobre el título. */
+        className="sticky top-0 z-sticky bg-slate-50 dark:bg-slate-950"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
         <div className="flex items-center justify-between h-12 md:h-14 px-4 md:px-6 gap-3">
