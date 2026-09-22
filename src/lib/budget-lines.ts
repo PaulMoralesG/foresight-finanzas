@@ -42,7 +42,7 @@ export function actualFor(expenses: Transaction[], line: Pick<BudgetLine, 'tag' 
   );
 }
 
-export interface GroupRow {
+interface GroupRow {
   kind: 'income' | 'expense';
   group: string;
   planned: number;

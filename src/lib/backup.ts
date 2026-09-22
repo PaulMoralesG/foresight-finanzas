@@ -12,8 +12,8 @@ import type {
   Account, Asset, BudgetLine, Category, Debt, MonthlyBudget, NetWorthSnapshot, SavingsGoal, Settings, Transaction,
 } from '@/types';
 
-export const BACKUP_APP = 'foresight';
-export const BACKUP_VERSION = 1;
+const BACKUP_APP = 'foresight';
+const BACKUP_VERSION = 1;
 
 export interface Backup {
   app: typeof BACKUP_APP;

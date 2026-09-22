@@ -10,7 +10,7 @@ interface SkeletonProps {
   variant?: 'text' | 'card' | 'circle' | 'button';
 }
 
-export function Skeleton({ className = '', variant = 'text' }: SkeletonProps) {
+function Skeleton({ className = '', variant = 'text' }: SkeletonProps) {
   const base = 'animate-pulse bg-slate-200 dark:bg-slate-800 rounded';
 
   if (variant === 'card') {
