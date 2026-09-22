@@ -3,8 +3,9 @@
 // ================================================================
 
 import { useState, useMemo, useEffect } from 'react';
-import { Layers, ArrowDown, ArrowUp, Store, User as UserIcon, Plus, X, Search, Receipt, ChevronUp, ChevronDown, Trash2 } from '@/components/ui/icons.generated';
+import { Layers, ArrowDown, ArrowUp, Plus, X, Search, Receipt, ChevronUp, ChevronDown, Trash2 } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
+import { useExpensesEnAmbito } from '@/hooks/useAmbito';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
 import { formatMoney, LOCALE, roundMoney, safeParseDate, syncToCloud } from '@/lib/utils';
@@ -16,18 +17,19 @@ import { typeLabel, typePillClasses } from '@/lib/transaction-labels';
 import { accountName } from '@/lib/accounts';
 import type { FilterType } from '@/types';
 
+// Negocio/Personal ya no son chips de esta vista: es el ámbito global de la
+// cabecera (Todo / Personal / Negocio), que filtra todas las pantallas.
 const FILTERS: { id: FilterType; label: string; icon: React.ElementType }[] = [
   { id: 'all', label: 'Todos', icon: Layers },
   { id: 'income', label: 'Ingresos', icon: ArrowDown },
   { id: 'expense', label: 'Gastos', icon: ArrowUp },
-  { id: 'business', label: 'Negocio', icon: Store },
-  { id: 'personal', label: 'Personal', icon: UserIcon },
 ];
 
 const FILTER_TYPE_IDS = ['all', 'income', 'expense', 'business', 'personal'] as const;
 
 export function MovementsPage() {
-  const expenses = useFinanceStore((s) => s.expenses);
+  const expenses = useExpensesEnAmbito();
+  const setAmbito = useFinanceStore((s) => s.setAmbito);
   const getMonthlyData = useFinanceStore((s) => s.getMonthlyData);
   const currentViewDate = useFinanceStore((s) => s.currentViewDate);
   const currentFilter = useFinanceStore((s) => s.currentFilter);
@@ -100,7 +102,12 @@ export function MovementsPage() {
   // Aplicar filtro pendiente desde el dashboard (KPIs o categorías)
   useEffect(() => {
     if (!pendingFilter) return;
-    if (FILTER_TYPE_IDS.includes(pendingFilter as FilterType)) {
+    if (pendingFilter === 'business' || pendingFilter === 'personal') {
+      // Viene del KPI "Resultado del negocio": es el ámbito global, no un chip.
+      setAmbito(pendingFilter);
+      setFilter('all');
+      setCategoryFilter(null);
+    } else if (FILTER_TYPE_IDS.includes(pendingFilter as FilterType)) {
       setFilter(pendingFilter as FilterType);
       setCategoryFilter(null);
     } else {
@@ -288,7 +295,7 @@ export function MovementsPage() {
             value={accountFilter ?? ''}
             onChange={(e) => setAccountFilter(e.target.value || null)}
             aria-label="Filtrar por cuenta"
-            className="saas-input-sm text-2xs flex-shrink-0 ml-2"
+            className="saas-input-sm text-xs !w-auto max-w-[220px] flex-shrink-0 ml-2"
           >
             <option value="">Todas las cuentas</option>
             {accounts.map((a) => (
@@ -450,7 +457,7 @@ export function MovementsPage() {
                     <div className="flex items-center gap-1 flex-wrap">
                       <button
                         type="button"
-                        className={`saas-cell-filter text-2xs font-medium px-1.5 py-0.5 rounded-full ${typePillClasses(tx.type)}`}
+                        className={`saas-chip-click text-xs font-medium px-1.5 py-0.5 rounded-full ${typePillClasses(tx.type)}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           if (tx.type !== 'transfer') setFilter(tx.type);
@@ -460,13 +467,13 @@ export function MovementsPage() {
                         {typeLabel(tx.type)}
                       </button>
                       {tx.type === 'transfer' ? (
-                        <span className="text-2xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
+                        <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
                           {accountName(accounts, tx.accountId)} → {accountName(accounts, tx.toAccountId)}
                         </span>
                       ) : (
                       <button
                         type="button"
-                        className="saas-cell-filter text-2xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full"
+                        className="saas-chip-click text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full"
                         onClick={(e) => { e.stopPropagation(); setCategoryFilter(tx.category); }}
                         title={`Filtrar solo ${category?.label || tx.category}`}
                       >
@@ -475,10 +482,10 @@ export function MovementsPage() {
                       )}
                       <button
                         type="button"
-                        className="saas-cell-filter"
+                        className="saas-chip-click"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setFilter(tx.businessType === 'business' ? 'business' : 'personal');
+                          setAmbito(tx.businessType === 'business' ? 'business' : 'personal');
                         }}
                         aria-label={`Filtrar solo ${tx.businessType === 'business' ? 'Negocio' : 'Personal'}`}
                         title={`Filtrar solo ${tx.businessType === 'business' ? 'Negocio' : 'Personal'}`}
@@ -517,9 +524,11 @@ export function MovementsPage() {
                       />
                     </span>
                   </th>
-                  <th className="w-10 text-center" aria-label="Icono"></th>
+                  {/* Icono y Ámbito solo desde lg: en tablet (768) ocho columnas
+                      no caben y era el Monto el que se salía por la derecha. */}
+                  <th className="w-10 text-center hidden lg:table-cell" aria-label="Icono"></th>
                   <th>Concepto</th>
-                  <th className="whitespace-nowrap">Ámbito</th>
+                  <th className="whitespace-nowrap hidden lg:table-cell">Ámbito</th>
                   <th className="whitespace-nowrap">Categoría</th>
                   <th className="whitespace-nowrap">Tipo</th>
                   <th
@@ -584,7 +593,7 @@ export function MovementsPage() {
                         />
                         </span>
                       </td>
-                      <td className="text-center">
+                      <td className="text-center hidden lg:table-cell">
                         <span className="text-base">{tx.type === 'transfer' ? '🔁' : category?.icon || '📌'}</span>
                       </td>
                       <td>
@@ -592,12 +601,12 @@ export function MovementsPage() {
                           {tx.concept}
                         </span>
                       </td>
-                      <td className="whitespace-nowrap">
+                      <td className="whitespace-nowrap hidden lg:table-cell">
                         <button
                           className="saas-cell-filter text-xs font-medium"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setFilter(tx.businessType === 'business' ? 'business' : 'personal');
+                            setAmbito(tx.businessType === 'business' ? 'business' : 'personal');
                           }}
                           aria-label={`Filtrar solo ${tx.businessType === 'business' ? 'Negocio' : 'Personal'}`}
                           title={`Filtrar solo ${tx.businessType === 'business' ? 'Negocio' : 'Personal'}`}

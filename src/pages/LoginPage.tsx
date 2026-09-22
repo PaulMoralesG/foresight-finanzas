@@ -72,11 +72,9 @@ export function LoginPage() {
   return (
     <div className="min-h-dvh flex bg-white dark:bg-slate-950" style={{minHeight:"100dvh"}}>
       {/* Left Panel — Branding */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-slate-950">
-        {/* Gradient base */}
-        <div className="absolute inset-0 bg-gradient-to-br from-brand-700 via-brand-900 to-slate-950" />
-        {/* Subtle noise texture overlay */}
-        <div className="absolute inset-0 opacity-[0.04] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCI+PGRlZnM+PGZpbHRlciBpZD0ibiI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9Ii45IiBudW1PY3RhdmVzPSI0IiAvPjwvZmlsdGVyPjwvZGVmcz48cmVjdCB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbHRlcj0idXJsKCNuKSIgb3BhY2l0eT0iMSIgLz48L3N2Zz4=')]" />
+      {/* Verde de marca plano: la misma tinta de acento del resto de la app,
+          sin degradado a negro ni textura. */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-brand-700 dark:bg-brand-900">
 
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
@@ -95,12 +93,12 @@ export function LoginPage() {
             {/* Reclamo de marketing, no una sección del documento: como <h2>
                 precedía en el DOM al <h1> del formulario, y un lector de
                 pantalla que navega por encabezados encontraba el h2 primero. */}
-            <p className="text-4xl font-extrabold text-white leading-tight">
+            <p className="font-display text-4xl font-semibold text-white leading-tight text-balance">
               Tus finanzas,
               <br />
-              <span className="text-brand-300">bajo control total</span>
+              <span className="text-brand-200">bajo control total</span>
             </p>
-            <p className="text-lg text-slate-300 leading-relaxed">
+            <p className="text-lg text-brand-50/80 leading-relaxed">
               Separa ingresos y gastos personales de tu negocio. Visualiza tu crecimiento
               mes a mes con reportes claros y exportables.
             </p>
@@ -108,13 +106,13 @@ export function LoginPage() {
             {/* Feature list */}
             <div className="space-y-3">
               {[
-                { Icon: Gauge, label: 'Dashboard en tiempo real' },
-                { Icon: FileText, label: 'Exportación a PDF' },
-                { Icon: PiggyBank, label: 'Presupuestos mensuales' },
-                { Icon: Smartphone, label: '100% responsive' },
+                { Icon: Gauge, label: 'Personal y negocio, separados' },
+                { Icon: PiggyBank, label: 'Presupuestos, deudas y metas' },
+                { Icon: FileText, label: 'Reporte mensual en PDF y Excel' },
+                { Icon: Smartphone, label: 'Funciona sin conexión' },
               ].map((f) => (
                 <div key={f.label} className="flex items-center gap-3 text-white/90 text-sm">
-                  <f.Icon className="text-brand-400 w-5 h-5 flex-shrink-0" />
+                  <f.Icon className="text-brand-200 w-5 h-5 flex-shrink-0" />
                   <span>{f.label}</span>
                 </div>
               ))}
@@ -125,7 +123,7 @@ export function LoginPage() {
           {/* Este panel es oscuro en ambos temas, así que la variante `dark:`
               nunca se aplicaba en modo claro y quedaba slate-500 sobre
               slate-950. Color fijo, elegido para el fondo real. */}
-          <p className="text-slate-400 text-xs">
+          <p className="text-brand-100/70 text-xs">
             © {new Date().getFullYear()} Foresight Finanzas. Todos los derechos reservados.
           </p>
         </div>
@@ -136,8 +134,8 @@ export function LoginPage() {
         className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12 pt-safe pb-safe"
       >
         <div className="w-full max-w-sm">
-          {/* Dark mode toggle pill */}
-          <div className="flex justify-end mb-6">
+          {/* Toggle de tema en la esquina del viewport (donde vive en la app) */}
+          <div className="fixed top-4 right-4 z-sticky pt-safe">
             <button
               onClick={toggleDarkMode}
               className="dark-mode-pill"

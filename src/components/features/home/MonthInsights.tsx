@@ -89,6 +89,10 @@ export function HighlightsCard({ largestExpense, peakDay, peakDayTransactions, a
         )}
       </section>
 
+      {/* Si el día pico es un único movimiento, es el mismo "mayor gasto" de
+          arriba: repetir la cifra no aporta nada. Solo se muestra cuando el
+          día suma varios movimientos. */}
+      {peakDay && !(peakDayTransactions.length === 1 && largestExpense && peakDayTransactions[0].id === largestExpense.id) && (
       <section className="pt-3 border-t border-slate-100 dark:border-slate-800">
         <h2 className="text-sm font-bold text-slate-900 dark:text-white mb-2">Día de mayor gasto</h2>
         {peakDay ? (
@@ -120,6 +124,7 @@ export function HighlightsCard({ largestExpense, peakDay, peakDayTransactions, a
           <EmptyState variant="compact" title="Sin gastos este mes" />
         )}
       </section>
+      )}
     </div>
   );
 }

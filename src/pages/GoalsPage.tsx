@@ -12,6 +12,7 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { PiggyBank, Plus, Pencil, Trash2 } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
+import { useGoalsEnAmbito } from '@/hooks/useAmbito';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
 import { formatMoney, getTodayISO, parseMoneyInput, roundMoney, MONTH_NAMES, syncToCloud } from '@/lib/utils';
@@ -36,7 +37,7 @@ function monthLabel(mk: string): string {
 }
 
 export function GoalsPage() {
-  const savingsGoals = useFinanceStore((s) => s.savingsGoals);
+  const savingsGoals = useGoalsEnAmbito();
   const accounts = useFinanceStore((s) => s.accounts);
   const addSavingsGoal = useFinanceStore((s) => s.addSavingsGoal);
   const updateSavingsGoal = useFinanceStore((s) => s.updateSavingsGoal);
@@ -88,6 +89,9 @@ export function GoalsPage() {
     if (!concept) { addToast('Ponle un nombre a la meta', 'error'); return; }
     const target = roundMoney(parseMoneyInput(fTarget));
     if (target <= 0) { addToast('El monto objetivo debe ser mayor a 0', 'error'); return; }
+    // Safari de escritorio y Firefox no tienen selector para type="month" y
+    // dejan escribir texto libre: el formato se comprueba aquí.
+    if (fDate && !/^\d{4}-(0[1-9]|1[0-2])$/.test(fDate)) { addToast('El mes objetivo debe tener el formato AAAA-MM', 'error'); return; }
     const data = { concept, tag: fTag, target, targetDate: fDate || null, saved: roundMoney(parseMoneyInput(fSaved)) };
     if (editing) {
       updateSavingsGoal(editing.id, data);
@@ -152,7 +156,7 @@ export function GoalsPage() {
         />
       ) : (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 animate-slide-up">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-slide-up">
             <Kpi label="Metas activas" value={String(savingsGoals.length)} sub={savingsGoals.length === 1 ? 'una meta' : 'en total'} />
             <Kpi label="Ahorrado" value={formatMoney(totals.saved)} sub={`de ${formatMoney(totals.target)}`} />
             <Kpi label="Falta" value={formatMoney(Math.max(0, roundMoney(totals.target - totals.saved)))} sub="para completar todo" />
@@ -167,18 +171,18 @@ export function GoalsPage() {
                 const barColor = late ? 'bg-expense-500' : 'bg-brand-500 dark:bg-brand-400';
                 return (
                   <li key={g.id} className="py-3">
-                    <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2 mb-1">
                       <span className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-1.5 flex-wrap">
                         {g.concept} <ScopeBadge businessType={g.tag} />
                       </span>
                       <span className="text-sm font-bold tabular-nums text-slate-900 dark:text-white flex-shrink-0">
-                        {formatMoney(m.saved)} / {formatMoney(m.target)}
+                        {formatMoney(m.saved)} <span className="font-normal text-slate-500 dark:text-slate-400">/ {formatMoney(m.target)}</span>
                       </span>
                     </div>
                     <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                       <div className={`h-full rounded-full ${barColor}`} style={{ width: `${m.pct}%` }} />
                     </div>
-                    <p className="text-2xs text-slate-500 dark:text-slate-400 mt-1 tabular-nums">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 tabular-nums">
                       {m.pct.toFixed(0)}% · faltan {formatMoney(m.missing)}
                       {g.targetDate
                         ? late
@@ -189,10 +193,10 @@ export function GoalsPage() {
                         : ' · sin fecha objetivo'}
                       {m.monthly !== null && m.missing > 0 ? ` · guarda ${formatMoney(m.monthly)} al mes` : ''}
                     </p>
-                    <div className="flex gap-1.5 mt-2 flex-wrap">
-                      <button onClick={() => openContribute(g)} className="saas-btn saas-btn-secondary saas-btn-sm text-2xs">Registrar aporte</button>
-                      <button onClick={() => openEdit(g)} className="saas-btn saas-btn-ghost saas-btn-sm text-2xs flex items-center gap-1" aria-label={`Editar ${g.concept}`}><Pencil className="w-3 h-3" /> Editar</button>
-                      <button onClick={() => setConfirmDelete(g)} className="saas-btn saas-btn-ghost saas-btn-sm text-2xs flex items-center gap-1 text-expense-600 dark:text-expense-400" aria-label={`Eliminar ${g.concept}`}><Trash2 className="w-3 h-3" /> Eliminar</button>
+                    <div className="flex gap-x-2 gap-y-1 mt-2 flex-wrap">
+                      <button onClick={() => openContribute(g)} className="saas-btn saas-btn-secondary saas-btn-sm text-xs">Registrar aporte</button>
+                      <button onClick={() => openEdit(g)} className="saas-btn saas-btn-ghost saas-btn-sm text-xs flex items-center gap-1" aria-label={`Editar ${g.concept}`}><Pencil className="w-3 h-3" /> Editar</button>
+                      <button onClick={() => setConfirmDelete(g)} className="saas-btn saas-btn-ghost saas-btn-sm text-xs flex items-center gap-1 text-expense-600 dark:text-expense-400" aria-label={`Eliminar ${g.concept}`}><Trash2 className="w-3 h-3" /> Eliminar</button>
                     </div>
                   </li>
                 );
@@ -225,7 +229,7 @@ export function GoalsPage() {
                 <input id="g-target" type="text" inputMode="decimal" value={fTarget} onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setFTarget(e.target.value); }} className="saas-input py-1.5 text-sm tabular-nums" required />
               </Campo>
               <Campo id="g-date" label="Mes objetivo">
-                <input id="g-date" type="month" value={fDate} onChange={(e) => setFDate(e.target.value)} className="saas-input py-1.5 text-sm" />
+                <input id="g-date" type="month" placeholder="AAAA-MM" pattern="[0-9]{4}-(0[1-9]|1[0-2])" value={fDate} onChange={(e) => setFDate(e.target.value)} className="saas-input py-1.5 text-sm" />
               </Campo>
             </div>
             <Campo id="g-saved" label="Ahorrado hasta hoy">
@@ -302,7 +306,7 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub: string 
   return (
     <div className="saas-card p-4">
       <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}</p>
-      <p className="text-xl font-bold tabular-nums mt-1 truncate text-slate-900 dark:text-white">{value}</p>
+      <p className="text-[clamp(1rem,4.6vw,1.25rem)] md:text-xl font-bold tabular-nums mt-1 whitespace-nowrap text-slate-900 dark:text-white">{value}</p>
       <p className="text-2xs text-slate-500 dark:text-slate-400 mt-0.5">{sub}</p>
     </div>
   );

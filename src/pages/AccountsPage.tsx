@@ -15,7 +15,7 @@ import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
 import { formatMoney, parseMoneyInput, roundMoney, safeParseDate, syncToCloud } from '@/lib/utils';
 import { accountBalance, accountIsUsed, accountName, totalBalance, ACCOUNT_KINDS } from '@/lib/accounts';
-import { currentMonthKey, shiftMonthKey, monthKeyLabel } from '@/lib/month-keys';
+import { currentMonthKey, shiftMonthKey, monthKeyLabel, monthKeyLabelCorto } from '@/lib/month-keys';
 import { getCategoryById } from '@/config/categories';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
@@ -285,17 +285,17 @@ function AccountSummaryCard() {
           <h2 className="text-sm font-bold text-slate-900 dark:text-white">Resumen por cuenta</h2>
           <p className="text-2xs text-slate-500 dark:text-slate-400">Entradas y salidas del mes en una sola cuenta</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <div>
             <label htmlFor="ac-sel" className="sr-only">Cuenta</label>
-            <select id="ac-sel" value={cuenta.id} onChange={(e) => setAccId(e.target.value)} className="saas-input-sm text-2xs">
+            <select id="ac-sel" value={cuenta.id} onChange={(e) => setAccId(e.target.value)} className="saas-input-sm text-xs">
               {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
           </div>
           <div>
             <label htmlFor="ac-month" className="sr-only">Mes</label>
-            <select id="ac-month" value={mk} onChange={(e) => setMk(e.target.value)} className="saas-input-sm text-2xs">
-              {meses.map((k) => <option key={k} value={k}>{monthKeyLabel(k)}</option>)}
+            <select id="ac-month" value={mk} onChange={(e) => setMk(e.target.value)} className="saas-input-sm text-xs">
+              {meses.map((k) => <option key={k} value={k}>{monthKeyLabelCorto(k)}</option>)}
             </select>
           </div>
         </div>

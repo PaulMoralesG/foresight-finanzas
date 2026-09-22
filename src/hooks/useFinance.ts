@@ -5,6 +5,8 @@
 
 import { useMemo } from 'react';
 import { useFinanceStore } from '@/stores/financeStore';
+import { useExpensesEnAmbito } from '@/hooks/useAmbito';
+import { filtrarPorAmbito } from '@/lib/ambito';
 import { safeParseDate, roundMoney } from '@/lib/utils';
 import type { Transaction } from '@/types';
 
@@ -24,11 +26,12 @@ export function useMonthlyData(): {
   previousBusinessIncome: number;
 } {
   const getMonthlyData = useFinanceStore((s) => s.getMonthlyData);
-  const expenses = useFinanceStore((s) => s.expenses);
+  const ambito = useFinanceStore((s) => s.ambito);
+  const expenses = useExpensesEnAmbito();
   const currentViewDate = useFinanceStore((s) => s.currentViewDate);
 
   return useMemo(() => {
-    const monthlyData = getMonthlyData();
+    const monthlyData = filtrarPorAmbito(getMonthlyData(), ambito, (t) => t.businessType);
 
     const incomeItems = monthlyData.filter((i) => i.type === 'income');
     const expenseItems = monthlyData.filter((i) => i.type === 'expense');
@@ -70,5 +73,5 @@ export function useMonthlyData(): {
       summary: { totalIncome, totalSpent, available, businessIncome, businessSpent, businessProfit, profitMargin },
       previousBusinessIncome,
     };
-  }, [getMonthlyData, expenses, currentViewDate]);
+  }, [getMonthlyData, expenses, currentViewDate, ambito]);
 }

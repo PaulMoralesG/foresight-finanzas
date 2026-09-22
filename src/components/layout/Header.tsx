@@ -11,6 +11,10 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { supabaseAvailable } from '@/config/supabase';
 import { userInitials } from '@/lib/utils';
 import { vistaPorId } from '@/config/views';
+import { AmbitoSegmentado } from '@/components/layout/AmbitoSegmentado';
+
+/** Vistas sin ámbito: cuentas y patrimonio no se etiquetan; ajustes es global. */
+const SIN_AMBITO = new Set(['accounts', 'networth', 'settings']);
 
 export function Header() {
   const activeTab = useUiStore((s) => s.activeTab);
@@ -29,6 +33,8 @@ export function Header() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const vista = vistaPorId(activeTab);
+  const conAmbito = !SIN_AMBITO.has(activeTab);
 
   // Detectar cambios de conectividad de red (independiente del estado de sync)
   useEffect(() => {
@@ -75,16 +81,19 @@ export function Header() {
         className="sticky top-0 z-sticky bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200 dark:border-slate-800"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
-        <div className="flex items-center justify-between h-12 px-4 md:px-6">
-          {/* Left: Page title */}
-          <div className="flex items-center gap-2">
-            <h1 className="text-base font-bold text-slate-900 dark:text-white truncate">
-              {vistaPorId(activeTab).label}
+        <div className="flex items-center justify-between h-12 md:h-14 px-4 md:px-6 gap-3">
+          {/* Left: título de la vista + una línea que dice qué es (view-sub) */}
+          <div className="min-w-0">
+            <h1 className="text-base font-bold text-slate-900 dark:text-white truncate leading-tight">
+              {vista.label}
             </h1>
+            <p className="hidden md:block text-2xs text-slate-500 dark:text-slate-400 truncate">{vista.descripcion}</p>
           </div>
 
-          {/* Right: Sync status + Global actions */}
+          {/* Right: ámbito + estado de sync + acciones globales */}
           <div className="flex items-center gap-2">
+            {conAmbito && <AmbitoSegmentado className="hidden sm:inline-flex" />}
+
             {/* Sync status indicator — combina red real + resultado real del push */}
             {/* Región viva: el estado solo se comunicaba por `title`, que la
                 mayoría de lectores de pantalla no anuncia, así que pasar a
@@ -190,6 +199,12 @@ export function Header() {
             )}
           </div>
         </div>
+        {/* En móvil el segmentado no cabe junto al título: segunda fila */}
+        {conAmbito && (
+          <div className="sm:hidden px-4 pb-2 -mt-1">
+            <AmbitoSegmentado />
+          </div>
+        )}
       </header>
 
       <ConfirmDialog

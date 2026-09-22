@@ -23,6 +23,10 @@ export function TabBar() {
   const activeTab = useUiStore((s) => s.activeTab);
   const setActiveTab = useUiStore((s) => s.setActiveTab);
   const openModal = useUiStore((s) => s.openModal);
+  const isModalOpen = useUiStore((s) => s.isModalOpen);
+  // En Movimientos, desde tablet ya está el botón "Nueva transacción" en la
+  // cabecera de la página: dos accesos a lo mismo en la misma pantalla sobran.
+  const fabVisible = (activeTab === 'home' || activeTab === 'movements') && !isModalOpen;
 
   const [masAbierto, setMasAbierto] = useState(false);
   const masId = useId();
@@ -160,7 +164,7 @@ export function TabBar() {
           cinco elementos es geométricamente imposible.) */}
       <button
         onClick={() => openModal()}
-        className="absolute z-nav bottom-full mb-3 right-4
+        className={`absolute z-nav bottom-full mb-3 right-4 ${activeTab === 'movements' ? 'md:hidden' : ''}
           w-14 h-14 sm:w-16 sm:h-16 rounded-2xl sm:rounded-[18px]
           bg-brand-600 hover:bg-brand-700
           text-white
@@ -168,16 +172,17 @@ export function TabBar() {
           active:scale-90
           flex items-center justify-center
           transition-all duration-200
-          ring-2 ring-white dark:ring-slate-900"
+          ring-2 ring-white dark:ring-slate-900`}
         style={{
           // FAB global: registrar un movimiento es LA acción principal de la app.
           // Visible en Resumen (donde empieza la sesión) y Movimientos; el
-          // resto son vistas de lectura o de configuración.
-          opacity: activeTab === 'movements' || activeTab === 'home' ? 1 : 0,
-          pointerEvents: activeTab === 'movements' || activeTab === 'home' ? 'auto' : 'none',
+          // resto son vistas de lectura o de configuración. Con un modal
+          // abierto se esconde: no compite con el formulario.
+          opacity: fabVisible ? 1 : 0,
+          pointerEvents: fabVisible ? 'auto' : 'none',
         }}
         aria-label="Agregar transacción"
-        tabIndex={activeTab === 'movements' || activeTab === 'home' ? 0 : -1}
+        tabIndex={fabVisible ? 0 : -1}
       >
         <Plus className="w-6 h-6 sm:w-7 sm:h-7" strokeWidth={2.5} />
       </button>

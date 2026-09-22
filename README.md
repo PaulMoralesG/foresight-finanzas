@@ -12,7 +12,9 @@ Todo desde una sola app, instalable en tu celular, que funciona incluso sin cone
 
 ## Qué incluye
 
-Ocho vistas en dos secciones, **Día a día** y **Patrimonio**:
+Ocho vistas en dos secciones, **Día a día** y **Patrimonio**, con un filtro global
+**Todo / Personal / Negocio** en la cabecera que aplica a Resumen, Movimientos,
+Presupuestos, Deudas y Metas:
 
 - **Resumen** — Saldo total y del mes, ingresos vs gastos, resultado del negocio, evolución de seis meses, categorías principales, presupuestos a vigilar, deudas y metas
 - **Movimientos** — Alta, edición y baja de transacciones y transferencias entre cuentas. Filtros por tipo, categoría, cuenta, negocio/personal y búsqueda libre
