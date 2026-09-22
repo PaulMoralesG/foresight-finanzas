@@ -71,6 +71,18 @@ describe('NetWorthPage', () => {
     expect(screen.getByText(/La curva empieza a dibujarse el próximo mes/)).toBeInTheDocument();
   });
 
+  it('permite editar la meta de patrimonio junto a la gráfica de evolución', async () => {
+    useFinanceStore.getState().addAccount({ name: 'Banco', kind: 'Banco', initialBalance: 1000 });
+    render(<NetWorthPage />);
+
+    const input = screen.getByLabelText('Meta de patrimonio neto');
+    await userEvent.type(input, '5000');
+    await userEvent.tab();
+
+    expect(useFinanceStore.getState().settings.netWorthGoal).toBe(5000);
+    expect(screen.getByText('Falta para la meta').parentElement).toHaveTextContent('$4,000.00');
+  });
+
   it('con historial dibuja la curva', () => {
     useFinanceStore.setState({
       networth: [

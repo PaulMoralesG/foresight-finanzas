@@ -13,10 +13,9 @@ import { MIN_PASSWORD_LENGTH, STRENGTH_TRACK_CLASS, passwordStrength, validateNe
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { CategoryManager } from '@/components/features/categories/CategoryManager';
-import { StrategySettings } from '@/components/features/settings/StrategySettings';
 import { BackupSettings } from '@/components/features/settings/BackupSettings';
 
-type Section = 'profile' | 'email' | 'password' | 'strategy' | 'categories' | null;
+type Section = 'profile' | 'email' | 'password' | 'categories' | null;
 
 export function SettingsPage() {
   const { signOut, updateProfile, updateEmail, updatePassword, saveData } = useAuth();
@@ -156,7 +155,7 @@ export function SettingsPage() {
             y "Usuario Local" (13 caracteres) ya se truncaba a "Usuario Lo…"
             a 375px, solo por competir con el botón "Editar" en el mismo
             renglón. A partir de sm vuelve a la fila única de siempre. */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4 min-w-0">
             <div className="w-16 h-16 rounded-full bg-brand-100 dark:bg-brand-900 text-brand-700 dark:text-brand-300 flex items-center justify-center text-2xl font-bold flex-shrink-0">
               {initials}
@@ -473,16 +472,6 @@ export function SettingsPage() {
             </div>
           )}
         </div>
-
-        {/* ─── Metas y estrategia (Balance Dual: Ajustes) ─── */}
-        <div className="px-4 pt-5 pb-2">
-          <p className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Metas y estrategia</p>
-        </div>
-        <StrategySettings
-          abierto={expanded === 'strategy'}
-          onToggle={() => toggleSection('strategy')}
-          saveData={saveData}
-        />
 
         {/* ─── Personalización ─── */}
         <div className="px-4 pt-5 pb-2">
