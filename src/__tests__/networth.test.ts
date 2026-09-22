@@ -3,7 +3,7 @@
 // ================================================================
 
 import { describe, it, expect } from 'vitest';
-import { netWorthNow, netWorthHistory, needsSnapshot } from '@/lib/networth';
+import { netWorthNow, netWorthHistory, needsSnapshot, netWorthHistoryToCsv } from '@/lib/networth';
 import type { Account, Asset, Debt, SavingsGoal, Transaction } from '@/types';
 
 const at = '2026-09-01T00:00:00.000Z';
@@ -38,6 +38,19 @@ describe('netWorthNow', () => {
   it('sin nada, todo en cero', () => {
     const nw = netWorthNow({ accounts: [], expenses: [], assets: [], debts: [], savingsGoals: [] });
     expect(nw).toMatchObject({ assets: 0, liabilities: 0, net: 0 });
+  });
+});
+
+describe('netWorthHistoryToCsv', () => {
+  it('una fila por mes, ordenada cronológicamente aunque llegue desordenada', async () => {
+    const snaps = [
+      { month: '2026-03', assets: 500, liabilities: 100, net: 400, updated_at: at },
+      { month: '2026-01', assets: 300, liabilities: 50, net: 250, updated_at: at },
+    ];
+    const csv = await netWorthHistoryToCsv(snaps).text();
+    expect(csv).toContain('"Mes","Activos","Pasivos","Neto"');
+    const lineas = csv.split('\r\n').filter((l) => l.startsWith('"2026'));
+    expect(lineas).toEqual(['"2026-01","300.00","50.00","250.00"', '"2026-03","500.00","100.00","400.00"']);
   });
 });
 

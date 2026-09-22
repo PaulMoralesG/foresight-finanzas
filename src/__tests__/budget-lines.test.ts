@@ -10,6 +10,7 @@ import {
   planFor,
   budgetStatus,
   groupSummary,
+  groupSummaryToCsv,
   annualReport,
 } from '@/lib/budget-lines';
 import type { BudgetLine, Transaction } from '@/types';
@@ -140,6 +141,18 @@ describe('groupSummary (presupuestado vs. real por grupo)', () => {
     expect(emp).toMatchObject({ planned: 2000, actual: 2100, diff: 100 }); // ingreso de más es bueno
     expect(r.planResult).toBe(1000); // 2000 − 1000
     expect(r.realResult).toBe(1300); // 2100 − 800
+  });
+});
+
+describe('groupSummaryToCsv', () => {
+  it('una fila por grupo, en el mismo orden que groupSummary', async () => {
+    const lines = [linea({ categoryId: 'comida', limit: 200 })];
+    const expenses = [mov({ category: 'comida', amount: 150, date: '2026-01-10' })];
+    const resumen = groupSummary(lines, expenses, '2026-01', []);
+
+    const csv = await groupSummaryToCsv(resumen).text();
+    expect(csv).toContain('"Tipo","Grupo","Presupuestado","Real","Diferencia"');
+    expect(csv).toContain('"Gasto","Alimentación","200.00","150.00","50.00"');
   });
 });
 

@@ -6,7 +6,7 @@
 // ================================================================
 
 import { describe, it, expect } from 'vitest';
-import { projectDebts, totalDebt, monthlyDebtPayment, payoffDate } from '@/lib/debts';
+import { projectDebts, totalDebt, monthlyDebtPayment, payoffDate, debtsToCsv } from '@/lib/debts';
 import type { Debt } from '@/types';
 
 let n = 0;
@@ -95,6 +95,18 @@ describe('projectDebts', () => {
     expect(plan.payoff.a).toBe(1);
     expect(plan.payoff.b).toBe(2);
     expect(plan.months).toBe(2);
+  });
+});
+
+describe('debtsToCsv', () => {
+  it('una fila por deuda, con el ámbito traducido y el día "—" cuando falta', async () => {
+    const csv = await debtsToCsv([
+      deuda({ name: 'Tarjeta Banco', tag: 'business', kind: 'Tarjeta de crédito', balance: 500, annualRate: 22, minPayment: 50, payDay: 15 }),
+      deuda({ name: 'Préstamo auto', payDay: null }),
+    ]).text();
+    expect(csv).toContain('"Nombre","Ámbito","Tipo","Saldo","Interés anual (%)","Pago mínimo","Día de pago"');
+    expect(csv).toContain('"Tarjeta Banco","Negocio","Tarjeta de crédito","500.00","22.00","50.00","15"');
+    expect(csv).toContain('"Préstamo auto","Personal","Préstamo","1000.00","12.00","100.00","—"');
   });
 });
 
