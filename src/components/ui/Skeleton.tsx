@@ -35,22 +35,6 @@ export function Skeleton({ className = '', variant = 'text' }: SkeletonProps) {
   return <div className={`${base} ${className || 'h-4 w-full'}`} />;
 }
 
-/** Full-page loading skeleton for lazy-loaded routes */
-export function PageSkeleton() {
-  return (
-    <div className="space-y-3 p-4 animate-fade-in">
-      <Skeleton className="h-8 w-48" />
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Skeleton variant="card" />
-        <Skeleton variant="card" />
-        <Skeleton variant="card" />
-      </div>
-      <Skeleton variant="card" className="h-40" />
-      <Skeleton variant="card" className="h-32" />
-    </div>
-  );
-}
-
 /** App-level loading skeleton — full screen placeholder */
 export function AppLoadingSkeleton() {
   return (

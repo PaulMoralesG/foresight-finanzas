@@ -17,21 +17,22 @@ import { MovementsPage } from '@/pages/MovementsPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { BudgetsPage } from '@/pages/BudgetsPage';
 import { DebtsPage } from '@/pages/DebtsPage';
+import { GoalsPage } from '@/pages/GoalsPage';
 import { NetWorthPage } from '@/pages/NetWorthPage';
 import { AccountsPage } from '@/pages/AccountsPage';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { TransactionModal } from '@/components/features/movements/TransactionModal';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
-import { AppLoadingSkeleton, PageSkeleton } from '@/components/ui/Skeleton';
+import { AppLoadingSkeleton } from '@/components/ui/Skeleton';
 
-// Lazy-load: páginas pesadas que no se necesitan en la carga inicial.
+// Lazy-load: lo que no se necesita en la carga inicial (el login y el reporte;
+// las ocho vistas van estáticas para que cambiar de pestaña sea instantáneo).
 //
 // Van con `lazyConRecuperacion` y no con `lazy` a secas: al publicar una
 // versión, los chunks cambian de hash y los viejos desaparecen del servidor.
 // Un shell servido desde el precache del worker anterior pide el chunk que ya
 // no existe, el import falla y la pantalla entera cae al ErrorBoundary. El
 // envoltorio activa el worker en espera y recarga. Ver src/lib/lazy-recovery.ts.
-const GoalsPage = lazyConRecuperacion(() => import('@/pages/GoalsPage').then(m => ({ default: m.GoalsPage })));
 const LoginPage = lazyConRecuperacion(() => import('@/pages/LoginPage').then(m => ({ default: m.LoginPage })));
 // Lazy: el modal y la vista imprimible del reporte (compartida con StatsPage)
 // solo hacen falta al exportar; fuera de la carga inicial aunque pesen poco.
@@ -93,7 +94,7 @@ export function App() {
       case 'movements': return <MovementsPage />;
       case 'budgets':   return <BudgetsPage />;
       case 'debts':     return <DebtsPage />;
-      case 'goals':     return <Suspense fallback={<PageSkeleton />}><GoalsPage /></Suspense>;
+      case 'goals':     return <GoalsPage />;
       case 'networth':  return <NetWorthPage />;
       case 'accounts':  return <AccountsPage />;
       case 'settings':  return <SettingsPage />;
