@@ -562,9 +562,11 @@ export function HomePage() {
 
       <TrendCard trendData={trendData} />
 
-      {/* Categorías + destacados | presupuesto + ahorro */}
-      {/* Dos columnas desde tablet; las tarjetas se reparten para que ninguna
-          columna quede medio vacía en pantallas anchas. */}
+      {/* Gasto del mes + patrimonio | planes (presupuesto + metas) */}
+      {/* Dos columnas desde tablet. Deudas y Patrimonio no se pintan sin
+          datos, así que van con las tarjetas de gasto (que siempre existen)
+          y la columna de planes queda Presupuestos + Metas: así ninguna
+          columna termina medio vacía tenga o no deudas el usuario. */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:items-start">
         <div className="space-y-4">
           <CategoryBreakdown expenses={monthlyData} />
@@ -574,12 +576,12 @@ export function HomePage() {
             peakDayTransactions={peakDayTransactions}
             allCustomCats={allCustomCats}
           />
-          <SavingsGoalWidget />
+          <DebtMiniCard />
+          <NetWorthWidget />
         </div>
         <div className="space-y-4">
           <BudgetWatchlist />
-          <DebtMiniCard />
-          <NetWorthWidget />
+          <SavingsGoalWidget />
         </div>
       </div>
     </div>
