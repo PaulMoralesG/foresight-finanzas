@@ -33,11 +33,6 @@ export function budgetStatus(spent: number, limit: number): { pct: number; statu
   return { pct, status, label };
 }
 
-/** Total planificado de gasto de un mes (todas las líneas de gasto, ambos ámbitos). */
-export function plannedExpenseTotal(lines: BudgetLine[], monthKey: string): number {
-  return roundMoney(lines.filter((l) => l.kind === 'expense').reduce((s, l) => s + planFor(l, monthKey), 0));
-}
-
 /** Gasto (o ingreso) real de una categoría y ámbito en un mes. */
 export function actualFor(expenses: Transaction[], line: Pick<BudgetLine, 'tag' | 'kind' | 'categoryId'>, monthKey: string): number {
   return roundMoney(

@@ -26,12 +26,12 @@ const { version } = require('lucide-react/package.json');
 /** Nombres tal como los exporta lucide-react (PascalCase). */
 const ICONOS = [
   'AlertCircle', 'AlertTriangle', 'ArrowDown', 'ArrowLeft', 'ArrowLeftRight', 'ArrowUp',
-  'Banknote', 'BarChart3', 'Building2', 'Calendar', 'CalendarClock', 'ChartNoAxesColumn',
+  'Banknote', 'Building2', 'Calendar', 'ChartNoAxesColumn',
   'Check', 'CheckCircle', 'ChevronDown', 'ChevronLeft', 'ChevronRight', 'ChevronUp',
-  'ChevronsLeft', 'ChevronsRight', 'ClipboardList', 'CloudOff', 'CreditCard', 'Download',
+  'ChevronsLeft', 'ChevronsRight', 'CloudOff', 'CreditCard', 'Download',
   'Edit3', 'Ellipsis', 'Eye', 'EyeOff', 'FileSpreadsheet', 'FileText', 'Gauge', 'Home', 'Key',
   'Landmark', 'Layers', 'LayoutGrid', 'Loader2', 'Lock', 'LogIn', 'LogOut', 'Mail',
-  'MailCheck', 'Moon', 'Pencil', 'PieChart', 'PiggyBank', 'Plus', 'Printer', 'Receipt',
+  'MailCheck', 'Moon', 'Pencil', 'PiggyBank', 'Plus', 'Printer', 'Receipt',
   'RefreshCw', 'Search', 'Send', 'Settings', 'Smartphone', 'Store', 'Sun', 'Tags', 'Target',
   'Trash2', 'TrendingUp', 'User', 'UserPlus', 'Wallet', 'Wifi', 'WifiOff', 'X',
 ];

@@ -51,7 +51,7 @@ describe('modo offline', () => {
 
     // Estado como quedaría tras una sesión anterior, ya rehidratado del disco
     useFinanceStore.getState().addTransaction(gasto);
-    useFinanceStore.getState().setBudget('2026-08', 1500);
+    useFinanceStore.getState().addBudgetLine({ tag: 'personal', kind: 'expense', categoryId: 'comida', limit: 1500, plan: {} });
     useFinanceStore.getState().addSavingsGoal({ concept: 'Casa', target: 5000 });
     expect(useFinanceStore.getState().expenses).toHaveLength(1);
 
@@ -61,7 +61,7 @@ describe('modo offline', () => {
     const estado = useFinanceStore.getState();
     expect(estado.expenses).toHaveLength(1);
     expect(estado.expenses[0].concept).toBe('Sobrevive a la recarga');
-    expect(estado.budgets['2026-08']).toBe(1500);
+    expect(estado.budgetLines[0].limit).toBe(1500);
     expect(estado.savingsGoals).toHaveLength(1);
   });
 

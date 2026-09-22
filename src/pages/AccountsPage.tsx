@@ -15,7 +15,7 @@ import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
 import { formatMoney, parseMoneyInput, roundMoney, safeParseDate, syncToCloud } from '@/lib/utils';
 import { accountBalance, accountIsUsed, accountName, totalBalance, ACCOUNT_KINDS } from '@/lib/accounts';
-import { currentMonthKey, shiftMonthKey, monthKeyLabel } from '@/hooks/useBudget';
+import { currentMonthKey, shiftMonthKey, monthKeyLabel } from '@/lib/month-keys';
 import { getCategoryById } from '@/config/categories';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';

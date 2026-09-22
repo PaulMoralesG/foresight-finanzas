@@ -9,6 +9,7 @@ import { computeSavingsByConcept, savingsForGoal } from '@/lib/savings';
 import { newId, nowIso } from '@/lib/ids';
 import type { Transaction, MonthlyBudget, FilterType, Category, SavingsGoal, Account, Debt, Settings, Asset, NetWorthSnapshot, BudgetLine, BusinessType } from '@/types';
 import { convertGlobalBudgets } from '@/lib/budget-lines';
+import { accountIsUsed } from '@/lib/accounts';
 import type { BackupData } from '@/lib/backup';
 
 interface FinanceState {
@@ -48,14 +49,11 @@ interface FinanceState {
   restoreTransactions: (items: Transaction[]) => void;
 
   // --- Presupuestos ---
-  setBudget: (monthKey: string, value: number) => void;
   addBudgetLine: (l: Omit<BudgetLine, 'id' | 'updated_at'>) => string;
   updateBudgetLine: (id: string, partial: Partial<Omit<BudgetLine, 'id' | 'updated_at'>>) => void;
   deleteBudgetLine: (id: string) => void;
   /** Fija (o borra, con 0/NaN) el plan de un mes de una línea. */
   setBudgetPlan: (id: string, monthKey: string, value: number | null) => void;
-
-  // --- Recordatorios de pago ---
 
   // --- Categorías personalizadas ---
   addCustomCategory: (type: 'expense' | 'income', category: Category) => void;
@@ -81,6 +79,7 @@ interface FinanceState {
   // --- Cuentas ---
   addAccount: (a: Omit<Account, 'id' | 'updated_at'>) => string;
   updateAccount: (id: string, partial: Partial<Omit<Account, 'id' | 'updated_at'>>) => void;
+  /** No borra (ni deja tombstone) si algún movimiento usa la cuenta. */
   deleteAccount: (id: string) => void;
 
   // --- Deudas ---
@@ -373,12 +372,6 @@ export const useFinanceStore = create<FinanceState>()(
           };
         }),
 
-      setBudget: (monthKey, value) =>
-        set((state) => ({
-          budgets: { ...state.budgets, [monthKey]: value },
-          budgetUpdatedAt: { ...state.budgetUpdatedAt, [monthKey]: nowIso() },
-        })),
-
       // ── Categorías personalizadas ──
       addCustomCategory: (type, category) =>
         set((state) => {
@@ -538,11 +531,16 @@ export const useFinanceStore = create<FinanceState>()(
           tombstones: clearedTombstone(state.tombstones, id),
         })),
 
+      // No-op si tiene movimientos: el invariante "ningún accountId huérfano"
+      // lo garantiza el store, no solo la pantalla que hoy lo comprueba.
       deleteAccount: (id) =>
-        set((state) => ({
-          accounts: state.accounts.filter((a) => a.id !== id),
-          tombstones: tombstoned(state.tombstones, id),
-        })),
+        set((state) => {
+          if (accountIsUsed(id, state.expenses)) return {};
+          return {
+            accounts: state.accounts.filter((a) => a.id !== id),
+            tombstones: tombstoned(state.tombstones, id),
+          };
+        }),
 
       // ── Deudas ──
       addDebt: (d) => {

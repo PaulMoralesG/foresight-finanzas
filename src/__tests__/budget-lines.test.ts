@@ -10,7 +10,6 @@ import {
   planFor,
   budgetStatus,
   groupSummary,
-  plannedExpenseTotal,
   annualReport,
 } from '@/lib/budget-lines';
 import type { BudgetLine, Transaction } from '@/types';
@@ -141,11 +140,6 @@ describe('groupSummary (presupuestado vs. real por grupo)', () => {
     expect(emp).toMatchObject({ planned: 2000, actual: 2100, diff: 100 }); // ingreso de más es bueno
     expect(r.planResult).toBe(1000); // 2000 − 1000
     expect(r.realResult).toBe(1300); // 2100 − 800
-  });
-
-  it('plannedExpenseTotal suma solo las líneas de gasto del mes', () => {
-    const lines = [linea({ kind: 'income', limit: 9999 }), linea({ limit: 500 }), linea({ categoryId: 'ropa', limit: 100, plan: { '2026-08': 150 } })];
-    expect(plannedExpenseTotal(lines, '2026-08')).toBe(650);
   });
 });
 

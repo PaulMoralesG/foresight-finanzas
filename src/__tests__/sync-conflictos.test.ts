@@ -60,6 +60,7 @@ function armar(esc: Escenario = {}) {
           maybeSingle: vi.fn(() =>
             Promise.resolve({ data: esc.perfil ?? null, error: esc.errorPerfil ?? null })
           ),
+          gte: vi.fn(() => chain),
           order: vi.fn(() => chain),
           range: vi.fn(() => {
             const n = contadorPull[table] ?? 0;
@@ -325,7 +326,7 @@ describe('entidades secundarias (fase 3)', () => {
     s.addCustomCategory('income', { id: 'cat_extra', label: 'Extra', icon: '💸', color: 'bg-y' });
     s.addCustomCategory('expense', { id: 'cat_fuera', label: 'Fuera', icon: '❌', color: 'bg-z', updated_at: '2026-08-01T00:00:00.000Z' });
     s.deleteCustomCategory('expense', 'cat_fuera');
-    s.setBudget('2026-09', 8000);
+    useFinanceStore.setState({ budgets: { '2026-09': 8000 }, budgetUpdatedAt: { '2026-09': '2026-09-01T12:00:00.000Z' } });
     s.addAccount({ name: 'Nuevo', kind: 'Banco', initialBalance: 100 });
     s.addAccount({ name: 'A', kind: 'Banco', initialBalance: 0 });
     s.deleteAccount('a_fuera');
@@ -561,6 +562,7 @@ describe('reloj y ciclo de vida', () => {
         eq: vi.fn(() => {
           const chain = {
             maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
+            gte: vi.fn(() => chain),
             order: vi.fn(() => chain),
             range: vi.fn(async () => {
               if (table === 'expenses') await bloqueo;

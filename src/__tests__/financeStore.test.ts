@@ -42,6 +42,7 @@ describe('financeStore', () => {
     const s = useFinanceStore.getState();
     expect(s.expenses).toEqual([]);
     expect(s.budgets).toEqual({});
+    expect(s.budgetLines).toEqual([]);
     expect(s.savingsGoals).toEqual([]);
     expect(s.tombstones).toEqual({});
     expect(s.budgetUpdatedAt).toEqual({});
@@ -188,36 +189,6 @@ describe('financeStore', () => {
     expect(monthly[0].concept).toBe('Este mes');
   });
 
-  // ─── Presupuestos ─────────────────────────────────────────────
-
-  it('setBudget guarda presupuesto mensual', () => {
-    useFinanceStore.getState().setBudget('2026-07', 10000);
-    expect(useFinanceStore.getState().budgets['2026-07']).toBe(10000);
-  });
-
-  it('setBudget registra budgetUpdatedAt por mes', () => {
-    useFinanceStore.getState().setBudget('2026-07', 10000);
-    expect(useFinanceStore.getState().budgetUpdatedAt['2026-07']).toBeDefined();
-    expect(new Date(useFinanceStore.getState().budgetUpdatedAt['2026-07']).getTime()).toBeGreaterThan(0);
-  });
-
-  it('setBudget sobreescribe y no borra otras keys', () => {
-    useFinanceStore.getState().setBudget('2026-07', 5000);
-    useFinanceStore.getState().setBudget('2026-08', 8000);
-    useFinanceStore.getState().setBudget('2026-07', 6000);
-
-    const budgets = useFinanceStore.getState().budgets;
-    expect(budgets['2026-07']).toBe(6000);
-    expect(budgets['2026-08']).toBe(8000);
-  });
-
-  // ─── Recordatorios de pago ────────────────────────────────────
-
-
-
-
-
-
   // ─── Categorías personalizadas ────────────────────────────────
 
   it('addCustomCategory agrega categoría de gasto', () => {
@@ -276,7 +247,7 @@ describe('financeStore', () => {
 
   it('reset limpia todo el estado', () => {
     useFinanceStore.getState().addTransaction(makeTx());
-    useFinanceStore.getState().setBudget('2026-07', 5000);
+    useFinanceStore.getState().addBudgetLine({ tag: 'personal', kind: 'expense', categoryId: 'comida', limit: 5000, plan: {} });
     useFinanceStore.getState().addCustomCategory('expense', makeCat());
     useFinanceStore.getState().addSavingsGoal({ concept: 'Casa', target: 100000 });
     useFinanceStore.getState().setFilter('income');
@@ -286,6 +257,7 @@ describe('financeStore', () => {
     const s = useFinanceStore.getState();
     expect(s.expenses).toEqual([]);
     expect(s.budgets).toEqual({});
+    expect(s.budgetLines).toEqual([]);
     expect(s.customExpenseCategories).toEqual([]);
     expect(s.savingsGoals).toEqual([]);
     expect(s.tombstones).toEqual({});

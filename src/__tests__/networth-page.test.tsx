@@ -9,7 +9,7 @@ import { NetWorthPage } from '@/pages/NetWorthPage';
 import { useNetWorthSnapshot } from '@/hooks/useNetWorthSnapshot';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { currentMonthKey } from '@/hooks/useBudget';
+import { currentMonthKey } from '@/lib/month-keys';
 
 beforeEach(() => {
   cleanup();
