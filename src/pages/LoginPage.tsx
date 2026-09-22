@@ -162,7 +162,7 @@ export function LoginPage() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
             {titleText}
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
             {subtitleText}
           </p>
 
@@ -175,7 +175,7 @@ export function LoginPage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">¡Correo enviado!</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                     Revisa <strong>{forgotEmail}</strong> y sigue el enlace para restablecer tu contraseña.
                   </p>
                 </div>
@@ -190,7 +190,7 @@ export function LoginPage() {
             ) : (
               /* ── Formulario de recuperación ── */
               <form onSubmit={handleForgotPassword} className="space-y-3">
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-slate-600 dark:text-slate-400">
                   Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.
                 </p>
                 <input
@@ -214,7 +214,7 @@ export function LoginPage() {
                     'Enviar enlace de recuperación'
                   )}
                 </button>
-                <p className="text-center text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-center text-xs text-slate-600 dark:text-slate-400">
                   <button
                     type="button"
                     onClick={goToLogin}

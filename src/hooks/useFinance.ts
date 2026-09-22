@@ -4,10 +4,8 @@
 // ================================================================
 
 import { useMemo } from 'react';
-import { useFinanceStore } from '@/stores/financeStore';
-import { useExpensesEnAmbito } from '@/hooks/useAmbito';
-import { filtrarPorAmbito } from '@/lib/ambito';
-import { safeParseDate, roundMoney } from '@/lib/utils';
+import { useExpensesDelMesEnAmbito } from '@/hooks/useAmbito';
+import { roundMoney } from '@/lib/utils';
 import type { Transaction } from '@/types';
 
 interface MonthlySummary {
@@ -23,15 +21,10 @@ interface MonthlySummary {
 export function useMonthlyData(): {
   monthlyData: Transaction[];
   summary: MonthlySummary;
-  previousBusinessIncome: number;
 } {
-  const getMonthlyData = useFinanceStore((s) => s.getMonthlyData);
-  const ambito = useFinanceStore((s) => s.ambito);
-  const expenses = useExpensesEnAmbito();
-  const currentViewDate = useFinanceStore((s) => s.currentViewDate);
+  const monthlyData = useExpensesDelMesEnAmbito();
 
   return useMemo(() => {
-    const monthlyData = filtrarPorAmbito(getMonthlyData(), ambito, (t) => t.businessType);
 
     const incomeItems = monthlyData.filter((i) => i.type === 'income');
     const expenseItems = monthlyData.filter((i) => i.type === 'expense');
@@ -51,27 +44,9 @@ export function useMonthlyData(): {
     const businessProfit = roundMoney(businessIncome - businessSpent);
     const profitMargin = businessIncome > 0 ? roundMoney((businessProfit / businessIncome) * 100) : 0;
 
-    // Ingresos de negocio del mes anterior
-    const d = new Date(currentViewDate);
-    const prevDate = new Date(d.getFullYear(), d.getMonth() - 1, 1);
-    const prevMonth = prevDate.getMonth();
-    const prevYear = prevDate.getFullYear();
-    const previousBusinessIncome = roundMoney(expenses
-      .filter((item) => {
-        const id = safeParseDate(item.date);
-        return (
-          id.getMonth() === prevMonth &&
-          id.getFullYear() === prevYear &&
-          item.type === 'income' &&
-          item.businessType === 'business'
-        );
-      })
-      .reduce((s, i) => s + i.amount, 0));
-
     return {
       monthlyData,
       summary: { totalIncome, totalSpent, available, businessIncome, businessSpent, businessProfit, profitMargin },
-      previousBusinessIncome,
     };
-  }, [getMonthlyData, expenses, currentViewDate, ambito]);
+  }, [monthlyData]);
 }

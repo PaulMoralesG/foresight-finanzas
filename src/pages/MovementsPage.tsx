@@ -5,7 +5,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Layers, ArrowDown, ArrowUp, Plus, X, Search, Receipt, ChevronUp, ChevronDown, Trash2 } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
-import { useExpensesEnAmbito } from '@/hooks/useAmbito';
+import { useExpensesDelMesEnAmbito } from '@/hooks/useAmbito';
+import { RecurrencesPanel } from '@/components/features/movements/RecurrencesPanel';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
 import { formatMoney, LOCALE, roundMoney, safeParseDate, syncToCloud } from '@/lib/utils';
@@ -28,9 +29,8 @@ const FILTERS: { id: FilterType; label: string; icon: React.ElementType }[] = [
 const FILTER_TYPE_IDS = ['all', 'income', 'expense', 'business', 'personal'] as const;
 
 export function MovementsPage() {
-  const expenses = useExpensesEnAmbito();
   const setAmbito = useFinanceStore((s) => s.setAmbito);
-  const getMonthlyData = useFinanceStore((s) => s.getMonthlyData);
+  const recurrences = useFinanceStore((s) => s.recurrences);
   const currentViewDate = useFinanceStore((s) => s.currentViewDate);
   const currentFilter = useFinanceStore((s) => s.currentFilter);
   const setFilter = useFinanceStore((s) => s.setFilter);
@@ -43,6 +43,7 @@ export function MovementsPage() {
 
   const [sortField, setSortField] = useState<'date' | 'amount'>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [vista, setVista] = useState<'lista' | 'recurrentes'>('lista');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [accountFilter, setAccountFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,7 +71,7 @@ export function MovementsPage() {
   const handleBulkDelete = () => {
     if (selectedIds.size === 0) return;
     // Guardar copia de las transacciones antes de eliminar (para Undo)
-    const deletedItems = expenses.filter((e) => selectedIds.has(e.id));
+    const deletedItems = monthlyData.filter((e) => selectedIds.has(e.id));
     const count = selectedIds.size;
 
     try {
@@ -130,9 +131,7 @@ export function MovementsPage() {
     return map;
   }, [customExpenseCategories, customIncomeCategories]);
 
-  // Deps "innecesarias" a propósito: getMonthlyData lee el store por dentro
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const monthlyData = useMemo(() => getMonthlyData(), [getMonthlyData, expenses, currentViewDate]);
+  const monthlyData = useExpensesDelMesEnAmbito();
 
   // Todas las categorías (default + personalizadas) para el dropdown
   const allCategories = useMemo(
@@ -192,8 +191,19 @@ export function MovementsPage() {
   const totalIncome = roundMoney(filtered.filter((i) => i.type === 'income').reduce((s, i) => s + i.amount, 0));
   const totalExpense = roundMoney(filtered.filter((i) => i.type === 'expense').reduce((s, i) => s + i.amount, 0));
 
+  if (vista === 'recurrentes') {
+    return (
+      <div className="space-y-2.5 animate-fade-in">
+        <SubPestanas vista={vista} setVista={setVista} recurrentes={recurrences.length} />
+        <RecurrencesPanel />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2 sm:space-y-2.5 animate-fade-in">
+      <SubPestanas vista={vista} setVista={setVista} recurrentes={recurrences.length} />
+
       {/* Page header: MonthNav + contextual "Nueva" */}
       <div className="flex items-center justify-between gap-2">
         <MonthNav />
@@ -210,7 +220,7 @@ export function MovementsPage() {
 
       {/* Summary line + active filter chips */}
       <div className="flex items-center gap-2 flex-wrap">
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-slate-600 dark:text-slate-400">
           {filtered.length} {filtered.length === 1 ? 'transacción' : 'transacciones'} ·{' '}
           <span className="text-income-600 dark:text-income-400 font-medium">{formatMoney(totalIncome)}</span>
           {' '}ingresos ·{' '}
@@ -304,7 +314,7 @@ export function MovementsPage() {
           </select>
         )}
         <div className="flex items-center w-[260px] ml-auto flex-shrink-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus-within:ring-2 focus-within:ring-brand-500 focus-within:border-transparent">
-          <Search className="ml-2.5 w-3.5 h-3.5 text-slate-500 dark:text-slate-400 flex-shrink-0" />
+          <Search className="ml-2.5 w-3.5 h-3.5 text-slate-600 dark:text-slate-400 flex-shrink-0" />
           <input
             type="text"
             placeholder="Buscar..."
@@ -317,7 +327,7 @@ export function MovementsPage() {
           {searchQuery ? (
             <button
               onClick={() => setSearchQuery('')}
-              className="mr-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex-shrink-0"
+              className="mr-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex-shrink-0"
               aria-label="Limpiar búsqueda"
               title="Limpiar búsqueda"
             >
@@ -328,7 +338,7 @@ export function MovementsPage() {
             // había ninguna pista en la interfaz de que existiera el atajo.
             <kbd
               aria-hidden="true"
-              className="mr-1.5 px-1 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-3xs font-mono text-slate-400 dark:text-slate-500 flex-shrink-0"
+              className="mr-1.5 px-1 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-3xs font-mono text-slate-600 dark:text-slate-400 flex-shrink-0"
             >
               Ctrl+K
             </kbd>
@@ -377,7 +387,7 @@ export function MovementsPage() {
 
       {/* Search mobile (own row, full width) */}
       <div className="flex items-center sm:hidden w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus-within:ring-2 focus-within:ring-brand-500 focus-within:border-transparent">
-        <Search className="ml-2.5 w-3.5 h-3.5 text-slate-500 dark:text-slate-400 flex-shrink-0" />
+        <Search className="ml-2.5 w-3.5 h-3.5 text-slate-600 dark:text-slate-400 flex-shrink-0" />
         <input
           type="text"
           placeholder="Buscar..."
@@ -390,7 +400,7 @@ export function MovementsPage() {
         {searchQuery && (
           <button
             onClick={() => setSearchQuery('')}
-            className="mr-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex-shrink-0"
+            className="mr-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex-shrink-0"
             aria-label="Limpiar búsqueda"
             title="Limpiar búsqueda"
           >
@@ -467,13 +477,13 @@ export function MovementsPage() {
                         {typeLabel(tx.type)}
                       </button>
                       {tx.type === 'transfer' ? (
-                        <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
+                        <span className="text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
                           {accountName(accounts, tx.accountId)} → {accountName(accounts, tx.toAccountId)}
                         </span>
                       ) : (
                       <button
                         type="button"
-                        className="saas-chip-click text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full"
+                        className="saas-chip-click text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full"
                         onClick={(e) => { e.stopPropagation(); setCategoryFilter(tx.category); }}
                         title={`Filtrar solo ${category?.label || tx.category}`}
                       >
@@ -493,7 +503,7 @@ export function MovementsPage() {
                         <ScopeBadge businessType={tx.businessType} />
                       </button>
                     </div>
-                    <span className="text-2xs text-slate-500 dark:text-slate-400 flex-shrink-0">
+                    <span className="text-2xs text-slate-600 dark:text-slate-400 flex-shrink-0">
                       {safeParseDate(tx.date).toLocaleDateString(LOCALE, {
                         day: 'numeric',
                         month: 'short',
@@ -642,7 +652,7 @@ export function MovementsPage() {
                         </button>
                       </td>
                       <td className="whitespace-nowrap">
-                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                        <span className="text-xs text-slate-600 dark:text-slate-400">
                           {safeParseDate(tx.date).toLocaleDateString(LOCALE, {
                             day: 'numeric',
                             month: 'short',
@@ -689,6 +699,32 @@ export function MovementsPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ─── Sub-pestañas: la lista del mes y las reglas que se repiten ─── */
+function SubPestanas({ vista, setVista, recurrentes }: {
+  vista: 'lista' | 'recurrentes';
+  setVista: (v: 'lista' | 'recurrentes') => void;
+  recurrentes: number;
+}) {
+  return (
+    <div className="flex gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 w-fit" role="tablist" aria-label="Vista de movimientos">
+      {([['lista', 'Movimientos'], ['recurrentes', 'Recurrentes']] as ['lista' | 'recurrentes', string][]).map(([id, label]) => (
+        <button
+          key={id}
+          role="tab"
+          aria-selected={vista === id}
+          onClick={() => setVista(id)}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${vista === id ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-400'}`}
+        >
+          {label}
+          {id === 'recurrentes' && recurrentes > 0 && (
+            <span className="ml-1.5 text-2xs tabular-nums text-slate-600 dark:text-slate-400">{recurrentes}</span>
+          )}
+        </button>
+      ))}
     </div>
   );
 }

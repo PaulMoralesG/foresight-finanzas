@@ -239,9 +239,6 @@ input[type="checkbox"]:indeterminate {
   .saas-badge {
     @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
   }
-  .saas-badge-green  { @apply saas-badge bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400; }
-  .saas-badge-red    { @apply saas-badge bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400; }
-  .saas-badge-blue   { @apply saas-badge bg-brand-50 dark:bg-brand-950 text-brand-700 dark:text-brand-400; }
   .saas-badge-slate  { @apply saas-badge bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400; }
   /* Negocio. Usa la rampa `business` (terracota) y no `violet`, que era un
      color suelto de Tailwind sin relación con el resto del sistema: el
@@ -313,13 +310,6 @@ input[type="checkbox"]:indeterminate {
     @apply hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors;
   }
 
-  .saas-skeleton {
-    @apply rounded-lg bg-slate-200 dark:bg-slate-800 animate-skeleton;
-  }
-
-  .saas-divider {
-    @apply border-t border-slate-200 dark:border-slate-800;
-  }
 }
 
 /* ================================================================
@@ -408,8 +398,10 @@ textarea {
     scroll-behavior: auto !important;
   }
   /* El esqueleto de carga sí conserva su pulso: comunica "esto está cargando"
-     y es una atenuación suave, no un desplazamiento. */
-  .saas-skeleton {
+     y es una atenuación suave, no un desplazamiento. La excepción apuntaba a
+     `.saas-skeleton`, una clase que ya no usaba nadie —el componente Skeleton
+     usa `animate-pulse`—, así que en la práctica el pulso quedaba congelado. */
+  .animate-pulse {
     animation-duration: 1.5s !important;
     animation-iteration-count: infinite !important;
   }

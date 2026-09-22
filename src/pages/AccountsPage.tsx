@@ -20,6 +20,7 @@ import { getCategoryById } from '@/config/categories';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { CardHeader } from '@/components/ui/CardHeader';
 import { ModalSheet } from '@/components/ui/ModalSheet';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { Account, AccountKind } from '@/types';
@@ -108,11 +109,11 @@ export function AccountsPage() {
       {/* Cabecera con saldo total */}
       <div className="flex items-end justify-between gap-3 flex-wrap">
         <div>
-          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Saldo total</p>
+          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Saldo total</p>
           <p className={`text-2xl font-bold tabular-nums ${total < 0 ? 'text-expense-600 dark:text-expense-400' : 'text-slate-900 dark:text-white'}`}>
             {formatMoney(total)}
           </p>
-          <p className="text-2xs text-slate-500 dark:text-slate-400">
+          <p className="text-2xs text-slate-600 dark:text-slate-400">
             {accounts.length} {accounts.length === 1 ? 'cuenta' : 'cuentas'}
           </p>
         </div>
@@ -135,7 +136,7 @@ export function AccountsPage() {
             const bal = accountBalance(a, expenses);
             return (
               <div key={a.id} className="saas-card p-4 flex flex-col gap-1 animate-slide-up">
-                <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{a.kind}</p>
+                <p className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">{a.kind}</p>
                 <p className="font-semibold text-slate-900 dark:text-white truncate">{a.name}</p>
                 <p className={`text-xl font-bold tabular-nums ${bal < 0 ? 'text-expense-600 dark:text-expense-400' : 'text-slate-900 dark:text-white'}`}>
                   {formatMoney(bal)}
@@ -174,7 +175,7 @@ export function AccountsPage() {
         >
           <form onSubmit={handleSubmit} className="p-3 space-y-3 flex-1 overflow-y-auto">
             <div>
-              <label htmlFor="account-name" className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Nombre</label>
+              <label htmlFor="account-name" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Nombre</label>
               <input
                 id="account-name"
                 type="text"
@@ -188,7 +189,7 @@ export function AccountsPage() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label htmlFor="account-kind" className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Tipo</label>
+                <label htmlFor="account-kind" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Tipo</label>
                 <select
                   id="account-kind"
                   value={kind}
@@ -201,7 +202,7 @@ export function AccountsPage() {
                 </select>
               </div>
               <div>
-                <label htmlFor="account-initial" className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Saldo inicial</label>
+                <label htmlFor="account-initial" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Saldo inicial</label>
                 <input
                   id="account-initial"
                   type="text"
@@ -213,7 +214,7 @@ export function AccountsPage() {
                 />
               </div>
             </div>
-            <p className="text-2xs text-slate-500 dark:text-slate-400">
+            <p className="text-2xs text-slate-600 dark:text-slate-400">
               Lo que ya tienes guardado dentro de una cuenta déjalo aquí como saldo inicial: no vuelve a contarse en tu patrimonio.
             </p>
             <div className="flex gap-2 pt-1">
@@ -280,12 +281,11 @@ function AccountSummaryCard() {
 
   return (
     <div className="saas-card p-4 animate-slide-up">
-      <div className="flex items-end justify-between gap-3 flex-wrap mb-3">
-        <div>
-          <h2 className="text-sm font-bold text-slate-900 dark:text-white">Resumen por cuenta</h2>
-          <p className="text-2xs text-slate-500 dark:text-slate-400">Entradas y salidas del mes en una sola cuenta</p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
+      <CardHeader
+        titulo="Resumen por cuenta"
+        sub="Entradas y salidas del mes en una sola cuenta"
+        accion={
+        <div className="flex gap-2 flex-wrap flex-shrink-0">
           <div>
             <label htmlFor="ac-sel" className="sr-only">Cuenta</label>
             <select id="ac-sel" value={cuenta.id} onChange={(e) => setAccId(e.target.value)} className="saas-input-sm text-xs">
@@ -299,14 +299,15 @@ function AccountSummaryCard() {
             </select>
           </div>
         </div>
-      </div>
+        }
+      />
 
       {vacio ? (
         <EmptyState variant="compact" title={`Sin movimientos en ${accountName(accounts, cuenta.id)} para ${monthKeyLabel(mk)}`} />
       ) : (
         <table className="w-full text-xs">
           <thead>
-            <tr className="text-left text-2xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <tr className="text-left text-2xs uppercase tracking-wider text-slate-600 dark:text-slate-400">
               <th className="py-1 font-semibold">Categoría</th>
               <th className="py-1 font-semibold text-right">Real</th>
             </tr>
@@ -332,7 +333,7 @@ function FragmentoSeccion({ titulo, lista }: { titulo: string; lista: [string, n
   return (
     <>
       <tr>
-        <td colSpan={2} className="pt-2 pb-0.5 text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{titulo}</td>
+        <td colSpan={2} className="pt-2 pb-0.5 text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">{titulo}</td>
       </tr>
       {lista.map(([label, monto]) => (
         <tr key={label} className="border-t border-slate-100 dark:border-slate-800">

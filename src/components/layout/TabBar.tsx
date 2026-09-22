@@ -121,14 +121,14 @@ export function TabBar() {
           className={`size-6 transition-colors duration-300 ${
             isActive
               ? 'text-brand-600 dark:text-brand-400'
-              : 'text-slate-500 dark:text-slate-400'
+              : 'text-slate-600 dark:text-slate-400'
           }`}
         />
         <span
           className={`text-2xs font-semibold mt-0.5 transition-colors duration-300 ${
             isActive
               ? 'text-brand-600 dark:text-brand-400'
-              : 'text-slate-500 dark:text-slate-400'
+              : 'text-slate-600 dark:text-slate-400'
           }`}
         >
           {tab.label}
@@ -137,7 +137,7 @@ export function TabBar() {
     );
   };
 
-  const colorMas = enMas || masAbierto ? 'text-brand-600 dark:text-brand-400' : 'text-slate-500 dark:text-slate-400';
+  const colorMas = enMas || masAbierto ? 'text-brand-600 dark:text-brand-400' : 'text-slate-600 dark:text-slate-400';
 
   return (
     /* ── Contenedor fixed ÚNICO (TabBar + FAB juntos).

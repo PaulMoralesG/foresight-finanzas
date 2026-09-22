@@ -9,7 +9,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 
 /** Ancho de respaldo antes de medir (y en jsdom, que no mide nada). */
-export const ANCHO_INICIAL = 520;
+const ANCHO_INICIAL = 520;
 
 export function useAnchoContenedor<T extends HTMLElement>() {
   const ref = useRef<T>(null);

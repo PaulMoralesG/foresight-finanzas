@@ -85,13 +85,16 @@ export function Header() {
         className="sticky top-0 z-sticky bg-slate-50 dark:bg-slate-950"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
-        <div className="flex items-center justify-between h-12 md:h-14 px-4 md:px-6 gap-3">
-          {/* Left: título de la vista + una línea que dice qué es (view-sub) */}
+        <div className="flex items-center justify-between h-14 md:h-16 px-4 md:px-6 gap-3">
+          {/* Left: título de la vista + una línea que dice qué es (view-sub).
+              El título va a 1.25/1.5rem como `.view-title` de la referencia:
+              con 16px no había salto de jerarquía con los títulos de tarjeta y
+              ninguna pantalla tenía un ancla visual al entrar. */}
           <div className="min-w-0">
-            <h1 className="text-base font-bold text-slate-900 dark:text-white truncate leading-tight">
+            <h1 className="text-xl md:text-2xl font-semibold text-slate-900 dark:text-white truncate leading-tight">
               {vista.label}
             </h1>
-            <p className="hidden md:block text-2xs text-slate-500 dark:text-slate-400 truncate">{vista.descripcion}</p>
+            <p className="hidden md:block text-xs text-slate-600 dark:text-slate-400 truncate">{vista.descripcion}</p>
           </div>
 
           {/* Right: ámbito + estado de sync + acciones globales */}
@@ -105,7 +108,7 @@ export function Header() {
             {supabaseAvailable && (
               <div role="status" aria-live="polite" className="flex items-center">
                 {!isOnline ? (
-                  <span className="flex items-center gap-1 text-2xs text-slate-500 dark:text-slate-400" title="Sin conexión">
+                  <span className="flex items-center gap-1 text-2xs text-slate-600 dark:text-slate-400" title="Sin conexión">
                     <WifiOff className="w-3 h-3" />
                     <span className="sr-only">Sin conexión</span>
                   </span>

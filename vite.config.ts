@@ -17,7 +17,10 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: false,
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
+      // Sin `includeAssets`: apuntaba a favicon.ico y apple-touch-icon.png en
+      // la raíz de public/, y ninguno de los dos existe (el favicon es
+      // favicon.png y el de Apple vive en public/icons/), así que no
+      // precacheaba nada. Los iconos reales entran por globPatterns.
       manifest: {
         name: 'Foresight Finanzas',
         short_name: 'Foresight',

@@ -55,7 +55,7 @@ export function Toast() {
         )}
         <button
           onClick={() => removeToast(toast.id)}
-          className="text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex-shrink-0"
+          className="text-slate-600 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex-shrink-0"
           aria-label="Cerrar aviso"
         >
           <X className="w-3.5 h-3.5" />

@@ -12,12 +12,15 @@ import { Plus, Pencil, Trash2 } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
-import { formatMoney, parseMoneyInput, roundMoney, syncToCloud, MONTH_NAMES } from '@/lib/utils';
+import { formatMoney, parseMoneyInput, roundMoney, syncToCloud } from '@/lib/utils';
+import { monthKeyLabel, monthKeyLabelCorto } from '@/lib/month-keys';
 import { netWorthNow, netWorthHistory, ASSET_GROUPS, type NetWorth } from '@/lib/networth';
 import { escalaBonita, formatoTickDinero, trazarLinea } from '@/lib/chart-geometry';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { coloresGrafica } from '@/lib/chart-colors';
+import { CardHeader } from '@/components/ui/CardHeader';
 import { ModalSheet } from '@/components/ui/ModalSheet';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ScopeBadge } from '@/components/ui/TransactionBits';
@@ -97,15 +100,16 @@ export function NetWorthPage() {
 
       {/* Otros activos */}
       <div className="saas-card p-4 animate-slide-up">
-        <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
-          <div>
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white">Otros activos</h2>
-            <p className="text-2xs text-slate-500 dark:text-slate-400">Lo que la app no ve en tus cuentas: vehículos, inversiones, equipos</p>
-          </div>
-          <button onClick={openCreate} className="saas-btn saas-btn-primary saas-btn-sm flex items-center gap-1.5">
-            <Plus className="w-3.5 h-3.5" /> Agregar activo
-          </button>
-        </div>
+        <CardHeader
+          titulo="Otros activos"
+          sub="Lo que la app no ve en tus cuentas: vehículos, inversiones, equipos"
+          className="mb-2"
+          accion={
+            <button onClick={openCreate} className="saas-btn saas-btn-primary saas-btn-sm flex items-center gap-1.5 flex-shrink-0">
+              <Plus className="w-3.5 h-3.5" /> Agregar activo
+            </button>
+          }
+        />
         {assets.length === 0 ? (
           <EmptyState variant="compact" title="Sin activos registrados. Tus cuentas ya cuentan como activo líquido." />
         ) : (
@@ -114,7 +118,7 @@ export function NetWorthPage() {
             if (lista.length === 0) return null;
             return (
               <div key={g} className="mt-3">
-                <h3 className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">{g}</h3>
+                <h3 className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">{g}</h3>
                 <ul className="divide-y divide-slate-100 dark:divide-slate-800">
                   {lista.map((a) => (
                     <li key={a.id} className="py-2 flex items-center gap-3">
@@ -122,7 +126,7 @@ export function NetWorthPage() {
                         {a.name} <ScopeBadge businessType={a.tag} />
                       </span>
                       <span className="text-sm font-semibold tabular-nums">{formatMoney(a.value)}</span>
-                      <button onClick={() => openEdit(a)} className="saas-btn-icon text-slate-500 dark:text-slate-400" aria-label={`Editar ${a.name}`} title="Editar"><Pencil className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => openEdit(a)} className="saas-btn-icon text-slate-600 dark:text-slate-400" aria-label={`Editar ${a.name}`} title="Editar"><Pencil className="w-3.5 h-3.5" /></button>
                       <button onClick={() => setConfirmDelete(a)} className="saas-btn-icon text-expense-600 dark:text-expense-400" aria-label={`Eliminar ${a.name}`} title="Eliminar"><Trash2 className="w-3.5 h-3.5" /></button>
                     </li>
                   ))}
@@ -137,7 +141,7 @@ export function NetWorthPage() {
         <ModalSheet id="asset-form-title" titulo={editing ? 'Editar activo' : 'Nuevo activo'} onClose={() => setFormOpen(false)} trapActivo={!confirmDelete} focoInicial="#as-name">
           <form onSubmit={handleSubmit} className="p-3 space-y-3 flex-1 overflow-y-auto">
             <div>
-              <span className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Ámbito</span>
+              <span className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Ámbito</span>
               <div className="flex gap-1" role="group" aria-label="Ámbito">
                 {(['personal', 'business'] as BusinessType[]).map((t) => (
                   <button key={t} type="button" onClick={() => setFTag(t)}
@@ -148,18 +152,18 @@ export function NetWorthPage() {
               </div>
             </div>
             <div>
-              <label htmlFor="as-name" className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Nombre</label>
+              <label htmlFor="as-name" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Nombre</label>
               <input id="as-name" type="text" value={fName} onChange={(e) => setFName(e.target.value)} placeholder="Moto, terreno, fondo de inversión" className="saas-input py-1.5 text-sm" required maxLength={80} />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label htmlFor="as-group" className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Grupo</label>
+                <label htmlFor="as-group" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Grupo</label>
                 <select id="as-group" value={fGroup} onChange={(e) => setFGroup(e.target.value as AssetGroup)} className="saas-input py-1.5 text-sm">
                   {ASSET_GROUPS.map((g) => <option key={g} value={g}>{g}</option>)}
                 </select>
               </div>
               <div>
-                <label htmlFor="as-value" className="text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Valor actual</label>
+                <label htmlFor="as-value" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Valor actual</label>
                 <input id="as-value" type="text" inputMode="decimal" value={fValue} onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setFValue(e.target.value); }} className="saas-input py-1.5 text-sm tabular-nums" required />
               </div>
             </div>
@@ -188,20 +192,17 @@ function Kpi({ label, value, sub, tone }: { label: string; value: string; sub: s
   const color = tone === 'good' ? 'text-income-600 dark:text-income-400' : tone === 'crit' ? 'text-expense-600 dark:text-expense-400' : 'text-slate-900 dark:text-white';
   return (
     <div className="saas-card p-4">
-      <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">{label}</p>
       <p className={`text-[clamp(1rem,4.6vw,1.25rem)] md:text-xl font-bold tabular-nums mt-1 whitespace-nowrap ${color}`}>{value}</p>
-      <p className="text-2xs text-slate-500 dark:text-slate-400 mt-0.5">{sub}</p>
+      <p className="text-2xs text-slate-600 dark:text-slate-400 mt-0.5">{sub}</p>
     </div>
   );
 }
 
 /* ─── Evolución del patrimonio: los cierres mensuales (SVG, como la referencia) ─── */
-export function NetWorthTrendCard({ history, goal, hoy }: { history: NetWorthSnapshot[]; goal: number; hoy: number }) {
+function NetWorthTrendCard({ history, goal, hoy }: { history: NetWorthSnapshot[]; goal: number; hoy: number }) {
   const isDark = useUiStore((s) => s.isDark);
-  const grid = isDark ? '#4a4944' : '#e6e4dd';
-  const tick = isDark ? '#a3a099' : '#5f5e58';
-  const ink = isDark ? '#f3f2ee' : '#1a1a19';
-  const linea = '#1baf7a';
+  const { grid, tick, tipFg: ink, income: linea } = coloresGrafica(isDark);
   const { ref, ancho: W } = useAnchoContenedor<HTMLDivElement>();
   const H = 190, padL = 52, padR = 12, padB = 26, padT = 12;
   const innerH = H - padT - padB;
@@ -234,13 +235,13 @@ export function NetWorthTrendCard({ history, goal, hoy }: { history: NetWorthSna
         <path d={trazarLinea(pts)} fill="none" stroke={linea} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
         {pts.map(([x, y], i) => (
           <circle key={i} cx={x} cy={y} r={i === pts.length - 1 ? 4 : 2.5} fill={linea}>
-            <title>{etiquetaMes(history[i].month)}: {formatMoney(history[i].net)}</title>
+            <title>{monthKeyLabel(history[i].month)}: {formatMoney(history[i].net)}</title>
           </circle>
         ))}
         {history.map((h, i) =>
           history.length <= 8 || i % 2 === 0 || i === history.length - 1 ? (
             <text key={h.month} x={pts[i][0]} y={H - 8} fontSize={10} fill={tick} textAnchor="middle">
-              {MONTH_NAMES[parseInt(h.month.split('-')[1], 10) - 1].slice(0, 3)}
+              {monthKeyLabelCorto(h.month).slice(0, 3)}
             </text>
           ) : null,
         )}
@@ -253,20 +254,14 @@ export function NetWorthTrendCard({ history, goal, hoy }: { history: NetWorthSna
 
   return (
     <div className="saas-card p-4 animate-slide-up">
-      <h2 className="text-sm font-bold text-slate-900 dark:text-white">Evolución del patrimonio</h2>
-      <p className="text-2xs text-slate-500 dark:text-slate-400 mb-2">Se guarda solo al cierre de cada mes</p>
+      <CardHeader titulo="Evolución del patrimonio" sub="Se guarda solo al cierre de cada mes" />
       <div ref={ref}>{contenido}</div>
-      <p className="text-2xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-3 flex-wrap">
+      <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 flex items-center gap-3 flex-wrap">
         <span className="flex items-center gap-1.5"><span aria-hidden className="inline-block h-0 w-4 border-t-[3px]" style={{ borderColor: linea }} />Patrimonio neto</span>
         {goal > 0 && <span className="flex items-center gap-1.5"><span aria-hidden className="inline-block h-0 w-4 border-t-2 border-dashed" style={{ borderColor: tick }} />Meta {formatMoney(goal)}</span>}
       </p>
     </div>
   );
-}
-
-function etiquetaMes(month: string): string {
-  const [y, m] = month.split('-').map(Number);
-  return `${MONTH_NAMES[m - 1]} ${y}`;
 }
 
 /* ─── De qué se compone el patrimonio hoy ─── */
@@ -283,8 +278,7 @@ function NetWorthBreakdownCard({ nw }: { nw: NetWorth }) {
 
   return (
     <div className="saas-card p-4 animate-slide-up">
-      <h2 className="text-sm font-bold text-slate-900 dark:text-white">De qué se compone</h2>
-      <p className="text-2xs text-slate-500 dark:text-slate-400 mb-2">Hoy</p>
+      <CardHeader titulo="De qué se compone" sub="Hoy" />
       {visibles.length === 0 ? (
         <EmptyState variant="compact" title="Todavía no hay nada que medir: crea cuentas, activos o deudas." />
       ) : (
@@ -304,7 +298,7 @@ function NetWorthBreakdownCard({ nw }: { nw: NetWorth }) {
         </div>
       )}
       {nw.accountsDebt > 0 && nw.debts > 0 && (
-        <p className="text-2xs text-slate-500 dark:text-slate-400 mt-3">
+        <p className="text-2xs text-slate-600 dark:text-slate-400 mt-3">
           Si una tarjeta está registrada como cuenta con saldo negativo y además como deuda, aparecerá dos veces. Deja una sola de las dos.
         </p>
       )}

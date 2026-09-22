@@ -182,11 +182,13 @@ describe('Resumen — lo heredado de Estadísticas', () => {
     expect(screen.getByRole('heading', { name: 'Evolución' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /Evolución de los últimos 6 meses/ })).toBeInTheDocument();
 
-    const mayor = screen.getByRole('heading', { name: 'Mayor gasto' }).parentElement!;
+    // closest('section') y no parentElement: el título vive dentro de CardHeader,
+    // así que su padre es la columna del encabezado, no la tarjeta entera.
+    const mayor = screen.getByRole('heading', { name: 'Mayor gasto' }).closest('section')!;
     expect(within(mayor).getByText('Renta')).toBeInTheDocument();
     expect(within(mayor).getByText('$1,200.00')).toBeInTheDocument();
 
-    const pico = screen.getByRole('heading', { name: 'Día de mayor gasto' }).parentElement!;
+    const pico = screen.getByRole('heading', { name: 'Día de mayor gasto' }).closest('section')!;
     expect(within(pico).getByText('$1,250.00')).toBeInTheDocument(); // 1200 + 50 el día 3
     expect(within(pico).getByText('2 mov.')).toBeInTheDocument();
   });

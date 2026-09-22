@@ -103,6 +103,7 @@ vez cada una. Para un entorno nuevo hay que aplicarlas todas:
 | `0011_assets_and_networth.sql` | Tablas `assets` (activos manuales por grupo) y `networth` (cierre mensual del patrimonio, una fila por mes), con RLS, grant y `keep_newest` | **Antes** de desplegar (el cliente hace pull de ambas) |
 | `0012_budget_lines.sql` | Tabla `budget_lines` (presupuesto por categoría: límite base + plan por mes en jsonb) con RLS, grant y `keep_newest`; columna `group` en `categories`. La tabla `budgets` (presupuesto global) se conserva | **Antes** de desplegar (el cliente hace pull de `budget_lines`) |
 | `0013_goals_saved_direct.sql` | Columnas `tag`, `target_date`, `saved` y `saved_from_accounts` en `savings_goals`: cada meta lleva su propio acumulado en vez de derivarlo de gastos de categoría "ahorro" agrupados por concepto | **Antes** de desplegar (el cliente hace pull/push de `saved`/`saved_from_accounts`) |
+| `0014_recurrences.sql` | Tabla `recurrences` (plantillas de movimientos que se repiten: diario, semanal o mensual) con RLS, grant, índice por `(user_id, updated_at)` y `keep_newest`; columna `recurrence_id` en `expenses` | **Antes** de desplegar (el cliente hace pull de `recurrences`; sin la tabla el sync entero cae a modo local) |
 
 Fíjate en el orden de la `0005` y la `0006`: una va antes del deploy y la otra después.
 Invertirlo deja al cliente pidiendo algo que ya no existe, o escribiendo con una clave

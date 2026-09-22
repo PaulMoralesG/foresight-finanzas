@@ -47,7 +47,9 @@ export function netWorthNow({ accounts, expenses, assets, debts, savingsGoals }:
   // suma (se contaría dos veces). savedFromAccounts es justo esa porción,
   // llevada por la propia meta (fase 3.8) en vez de reconstruida escaneando
   // gastos por categoría.
-  const goals = savingsGoals.reduce((s, g) => s + (g.savedFromAccounts || 0), 0);
+  // Math.min por si un dato viejo (o sincronizado desde un cliente anterior al
+  // recorte de updateSavingsGoal) trae más "de cuenta" que ahorrado total.
+  const goals = savingsGoals.reduce((s, g) => s + Math.min(g.savedFromAccounts || 0, g.saved || 0), 0);
 
   const totalAssets = roundMoney(liquid + manual + goals);
   const liabilities = roundMoney(owed + debtTotal);

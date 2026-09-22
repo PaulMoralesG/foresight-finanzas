@@ -114,13 +114,13 @@ export function App() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-slate-900 dark:text-white">Instalar aplicación</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Accede rápido desde tu pantalla de inicio</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">Accede rápido desde tu pantalla de inicio</p>
                 <div className="flex gap-2 mt-3">
                   <button onClick={handleInstall} className="saas-btn-primary saas-btn-sm text-xs">Instalar</button>
                   <button onClick={dismissInstallBanner} className="saas-btn-ghost saas-btn-sm text-xs">Ahora no</button>
                 </div>
               </div>
-              <button onClick={dismissInstallBanner} aria-label="Cerrar" className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 flex-shrink-0">
+              <button onClick={dismissInstallBanner} aria-label="Cerrar" className="text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 flex-shrink-0">
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -138,7 +138,7 @@ export function App() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-slate-900 dark:text-white">Nueva versión disponible</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Actualiza para ver las últimas mejoras</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">Actualiza para ver las últimas mejoras</p>
                 <button onClick={handleUpdate} className="saas-btn-primary saas-btn-sm text-xs mt-3">Actualizar ahora</button>
               </div>
             </div>
