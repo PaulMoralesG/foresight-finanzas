@@ -56,6 +56,44 @@ describe('Movimientos › Recurrentes', () => {
     expect(screen.getByText('En pausa')).toBeInTheDocument();
   });
 
+  it('permite editar el día del mes sin borrar ni recrear la regla', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    alta(); // diaMes: 5
+    render(<MovementsPage />);
+    await user.click(screen.getByRole('tab', { name: /Recurrentes/ }));
+
+    const input = screen.getByLabelText('Día del mes');
+    await user.clear(input);
+    await user.type(input, '20');
+    await user.tab();
+
+    expect(useFinanceStore.getState().recurrences[0].diaMes).toBe(20);
+    expect(screen.getByText(/Cada mes, el 20/)).toBeInTheDocument();
+  });
+
+  it('ignora un día fuera de rango y deja el que ya tenía', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    alta();
+    render(<MovementsPage />);
+    await user.click(screen.getByRole('tab', { name: /Recurrentes/ }));
+
+    const input = screen.getByLabelText('Día del mes');
+    await user.clear(input);
+    await user.type(input, '45');
+    await user.tab();
+
+    expect(useFinanceStore.getState().recurrences[0].diaMes).toBe(5);
+  });
+
+  it('no muestra el campo de día en reglas semanales o diarias', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    alta({ frecuencia: 'weekly', diaMes: null, desde: '2026-09-07' });
+    render(<MovementsPage />);
+    await user.click(screen.getByRole('tab', { name: /Recurrentes/ }));
+
+    expect(screen.queryByLabelText('Día del mes')).not.toBeInTheDocument();
+  });
+
   it('sin reglas explica cómo crear la primera', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<MovementsPage />);

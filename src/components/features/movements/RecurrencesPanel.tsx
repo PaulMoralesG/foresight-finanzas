@@ -41,6 +41,30 @@ export function RecurrencesPanel() {
   const { saveData } = useAuth();
   const ambito = useAmbito();
   const [confirmDelete, setConfirmDelete] = useState<Recurrence | null>(null);
+  // Solo guarda una entrada mientras el campo "Día del mes" de esa fila está
+  // en edición; el resto de las filas leen el valor directo de `r.diaMes`.
+  const [diaInputs, setDiaInputs] = useState<Record<string, string>>({});
+
+  function diaValue(r: Recurrence): string {
+    return diaInputs[r.id] ?? String(r.diaMes ?? '');
+  }
+
+  function commitDia(r: Recurrence) {
+    if (!(r.id in diaInputs)) return;
+    const n = Math.round(Number(diaInputs[r.id]));
+    if (Number.isFinite(n) && n >= 1 && n <= 31 && n !== r.diaMes) {
+      updateRecurrence(r.id, { diaMes: n });
+      addToast('Día actualizado ✅', 'success');
+      syncToCloud(saveData, addToast);
+    } else if (!Number.isFinite(n) || n < 1 || n > 31) {
+      addToast('El día debe estar entre 1 y 31', 'error');
+    }
+    setDiaInputs((prev) => {
+      const next = { ...prev };
+      delete next[r.id];
+      return next;
+    });
+  }
 
   const customCats = useMemo(
     () => [...customExpenseCategories, ...customIncomeCategories],
@@ -103,7 +127,26 @@ export function RecurrencesPanel() {
                     {r.activa && proxima ? ` · próxima el ${fechaCorta(proxima)}` : ''}
                     {r.hasta ? ` · hasta ${fechaCorta(r.hasta)}` : ''}
                   </p>
-                  <div className="flex gap-3 mt-1.5 flex-wrap">
+                  <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                    {r.frecuencia === 'monthly' && (
+                      <div className="flex items-center gap-1.5">
+                        <label htmlFor={`dia-${r.id}`} className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                          Día del mes
+                        </label>
+                        <input
+                          id={`dia-${r.id}`}
+                          type="number"
+                          inputMode="numeric"
+                          min={1}
+                          max={31}
+                          value={diaValue(r)}
+                          onChange={(e) => setDiaInputs((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                          onBlur={() => commitDia(r)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                          className="saas-input-sm text-xs tabular-nums !w-14"
+                        />
+                      </div>
+                    )}
                     <button onClick={() => alternar(r)} className="saas-btn saas-btn-secondary saas-btn-sm text-xs">
                       {r.activa ? 'Pausar' : 'Reanudar'}
                     </button>
