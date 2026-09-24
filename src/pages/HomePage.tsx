@@ -64,7 +64,7 @@ function CategoryBreakdown({ porCategoria }: { porCategoria: [string, number][] 
         accion={
           <button
             onClick={() => { navigateTo('movements' as TabId, 'expense'); }}
-            className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline flex-shrink-0"
+            className="saas-hit text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline flex-shrink-0"
             title="Ver todos los gastos del mes"
             aria-label="Ver todos los gastos"
           >
@@ -149,7 +149,7 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
         accion={
           <button
             onClick={() => { setActiveTab('movements' as TabId); }}
-            className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline active:scale-95 transition-transform flex-shrink-0"
+            className="saas-hit text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline active:scale-95 transition-transform flex-shrink-0"
             title="Ver todos los movimientos"
             aria-label="Ver todos los movimientos"
           >
@@ -317,7 +317,7 @@ function BudgetWatchlist() {
         accion={
           <button
             onClick={() => navigateTo('budgets' as TabId)}
-            className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline flex-shrink-0"
+            className="saas-hit text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline flex-shrink-0"
           >
             Ver todo
           </button>
@@ -407,7 +407,7 @@ function DebtMiniCard() {
       )}
       <button
         onClick={() => navigateTo('debts' as TabId)}
-        className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline mt-3 inline-block"
+        className="saas-hit text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline mt-3 inline-block"
       >
         Ver el plan completo →
       </button>
@@ -645,7 +645,7 @@ function SavingsGoalWidget() {
 
       <button
         onClick={() => navigateTo('goals' as TabId)}
-        className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline mt-3 inline-block"
+        className="saas-hit text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline mt-3 inline-block"
       >
         Ver metas →
       </button>
@@ -684,7 +684,7 @@ function ProximosCargos() {
         accion={
           <button
             onClick={() => navigateTo('movements' as TabId)}
-            className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline flex-shrink-0"
+            className="saas-hit text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline flex-shrink-0"
           >
             Ver todo
           </button>

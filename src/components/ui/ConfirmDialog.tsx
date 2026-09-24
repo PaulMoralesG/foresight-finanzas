@@ -97,7 +97,7 @@ export function ConfirmDialog({
           </div>
         </div>
 
-        <div className="flex gap-3 mt-6">
+        <div className="dialog-actions flex gap-3 mt-6">
           <button
             onClick={onCancel}
             data-confirm-cancel

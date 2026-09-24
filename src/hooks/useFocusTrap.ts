@@ -45,8 +45,11 @@ export function useFocusTrap<T extends HTMLElement>(active: boolean, initialFocu
         .filter((el) => el.offsetParent !== null || el === document.activeElement);
 
     // Foco inicial: el control indicado, o el primero disponible
+    // El selector puede apuntar al propio contenedor (ModalSheet lo usa en
+    // pantallas táctiles para no abrir el teclado): querySelector solo busca
+    // entre los descendientes, así que se comprueba aparte.
     const target = initialFocus
-      ? container.querySelector<HTMLElement>(initialFocus)
+      ? (container.matches(initialFocus) ? container : container.querySelector<HTMLElement>(initialFocus))
       : null;
     (target ?? focusables()[0])?.focus();
 

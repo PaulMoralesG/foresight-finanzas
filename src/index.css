@@ -195,6 +195,39 @@ input[type="checkbox"]:indeterminate {
 
   .saas-input-sm { @apply saas-input px-2 py-1 text-xs; }
 
+  /* ── Hoja modal (ModalSheet) ──
+     Móvil: hoja inferior. Se ancla al borde inferior de la parte VISIBLE de
+     la pantalla (--vv-bottom = alto del teclado, lo publica useVisualViewport)
+     y su alto nunca pasa de lo visible menos la zona segura superior, así que
+     la cabecera con «Cerrar» queda siempre a la vista, con o sin teclado.
+     Los valores sin variables son el respaldo para navegadores sin
+     visualViewport. */
+  .modal-sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--vv-bottom, 0px);
+    max-height: calc(100vh - env(safe-area-inset-top, 0px) - 0.75rem);
+    max-height: calc(var(--vv-height, 100dvh) - env(safe-area-inset-top, 0px) - 0.75rem);
+    border-top-left-radius: 1.25rem;
+    border-top-right-radius: 1.25rem;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+  @media (min-width: 768px) {
+    .modal-sheet {
+      inset: 0;
+      margin: auto;
+      width: 100%;
+      max-width: 28rem;
+      height: fit-content;
+      max-height: calc(100vh - 3rem);
+      border-radius: 1rem;
+      padding: 0;
+    }
+  }
+
   .saas-btn {
     @apply inline-flex items-center justify-center gap-1.5 rounded-lg font-medium text-sm;
     @apply px-3 py-1.5 transition-all duration-150;
@@ -458,10 +491,36 @@ textarea {
     min-width: 44px;
     min-height: 44px;
   }
+  /* Dentro de un diálogo, todo control de formulario llega a 44px: los
+     segmentados Personal/Negocio e Ingreso/Gasto medían 25px y los campos
+     30–34px, por debajo del mínimo de Apple (44pt) y de Android (48dp ≈ 44px
+     útiles). En escritorio no se toca: ahí la densidad es una ventaja. */
+  [role='dialog'] form button,
+  [role='dialog'] form select,
+  [role='dialog'] form input:not([type='checkbox']):not([type='radio']),
+  [role='dialog'] .dialog-actions button {
+    min-height: 44px;
+  }
+  /* Campos de página (buscador, filtros, meta de patrimonio): 36px → 44px. */
+  .saas-input,
+  .saas-input-sm,
+  .dark-mode-pill {
+    min-height: 44px;
+  }
+  /* Controles que deben verse compactos —segmentados de ámbito, subpestañas,
+     interruptores, enlaces «Ver todo»— conservan su dibujo y ganan una zona
+     táctil invisible de 44px. Por rol, para que cubra también los que se
+     añadan después sin acordarse de ponerles una clase. */
   .saas-chip-click,
-  .saas-hit {
+  .saas-hit,
+  [role='group'] > button,
+  [role='tablist'] > [role='tab'],
+  [role='switch'] {
     position: relative;
   }
+  [role='group'] > button::after,
+  [role='tablist'] > [role='tab']::after,
+  [role='switch']::after,
   .saas-chip-click::after,
   .saas-hit::after {
     content: '';

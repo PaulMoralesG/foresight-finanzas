@@ -126,17 +126,19 @@ export function ReportModal() {
           touchAction: 'pan-y',
         }}
       >
-        {/* Scrollable content */}
-        <div className="overflow-y-auto ios-scroll -mx-3 -mt-3 px-3 pt-3 flex-1" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
-        {/* Header */}
-        <div className="flex items-center justify-between mb-2">
-          <h2 id={titleId} className="font-semibold text-sm text-slate-900 dark:text-white">
-            Reporte Mensual
+        {/* Cabecera FUERA del área con scroll: dentro, el botón de cerrar se
+            iba con el contenido al desplazarse y en móvil quedaba inalcanzable. */}
+        <div className="flex items-center justify-between gap-3 mb-2 flex-shrink-0">
+          <h2 id={titleId} className="font-semibold text-base md:text-sm text-slate-900 dark:text-white">
+            Reporte mensual
           </h2>
-          <button onClick={closeReportModal} aria-label="Cerrar" className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-            <X className="w-3.5 h-3.5" />
+          <button onClick={closeReportModal} aria-label="Cerrar" className="w-11 h-11 md:w-8 md:h-8 flex-shrink-0 flex items-center justify-center rounded-full text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 md:bg-transparent md:dark:bg-transparent hover:bg-slate-200 dark:hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 transition-colors">
+            <X className="w-5 h-5 md:w-4 md:h-4" />
           </button>
         </div>
+
+        {/* Contenido con scroll */}
+        <div className="overflow-y-auto ios-scroll -mx-3 px-3 flex-1 min-h-0" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
 
         <p className="text-2xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
           <Calendar className="inline w-3.5 h-3.5 mr-1" />
@@ -198,7 +200,7 @@ export function ReportModal() {
             title="Imprimir o guardar como PDF"
           >
             <Printer className="w-3 h-3" />
-            PDF Completo
+            PDF completo
           </button>
           <button
             onClick={handleCSV}
