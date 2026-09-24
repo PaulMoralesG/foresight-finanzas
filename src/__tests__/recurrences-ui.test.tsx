@@ -94,11 +94,9 @@ describe('Movimientos › Recurrentes', () => {
     expect(screen.queryByLabelText('Día del mes')).not.toBeInTheDocument();
   });
 
-  it('sin reglas explica cómo crear la primera', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  it('sin reglas no muestra la pestaña Recurrentes', () => {
     render(<MovementsPage />);
-    await user.click(screen.getByRole('tab', { name: /Recurrentes/ }));
-    expect(screen.getByText('Todavía no repites ningún movimiento')).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /Recurrentes/ })).not.toBeInTheDocument();
   });
 });
 
@@ -114,6 +112,16 @@ describe('Resumen › Próximos cargos', () => {
 
   it('no aparece si lo siguiente cae más allá de 30 días', () => {
     alta({ desde: '2027-01-05' });
+    useUiStore.setState({ activeTab: 'home' });
+    render(<HomePage />);
+    expect(screen.queryByText('Próximos cargos')).not.toBeInTheDocument();
+  });
+});
+
+describe('Resumen › Próximos cargos fuera del mes actual', () => {
+  it('no aparece al navegar a otro mes', () => {
+    alta({ desde: '2026-09-25', diaMes: 25 });
+    useFinanceStore.setState({ currentViewDate: new Date(2026, 2, 1).toISOString() }); // marzo
     useUiStore.setState({ activeTab: 'home' });
     render(<HomePage />);
     expect(screen.queryByText('Próximos cargos')).not.toBeInTheDocument();

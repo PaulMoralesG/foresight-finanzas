@@ -235,3 +235,17 @@ describe('TransactionModal — sincronización', () => {
     expect(onSave).toHaveBeenCalled();
   });
 });
+
+describe('TransactionModal — sin «Repetir»', () => {
+  it('no ofrece repetir el movimiento ni crea reglas al guardar', async () => {
+    const user = userEvent.setup();
+    useFinanceStore.setState({ recurrences: [] });
+    abrirModal();
+    montar();
+    expect(screen.queryByRole('group', { name: /Repetir/ })).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText(/Monto/i), '120');
+    await user.click(screen.getByRole('button', { name: 'Registrar movimiento' }));
+    expect(useFinanceStore.getState().recurrences).toHaveLength(0);
+  });
+});
+

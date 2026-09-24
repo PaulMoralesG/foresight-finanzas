@@ -101,8 +101,8 @@ export function RecurrencesPanel() {
         <EmptyState
           variant="compact"
           icon={RefreshCw}
-          title="Todavía no repites ningún movimiento"
-          description='Al registrar uno, elige "Cada día", "Cada semana" o "Cada mes" en el campo Repetir.'
+          title="No hay reglas en este ámbito"
+          description="Elige «Todo» arriba para ver las de Personal y Negocio juntas."
         />
       ) : (
         <ul className="divide-y divide-slate-100 dark:divide-slate-800">
