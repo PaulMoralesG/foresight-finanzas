@@ -104,6 +104,29 @@ input[type="checkbox"]:indeterminate {
     font-variant-numeric: tabular-nums;
   }
 
+  /* Campos de fecha en Safari de iOS: el control nativo tiene un ancho mínimo
+     propio (el del texto «24 sept 2026» más el selector) que ignora el
+     `width: 100%` y desborda su columna en una rejilla de dos, saliéndose del
+     margen de la hoja. `min-width: 0` + `appearance: none` lo devuelven a su
+     caja; el texto se alinea a la izquierda como en el resto de campos y el
+     selector nativo sigue abriéndose al tocarlo. */
+  input[type='date'],
+  input[type='month'],
+  input[type='time'],
+  input[type='datetime-local'] {
+    min-width: 0;
+    max-width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input[type='date']::-webkit-date-and-time-value,
+  input[type='month']::-webkit-date-and-time-value,
+  input[type='time']::-webkit-date-and-time-value,
+  input[type='datetime-local']::-webkit-date-and-time-value {
+    text-align: left;
+    margin: 0;
+  }
+
   /* El contenedor raíz de React debe llenar todo el viewport */
   #root {
     min-height: 100vh;
