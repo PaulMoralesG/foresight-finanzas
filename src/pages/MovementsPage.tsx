@@ -191,7 +191,12 @@ export function MovementsPage() {
   const totalIncome = roundMoney(filtered.filter((i) => i.type === 'income').reduce((s, i) => s + i.amount, 0));
   const totalExpense = roundMoney(filtered.filter((i) => i.type === 'expense').reduce((s, i) => s + i.amount, 0));
 
-  if (vista === 'recurrentes') {
+  // Las reglas ya no se crean desde el formulario (la fila «Repetir» metía
+  // reglas sin querer). La pestaña solo aparece mientras quede alguna, para
+  // poder verla o borrarla; sin reglas, la vista vuelve sola a la lista.
+  const hayRecurrentes = recurrences.length > 0;
+
+  if (vista === 'recurrentes' && hayRecurrentes) {
     return (
       <div className="space-y-2.5 animate-fade-in">
         <SubPestanas vista={vista} setVista={setVista} recurrentes={recurrences.length} />
@@ -202,7 +207,7 @@ export function MovementsPage() {
 
   return (
     <div className="space-y-2 sm:space-y-2.5 animate-fade-in">
-      <SubPestanas vista={vista} setVista={setVista} recurrentes={recurrences.length} />
+      {hayRecurrentes && <SubPestanas vista="lista" setVista={setVista} recurrentes={recurrences.length} />}
 
       {/* Page header: MonthNav + contextual "Nueva" */}
       <div className="flex items-center justify-between gap-2">
