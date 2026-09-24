@@ -56,8 +56,9 @@ export function ConfirmDialog({
   if (!open) return null;
 
   const confirmColors = variant === 'danger'
-    ? 'bg-red-600 hover:bg-red-700 text-white'
-    : 'bg-amber-500 hover:bg-amber-600 text-white';
+    ? 'bg-expense-600 hover:bg-expense-700 text-white'
+    // amber-700 y no amber-500: el texto blanco sobre amber-500 daba 2.2:1.
+    : 'bg-amber-700 hover:bg-amber-800 text-white';
 
   return createPortal(
     <div className="fixed inset-0 z-dialog flex items-end sm:items-center justify-center">
@@ -82,12 +83,12 @@ export function ConfirmDialog({
       >
         <div className="flex items-start gap-4">
           <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-            variant === 'danger' ? 'bg-red-100 dark:bg-red-950 text-red-600' : 'bg-amber-100 dark:bg-amber-950 text-amber-600'
+            variant === 'danger' ? 'bg-expense-100 dark:bg-expense-950 text-expense-600 dark:text-expense-400' : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400'
           }`}>
             <AlertTriangle className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 id={titleId} className="text-base font-bold text-slate-900 dark:text-white mb-1">
+            <h3 id={titleId} className="text-base font-semibold text-slate-900 dark:text-white mb-1">
               {title}
             </h3>
             <p id={messageId} className="text-sm text-slate-600 dark:text-slate-400">
@@ -96,7 +97,7 @@ export function ConfirmDialog({
           </div>
         </div>
 
-        <div className="flex gap-3 mt-6">
+        <div className="dialog-actions flex gap-3 mt-6">
           <button
             onClick={onCancel}
             data-confirm-cancel

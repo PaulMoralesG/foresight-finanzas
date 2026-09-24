@@ -280,7 +280,7 @@ export function DebtsPage() {
               <div className="flex gap-1" role="group" aria-label="Ámbito">
                 {(['personal', 'business'] as BusinessType[]).map((t) => (
                   <button key={t} type="button" onClick={() => setFTag(t)}
-                    className={`flex-1 py-1 rounded-md text-2xs font-semibold ${fTag === t ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${fTag === t ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
                     {t === 'personal' ? 'Personal' : 'Negocio'}
                   </button>
                 ))}
@@ -329,8 +329,10 @@ export function DebtsPage() {
                 <input id="p-amount" type="text" inputMode="decimal" value={pAmount} onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setPAmount(e.target.value); }} className="saas-input py-1.5 text-sm font-bold tabular-nums" required />
               </Campo>
             </div>
-            <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
-              <input type="checkbox" checked={pAsExpense} onChange={(e) => setPAsExpense(e.target.checked)} className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-brand-600" />
+            {/* La etiqueta entera es la zona táctil (44px de alto): la casilla
+                sola medía 16px y había que acertarle con el dedo. */}
+            <label className="flex items-center gap-2.5 min-h-[44px] cursor-pointer text-sm text-slate-700 dark:text-slate-300">
+              <input type="checkbox" checked={pAsExpense} onChange={(e) => setPAsExpense(e.target.checked)} className="w-5 h-5 flex-shrink-0 rounded border-slate-300 dark:border-slate-600 accent-brand-600" />
               Registrarlo también como gasto del mes
             </label>
             {pAsExpense && accounts.length > 0 && (

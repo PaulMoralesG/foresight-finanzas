@@ -116,7 +116,7 @@ export function LoginForm({ onSwitchToSignUp, onForgotPassword }: Props) {
   }
 
   const inputClass = (hasError: boolean) =>
-    `saas-input pr-10 ${hasError ? '!border-red-500 !ring-red-500/20 focus:!ring-red-500/30' : ''}`;
+    `saas-input pr-10 ${hasError ? '!border-expense-500 !ring-expense-500/20 focus:!ring-expense-500/30' : ''}`;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
@@ -185,7 +185,7 @@ export function LoginForm({ onSwitchToSignUp, onForgotPassword }: Props) {
       {error && (
         <p
           role="alert"
-          className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 rounded-md px-3 py-2 border border-red-200 dark:border-red-800/50"
+          className="text-xs text-expense-600 dark:text-expense-400 bg-expense-50 dark:bg-expense-950/30 rounded-md px-3 py-2 border border-expense-200 dark:border-expense-800/50"
         >
           <AlertCircle className="inline w-3.5 h-3.5 mr-1.5" />
           {error}
