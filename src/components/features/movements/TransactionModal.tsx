@@ -3,7 +3,7 @@
 // ================================================================
 
 import { useState, useEffect, useMemo, Fragment, type FormEvent } from 'react';
-import { X, Plus, Trash2, ArrowDown, ArrowUp, ArrowLeftRight, Building2, User, Banknote, CreditCard, Landmark, Search } from '@/components/ui/icons.generated';
+import { X, Plus, Trash2, ArrowDown, ArrowUp, ArrowLeftRight, Building2, User, Banknote, CreditCard, Landmark } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_COLORS, DEFAULT_GROUP } from '@/config/categories';
@@ -82,7 +82,6 @@ export function TransactionModal({
   const [newCatLabel, setNewCatLabel] = useState('');
   const [newCatIcon, setNewCatIcon] = useState('📌');
   const [newCatColor, setNewCatColor] = useState(CATEGORY_COLORS[0]);
-  const [categorySearch, setCategorySearch] = useState('');
 
   /** Universo de categorías: ingreso o gasto (una transferencia no lleva). */
   const catType: 'income' | 'expense' = type === 'income' ? 'income' : 'expense';
@@ -90,16 +89,6 @@ export function TransactionModal({
     ...(catType === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES),
     ...(catType === 'income' ? customIncomeCategories : customExpenseCategories),
   ];
-
-  // El tipo cambia el universo de categorías (ingreso vs gasto): una búsqueda
-  // que tenía sentido en uno puede no tener ningún resultado en el otro.
-  useEffect(() => {
-    setCategorySearch('');
-  }, [type]);
-
-  const filteredCategories = categorySearch.trim()
-    ? categories.filter((c) => c.label.toLowerCase().includes(categorySearch.trim().toLowerCase()))
-    : categories;
 
   function handleAddCustomCategory() {
     const label = newCatLabel.trim();
@@ -174,7 +163,6 @@ export function TransactionModal({
       setBusinessType('personal');
       setAccountId('');
       setToAccountId('');
-      setCategorySearch('');
     }
     // Solo montar al abrir/cerrar o cambiar item
   }, [editingId, isOpen, modalPrefill, defaultDate, addToast]);
@@ -522,31 +510,17 @@ export function TransactionModal({
                 </span>
               )}
             </span>
-            {/* Buscador: con 28+ categorías, encontrar "Gasolina" a ojo en una
-                grilla estática es más lento que escribir 3 letras. Solo se
-                muestra si hay suficientes categorías para justificarlo. */}
-            {categories.length > 8 && (
-              <div className="relative mb-1.5">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600 dark:text-slate-400 pointer-events-none" />
-                <input
-                  type="text"
-                  value={categorySearch}
-                  onChange={(e) => setCategorySearch(e.target.value)}
-                  placeholder="Buscar categoría..."
-                  aria-label="Buscar categoría"
-                  className="saas-input-sm w-full pl-7 text-xs"
-                />
-              </div>
-            )}
+            {/* Sin buscador: en móvil ocupaba una fila entera de la hoja y
+                obligaba a desplazarse para llegar a las categorías. Las
+                cabeceras de grupo ya ordenan la rejilla. */}
             {/* 3 columnas en pantallas estrechas: con 4 fijas, un iPhone SE
                 (320px) dejaba ~68px por celda y truncaba «Entretenimiento» o
                 «Transporte» a la primera palabra. */}
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5" role="group" aria-label="Categoría del movimiento">
-              {/* Con grupos, como en Balance Dual: una cabecera por grupo cuando
-                  no hay búsqueda (buscando, el orden por coincidencia manda). */}
-              {filteredCategories.map((cat, i) => {
+              {/* Con grupos, como en Balance Dual: una cabecera por grupo. */}
+              {categories.map((cat, i) => {
                 const grupo = cat.group || DEFAULT_GROUP;
-                const nuevoGrupo = !categorySearch.trim() && (i === 0 || (filteredCategories[i - 1].group || DEFAULT_GROUP) !== grupo);
+                const nuevoGrupo = i === 0 || (categories[i - 1].group || DEFAULT_GROUP) !== grupo;
                 return (
                   <Fragment key={cat.id}>
                     {nuevoGrupo && (
