@@ -10,7 +10,7 @@ import { ChartNoAxesColumn, Plus, Receipt, ArrowDown, ArrowUp, Store, PiggyBank,
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useMonthlyData } from '@/hooks/useFinance';
-import { mesDeLaVista, monthKeyLabel } from '@/lib/month-keys';
+import { currentMonthKey, mesDeLaVista, monthKeyLabel } from '@/lib/month-keys';
 import { proximaFecha } from '@/lib/recurrence';
 import { filtrarPorAmbito } from '@/lib/ambito';
 import { useAmbito, useBudgetLinesEnAmbito, useDebtsEnAmbito, useExpensesEnAmbito, useGoalsEnAmbito } from '@/hooks/useAmbito';
@@ -659,6 +659,12 @@ function ProximosCargos() {
   const ambito = useAmbito();
   const navigateTo = useUiStore((s) => s.navigateTo);
 
+  // «Próximos» solo tiene sentido mirando el mes en curso: antes la tarjeta
+  // salía igual al navegar a marzo o a junio y parecía que las reglas se
+  // replicaban en todos los meses.
+  const currentViewDate = useFinanceStore((s) => s.currentViewDate);
+  const esMesActual = mesDeLaVista(currentViewDate) === currentMonthKey();
+
   const proximos = useMemo(() => {
     const hoy = getTodayISO();
     const limite = new Date();
@@ -670,7 +676,7 @@ function ProximosCargos() {
       .sort((a, b) => a.fecha.localeCompare(b.fecha));
   }, [recurrences, ambito]);
 
-  if (proximos.length === 0) return null;
+  if (!esMesActual || proximos.length === 0) return null;
 
   const salidas = roundMoney(
     proximos.filter((x) => x.r.type === 'expense').reduce((acc, x) => acc + x.r.amount, 0),
