@@ -157,7 +157,7 @@ export function BudgetsPage() {
                 <div className="flex gap-1" role="group" aria-label="Ámbito">
                   {TAGS.map((t) => (
                     <button key={t} type="button" onClick={() => setFTag(t)}
-                      className={`flex-1 py-1 rounded-md text-2xs font-semibold ${fTag === t ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${fTag === t ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
                       {tagLabel(t)}
                     </button>
                   ))}
@@ -168,7 +168,7 @@ export function BudgetsPage() {
                 <div className="flex gap-1" role="group" aria-label="Tipo de presupuesto">
                   {(['expense', 'income'] as const).map((k) => (
                     <button key={k} type="button" onClick={() => { setFKind(k); setFCat(catsFor(k)[0]?.id ?? ''); }}
-                      className={`flex-1 py-1 rounded-md text-2xs font-semibold ${fKind === k ? (k === 'expense' ? 'bg-expense-600 text-white' : 'bg-income-600 text-white') : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${fKind === k ? (k === 'expense' ? 'bg-expense-600 text-white' : 'bg-income-600 text-white') : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
                       {k === 'expense' ? 'Gasto' : 'Ingreso'}
                     </button>
                   ))}

@@ -386,7 +386,7 @@ export function MovementsPage() {
       )}
 
       {/* Search mobile (own row, full width) */}
-      <div className="flex items-center sm:hidden w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus-within:ring-2 focus-within:ring-brand-500 focus-within:border-transparent">
+      <div className="flex items-center sm:hidden w-full min-h-[44px] rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus-within:ring-2 focus-within:ring-brand-500 focus-within:border-transparent">
         <Search className="ml-2.5 w-3.5 h-3.5 text-slate-600 dark:text-slate-400 flex-shrink-0" />
         <input
           type="text"
@@ -395,12 +395,12 @@ export function MovementsPage() {
           data-search-input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="flex-1 min-w-0 bg-transparent border-0 outline-none px-1.5 py-1.5 text-2xs text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400"
+          className="flex-1 min-w-0 self-stretch bg-transparent border-0 outline-none px-1.5 py-1.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400"
         />
         {searchQuery && (
           <button
             onClick={() => setSearchQuery('')}
-            className="mr-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex-shrink-0"
+            className="saas-hit mr-1 p-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex-shrink-0"
             aria-label="Limpiar búsqueda"
             title="Limpiar búsqueda"
           >
@@ -434,12 +434,15 @@ export function MovementsPage() {
                   className={`saas-card p-2.5 cursor-pointer relative touch-manipulation ${isSelected ? 'ring-2 ring-brand-500 bg-brand-50 dark:bg-brand-950/30' : 'active:bg-slate-50 dark:active:bg-slate-800/50'}`}
                 >
                   {/* Checkbox en esquina superior derecha — mínimo, no roba el tap */}
-                  <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                  {/* saas-checkbox-target: 44px de zona táctil en la esquina. Con la
+                      casilla sola (16px) un toque que fallaba por poco abría el
+                      editor del movimiento en vez de seleccionarlo. */}
+                  <div className="saas-checkbox-target absolute top-0 right-0 z-10 p-2" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => toggleSelect(tx.id)}
-                      className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-brand-600 focus:ring-brand-500"
+                      className="w-5 h-5 rounded border-slate-300 dark:border-slate-600 text-brand-600 focus:ring-brand-500"
                       aria-label={`Seleccionar ${tx.concept}`}
                     />
                   </div>
