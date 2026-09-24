@@ -285,10 +285,12 @@ function AccountSummaryCard() {
         titulo="Resumen por cuenta"
         sub="Entradas y salidas del mes en una sola cuenta"
         accion={
-        <div className="flex gap-2 flex-wrap flex-shrink-0">
-          <div>
+        <div className="flex gap-2 flex-wrap min-w-0 max-w-full">
+          <div className="min-w-0 max-w-full">
             <label htmlFor="ac-sel" className="sr-only">Cuenta</label>
-            <select id="ac-sel" value={cuenta.id} onChange={(e) => setAccId(e.target.value)} className="saas-input-sm text-xs">
+            {/* max-w-full + truncado: un nombre de cuenta largo no empuja el
+                selector fuera de la tarjeta en móvil. */}
+            <select id="ac-sel" value={cuenta.id} onChange={(e) => setAccId(e.target.value)} className="saas-input-sm text-xs max-w-full truncate">
               {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
           </div>

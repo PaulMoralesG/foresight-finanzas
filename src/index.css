@@ -10,6 +10,9 @@
 @import '@fontsource/ibm-plex-sans/latin-600.css';
 @import '@fontsource/ibm-plex-mono/latin-400.css';
 @import '@fontsource/ibm-plex-mono/latin-500.css';
+/* 700: las cifras KPI van en font-bold. Sin este archivo el navegador sintetiza
+   la negrita de la 500 y cada motor la engorda distinto (Safari la emborrona). */
+@import '@fontsource/ibm-plex-mono/latin-700.css';
 @import '@fontsource/fraunces/latin-600.css';
 
 @tailwind base;
@@ -47,9 +50,17 @@ input[type="checkbox"]:indeterminate {
 
 @layer base {
   html {
-    /* dvh = dynamic viewport height — se ajusta cuando la barra de Safari aparece/desaparece */
-    min-height: 100dvh;
+    /* Alto del viewport, en cascada de compatibilidad: 100vh para todos,
+       -webkit-fill-available para Safari iOS < 15.4 y 100dvh (dynamic
+       viewport height, sigue a la barra de Safari/Chrome móvil) donde exista.
+       Antes el orden era dvh → fill-available, así que en los navegadores que
+       entienden ambos ganaba el valor viejo, y Firefox (que no conoce
+       fill-available) quedaba sin la corrección de Safari. */
+    min-height: 100vh;
     min-height: -webkit-fill-available;
+    /* Evita que iOS agrande el texto al girar a horizontal. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     overflow-x: hidden;
     overflow-y: auto;
     /* Previene el bounce de iOS que descubre espacio blanco bajo el TabBar */
@@ -61,7 +72,7 @@ input[type="checkbox"]:indeterminate {
   body {
     margin: 0;
     padding: 0;
-    min-height: 100dvh;
+    min-height: 100vh;
     min-height: -webkit-fill-available;
     @apply bg-slate-50 text-slate-900 antialiased;
     overflow-x: hidden;
@@ -95,8 +106,16 @@ input[type="checkbox"]:indeterminate {
 
   /* El contenedor raíz de React debe llenar todo el viewport */
   #root {
-    min-height: 100dvh;
+    min-height: 100vh;
     min-height: -webkit-fill-available;
+  }
+
+  @supports (min-height: 100dvh) {
+    html,
+    body,
+    #root {
+      min-height: 100dvh;
+    }
   }
 
   html.dark {
@@ -121,7 +140,8 @@ input[type="checkbox"]:indeterminate {
   }
 
   ::selection {
-    background-color: rgb(37 99 235 / 0.2);
+    /* Verde de marca: aquí quedaba el azul (blue-600) del diseño anterior. */
+    background-color: rgb(23 145 122 / 0.22); /* brand-500 */
     @apply text-brand-900 dark:text-brand-100;
   }
 
@@ -267,6 +287,13 @@ input[type="checkbox"]:indeterminate {
      sobre el siguiente y recortaban "Gasto" a "Gast" en móvil. */
   .saas-chip-click {
     @apply cursor-pointer transition-colors hover:brightness-95 dark:hover:brightness-110;
+  }
+
+  /* Zona táctil ampliada sin cambiar el tamaño visible: un ::after invisible
+     que desborda el control. Para chips y avatares que, a 20–32px, quedan por
+     debajo de los 44px en pantallas táctiles (ver @media pointer:coarse). */
+  .saas-hit {
+    position: relative;
   }
 
   .saas-table {
@@ -430,6 +457,20 @@ textarea {
   .saas-checkbox-target {
     min-width: 44px;
     min-height: 44px;
+  }
+  .saas-chip-click,
+  .saas-hit {
+    position: relative;
+  }
+  .saas-chip-click::after,
+  .saas-hit::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
   }
 }
 

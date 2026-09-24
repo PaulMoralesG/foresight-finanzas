@@ -33,7 +33,9 @@ export function coloresGrafica(isDark: boolean): ColoresGrafica {
     tipBg: isDark ? '#232320' : '#ffffff',
     tipFg: isDark ? '#f3f2ee' : '#1a1a19',
     tipLabel: isDark ? '#cfccc2' : '#4a4944',
-    income: '#1baf7a',
+    // En claro, income-600: el income-500 (#1baf7a) sobre blanco daba 2.8:1,
+    // por debajo del 3:1 que pide una línea que carga significado (WCAG 1.4.11).
+    income: isDark ? '#1baf7a' : '#0f7a54',
     expense: '#e34948',
     balance: isDark ? '#cfccc2' : '#4a4944',
   };

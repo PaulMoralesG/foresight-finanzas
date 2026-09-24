@@ -52,7 +52,10 @@ export function MonthNav({ showReport = false }: MonthNavProps) {
           title="Reporte PDF mensual"
         >
           <FileText className="w-3.5 h-3.5" />
-          <span className="inline ml-1.5 text-xs">Reporte</span>
+          {/* Por debajo de 360px (iPhone SE 1.ª gen., Android pequeños) el
+              texto empujaba el botón fuera de la pantalla: queda solo el
+              icono, con el aria-label de siempre. */}
+          <span className="inline ml-1.5 text-xs max-[359px]:hidden">Reporte</span>
         </button>
       )}
     </MonthStepper>

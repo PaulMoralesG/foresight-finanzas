@@ -115,7 +115,7 @@ export function TabBar() {
         title={tab.label}
         aria-label={tab.label}
         aria-current={isActive ? 'page' : undefined}
-        className="relative flex-1 flex flex-col items-center justify-center rounded-xl z-10 min-h-[44px]"
+        className="relative flex-1 min-w-0 flex flex-col items-center justify-center rounded-xl z-10 min-h-[44px]"
       >
         <Icon
           className={`size-6 transition-colors duration-300 ${
@@ -125,7 +125,7 @@ export function TabBar() {
           }`}
         />
         <span
-          className={`text-2xs font-semibold mt-0.5 transition-colors duration-300 ${
+          className={`max-w-full truncate px-0.5 text-[10px] min-[375px]:text-2xs tracking-tight min-[375px]:tracking-normal font-semibold mt-0.5 transition-colors duration-300 ${
             isActive
               ? 'text-brand-600 dark:text-brand-400'
               : 'text-slate-600 dark:text-slate-400'
@@ -191,7 +191,7 @@ export function TabBar() {
       <div
         ref={navRef}
         className="relative flex items-center
-          px-2 pt-1.5 pb-1.5
+          px-1 min-[360px]:px-2 pt-1.5 pb-1.5
           w-full
           bg-white dark:bg-slate-900
           border-t border-slate-200 dark:border-slate-800"
@@ -217,10 +217,10 @@ export function TabBar() {
           aria-haspopup="dialog"
           aria-expanded={masAbierto}
           aria-controls={masId}
-          className="relative flex-1 flex flex-col items-center justify-center rounded-xl z-10 min-h-[44px]"
+          className="relative flex-1 min-w-0 flex flex-col items-center justify-center rounded-xl z-10 min-h-[44px]"
         >
           <Ellipsis className={`size-6 transition-colors duration-300 ${colorMas}`} />
-          <span className={`text-2xs font-semibold mt-0.5 transition-colors duration-300 ${colorMas}`}>
+          <span className={`max-w-full truncate px-0.5 text-[10px] min-[375px]:text-2xs tracking-tight min-[375px]:tracking-normal font-semibold mt-0.5 transition-colors duration-300 ${colorMas}`}>
             {enMas ? vistaPorId(activeTab).label : 'Más'}
           </span>
         </button>
