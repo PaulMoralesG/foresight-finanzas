@@ -129,12 +129,14 @@ export function useAuthSession(): void {
 
         if (cancelled) return;
 
-        // 2) Sync: import legacy (si aplica) → pull → merge → push
-        await syncService.attach(uid);
-
-        if (cancelled) return;
-
-        // 3) Sesión lista
+        // 2) Sesión lista. Los datos financieros ya están en financeStore
+        // (persistidos en localStorage, offline-first): no hace falta esperar
+        // a que termine un sync completo con la nube para mostrar la app.
+        // attach() —import legacy si aplica → pull → merge → push— corre en
+        // segundo plano y va reflejando su progreso en el ícono de estado del
+        // header (syncState); nunca rechaza (ver su propio try/catch), pero
+        // se atrapa el `.catch` igual como red de seguridad ante lo
+        // inesperado, ya que aquí ya no se espera con `await`.
         setUser({
           id: uid,
           email,
@@ -144,6 +146,10 @@ export function useAuthSession(): void {
           pendingEmail,
         });
         setLoading(false);
+
+        void syncService.attach(uid).catch((err) => {
+          console.error('[useAuth] attach() en segundo plano falló inesperadamente:', err);
+        });
       } catch (err) {
         // ALT-1: nunca dejar datos de otra cuenta en el store
         console.error('[useAuth] Error al cargar perfil:', err);
