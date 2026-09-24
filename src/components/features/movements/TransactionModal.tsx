@@ -15,7 +15,7 @@ import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { ModalSheet } from '@/components/ui/ModalSheet';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import type { TransactionType, BusinessType, PaymentMethod, Category, Frecuencia } from '@/types';
+import type { TransactionType, BusinessType, PaymentMethod, Category } from '@/types';
 
 export function TransactionModal({
   onSave,
@@ -27,7 +27,6 @@ export function TransactionModal({
   const modalPrefill = useUiStore((s) => s.modalPrefill);
   const closeModal = useUiStore((s) => s.closeModal);
   const addTransaction = useFinanceStore((s) => s.addTransaction);
-  const addRecurrence = useFinanceStore((s) => s.addRecurrence);
   const updateTransaction = useFinanceStore((s) => s.updateTransaction);
   const deleteTransaction = useFinanceStore((s) => s.deleteTransaction);
   const isDeleteModalOpen = useUiStore((s) => s.isDeleteModalOpen);
@@ -74,7 +73,6 @@ export function TransactionModal({
   // Repetición: 'no' deja el movimiento como uno suelto, cualquier otra
   // crea además la regla. Solo al registrar: editar un movimiento ya creado
   // no toca la regla que lo generó (para eso está la lista de recurrentes).
-  const [repetir, setRepetir] = useState<'no' | Frecuencia>('no');
   const isTransfer = type === 'transfer';
 
   // ── Nueva categoría ──
@@ -145,7 +143,6 @@ export function TransactionModal({
       setAmount('');
       setConcept(modalPrefill.concept ?? '');
       setDate(defaultDate);
-      setRepetir('no');
       setCategory(modalPrefill.category ?? '');
       setMethod('cash');
       setBusinessType(modalPrefill.businessType ?? 'personal');
@@ -157,7 +154,6 @@ export function TransactionModal({
       setAmount('');
       setConcept('');
       setDate(defaultDate);
-      setRepetir('no');
       setCategory('');
       setMethod('cash');
       setBusinessType('personal');
@@ -222,22 +218,6 @@ export function TransactionModal({
       updateTransaction(editingId, data);
     } else {
       addTransaction(data);
-      if (repetir !== 'no') {
-        // La regla arranca en el día siguiente a este movimiento: el de hoy
-        // ya queda registrado arriba, y así la primera materialización no lo
-        // duplica con otro id.
-        const siguiente = new Date(date);
-        siguiente.setDate(siguiente.getDate() + 1);
-        addRecurrence({
-          ...data,
-          frecuencia: repetir,
-          intervalo: 1,
-          diaMes: repetir === 'monthly' ? new Date(date).getDate() : null,
-          desde: `${siguiente.getFullYear()}-${String(siguiente.getMonth() + 1).padStart(2, '0')}-${String(siguiente.getDate()).padStart(2, '0')}`,
-          hasta: null,
-          activa: true,
-        });
-      }
     }
 
     // Cerrar modal inmediatamente — el store ya está actualizado
@@ -367,31 +347,6 @@ export function TransactionModal({
               />
             </div>
           </div>
-
-          {/* Repetir: solo al registrar. Editar un movimiento no cambia la
-              regla que lo creó — eso se hace en Movimientos › Recurrentes. */}
-          {!isEditing && (
-            <div>
-              <span className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Repetir</span>
-              <div className="flex gap-1 flex-wrap" role="group" aria-label="Repetir el movimiento">
-                {([['no', 'No se repite'], ['daily', 'Cada día'], ['weekly', 'Cada semana'], ['monthly', 'Cada mes']] as const).map(([valor, etiqueta]) => (
-                  <button
-                    key={valor}
-                    type="button"
-                    onClick={() => setRepetir(valor)}
-                    aria-pressed={repetir === valor}
-                    className={`px-2 py-1 rounded-lg text-2xs font-semibold border transition-colors ${
-                      repetir === valor
-                        ? 'bg-brand-600 text-white border-brand-600'
-                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                    }`}
-                  >
-                    {etiqueta}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Row 3: Ámbito + Método.
               Apilado en pantallas estrechas: Método tiene TRES opciones y en
