@@ -65,7 +65,7 @@ export function ModalSheet({
         style={style}
       >
         <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-800">
-          <h2 id={id} className="font-bold text-sm text-slate-900 dark:text-white">
+          <h2 id={id} className="font-semibold text-sm text-slate-900 dark:text-white">
             {titulo}
           </h2>
           <button

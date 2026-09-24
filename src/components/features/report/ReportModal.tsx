@@ -130,7 +130,7 @@ export function ReportModal() {
         <div className="overflow-y-auto ios-scroll -mx-3 -mt-3 px-3 pt-3 flex-1" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
         {/* Header */}
         <div className="flex items-center justify-between mb-2">
-          <h2 id={titleId} className="font-bold text-sm text-slate-900 dark:text-white">
+          <h2 id={titleId} className="font-semibold text-sm text-slate-900 dark:text-white">
             Reporte Mensual
           </h2>
           <button onClick={closeReportModal} aria-label="Cerrar" className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
@@ -153,7 +153,7 @@ export function ReportModal() {
             <p className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
               Ingresos
             </p>
-            <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">
+            <p className="text-sm font-bold text-income-700 dark:text-income-400 tabular-nums">
               {formatMoney(totalIncome)}
             </p>
           </div>
@@ -161,7 +161,7 @@ export function ReportModal() {
             <p className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
               Gastos
             </p>
-            <p className="text-sm font-bold text-red-600 dark:text-red-400 tabular-nums">
+            <p className="text-sm font-bold text-expense-600 dark:text-expense-400 tabular-nums">
               {formatMoney(totalExpenses)}
             </p>
           </div>
@@ -173,7 +173,7 @@ export function ReportModal() {
               className={`text-sm font-bold tabular-nums ${
                 balance >= 0
                   ? 'text-brand-600 dark:text-brand-400'
-                  : 'text-red-600 dark:text-red-400'
+                  : 'text-expense-600 dark:text-expense-400'
               }`}
             >
               {formatMoney(balance)}

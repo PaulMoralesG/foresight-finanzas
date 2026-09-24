@@ -145,7 +145,7 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
   }
 
   const inputClass = (hasError: boolean) =>
-    `saas-input ${hasError ? '!border-red-500 !ring-red-500/20 focus:!ring-red-500/30' : ''}`;
+    `saas-input ${hasError ? '!border-expense-500 !ring-expense-500/20 focus:!ring-expense-500/30' : ''}`;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
@@ -167,7 +167,7 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
             className={inputClass(!!fieldErrors.firstName && touched.firstName)}
           />
           {touched.firstName && fieldErrors.firstName && (
-            <p className="text-2xs text-red-600 dark:text-red-400 mt-1 ml-1">{fieldErrors.firstName}</p>
+            <p className="text-2xs text-expense-600 dark:text-expense-400 mt-1 ml-1">{fieldErrors.firstName}</p>
           )}
         </div>
         <div className="flex-1">
@@ -204,7 +204,7 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
           autoComplete="email"
         />
         {touched.email && fieldErrors.email && (
-          <p className="text-2xs text-red-600 dark:text-red-400 mt-1 ml-1">{fieldErrors.email}</p>
+          <p className="text-2xs text-expense-600 dark:text-expense-400 mt-1 ml-1">{fieldErrors.email}</p>
         )}
       </div>
 
@@ -236,7 +236,7 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
           </button>
         </div>
         {touched.password && fieldErrors.password && (
-          <p className="text-2xs text-red-600 dark:text-red-400 mt-1 ml-1">{fieldErrors.password}</p>
+          <p className="text-2xs text-expense-600 dark:text-expense-400 mt-1 ml-1">{fieldErrors.password}</p>
         )}
         {/* Barra de fortaleza */}
         {showStrength && (
@@ -260,7 +260,7 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
 
       {/* Mensaje de éxito */}
       {successMsg && (
-        <div className="text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg px-4 py-3 border border-emerald-200 dark:border-emerald-800/50">
+        <div className="text-xs text-income-700 dark:text-income-400 bg-income-50 dark:bg-income-950/30 rounded-lg px-4 py-3 border border-income-200 dark:border-income-800/50">
           <div className="flex items-start gap-2.5">
             <MailCheck className="w-4 h-4 mt-0.5 flex-shrink-0" />
             <div>
@@ -276,7 +276,7 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
 
       {/* Mensaje de error */}
       {error && (
-        <p className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 rounded-md px-3 py-2 border border-red-200 dark:border-red-800/50">
+        <p className="text-xs text-expense-600 dark:text-expense-400 bg-expense-50 dark:bg-expense-950/30 rounded-md px-3 py-2 border border-expense-200 dark:border-expense-800/50">
           <AlertCircle className="inline w-3.5 h-3.5 mr-1.5" />
           {error}
         </p>

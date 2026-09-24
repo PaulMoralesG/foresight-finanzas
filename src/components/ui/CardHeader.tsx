@@ -30,8 +30,11 @@ interface CardHeaderProps {
 
 export function CardHeader({ titulo, sub, icono: Icono, accion, className = 'mb-3' }: CardHeaderProps) {
   return (
-    <div className={`flex items-start justify-between gap-3 ${className}`}>
-      <div className="min-w-0">
+    // flex-wrap: si la acción no cabe junto al título (dos selectores en un
+    // móvil de 360px), baja a su propia línea en vez de aplastar el título a
+    // una palabra por renglón.
+    <div className={`flex flex-wrap items-start justify-between gap-x-3 gap-y-2 ${className}`}>
+      <div className="min-w-0 max-w-full">
         <h2 className="text-[0.95rem] font-semibold text-slate-900 dark:text-white flex items-center gap-2">
           {Icono && <Icono className="w-4 h-4 text-brand-500 flex-shrink-0" />}
           {titulo}

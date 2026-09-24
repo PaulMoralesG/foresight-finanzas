@@ -28,11 +28,11 @@ export interface PasswordStrength {
  * 4.5:1 que pide AA. Las variantes 400 rinden entre 7:1 y 13:1 en oscuro.
  */
 const LEVELS: Omit<PasswordStrength, 'score'>[] = [
-  { label: 'Muy débil', barClass: 'bg-red-500 dark:bg-red-400',         textClass: 'text-red-700 dark:text-red-400' },
+  { label: 'Muy débil', barClass: 'bg-expense-500 dark:bg-expense-400',         textClass: 'text-expense-700 dark:text-expense-400' },
   { label: 'Débil',     barClass: 'bg-orange-500 dark:bg-orange-400',   textClass: 'text-orange-700 dark:text-orange-400' },
   { label: 'Aceptable', barClass: 'bg-yellow-500 dark:bg-yellow-400',   textClass: 'text-yellow-700 dark:text-yellow-400' },
   { label: 'Buena',     barClass: 'bg-green-500 dark:bg-green-400',     textClass: 'text-green-700 dark:text-green-400' },
-  { label: 'Excelente', barClass: 'bg-emerald-500 dark:bg-emerald-400', textClass: 'text-emerald-700 dark:text-emerald-400' },
+  { label: 'Excelente', barClass: 'bg-income-500 dark:bg-income-400', textClass: 'text-income-700 dark:text-income-400' },
 ];
 
 /** Clases del segmento aún no alcanzado por la puntuación. */

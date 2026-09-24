@@ -122,7 +122,7 @@ export function Header() {
                   </span>
                 ) : syncState === 'error' ? (
                   <span
-                    className="flex items-center gap-1 text-2xs text-red-600 dark:text-red-400"
+                    className="flex items-center gap-1 text-2xs text-expense-600 dark:text-expense-400"
                     title="No se pudo sincronizar con la nube. Tus cambios están guardados solo en este dispositivo."
                   >
                     <CloudOff className="w-3 h-3" />
@@ -139,7 +139,7 @@ export function Header() {
                     <span className="sr-only">Sincronización desactivada. Los cambios se guardan solo en este dispositivo.</span>
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1 text-2xs text-emerald-600 dark:text-emerald-400" title="Sincronizado">
+                  <span className="flex items-center gap-1 text-2xs text-income-600 dark:text-income-400" title="Sincronizado">
                     <Wifi className="w-3 h-3" />
                     <span className="sr-only">Sincronizado</span>
                   </span>
@@ -167,7 +167,7 @@ export function Header() {
               <div ref={dropdownRef} className="relative">
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className={`w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900 text-brand-700 dark:text-brand-300 flex items-center justify-center text-xs font-bold ring-2 transition-all ${
+                  className={`saas-hit w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900 text-brand-700 dark:text-brand-300 flex items-center justify-center text-xs font-bold ring-2 transition-all ${
                     isDropdownOpen
                       ? 'ring-brand-500 dark:ring-brand-400'
                       : 'ring-transparent hover:ring-brand-200 dark:hover:ring-brand-800'
@@ -195,7 +195,7 @@ export function Header() {
                     </button>
                     <button
                       onClick={handleSignOut}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-expense-600 dark:text-expense-400 hover:bg-expense-50 dark:hover:bg-expense-950 rounded-lg transition-colors"
                     >
                       <LogOut className="w-4 h-4" />
                       Cerrar sesión

@@ -738,14 +738,16 @@ function NetWorthWidget() {
           ? 'Lo que tienes menos lo que debes'
           : 'Lo que tienes menos lo que debes · incluye ambos ámbitos'}
       />
-      <div className="grid grid-cols-2 gap-2">
+      {/* Una columna hasta 400px: en 320–390px las dos cifras en mono no caben
+          lado a lado y se montaban una sobre otra. */}
+      <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-2">
         <div>
           <p className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Hoy</p>
-          <p className={`text-xl font-bold tabular-nums ${nw.net >= 0 ? 'text-slate-900 dark:text-white' : 'text-expense-600 dark:text-expense-400'}`}>{formatMoney(nw.net)}</p>
+          <p className={`text-[clamp(1rem,4.6vw,1.25rem)] min-[400px]:text-xl font-bold tabular-nums whitespace-nowrap ${nw.net >= 0 ? 'text-slate-900 dark:text-white' : 'text-expense-600 dark:text-expense-400'}`}>{formatMoney(nw.net)}</p>
         </div>
         <div>
           <p className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Activos / pasivos</p>
-          <p className="text-sm font-bold tabular-nums text-slate-900 dark:text-white">{formatMoney(nw.assets)} / {formatMoney(nw.liabilities)}</p>
+          <p className="text-sm font-bold tabular-nums text-slate-900 dark:text-white break-words">{formatMoney(nw.assets)} / {formatMoney(nw.liabilities)}</p>
         </div>
       </div>
       {goal > 0 ? (

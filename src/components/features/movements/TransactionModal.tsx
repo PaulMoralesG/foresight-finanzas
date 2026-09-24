@@ -313,9 +313,9 @@ export function TransactionModal({
                     className={`flex-1 py-1 rounded-md text-2xs font-semibold transition-all flex items-center justify-center gap-1 ${
                       type === t
                         ? t === 'expense'
-                          ? 'bg-red-600 text-white'
+                          ? 'bg-expense-600 text-white'
                           : t === 'income'
-                            ? 'bg-emerald-600 text-white'
+                            ? 'bg-income-600 text-white'
                             : 'bg-slate-900 dark:bg-brand-600 text-white'
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                     }`}
