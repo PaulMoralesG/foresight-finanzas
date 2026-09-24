@@ -20,16 +20,16 @@ export function Toast() {
   const renderToast = (toast: (typeof toasts)[number]) => {
     const IconComponent = toast.type === 'error' ? AlertCircle : CheckCircle;
     const iconColor = toast.type === 'error'
-      ? 'text-red-600 dark:text-red-400'
+      ? 'text-expense-600 dark:text-expense-400'
       : toast.type === 'success'
-        ? 'text-emerald-600 dark:text-emerald-400'
+        ? 'text-income-600 dark:text-income-400'
         : 'text-brand-500';
 
     const borderColor =
       toast.type === 'error'
-        ? 'border-l-red-500'
+        ? 'border-l-expense-500'
         : toast.type === 'success'
-          ? 'border-l-emerald-500'
+          ? 'border-l-income-500'
           : 'border-l-brand-500';
 
     return (

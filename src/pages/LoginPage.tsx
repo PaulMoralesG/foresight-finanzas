@@ -159,7 +159,7 @@ export function LoginPage() {
             <span className="text-xl font-bold text-slate-900 dark:text-white">Foresight</span>
           </div>
 
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white mb-1">
             {titleText}
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
@@ -170,11 +170,11 @@ export function LoginPage() {
             forgotSent ? (
               /* ── Éxito: correo enviado ── */
               <div className="text-center space-y-4">
-                <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                  <MailCheck className="w-6 h-6 text-emerald-700 dark:text-emerald-400" />
+                <div className="w-16 h-16 mx-auto rounded-full bg-income-100 dark:bg-income-900/30 flex items-center justify-center">
+                  <MailCheck className="w-6 h-6 text-income-700 dark:text-income-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">¡Correo enviado!</h3>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">¡Correo enviado!</h3>
                   <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                     Revisa <strong>{forgotEmail}</strong> y sigue el enlace para restablecer tu contraseña.
                   </p>

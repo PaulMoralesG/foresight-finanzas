@@ -92,3 +92,16 @@ diseño y viaja en el bundle del navegador.
 
 Al crear una tabla nueva, habilítale RLS explícitamente igual que hacen las
 existentes; no confíes solo en ese `revoke`.
+
+Las cinco tablas que ya existían antes de la 0004 conservaron los privilegios
+por defecto de Supabase (`anon` con ALL, TRUNCATE incluido). La `0016` los
+retira para que todas las tablas queden con el mismo contrato: nada para
+`anon`, solo `select/insert/update/delete` para `authenticated`.
+
+### Migraciones aplicadas fuera del historial
+
+La `0014` y la `0015` se ejecutaron desde el *SQL Editor* y no figuran en
+`supabase_migrations.schema_migrations` (el historial que muestra el panel
+llega a la `0013`, registrada como `goals_saved_direct`). Están aplicadas —la
+tabla `recurrences` existe y las columnas de `budget_lines` son nullable—; solo
+falta el registro. No hace falta repetirlas.

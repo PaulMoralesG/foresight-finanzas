@@ -44,7 +44,7 @@ export function MonthStepper({
       <button
         onClick={onCurrent}
         disabled={isCurrent}
-        className={`relative text-sm font-semibold min-w-[110px] text-center select-none rounded-md px-2 py-1 transition-colors ${
+        className={`saas-hit relative text-sm font-semibold min-w-[110px] text-center select-none rounded-md px-2 py-1 transition-colors ${
           isCurrent
             ? 'text-slate-700 dark:text-slate-300 cursor-default'
             : 'text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950 cursor-pointer'

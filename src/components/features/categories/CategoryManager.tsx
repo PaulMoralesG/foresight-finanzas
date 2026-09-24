@@ -180,7 +180,7 @@ export function CategoryManager({ abierto, onToggle, saveData }: CategoryManager
                     />
                     <button
                       onClick={handleUpdateCategory}
-                      className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-600 p-1 flex-shrink-0"
+                      className="text-income-600 dark:text-income-400 hover:text-income-600 p-1 flex-shrink-0"
                       aria-label="Guardar categoría"
                       title="Guardar"
                     >
@@ -217,7 +217,7 @@ export function CategoryManager({ abierto, onToggle, saveData }: CategoryManager
                     <button
                       type="button"
                       onClick={() => setPendingDeleteCat({ id: cat.id, label: cat.label })}
-                      className="w-9 h-9 ml-1 flex items-center justify-center rounded-lg text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950 transition-colors flex-shrink-0"
+                      className="w-9 h-9 ml-1 flex items-center justify-center rounded-lg text-expense-600 dark:text-expense-400 hover:bg-expense-100 dark:hover:bg-expense-950 transition-colors flex-shrink-0"
                       title="Eliminar categoría"
                       aria-label={`Eliminar la categoría ${cat.label}`}
                     >

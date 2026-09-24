@@ -104,6 +104,8 @@ vez cada una. Para un entorno nuevo hay que aplicarlas todas:
 | `0012_budget_lines.sql` | Tabla `budget_lines` (presupuesto por categoría: límite base + plan por mes en jsonb) con RLS, grant y `keep_newest`; columna `group` en `categories`. La tabla `budgets` (presupuesto global) se conserva | **Antes** de desplegar (el cliente hace pull de `budget_lines`) |
 | `0013_goals_saved_direct.sql` | Columnas `tag`, `target_date`, `saved` y `saved_from_accounts` en `savings_goals`: cada meta lleva su propio acumulado en vez de derivarlo de gastos de categoría "ahorro" agrupados por concepto | **Antes** de desplegar (el cliente hace pull/push de `saved`/`saved_from_accounts`) |
 | `0014_recurrences.sql` | Tabla `recurrences` (plantillas de movimientos que se repiten: diario, semanal o mensual) con RLS, grant, índice por `(user_id, updated_at)` y `keep_newest`; columna `recurrence_id` en `expenses` | **Antes** de desplegar (el cliente hace pull de `recurrences`; sin la tabla el sync entero cae a modo local) |
+| `0015_budget_lines_nullable.sql` | `tag`, `kind` y `category_id` de `budget_lines` pasan a nullable, como en el resto de tablas: el upsert de un tombstone solo manda identidad y marcas de tiempo | **Antes** de desplegar un cliente que deduplique líneas de presupuesto (hotfix, ya aplicada) |
+| `0016_revoke_legacy_table_grants.sql` | Quita a `anon` todos los privilegios, y a `authenticated` TRUNCATE/TRIGGER/REFERENCES, en las cinco tablas anteriores a la 0004. No toca datos ni políticas | En cualquier momento; no depende del cliente |
 
 Fíjate en el orden de la `0005` y la `0006`: una va antes del deploy y la otra después.
 Invertirlo deja al cliente pidiendo algo que ya no existe, o escribiendo con una clave

@@ -46,7 +46,7 @@ describe('TransactionModal — guardado', () => {
     await user.type(screen.getByLabelText('Monto'), '10.05');
     await user.type(screen.getByLabelText('Concepto'), 'Café');
     await user.click(screen.getByRole('button', { name: /Comida/ }));
-    await user.click(screen.getByRole('button', { name: 'Registrar Movimiento' }));
+    await user.click(screen.getByRole('button', { name: 'Registrar movimiento' }));
 
     const [tx] = useFinanceStore.getState().expenses;
     expect(tx).toBeDefined();
@@ -66,7 +66,7 @@ describe('TransactionModal — guardado', () => {
     // alguien cambie la heurística sepa qué está rompiendo.
     await user.type(screen.getByLabelText('Monto'), '1.000');
     await user.click(screen.getByRole('button', { name: /Comida/ }));
-    await user.click(screen.getByRole('button', { name: 'Registrar Movimiento' }));
+    await user.click(screen.getByRole('button', { name: 'Registrar movimiento' }));
 
     expect(useFinanceStore.getState().expenses[0].amount).toBe(1000);
   });
@@ -89,7 +89,7 @@ describe('TransactionModal — guardado', () => {
       within(screen.getByRole('group', { name: 'Categoría del movimiento' }))
         .getAllByRole('button')[0],
     );
-    await user.click(screen.getByRole('button', { name: 'Registrar Movimiento' }));
+    await user.click(screen.getByRole('button', { name: 'Registrar movimiento' }));
 
     const [tx] = useFinanceStore.getState().expenses;
     expect(tx).toMatchObject({
@@ -119,7 +119,7 @@ describe('TransactionModal — guardado', () => {
     const monto = screen.getByLabelText('Monto');
     await user.clear(monto);
     await user.type(monto, '175.50');
-    await user.click(screen.getByRole('button', { name: 'Guardar Cambios' }));
+    await user.click(screen.getByRole('button', { name: 'Guardar cambios' }));
 
     const { expenses } = useFinanceStore.getState();
     expect(expenses).toHaveLength(1);
@@ -136,7 +136,7 @@ describe('TransactionModal — validación', () => {
 
     await user.type(screen.getByLabelText('Monto'), '0');
     await user.click(screen.getByRole('button', { name: /Comida/ }));
-    await user.click(screen.getByRole('button', { name: 'Registrar Movimiento' }));
+    await user.click(screen.getByRole('button', { name: 'Registrar movimiento' }));
 
     expect(useFinanceStore.getState().expenses).toHaveLength(0);
     expect(useUiStore.getState().toasts[0]).toMatchObject({
@@ -151,7 +151,7 @@ describe('TransactionModal — validación', () => {
     montar();
 
     await user.type(screen.getByLabelText('Monto'), '50');
-    await user.click(screen.getByRole('button', { name: 'Registrar Movimiento' }));
+    await user.click(screen.getByRole('button', { name: 'Registrar movimiento' }));
 
     expect(useFinanceStore.getState().expenses).toHaveLength(0);
     expect(useUiStore.getState().toasts[0]).toMatchObject({
@@ -190,7 +190,7 @@ describe('TransactionModal — accesibilidad', () => {
 
     const dialogo = screen.getByRole('dialog');
     expect(dialogo).toHaveAttribute('aria-modal', 'true');
-    expect(dialogo).toHaveAccessibleName('Nuevo Movimiento');
+    expect(dialogo).toHaveAccessibleName('Nuevo movimiento');
   });
 
   it('el botón de borrar tiene nombre accesible al editar', async () => {
@@ -230,7 +230,7 @@ describe('TransactionModal — sincronización', () => {
 
     await user.type(screen.getByLabelText('Monto'), '25');
     await user.click(screen.getByRole('button', { name: /Comida/ }));
-    await user.click(screen.getByRole('button', { name: 'Registrar Movimiento' }));
+    await user.click(screen.getByRole('button', { name: 'Registrar movimiento' }));
 
     expect(onSave).toHaveBeenCalled();
   });

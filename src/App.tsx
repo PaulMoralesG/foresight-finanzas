@@ -106,7 +106,9 @@ export function App() {
     <ErrorBoundary>
       {/* ── PWA Install Banner ── */}
       {showInstallBanner && (
-        <div className="fixed bottom-20 left-4 right-4 z-banner sm:left-auto sm:right-4 sm:bottom-20 sm:w-80 animate-slide-up">
+        // Sobre la TabBar y el indicador de inicio, no a 80px fijos: con el
+        // safe-area de un iPhone (34px) la barra mide ~90px y el aviso la pisaba.
+        <div className="fixed left-4 right-4 z-banner sm:left-auto sm:right-4 sm:w-80 animate-slide-up" style={{ bottom: 'calc(var(--bottom-clearance) + 1rem)' }}>
           <div className="saas-card p-4 shadow-2xl border-brand-500/30">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-brand-100 dark:bg-brand-900 flex items-center justify-center flex-shrink-0">
@@ -120,8 +122,8 @@ export function App() {
                   <button onClick={dismissInstallBanner} className="saas-btn-ghost saas-btn-sm text-xs">Ahora no</button>
                 </div>
               </div>
-              <button onClick={dismissInstallBanner} aria-label="Cerrar" className="text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 flex-shrink-0">
-                <X className="w-3.5 h-3.5" />
+              <button onClick={dismissInstallBanner} aria-label="Cerrar" className="saas-hit -mr-1 -mt-1 w-8 h-8 flex items-center justify-center rounded-full text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 flex-shrink-0">
+                <X className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -130,7 +132,9 @@ export function App() {
 
       {/* ── Service Worker Update Banner ── */}
       {swUpdateReady && (
-        <div className="fixed top-16 left-4 right-4 z-banner sm:left-auto sm:right-4 sm:w-80 animate-slide-up">
+        // Bajo la Dynamic Island/notch: top-16 fijo quedaba a 5px del borde de
+        // la isla en un iPhone 14 Pro instalado como app.
+        <div className="fixed left-4 right-4 z-banner sm:left-auto sm:right-4 sm:w-80 animate-slide-up" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 4rem)' }}>
           <div className="saas-card p-4 shadow-2xl border-amber-500/30">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900 flex items-center justify-center flex-shrink-0">

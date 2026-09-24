@@ -12,7 +12,7 @@ export function typeLabel(type: TransactionType): string {
 
 /** Clases de color de la píldora de tipo. Una transferencia va en neutro. */
 export function typePillClasses(type: TransactionType): string {
-  if (type === 'income') return 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400';
-  if (type === 'expense') return 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400';
+  if (type === 'income') return 'bg-income-50 dark:bg-income-950 text-income-700 dark:text-income-400';
+  if (type === 'expense') return 'bg-expense-50 dark:bg-expense-950 text-expense-700 dark:text-expense-400';
   return 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300';
 }

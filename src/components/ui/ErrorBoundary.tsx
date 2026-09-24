@@ -52,7 +52,7 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 px-4">
           <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-2xl shadow-lg p-8 text-center">
             <div className="text-5xl mb-4">⚠️</div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+            <h1 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
               Algo salió mal
             </h1>
             <p className="text-slate-600 dark:text-slate-400 mb-6 text-sm">
@@ -62,7 +62,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <summary className="text-xs text-slate-600 dark:text-slate-400 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300">
                 Detalles técnicos
               </summary>
-              <pre className="mt-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 p-3 rounded-lg overflow-auto max-h-32">
+              <pre className="mt-2 text-xs text-expense-600 dark:text-expense-400 bg-expense-50 dark:bg-expense-950/20 p-3 rounded-lg overflow-auto max-h-32">
                 {this.state.error?.message}
               </pre>
             </details>

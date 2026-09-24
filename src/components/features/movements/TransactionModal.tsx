@@ -281,7 +281,7 @@ export function TransactionModal({
     <>
     <ModalSheet
       id="transaction-modal-title"
-      titulo={isEditing ? 'Editar Movimiento' : 'Nuevo Movimiento'}
+      titulo={isEditing ? 'Editar movimiento' : 'Nuevo movimiento'}
       onClose={closeModal}
       // Con el diálogo de borrado abierto, el foco lo retiene ese, no este
       trapActivo={isOpen && !isDeleteModalOpen}
@@ -294,7 +294,7 @@ export function TransactionModal({
             no hijo, así que sin esta asociación el `required` del monto nunca
             disparaba la validación nativa y el botón no quedaba vinculado al
             formulario para tecnologías de asistencia. */}
-        <form id="transaction-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden ios-scroll p-3 space-y-1.5" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
+        <form id="transaction-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden ios-scroll p-3 space-y-1.5" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch', paddingBottom: '1rem' }}>
           {/* Row 1: Tipo + Monto */}
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -310,12 +310,12 @@ export function TransactionModal({
                     key={t}
                     type="button"
                     onClick={() => { setType(t as TransactionType); setCategory(''); }}
-                    className={`flex-1 py-1 rounded-md text-2xs font-semibold transition-all flex items-center justify-center gap-1 ${
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1 ${
                       type === t
                         ? t === 'expense'
-                          ? 'bg-red-600 text-white'
+                          ? 'bg-expense-600 text-white'
                           : t === 'income'
-                            ? 'bg-emerald-600 text-white'
+                            ? 'bg-income-600 text-white'
                             : 'bg-slate-900 dark:bg-brand-600 text-white'
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                     }`}
@@ -418,7 +418,7 @@ export function TransactionModal({
                     key={bt}
                     type="button"
                     onClick={() => setBusinessType(bt)}
-                    className={`flex-1 py-1 rounded-md text-2xs font-semibold transition-all flex items-center justify-center gap-1 ${
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1 ${
                       businessType === bt
                         // Negocio seleccionado va en terracota, como su badge
                         // en el resto de la app (ver ScopeBadge); Personal no
@@ -453,7 +453,7 @@ export function TransactionModal({
                     key={m.id}
                     type="button"
                     onClick={() => setMethod(m.id)}
-                    className={`flex-1 py-1 rounded-md text-2xs font-semibold transition-all flex items-center justify-center gap-1 ${
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1 ${
                       method === m.id
                         ? 'bg-slate-900 dark:bg-brand-600 text-white'
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
@@ -655,7 +655,7 @@ export function TransactionModal({
             form="transaction-form"
             className="saas-btn-primary flex-1 py-1.5 text-xs"
           >
-            {isEditing ? 'Guardar Cambios' : 'Registrar Movimiento'}
+            {isEditing ? 'Guardar cambios' : 'Registrar movimiento'}
           </button>
         </div>
 

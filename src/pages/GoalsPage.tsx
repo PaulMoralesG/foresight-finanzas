@@ -204,7 +204,7 @@ export function GoalsPage() {
               <div className="flex gap-1" role="group" aria-label="Ámbito">
                 {(['personal', 'business'] as BusinessType[]).map((t) => (
                   <button key={t} type="button" onClick={() => setFTag(t)}
-                    className={`flex-1 py-1 rounded-md text-2xs font-semibold ${fTag === t ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${fTag === t ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
                     {t === 'personal' ? 'Personal' : 'Negocio'}
                   </button>
                 ))}

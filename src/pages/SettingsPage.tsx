@@ -165,7 +165,7 @@ export function SettingsPage() {
               {initials}
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white truncate">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white truncate">
                 {fullName}
               </h2>
               <p className="text-sm text-slate-600 dark:text-slate-400 truncate">{user?.email}</p>
@@ -449,8 +449,8 @@ export function SettingsPage() {
                 {confirmPassword.length > 0 && (
                   <p className={`text-2xs mt-1 font-medium ${
                     confirmPassword === newPassword
-                      ? 'text-emerald-700 dark:text-emerald-400'
-                      : 'text-red-600 dark:text-red-400'
+                      ? 'text-income-700 dark:text-income-400'
+                      : 'text-expense-600 dark:text-expense-400'
                   }`}>
                     {confirmPassword === newPassword ? '✓ Coinciden' : '✗ No coinciden'}
                   </p>
@@ -541,13 +541,13 @@ export function SettingsPage() {
         {/* Sign Out */}
         <button
           onClick={() => setShowSignOutConfirm(true)}
-          className="w-full flex items-center gap-4 p-4 text-left hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors rounded-lg"
+          className="w-full flex items-center gap-4 p-4 text-left hover:bg-expense-50 dark:hover:bg-expense-950/30 transition-colors rounded-lg"
         >
-          <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-950 flex items-center justify-center text-red-600 dark:text-red-400 flex-shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-expense-50 dark:bg-expense-950 flex items-center justify-center text-expense-600 dark:text-expense-400 flex-shrink-0">
             <LogOut className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-red-600 dark:text-red-400">Cerrar sesión</p>
+            <p className="text-sm font-semibold text-expense-600 dark:text-expense-400">Cerrar sesión</p>
             <p className="text-xs text-slate-600 dark:text-slate-400">Finaliza tu sesión actual</p>
           </div>
           <ChevronRight className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
