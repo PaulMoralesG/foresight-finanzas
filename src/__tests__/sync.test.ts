@@ -78,13 +78,16 @@ describe('syncService', () => {
     expect(mockFrom.mock.calls.length).toBe(before); // aún no sincroniza
 
     await vi.advanceTimersByTimeAsync(1);
-    const result = await p3; // solo el último schedule dispara el push
-    expect(result).toBe(true);
+    // Las tres llamadas comparten la misma promesa del ciclo debounced: las
+    // tres deben resolverse con el mismo resultado, no solo la última —antes,
+    // p1 y p2 se quedaban pendientes para siempre.
+    const [r1, r2, r3] = await Promise.all([p1, p2, p3]);
+    expect(r1).toBe(true);
+    expect(r2).toBe(true);
+    expect(r3).toBe(true);
     // Un solo ciclo: pull de las 11 tablas (expenses, categories, savings_goals,
     // budgets, accounts, debts, settings, assets, networth, budget_lines, recurrences)
     expect(mockFrom.mock.calls.length).toBe(before + 11);
-    void p1;
-    void p2;
   });
 
   it('flush cancela el timer pendiente y sincroniza de inmediato', async () => {
@@ -96,7 +99,9 @@ describe('syncService', () => {
 
     expect(result).toBe(true);
     expect(mockFrom.mock.calls.length).toBe(before + 11);
-    void p;
+    // El schedule() cancelado por flush() también debe resolverse —antes se
+    // quedaba pendiente para siempre porque flush() solo limpiaba el timer.
+    await expect(p).resolves.toBe(true);
   });
 
   it('no-op en modo offline (sin supabase configurado)', async () => {
@@ -117,11 +122,14 @@ describe('syncService', () => {
     await vi.advanceTimersByTimeAsync(5000);
     expect(mockFrom.mock.calls.length).toBe(before); // nada nuevo
 
+    // cancel() resuelve en `false` el schedule() que dejó sin pushear — antes
+    // se quedaba pendiente para siempre.
+    await expect(p).resolves.toBe(false);
+
     syncService.detach();
     const r = await syncService.schedule();
     expect(r).toBe(true);
     expect(mockFrom.mock.calls.length).toBe(before);
-    void p;
   });
 
   it('cambios de datos disparan auto-save (suscripción al store)', async () => {
