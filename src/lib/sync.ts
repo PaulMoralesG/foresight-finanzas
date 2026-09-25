@@ -479,6 +479,13 @@ function rowToGoal(r: GoalRow): SavingsGoal {
 
 let userId: string | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
+// Promesa compartida del ciclo debounced en curso: sin esto, cada schedule()
+// creaba su propia promesa pero solo el temporizador de la ÚLTIMA llamada
+// dentro de la ráfaga llegaba a resolver algo — las anteriores quedaban
+// pendientes para siempre (ni resueltas ni rechazadas), así que sus
+// llamadores nunca se enteraban de si el push terminó bien o mal.
+let pendingResolve: ((ok: boolean) => void) | null = null;
+let pendingSchedule: Promise<boolean> | null = null;
 let pushInFlight: Promise<boolean> | null = null;
 let queuedAfterPush = false;
 let queuedFull = false; // el ciclo encolado debe ser completo
@@ -1312,17 +1319,25 @@ export const syncService = {
     }
   },
 
-  /** Agenda un push (debounce 800ms). Misma firma que el saveData original. */
+  /** Agenda un push (debounce 800ms). Misma firma que el saveData original.
+   *  Varias llamadas dentro de la ventana comparten la misma promesa: todas
+   *  se resuelven juntas cuando el ciclo debounced finalmente corre, en vez
+   *  de que solo la última llamada de la ráfaga reciba el resultado. */
   schedule(): Promise<boolean> {
     if (!supabase || syncDisabled) return Promise.resolve(true);
     if (!userId) return Promise.resolve(true);
     if (timer) clearTimeout(timer);
-    return new Promise<boolean>((resolve) => {
-      timer = setTimeout(() => {
-        timer = null;
-        void performPush().then(resolve);
-      }, DEBOUNCE_MS);
-    });
+    if (!pendingSchedule) {
+      pendingSchedule = new Promise<boolean>((resolve) => { pendingResolve = resolve; });
+    }
+    timer = setTimeout(() => {
+      timer = null;
+      const resolve = pendingResolve!;
+      pendingResolve = null;
+      pendingSchedule = null;
+      void performPush().then(resolve);
+    }, DEBOUNCE_MS);
+    return pendingSchedule;
   },
 
   /**
@@ -1335,12 +1350,24 @@ export const syncService = {
    * @param full  ciclo completo (pull y push sin marca de agua).
    */
   async flush(full = false): Promise<boolean> {
-    if (timer) {
-      clearTimeout(timer);
-      timer = null;
-    }
+    // Si al cancelar el timer había un schedule() pendiente, su promesa
+    // compartida se resuelve con el resultado de este mismo push — de lo
+    // contrario, sus llamadores quedarían esperando para siempre (el mismo
+    // bug que schedule() tenía consigo mismo, aquí por partida de flush()).
+    const tomarResolucionPendiente = () => {
+      const resolve = pendingResolve;
+      pendingResolve = null;
+      pendingSchedule = null;
+      return resolve;
+    };
+
+    if (timer) clearTimeout(timer);
+    timer = null;
+    let resolverPendiente = tomarResolucionPendiente();
+
     // Con un ciclo en vuelo, performPush encola uno y devuelve el actual.
     let ok = await performPush(full);
+    resolverPendiente?.(ok);
     // Al resolverse, el finally del ciclo pudo arrancar el encolado
     // (pushInFlight) o agendar otro (timer) por una edición en vuelo: se
     // esperan directamente —llamar a performPush encolaría uno más— hasta
@@ -1349,17 +1376,29 @@ export const syncService = {
       if (timer) {
         clearTimeout(timer);
         timer = null;
+        resolverPendiente = tomarResolucionPendiente();
+        ok = pushInFlight ? await pushInFlight : await performPush();
+        resolverPendiente?.(ok);
+      } else {
+        ok = await pushInFlight!;
       }
-      ok = pushInFlight ? await pushInFlight : await performPush();
     }
     return ok;
   },
 
-  /** Cancela el timer sin pushear. */
+  /** Cancela el timer sin pushear. Cualquier schedule() que quedara
+   *  esperando este ciclo se resuelve en `false` — no se va a pushear —
+   *  en vez de quedarse pendiente para siempre. */
   cancel(): void {
     if (timer) {
       clearTimeout(timer);
       timer = null;
+    }
+    if (pendingResolve) {
+      const resolve = pendingResolve;
+      pendingResolve = null;
+      pendingSchedule = null;
+      resolve(false);
     }
   },
 
