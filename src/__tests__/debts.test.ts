@@ -99,14 +99,14 @@ describe('projectDebts', () => {
 });
 
 describe('debtsToCsv', () => {
-  it('una fila por deuda, con el ámbito traducido y el día "—" cuando falta', async () => {
+  it('una fila por deuda, con el ámbito traducido y "—" en los datos que faltan', async () => {
     const csv = await debtsToCsv([
-      deuda({ name: 'Tarjeta Banco', tag: 'business', kind: 'Tarjeta de crédito', balance: 500, annualRate: 22, minPayment: 50, payDay: 15 }),
+      deuda({ name: 'Tarjeta Banco', tag: 'business', kind: 'Tarjeta de crédito', balance: 500, annualRate: 22, minPayment: 50, payDay: 15, cutDay: 28, statementBalance: 480, creditLimit: 2000 }),
       deuda({ name: 'Préstamo auto', payDay: null }),
     ]).text();
-    expect(csv).toContain('"Nombre","Ámbito","Tipo","Saldo","Interés anual (%)","Pago mínimo","Día de pago"');
-    expect(csv).toContain('"Tarjeta Banco","Negocio","Tarjeta de crédito","500.00","22.00","50.00","15"');
-    expect(csv).toContain('"Préstamo auto","Personal","Préstamo","1000.00","12.00","100.00","—"');
+    expect(csv).toContain('"Nombre","Ámbito","Tipo","Saldo","Interés anual (%)","Pago mínimo","Día de pago","Día de corte","Pago de contado","Cupo total"');
+    expect(csv).toContain('"Tarjeta Banco","Negocio","Tarjeta de crédito","500.00","22.00","50.00","15","28","480.00","2000.00"');
+    expect(csv).toContain('"Préstamo auto","Personal","Préstamo","1000.00","12.00","100.00","—","—","—","—"');
   });
 });
 

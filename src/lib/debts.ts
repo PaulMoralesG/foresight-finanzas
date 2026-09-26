@@ -12,7 +12,7 @@ import type { Debt, DebtKind, DebtMethod } from '@/types';
 
 export const DEBT_KINDS: DebtKind[] = ['Tarjeta de crédito', 'Préstamo', 'Hipoteca', 'Otro'];
 
-const DEBTS_CSV_HEADERS = ['Nombre', 'Ámbito', 'Tipo', 'Saldo', 'Interés anual (%)', 'Pago mínimo', 'Día de pago'] as const;
+const DEBTS_CSV_HEADERS = ['Nombre', 'Ámbito', 'Tipo', 'Saldo', 'Interés anual (%)', 'Pago mínimo', 'Día de pago', 'Día de corte', 'Pago de contado', 'Cupo total'] as const;
 
 /** Lista de deudas a CSV, en el orden en que llegan (la página ya las ordena). */
 export function debtsToCsv(debts: Debt[]): Blob {
@@ -24,6 +24,9 @@ export function debtsToCsv(debts: Debt[]): Blob {
     d.annualRate.toFixed(2),
     d.minPayment.toFixed(2),
     d.payDay != null ? String(d.payDay) : '—',
+    d.cutDay != null ? String(d.cutDay) : '—',
+    d.statementBalance != null ? d.statementBalance.toFixed(2) : '—',
+    d.creditLimit != null ? d.creditLimit.toFixed(2) : '—',
   ]);
   return toCsv([...DEBTS_CSV_HEADERS], rows);
 }

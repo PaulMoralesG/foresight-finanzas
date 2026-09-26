@@ -13,6 +13,7 @@ import { convertGlobalBudgets } from '@/lib/budget-lines';
 import { accountIsUsed, TRANSFER_CATEGORY } from '@/lib/accounts';
 import { fechasPendientes } from '@/lib/recurrence';
 import { aplicarDeltas, categoriaDePago, deltaDeSaldos, enlazarPagosAntiguos } from '@/lib/debt-payments';
+import { normalizarDeuda } from '@/lib/credit-card';
 import type { BackupData } from '@/lib/backup';
 
 interface FinanceState {
@@ -683,13 +684,13 @@ export const useFinanceStore = create<FinanceState>()(
       // ── Deudas ──
       addDebt: (d) => {
         const id = newId();
-        set((state) => ({ debts: [...state.debts, { ...d, id, updated_at: nowIso() }] }));
+        set((state) => ({ debts: [...state.debts, normalizarDeuda({ ...d, id, updated_at: nowIso() })] }));
         return id;
       },
 
       updateDebt: (id, partial) =>
         set((state) => ({
-          debts: state.debts.map((d) => (d.id === id ? { ...d, ...partial, updated_at: nowIso() } : d)),
+          debts: state.debts.map((d) => (d.id === id ? normalizarDeuda({ ...d, ...partial, updated_at: nowIso() }) : d)),
           tombstones: clearedTombstone(state.tombstones, id),
         })),
 

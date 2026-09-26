@@ -47,14 +47,24 @@ export function deltaDeSaldos(antes: Transaction[], despues: Transaction[]): Rec
   return delta;
 }
 
-/** Aplica los deltas a las deudas. El saldo nunca baja de 0. */
+/**
+ * Aplica los deltas a las deudas. El saldo nunca baja de 0.
+ *
+ * En una tarjeta con pago de contado conocido, el pago también se descuenta
+ * de él (y borrarlo lo devuelve): así la tarjeta dice cuánto falta para no
+ * pagar intereses en este corte.
+ */
 export function aplicarDeltas(debts: Debt[], delta: Record<string, number>, ahora: string): Debt[] {
   if (Object.keys(delta).length === 0) return debts;
-  return debts.map((d) =>
-    delta[d.id] === undefined
-      ? d
-      : { ...d, balance: Math.max(0, roundMoney(d.balance + delta[d.id])), updated_at: ahora },
-  );
+  return debts.map((d) => {
+    const cambio = delta[d.id];
+    if (cambio === undefined) return d;
+    const siguiente: Debt = { ...d, balance: Math.max(0, roundMoney(d.balance + cambio)), updated_at: ahora };
+    if (d.statementBalance !== undefined) {
+      siguiente.statementBalance = Math.max(0, roundMoney(d.statementBalance + cambio));
+    }
+    return siguiente;
+  });
 }
 
 export interface PagoDeDeuda {

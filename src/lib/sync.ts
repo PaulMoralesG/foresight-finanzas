@@ -85,6 +85,10 @@ interface DebtRow {
   annual_rate: number | null;
   min_payment: number | null;
   pay_day: number | null;
+  /** 0019. Opcionales en la forma: filas de antes de la migración no las traen. */
+  cut_day?: number | null;
+  statement_balance?: number | null;
+  credit_limit?: number | null;
   updated_at: string;
   deleted_at: string | null;
 }
@@ -272,6 +276,9 @@ function debtToRow(d: Debt, userId: string): DebtRow {
     annual_rate: d.annualRate,
     min_payment: d.minPayment,
     pay_day: d.payDay,
+    cut_day: d.cutDay ?? null,
+    statement_balance: d.statementBalance ?? null,
+    credit_limit: d.creditLimit ?? null,
     updated_at: d.updated_at,
     deleted_at: null,
   };
@@ -287,6 +294,11 @@ function rowToDebt(r: DebtRow): Debt {
     annualRate: Number(r.annual_rate ?? 0),
     minPayment: Number(r.min_payment ?? 0),
     payDay: r.pay_day ?? null,
+    // Solo con valor, para que una deuda sin datos de tarjeta sea
+    // estructuralmente igual a su copia local (igualEstructural).
+    ...(r.cut_day != null ? { cutDay: Number(r.cut_day) } : {}),
+    ...(r.statement_balance != null ? { statementBalance: Number(r.statement_balance) } : {}),
+    ...(r.credit_limit != null ? { creditLimit: Number(r.credit_limit) } : {}),
     updated_at: r.updated_at,
   };
 }

@@ -129,4 +129,45 @@ describe('DebtsPage — historial de pagos', () => {
     expect(filas[1]).toHaveTextContent('gasto del mes');
     expect(filas[1]).toHaveTextContent('saldo $800.00');
   });
+
+  it('tarjeta: datos del estado de cuenta en el formulario, resumen y actualización por corte', async () => {
+    render(<DebtsPage />);
+    await userEvent.click(screen.getAllByRole('button', { name: 'Agregar deuda' })[0]);
+    const dialogo = screen.getByRole('dialog');
+    await userEvent.type(within(dialogo).getByLabelText('Nombre'), 'Visa');
+    await userEvent.selectOptions(within(dialogo).getByLabelText('Tipo'), 'Tarjeta de crédito');
+    await userEvent.type(within(dialogo).getByLabelText('Saldo actual'), '1500');
+    await userEvent.type(within(dialogo).getByLabelText('Interés anual (%)'), '16');
+    await userEvent.type(within(dialogo).getByLabelText('Pago mínimo mensual'), '60');
+    await userEvent.type(within(dialogo).getByLabelText('Día de corte'), '28');
+    await userEvent.type(within(dialogo).getByLabelText('Pagar hasta (día)'), '10');
+    await userEvent.type(within(dialogo).getByLabelText('Pago de contado'), '480');
+    await userEvent.type(within(dialogo).getByLabelText('Cupo total'), '2000');
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Crear' }));
+
+    expect(useFinanceStore.getState().debts[0]).toMatchObject({ cutDay: 28, payDay: 10, statementBalance: 480, creditLimit: 2000 });
+    expect(screen.getByText(/para no pagar intereses/)).toHaveTextContent('Paga $480.00 antes del');
+    expect(screen.getByText('Cupo disponible').parentElement).toHaveTextContent('$500.00 de $2,000.00');
+    expect(screen.getByRole('progressbar', { name: /75% del cupo en uso/ })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Actualizar estado de cuenta' }));
+    const estado = screen.getByRole('dialog');
+    const total = within(estado).getByLabelText('Deuda total');
+    await userEvent.clear(total);
+    await userEvent.type(total, '1200');
+    const contado = within(estado).getByLabelText('Pago de contado');
+    await userEvent.clear(contado);
+    await userEvent.type(contado, '0');
+    await userEvent.click(within(estado).getByRole('button', { name: 'Guardar' }));
+
+    expect(useFinanceStore.getState().debts[0]).toMatchObject({ balance: 1200, statementBalance: 0, minPayment: 60 });
+    expect(screen.getByText(/Pago de contado cubierto/)).toBeInTheDocument();
+  });
+
+  it('un préstamo no muestra nada de tarjeta', () => {
+    useFinanceStore.getState().addDebt({ name: 'Moto', tag: 'personal', kind: 'Préstamo', balance: 3600, annualRate: 19, minPayment: 180, payDay: null });
+    render(<DebtsPage />);
+    expect(screen.queryByRole('button', { name: 'Actualizar estado de cuenta' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Cupo disponible')).not.toBeInTheDocument();
+  });
 });
