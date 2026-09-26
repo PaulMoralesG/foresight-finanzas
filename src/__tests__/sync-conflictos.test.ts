@@ -591,3 +591,67 @@ describe('reloj y ciclo de vida', () => {
     expect(mockFrom.mock.calls.length).toBeGreaterThan(llamadasAntes);
   });
 });
+
+// ── Tombstones contra columnas NOT NULL (recurrences, debts, accounts…) ──
+// Regresión: el borrado de una regla recurrente se subía como upsert con
+// solo identidad + timestamps, `recurrences.type` es NOT NULL y Postgres
+// rechazaba el ciclo entero (23502). El resto de cambios —movimientos
+// nuevos incluidos— se quedaba en el dispositivo para siempre.
+describe('tombstones en tablas con NOT NULL', () => {
+  it('si el upsert del borrado viola NOT NULL, lo marca con UPDATE y el resto sí se sube', async () => {
+    const upserts: { table: string; rows: Fila[] }[] = [];
+    const updates: { table: string; valores: Fila; filtros: [string, unknown][] }[] = [];
+    mockFrom.mockImplementation((table: string) => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => {
+          const chain = {
+            maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
+            gte: vi.fn(() => chain),
+            order: vi.fn(() => chain),
+            range: vi.fn(() => Promise.resolve({
+              data: table === 'recurrences'
+                ? [{ id: 'r1', user_id: 'user-1', type: 'expense', amount: 30, concept: 'Internet', category: 'servicios', method: 'card', business_type: 'personal', account_id: null, to_account_id: null, frecuencia: 'monthly', intervalo: 1, dia_mes: 1, desde: '2026-09-22', hasta: null, activa: true, ultima_generada: null, updated_at: '2026-08-01T00:00:00.000Z', deleted_at: null }]
+                : [],
+              error: null,
+            })),
+          };
+          return chain;
+        }),
+      })),
+      upsert: vi.fn((rows: Fila[]) => {
+        upserts.push({ table, rows });
+        const soloTombstones = rows.every((r) => r.deleted_at);
+        if (table === 'recurrences' && soloTombstones) {
+          return Promise.resolve({ error: { code: '23502', message: 'null value in column "type" of relation "recurrences" violates not-null constraint' } });
+        }
+        return Promise.resolve({ error: null });
+      }),
+      update: vi.fn((valores: Fila) => {
+        const filtros: [string, unknown][] = [];
+        const registro = { table, valores, filtros };
+        updates.push(registro);
+        const chain = {
+          eq: vi.fn((col: string, val: unknown) => {
+            filtros.push([col, val]);
+            return filtros.length >= 2 ? Promise.resolve({ error: null }) : chain;
+          }),
+        };
+        return chain;
+      }),
+    }));
+
+    // Borrado local de la regla (más nuevo que la fila del servidor) y un
+    // movimiento nuevo que debe llegar al servidor en el mismo ciclo.
+    useFinanceStore.setState({ tombstones: { r1: '2026-09-01T12:00:00.000Z' } });
+    gastoLocal('nuevo', '2026-09-01T12:00:00.000Z');
+
+    await syncService.attach('user-1');
+
+    expect(filasDe(upserts, 'expenses').map((r) => r.id)).toContain('nuevo');
+    const marca = updates.find((u) => u.table === 'recurrences');
+    expect(marca?.valores).toEqual({ deleted_at: '2026-09-01T12:00:00.000Z', updated_at: '2026-09-01T12:00:00.000Z' });
+    expect(marca?.filtros).toEqual([['user_id', 'user-1'], ['id', 'r1']]);
+    expect(useFinanceStore.getState().recurrences).toHaveLength(0);
+    expect(mocks.reportarError).not.toHaveBeenCalled();
+  });
+});

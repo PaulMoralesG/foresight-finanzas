@@ -106,6 +106,7 @@ vez cada una. Para un entorno nuevo hay que aplicarlas todas:
 | `0014_recurrences.sql` | Tabla `recurrences` (plantillas de movimientos que se repiten: diario, semanal o mensual) con RLS, grant, índice por `(user_id, updated_at)` y `keep_newest`; columna `recurrence_id` en `expenses` | **Antes** de desplegar (el cliente hace pull de `recurrences`; sin la tabla el sync entero cae a modo local) |
 | `0015_budget_lines_nullable.sql` | `tag`, `kind` y `category_id` de `budget_lines` pasan a nullable, como en el resto de tablas: el upsert de un tombstone solo manda identidad y marcas de tiempo | **Antes** de desplegar un cliente que deduplique líneas de presupuesto (hotfix, ya aplicada) |
 | `0016_revoke_legacy_table_grants.sql` | Quita a `anon` todos los privilegios, y a `authenticated` TRUNCATE/TRIGGER/REFERENCES, en las cinco tablas anteriores a la 0004. No toca datos ni políticas | En cualquier momento; no depende del cliente |
+| `0017_entity_columns_nullable.sql` | Columnas de negocio nullable en `accounts`, `assets`, `budget_lines`, `debts`, `recurrences` y `savings_goals`: el upsert de un borrado solo manda identidad + timestamps y el NOT NULL bloqueaba la sincronización entera (23502). No toca datos | En cualquier momento; desbloquea también a clientes sin actualizar |
 
 Fíjate en el orden de la `0005` y la `0006`: una va antes del deploy y la otra después.
 Invertirlo deja al cliente pidiendo algo que ya no existe, o escribiendo con una clave
