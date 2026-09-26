@@ -58,6 +58,8 @@ interface ExpenseRow {
   account_id: string | null;
   to_account_id: string | null;
   recurrence_id: string | null;
+  /** 0018. Opcional en la forma: filas de antes de la migración no la traen. */
+  debt_id?: string | null;
   created_at: string | null;
   updated_at: string;
   deleted_at: string | null;
@@ -211,6 +213,7 @@ function expenseToRow(t: Transaction, userId: string): ExpenseRow {
     account_id: t.accountId ?? null,
     to_account_id: t.toAccountId ?? null,
     recurrence_id: t.recurrenceId ?? null,
+    debt_id: t.debtId ?? null,
     created_at: t.created_at ?? null,
     updated_at: t.updated_at,
     deleted_at: null,
@@ -230,6 +233,9 @@ function rowToExpense(r: ExpenseRow): Transaction {
     accountId: r.account_id ?? null,
     toAccountId: r.to_account_id ?? null,
     recurrenceId: r.recurrence_id ?? null,
+    // Como created_at: la clave solo existe si hay deuda, para que un
+    // movimiento sin deuda sea estructuralmente igual a su copia local.
+    ...(r.debt_id ? { debtId: r.debt_id } : {}),
     // La clave solo aparece si hay valor: con `created_at: undefined` el objeto
     // tenía una clave más que su equivalente local y igualEstructural (que
     // compara el número de claves) daba "distinto" en cada ciclo, disparando
