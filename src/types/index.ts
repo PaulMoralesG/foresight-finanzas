@@ -50,6 +50,9 @@ export interface Transaction {
   toAccountId?: string | null;
   /** Si salió de una recurrencia, el id de la regla que la generó. */
   recurrenceId?: string | null;
+  /** Si paga una deuda, su id: el saldo de la deuda se ajusta con este
+   *  movimiento y aparece en su historial de pagos (ver lib/debt-payments). */
+  debtId?: string | null;
   created_at?: string;
   updated_at: string; // ISO — usado por el merge de sync
 }

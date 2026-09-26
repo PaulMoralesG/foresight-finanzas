@@ -655,3 +655,25 @@ describe('tombstones en tablas con NOT NULL', () => {
     expect(mocks.reportarError).not.toHaveBeenCalled();
   });
 });
+
+describe('expenses.debt_id (0018)', () => {
+  it('sube el debtId de un pago y lo recupera al bajar la fila', async () => {
+    const { upserts } = armar({ filas: { expenses: [filaGasto({ id: 'remoto', debt_id: 'd9', updated_at: '2026-08-01T00:00:00.000Z' })] } });
+    gastoLocal('local', '2026-09-01T12:00:00.000Z', { debtId: 'd1', category: 'pago-tarjetas' });
+
+    await syncService.attach('user-1');
+
+    const subida = filasDe(upserts, 'expenses').find((r) => r.id === 'local');
+    expect(subida).toMatchObject({ debt_id: 'd1' });
+    const bajado = useFinanceStore.getState().expenses.find((e) => e.id === 'remoto');
+    expect(bajado?.debtId).toBe('d9');
+  });
+
+  it('un movimiento sin deuda baja sin la clave debtId (igual a su copia local)', async () => {
+    armar({ filas: { expenses: [filaGasto({ id: 'sin', debt_id: null })] } });
+    await syncService.attach('user-1');
+    const bajado = useFinanceStore.getState().expenses.find((e) => e.id === 'sin');
+    expect(bajado).toBeDefined();
+    expect('debtId' in (bajado as object)).toBe(false);
+  });
+});
