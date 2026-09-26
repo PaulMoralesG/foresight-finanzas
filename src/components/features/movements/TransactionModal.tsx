@@ -2,7 +2,7 @@
 // TransactionModal - Modal para crear/editar transacciones
 // ================================================================
 
-import { useState, useEffect, useMemo, Fragment, type FormEvent } from 'react';
+import { useState, useEffect, useMemo, useRef, Fragment, type FormEvent } from 'react';
 import { X, Plus, Trash2, ArrowDown, ArrowUp, ArrowLeftRight, Building2, User, Banknote, CreditCard, Landmark } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
@@ -11,6 +11,7 @@ import { ColorPicker, IconPicker } from '@/components/ui/CategoryStylePicker';
 import { getTodayISO, parseMoneyInput, roundMoney, syncToCloud } from '@/lib/utils';
 import { makeCategoryId } from '@/lib/category-id';
 import { TRANSFER_CATEGORY } from '@/lib/accounts';
+import { esCategoriaDePago } from '@/lib/debt-payments';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { ModalSheet } from '@/components/ui/ModalSheet';
@@ -70,10 +71,22 @@ export function TransactionModal({
   // que antes); obligatoria y doble (origen → destino) en transferencias.
   const [accountId, setAccountId] = useState('');
   const [toAccountId, setToAccountId] = useState('');
-  // Repetición: 'no' deja el movimiento como uno suelto, cualquier otra
-  // crea además la regla. Solo al registrar: editar un movimiento ya creado
-  // no toca la regla que lo generó (para eso está la lista de recurrentes).
+  // Deuda que paga este movimiento (solo gastos en «Pago de tarjetas» o
+  // «Préstamos»). Al guardar, el store baja el saldo de esa deuda.
+  const [debtId, setDebtId] = useState('');
+  const debts = useFinanceStore((s) => s.debts);
   const isTransfer = type === 'transfer';
+  // Un pago de deuda que no cuenta como gasto se guarda como salida de cuenta
+  // sin destino; al editarlo no se le exige cuenta destino.
+  const esPagoSinDestino = isTransfer && !!debtId;
+  const muestraDeuda = type === 'expense' && esCategoriaDePago(category) && debts.length > 0;
+  // El selector aparece al final de la rejilla de categorías: al elegir
+  // «Pago de Tarjetas» o «Préstamos» se lleva a la vista para que no pase
+  // desapercibido en el móvil.
+  const deudaRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (muestraDeuda) deudaRef.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  }, [muestraDeuda]);
 
   // ── Nueva categoría ──
   const [showNewCat, setShowNewCat] = useState(false);
@@ -130,6 +143,7 @@ export function TransactionModal({
           setBusinessType(item.businessType ?? 'personal');
           setAccountId(item.accountId ?? '');
           setToAccountId(item.toAccountId ?? '');
+          setDebtId(item.debtId ?? '');
         } else {
           console.error('[TransactionModal] No se encontró transacción con id:', editingId);
         }
@@ -148,6 +162,7 @@ export function TransactionModal({
       setBusinessType(modalPrefill.businessType ?? 'personal');
       setAccountId('');
       setToAccountId('');
+      setDebtId('');
     } else if (!isOpen) {
       // Reset al cerrar
       setType('expense');
@@ -159,6 +174,7 @@ export function TransactionModal({
       setBusinessType('personal');
       setAccountId('');
       setToAccountId('');
+      setDebtId('');
     }
     // Solo montar al abrir/cerrar o cambiar item
   }, [editingId, isOpen, modalPrefill, defaultDate, addToast]);
@@ -186,7 +202,7 @@ export function TransactionModal({
       addToast('Ingresa un monto mayor a 0', 'error');
       return;
     }
-    if (isTransfer) {
+    if (isTransfer && !esPagoSinDestino) {
       if (!accountId || !toAccountId) {
         addToast('Elige la cuenta de origen y la de destino', 'error');
         return;
@@ -212,6 +228,9 @@ export function TransactionModal({
       businessType,
       accountId: accountId || null,
       toAccountId: isTransfer && toAccountId ? toAccountId : null,
+      // Solo un gasto de pago (o un pago que no cuenta como gasto) conserva la
+      // deuda; al cambiar de categoría se suelta y el store devuelve el saldo.
+      debtId: (muestraDeuda || esPagoSinDestino) && debtId ? debtId : null,
     };
 
     if (isEditing) {
@@ -554,6 +573,28 @@ export function TransactionModal({
               </div>
             )}
           </div>
+          )}
+
+          {/* Deuda que se paga: con ella, este gasto aparece en el historial de
+              la deuda y baja su saldo (ver Deudas). */}
+          {muestraDeuda && (
+            <div ref={deudaRef}>
+              <label htmlFor="tx-debt" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">¿Qué deuda pagas?</label>
+              <select
+                id="tx-debt"
+                value={debtId}
+                onChange={(e) => setDebtId(e.target.value)}
+                className="saas-input py-1 text-sm"
+              >
+                <option value="">Ninguna (solo registrar el gasto)</option>
+                {debts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+              {debtId && (
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                  Al guardar, el saldo de «{debts.find((d) => d.id === debtId)?.name}» baja en este monto y el pago queda en su historial.
+                </p>
+              )}
+            </div>
           )}
         </form>
 
