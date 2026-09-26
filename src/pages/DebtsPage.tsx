@@ -28,6 +28,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ScopeBadge } from '@/components/ui/TransactionBits';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { historialDeuda } from '@/lib/debt-payments';
+import { esTarjeta, estadoTarjeta } from '@/lib/credit-card';
 import { accountName } from '@/lib/accounts';
 import type { Debt, DebtKind, DebtMethod, BusinessType } from '@/types';
 
@@ -61,6 +62,16 @@ export function DebtsPage() {
   const [fRate, setFRate] = useState('');
   const [fMin, setFMin] = useState('');
   const [fDay, setFDay] = useState('');
+  // Estado de cuenta (solo tarjetas)
+  const [fCut, setFCut] = useState('');
+  const [fContado, setFContado] = useState('');
+  const [fCupo, setFCupo] = useState('');
+
+  // ── Actualizar estado de cuenta (cada corte) ──
+  const [estado, setEstado] = useState<Debt | null>(null);
+  const [eTotal, setETotal] = useState('');
+  const [eContado, setEContado] = useState('');
+  const [eMin, setEMin] = useState('');
 
   // ── Registrar pago ──
   const [paying, setPaying] = useState<Debt | null>(null);
@@ -76,6 +87,7 @@ export function DebtsPage() {
     setEditing(null);
     setFName(''); setFTag('personal'); setFKind('Tarjeta de crédito');
     setFBalance(''); setFRate(''); setFMin(''); setFDay('');
+    setFCut(''); setFContado(''); setFCupo('');
     setFormOpen(true);
   }
   function openEdit(d: Debt) {
@@ -83,6 +95,9 @@ export function DebtsPage() {
     setFName(d.name); setFTag(d.tag); setFKind(d.kind);
     setFBalance(String(d.balance)); setFRate(String(d.annualRate)); setFMin(String(d.minPayment));
     setFDay(d.payDay ? String(d.payDay) : '');
+    setFCut(d.cutDay ? String(d.cutDay) : '');
+    setFContado(d.statementBalance !== undefined ? String(d.statementBalance) : '');
+    setFCupo(d.creditLimit !== undefined ? String(d.creditLimit) : '');
     setFormOpen(true);
   }
   function handleSubmit(e: FormEvent) {
@@ -97,6 +112,11 @@ export function DebtsPage() {
       annualRate: roundMoney(parseMoneyInput(fRate)),
       minPayment: roundMoney(parseMoneyInput(fMin)),
       payDay: fDay ? Math.min(31, Math.max(1, parseInt(fDay, 10) || 0)) || null : null,
+      // Vacío = sin dato: el store quita la clave (normalizarDeuda), y en una
+      // deuda que no es tarjeta quita las tres.
+      cutDay: fCut ? Math.min(31, Math.max(1, parseInt(fCut, 10) || 0)) || undefined : undefined,
+      statementBalance: fContado.trim() ? roundMoney(parseMoneyInput(fContado)) : undefined,
+      creditLimit: fCupo.trim() ? roundMoney(parseMoneyInput(fCupo)) : undefined,
     };
     if (editing) {
       updateDebt(editing.id, data);
@@ -127,6 +147,25 @@ export function DebtsPage() {
     setPaying(null);
   }
 
+  function openEstado(d: Debt) {
+    setEstado(d);
+    setETotal(String(d.balance));
+    setEContado(d.statementBalance !== undefined ? String(d.statementBalance) : '');
+    setEMin(String(d.minPayment));
+  }
+  function handleEstado(e: FormEvent) {
+    e.preventDefault();
+    if (!estado) return;
+    updateDebt(estado.id, {
+      balance: roundMoney(parseMoneyInput(eTotal)),
+      statementBalance: eContado.trim() ? roundMoney(parseMoneyInput(eContado)) : undefined,
+      minPayment: roundMoney(parseMoneyInput(eMin)),
+    });
+    addToast('Estado de cuenta actualizado ✅', 'success');
+    syncToCloud(saveData, addToast);
+    setEstado(null);
+  }
+
   function handleDelete() {
     if (!confirmDelete) return;
     deleteDebt(confirmDelete.id);
@@ -147,9 +186,10 @@ export function DebtsPage() {
   const expenses = useFinanceStore((s) => s.expenses);
   const [historialAbierto, setHistorialAbierto] = useState<string | null>(null);
 
-  const anyOpen = formOpen || !!paying || !!confirmDelete;
+  const anyOpen = formOpen || !!paying || !!confirmDelete || !!estado;
   useEscapeKey(() => {
     if (confirmDelete) setConfirmDelete(null);
+    else if (estado) setEstado(null);
     else if (paying) setPaying(null);
     else if (formOpen) setFormOpen(false);
   }, anyOpen);
@@ -259,6 +299,9 @@ export function DebtsPage() {
                       </p>
                       <div className="flex gap-x-2 gap-y-1 mt-1.5 flex-wrap">
                         <button onClick={() => openPay(d)} className="saas-btn saas-btn-secondary saas-btn-sm text-xs">Registrar pago</button>
+                        {esTarjeta(d) && (
+                          <button onClick={() => openEstado(d)} className="saas-btn saas-btn-secondary saas-btn-sm text-xs">Actualizar estado de cuenta</button>
+                        )}
                         <button onClick={() => openEdit(d)} className="saas-btn saas-btn-ghost saas-btn-sm text-xs flex items-center gap-1" aria-label={`Editar ${d.name}`}><Pencil className="w-3 h-3" /> Editar</button>
                         <button onClick={() => setConfirmDelete(d)} className="saas-btn saas-btn-ghost saas-btn-sm text-xs flex items-center gap-1 text-expense-600 dark:text-expense-400" aria-label={`Eliminar ${d.name}`}><Trash2 className="w-3 h-3" /> Eliminar</button>
                       </div>
@@ -269,6 +312,7 @@ export function DebtsPage() {
                       <p className="text-sm font-bold tabular-nums text-slate-900 dark:text-white">{formatMoney(d.balance)}</p>
                       <p className="text-2xs text-slate-600 dark:text-slate-400">{months ? `libre en ${payoffDate(months)}` : 'sin proyección'}</p>
                     </div>
+                    <ResumenTarjeta debt={d} />
                     <HistorialPagos
                       debt={d}
                       expenses={expenses}
@@ -318,12 +362,65 @@ export function DebtsPage() {
                 <input id="d-min" type="text" inputMode="decimal" value={fMin} onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setFMin(e.target.value); }} className="saas-input py-1.5 text-sm tabular-nums" required />
               </Campo>
             </div>
-            <Campo id="d-day" label="Día de pago del mes (opcional)">
-              <input id="d-day" type="number" min={1} max={31} value={fDay} onChange={(e) => setFDay(e.target.value)} className="saas-input py-1.5 text-sm tabular-nums" />
-            </Campo>
+            {fKind === 'Tarjeta de crédito' ? (
+              <>
+                {/* Como en el estado de cuenta del banco: corte y fecha límite
+                    lado a lado; pago de contado y cupo, opcionales. */}
+                <div className="grid grid-cols-2 gap-2">
+                  <Campo id="d-cut" label="Día de corte">
+                    <input id="d-cut" type="number" inputMode="numeric" min={1} max={31} value={fCut} onChange={(e) => setFCut(e.target.value)} className="saas-input py-1.5 text-sm tabular-nums" />
+                  </Campo>
+                  <Campo id="d-day" label="Pagar hasta (día)">
+                    <input id="d-day" type="number" inputMode="numeric" min={1} max={31} value={fDay} onChange={(e) => setFDay(e.target.value)} className="saas-input py-1.5 text-sm tabular-nums" />
+                  </Campo>
+                  <Campo id="d-contado" label="Pago de contado">
+                    <input id="d-contado" type="text" inputMode="decimal" value={fContado} onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setFContado(e.target.value); }} className="saas-input py-1.5 text-sm tabular-nums" placeholder="Opcional" />
+                  </Campo>
+                  <Campo id="d-cupo" label="Cupo total">
+                    <input id="d-cupo" type="text" inputMode="decimal" value={fCupo} onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setFCupo(e.target.value); }} className="saas-input py-1.5 text-sm tabular-nums" placeholder="Opcional" />
+                  </Campo>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-400 -mt-1">
+                  El pago de contado es lo que tu banco te pide pagar en este corte para no generar intereses. Nunca escribas el número de la tarjeta.
+                </p>
+              </>
+            ) : (
+              <Campo id="d-day" label="Día de pago del mes (opcional)">
+                <input id="d-day" type="number" min={1} max={31} value={fDay} onChange={(e) => setFDay(e.target.value)} className="saas-input py-1.5 text-sm tabular-nums" />
+              </Campo>
+            )}
             <div className="flex gap-2 pt-1">
               <button type="button" onClick={() => setFormOpen(false)} className="saas-btn saas-btn-secondary flex-1 py-2 text-xs">Cancelar</button>
               <button type="submit" className="saas-btn saas-btn-primary flex-1 py-2 text-xs">{editing ? 'Guardar' : 'Crear'}</button>
+            </div>
+          </form>
+        </ModalSheet>
+      )}
+
+      {/* Modal estado de cuenta (tarjetas) */}
+      {estado && (
+        <ModalSheet id="estado-form-title" titulo="Actualizar estado de cuenta" onClose={() => setEstado(null)} focoInicial="#e-total">
+          <form onSubmit={handleEstado} className="p-3 space-y-3 flex-1 overflow-y-auto">
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              {estado.name} · copia las cifras del último corte de tu banco.
+            </p>
+            <Campo id="e-total" label="Deuda total">
+              <input id="e-total" type="text" inputMode="decimal" value={eTotal} onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setETotal(e.target.value); }} className="saas-input py-1.5 text-sm font-bold tabular-nums" required />
+            </Campo>
+            <div className="grid grid-cols-2 gap-2">
+              <Campo id="e-contado" label="Pago de contado">
+                <input id="e-contado" type="text" inputMode="decimal" value={eContado} onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setEContado(e.target.value); }} className="saas-input py-1.5 text-sm tabular-nums" placeholder="Opcional" />
+              </Campo>
+              <Campo id="e-min" label="Pago mínimo">
+                <input id="e-min" type="text" inputMode="decimal" value={eMin} onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setEMin(e.target.value); }} className="saas-input py-1.5 text-sm tabular-nums" required />
+              </Campo>
+            </div>
+            <p className="text-2xs text-slate-600 dark:text-slate-400">
+              El pago de contado es lo que debes pagar antes de la fecha límite para no pagar intereses. Los pagos que registres después lo irán bajando.
+            </p>
+            <div className="flex gap-2 pt-1">
+              <button type="button" onClick={() => setEstado(null)} className="saas-btn saas-btn-secondary flex-1 py-2 text-xs">Cancelar</button>
+              <button type="submit" className="saas-btn saas-btn-primary flex-1 py-2 text-xs">Guardar</button>
             </div>
           </form>
         </ModalSheet>
@@ -602,6 +699,58 @@ function HistorialPagos({ debt, expenses, accounts, abierto, onToggle }: {
             </>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Resumen de tarjeta: pago de contado, corte y cupo disponible ─── */
+const fechaCorta = (iso: string) => safeParseDate(iso).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' });
+
+function ResumenTarjeta({ debt }: { debt: Debt }) {
+  const e = estadoTarjeta(debt, getTodayISO());
+  if (!e) return null;
+  const sinDatos = e.contado === null && e.proximoCorte === null && e.cupoDisponible === null;
+  const urgente = e.diasParaPagar !== null && e.diasParaPagar <= 3;
+
+  return (
+    <div className="w-full pl-9 space-y-1.5">
+      {e.contado !== null && (
+        e.contadoCubierto ? (
+          <p className="text-xs text-income-700 dark:text-income-400">✅ Pago de contado cubierto: este corte no genera intereses.</p>
+        ) : (
+          <p className={`text-xs ${urgente ? 'text-amber-700 dark:text-amber-400 font-semibold' : 'text-slate-700 dark:text-slate-300'}`}>
+            Paga <span className="tabular-nums font-semibold">{formatMoney(e.contado)}</span>
+            {e.proximoPago ? ` antes del ${fechaCorta(e.proximoPago)}` : ''} para no pagar intereses
+            {e.diasParaPagar !== null ? (e.diasParaPagar === 0 ? ' (vence hoy)' : ` (faltan ${e.diasParaPagar} ${e.diasParaPagar === 1 ? 'día' : 'días'})`) : ''}.
+          </p>
+        )
+      )}
+      {(e.proximoCorte || e.proximoPago) && (
+        <p className="text-2xs text-slate-600 dark:text-slate-400">
+          {[e.proximoCorte && `Corte: ${fechaCorta(e.proximoCorte)}`, e.proximoPago && `Pagar hasta: ${fechaCorta(e.proximoPago)}`].filter(Boolean).join(' · ')}
+        </p>
+      )}
+      {e.cupoDisponible !== null && e.usoPct !== null && debt.creditLimit !== undefined && (
+        <div className="max-w-sm">
+          <div className="flex items-baseline justify-between gap-2 text-xs">
+            <span className="text-slate-600 dark:text-slate-400">Cupo disponible</span>
+            <span className="tabular-nums font-semibold text-slate-900 dark:text-white">
+              {formatMoney(Math.max(0, e.cupoDisponible))} <span className="font-normal text-slate-600 dark:text-slate-400">de {formatMoney(debt.creditLimit)}</span>
+            </span>
+          </div>
+          <div className="mt-1">
+            <ProgressBar
+              pct={Math.min(100, e.usoPct)}
+              label={`${debt.name}: ${e.usoPct.toFixed(0)}% del cupo en uso`}
+              color={e.usoPct > 70 ? 'bg-expense-500 dark:bg-expense-400' : 'bg-brand-500 dark:bg-brand-400'}
+            />
+          </div>
+          <p className="text-2xs text-slate-600 dark:text-slate-400 mt-0.5">{e.usoPct.toFixed(0)}% en uso{e.usoPct > 70 ? ' · por encima del 70% afecta tu historial crediticio' : ''}</p>
+        </div>
+      )}
+      {sinDatos && (
+        <p className="text-2xs text-slate-600 dark:text-slate-400">Usa «Actualizar estado de cuenta» para ver el pago de contado y tu cupo disponible.</p>
       )}
     </div>
   );

@@ -108,6 +108,7 @@ vez cada una. Para un entorno nuevo hay que aplicarlas todas:
 | `0016_revoke_legacy_table_grants.sql` | Quita a `anon` todos los privilegios, y a `authenticated` TRUNCATE/TRIGGER/REFERENCES, en las cinco tablas anteriores a la 0004. No toca datos ni políticas | En cualquier momento; no depende del cliente |
 | `0017_entity_columns_nullable.sql` | Columnas de negocio nullable en `accounts`, `assets`, `budget_lines`, `debts`, `recurrences` y `savings_goals`: el upsert de un borrado solo manda identidad + timestamps y el NOT NULL bloqueaba la sincronización entera (23502). No toca datos | En cualquier momento; desbloquea también a clientes sin actualizar |
 | `0018_expenses_debt_id.sql` | Columna `debt_id` (nullable) en `expenses`: enlaza un pago con su deuda para el historial de pagos y para que un «Pago de tarjetas» desde Movimientos baje el saldo | **Antes** de desplegar el cliente que la usa (sin la columna, el sync se desactiva con 42703) |
+| `0019_debts_card_statement.sql` | Columnas opcionales en `debts` para tarjetas: `cut_day` (día de corte), `statement_balance` (pago de contado) y `credit_limit` (cupo total) | **Antes** de desplegar el cliente que las usa |
 
 Fíjate en el orden de la `0005` y la `0006`: una va antes del deploy y la otra después.
 Invertirlo deja al cliente pidiendo algo que ya no existe, o escribiendo con una clave
