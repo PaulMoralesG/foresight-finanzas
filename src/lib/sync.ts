@@ -1042,6 +1042,54 @@ async function upsert(
   if (error) throw error;
 }
 
+/** ¿Violación de NOT NULL (23502)? */
+export function esViolacionNotNull(err: unknown): boolean {
+  return (err as { code?: string } | null)?.code === '23502';
+}
+
+interface FilaTombstone { id: string; user_id: string; updated_at: string; deleted_at: string }
+
+/**
+ * Sube las filas vivas y, APARTE, los tombstones de una tabla.
+ *
+ * Un tombstone solo lleva identidad + timestamps. Las tablas de la 0001 tienen
+ * las columnas de negocio nullable y lo aceptan por upsert, pero las de la
+ * 0009–0014 nacieron con NOT NULL sin default (`recurrences.type`,
+ * `debts.name`, `accounts.name`…). Postgres comprueba el NOT NULL de la fila
+ * propuesta ANTES de resolver el ON CONFLICT, así que el upsert de un borrado
+ * fallaba aunque la fila ya existiera, el ciclo entero se reintentaba hasta
+ * agotarse y NADA más se sincronizaba: todo quedaba en el dispositivo.
+ *
+ * Por eso:
+ *  - Los tombstones van en su propia llamada. Mezclados con filas vivas,
+ *    PostgREST rellena con NULL las columnas que el tombstone no trae, incluso
+ *    las que tienen default (así fallaba `budget_lines.limit`).
+ *  - Si aun así el esquema los rechaza por NOT NULL, se marcan con UPDATE:
+ *    solo toca `deleted_at`/`updated_at` de filas que ya existen. Una fila que
+ *    nunca llegó al servidor no necesita borrado remoto.
+ */
+async function upsertConTombstones(
+  table: TableName,
+  vivas: object[],
+  tombstones: FilaTombstone[],
+): Promise<void> {
+  await upsert(table, vivas, 'user_id,id');
+  if (tombstones.length === 0) return;
+  try {
+    await upsert(table, tombstones, 'user_id,id');
+  } catch (err: unknown) {
+    if (!esViolacionNotNull(err)) throw err;
+    for (const t of tombstones) {
+      const { error } = await supabase!
+        .from(table)
+        .update({ deleted_at: t.deleted_at, updated_at: t.updated_at })
+        .eq('user_id', t.user_id)
+        .eq('id', t.id);
+      if (error) throw error;
+    }
+  }
+}
+
 /**
  * @param since  marca de agua: solo se suben filas con `updated_at` posterior.
  *               `null` = push completo (primer push de la sesión).
@@ -1057,7 +1105,7 @@ async function pushAll(uid: string, merged: MergeResult, since: string | null): 
   // perderse.
   const changed = (updatedAt: string): boolean => since === null || updatedAt >= since;
 
-  const tombstoneRows = (tombstones: Record<string, string>): object[] =>
+  const tombstoneRows = (tombstones: Record<string, string>): FilaTombstone[] =>
     Object.entries(tombstones)
       .filter(([, at]) => changed(at))
       .map(([id, at]) => ({
@@ -1070,51 +1118,52 @@ async function pushAll(uid: string, merged: MergeResult, since: string | null): 
   // onConflict 'user_id,id' en las cuatro tablas: desde la migración 0005 la
   // PK es compuesta, de modo que dos cuentas pueden compartir un mismo `id`
   // sin que el upsert de una choque contra la fila —invisible por RLS— de la otra.
-  await upsert('expenses', [
-    ...merged.expenses.live.filter((t) => changed(t.updated_at)).map((t) => expenseToRow(t, uid)),
-    ...tombstoneRows(merged.expenses.tombstones),
-  ], 'user_id,id');
+  await upsertConTombstones('expenses',
+    merged.expenses.live.filter((t) => changed(t.updated_at)).map((t) => expenseToRow(t, uid)),
+    tombstoneRows(merged.expenses.tombstones),
+  );
 
-  await upsert('categories', [
+  await upsertConTombstones('categories', [
     ...merged.expenseCategories.live
       .filter((c) => changed(c.updated_at ?? ''))
       .map((c) => categoryToRow(c, uid, 'expense')),
     ...merged.incomeCategories.live
       .filter((c) => changed(c.updated_at ?? ''))
       .map((c) => categoryToRow(c, uid, 'income')),
+  ], [
     ...tombstoneRows(merged.expenseCategories.tombstones),
     ...tombstoneRows(merged.incomeCategories.tombstones),
-  ], 'user_id,id');
+  ]);
 
-  await upsert('savings_goals', [
-    ...merged.goals.live.filter((g) => changed(g.updated_at)).map((g) => goalToRow(g, uid)),
-    ...tombstoneRows(merged.goals.tombstones),
-  ], 'user_id,id');
+  await upsertConTombstones('savings_goals',
+    merged.goals.live.filter((g) => changed(g.updated_at)).map((g) => goalToRow(g, uid)),
+    tombstoneRows(merged.goals.tombstones),
+  );
 
-  await upsert('accounts', [
-    ...merged.accounts.live.filter((a) => changed(a.updated_at)).map((a) => accountToRow(a, uid)),
-    ...tombstoneRows(merged.accounts.tombstones),
-  ], 'user_id,id');
+  await upsertConTombstones('accounts',
+    merged.accounts.live.filter((a) => changed(a.updated_at)).map((a) => accountToRow(a, uid)),
+    tombstoneRows(merged.accounts.tombstones),
+  );
 
-  await upsert('debts', [
-    ...merged.debts.live.filter((d) => changed(d.updated_at)).map((d) => debtToRow(d, uid)),
-    ...tombstoneRows(merged.debts.tombstones),
-  ], 'user_id,id');
+  await upsertConTombstones('debts',
+    merged.debts.live.filter((d) => changed(d.updated_at)).map((d) => debtToRow(d, uid)),
+    tombstoneRows(merged.debts.tombstones),
+  );
 
-  await upsert('assets', [
-    ...merged.assets.live.filter((a) => changed(a.updated_at)).map((a) => assetToRow(a, uid)),
-    ...tombstoneRows(merged.assets.tombstones),
-  ], 'user_id,id');
+  await upsertConTombstones('assets',
+    merged.assets.live.filter((a) => changed(a.updated_at)).map((a) => assetToRow(a, uid)),
+    tombstoneRows(merged.assets.tombstones),
+  );
 
-  await upsert('budget_lines', [
-    ...merged.budgetLines.live.filter((l) => changed(l.updated_at)).map((l) => budgetLineToRow(l, uid)),
-    ...tombstoneRows(merged.budgetLines.tombstones),
-  ], 'user_id,id');
+  await upsertConTombstones('budget_lines',
+    merged.budgetLines.live.filter((l) => changed(l.updated_at)).map((l) => budgetLineToRow(l, uid)),
+    tombstoneRows(merged.budgetLines.tombstones),
+  );
 
-  await upsert('recurrences', [
-    ...merged.recurrences.live.filter((r) => changed(r.updated_at)).map((r) => recurrenceToRow(r, uid)),
-    ...tombstoneRows(merged.recurrences.tombstones),
-  ], 'user_id,id');
+  await upsertConTombstones('recurrences',
+    merged.recurrences.live.filter((r) => changed(r.updated_at)).map((r) => recurrenceToRow(r, uid)),
+    tombstoneRows(merged.recurrences.tombstones),
+  );
 
   await upsert('networth', merged.networth
     .filter((n) => changed(n.updated_at))
