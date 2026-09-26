@@ -14,7 +14,7 @@ import { useFinanceStore } from '@/stores/financeStore';
 import { useDebtsEnAmbito } from '@/hooks/useAmbito';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
-import { formatMoney, getTodayISO, parseMoneyInput, roundMoney, syncToCloud, downloadBlob } from '@/lib/utils';
+import { formatMoney, getTodayISO, parseMoneyInput, roundMoney, syncToCloud, downloadBlob, safeParseDate, LOCALE } from '@/lib/utils';
 import { projectDebts, totalDebt, monthlyDebtPayment, payoffDate, debtsToCsv, DEBT_KINDS, type DebtPlan } from '@/lib/debts';
 import { imprimirDeudas } from '@/lib/print-debts';
 import { escalaBonita, formatoTickDinero, trazarLinea } from '@/lib/chart-geometry';
@@ -26,6 +26,9 @@ import { CardHeader } from '@/components/ui/CardHeader';
 import { ModalSheet } from '@/components/ui/ModalSheet';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ScopeBadge } from '@/components/ui/TransactionBits';
+import { ProgressBar } from '@/components/ui/ProgressBar';
+import { historialDeuda } from '@/lib/debt-payments';
+import { accountName } from '@/lib/accounts';
 import type { Debt, DebtKind, DebtMethod, BusinessType } from '@/types';
 
 export function DebtsPage() {
@@ -140,6 +143,9 @@ export function DebtsPage() {
     }
     setExtraInput(String(v));
   }
+
+  const expenses = useFinanceStore((s) => s.expenses);
+  const [historialAbierto, setHistorialAbierto] = useState<string | null>(null);
 
   const anyOpen = formOpen || !!paying || !!confirmDelete;
   useEscapeKey(() => {
@@ -263,6 +269,13 @@ export function DebtsPage() {
                       <p className="text-sm font-bold tabular-nums text-slate-900 dark:text-white">{formatMoney(d.balance)}</p>
                       <p className="text-2xs text-slate-600 dark:text-slate-400">{months ? `libre en ${payoffDate(months)}` : 'sin proyección'}</p>
                     </div>
+                    <HistorialPagos
+                      debt={d}
+                      expenses={expenses}
+                      accounts={accounts}
+                      abierto={historialAbierto === d.id}
+                      onToggle={() => setHistorialAbierto(historialAbierto === d.id ? null : d.id)}
+                    />
                   </li>
                 );
               })}
@@ -333,9 +346,12 @@ export function DebtsPage() {
                 sola medía 16px y había que acertarle con el dedo. */}
             <label className="flex items-center gap-2.5 min-h-[44px] cursor-pointer text-sm text-slate-700 dark:text-slate-300">
               <input type="checkbox" checked={pAsExpense} onChange={(e) => setPAsExpense(e.target.checked)} className="w-5 h-5 flex-shrink-0 rounded border-slate-300 dark:border-slate-600 accent-brand-600" />
-              Registrarlo también como gasto del mes
+              Contar como gasto del mes
             </label>
-            {pAsExpense && accounts.length > 0 && (
+            <p className="text-xs text-slate-600 dark:text-slate-400 -mt-2">
+              El pago siempre queda en el historial de la deuda. Si lo desmarcas, sale de la cuenta pero no suma a tus gastos (útil si ya registras cada compra con la tarjeta).
+            </p>
+            {accounts.length > 0 && (
               <Campo id="p-acc" label="Cuenta de origen">
                 <select id="p-acc" value={pAccount} onChange={(e) => setPAccount(e.target.value)} className="saas-input py-1.5 text-sm">
                   <option value="">No descontar de ninguna cuenta</option>
@@ -513,6 +529,80 @@ function MethodCompareCard({ plan, alt, method, onMethod, extra }: {
       {bloque('Bola de nieve', 'snowball', snow, method === 'snowball')}
       {bloque('Avalancha', 'avalanche', aval, method === 'avalanche')}
       {msg && <p className="text-xs text-slate-700 dark:text-slate-300">{msg}</p>}
+    </div>
+  );
+}
+
+/* ─── Historial de pagos de una deuda: sus movimientos enlazados (debtId) ─── */
+function HistorialPagos({ debt, expenses, accounts, abierto, onToggle }: {
+  debt: Debt;
+  expenses: ReturnType<typeof useFinanceStore.getState>['expenses'];
+  accounts: ReturnType<typeof useFinanceStore.getState>['accounts'];
+  abierto: boolean;
+  onToggle: () => void;
+}) {
+  const { pagos, totalPagado } = useMemo(() => historialDeuda(debt, expenses), [debt, expenses]);
+  const panelId = `historial-${debt.id}`;
+  // Lo pagado frente a lo que se debía al primer pago registrado: saldo de
+  // hoy + todo lo pagado desde entonces.
+  const original = debt.balance + totalPagado;
+  const pct = original > 0 ? (totalPagado / original) * 100 : 0;
+
+  return (
+    <div className="w-full pl-9">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={abierto}
+        aria-controls={panelId}
+        className="saas-hit text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
+      >
+        {abierto ? 'Ocultar historial' : `Historial de pagos (${pagos.length})`}
+      </button>
+      {abierto && (
+        <div id={panelId} className="mt-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 p-3 space-y-2.5">
+          {pagos.length === 0 ? (
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              Aún no hay pagos. Usa «Registrar pago» o, en Movimientos, un gasto de «Pago de tarjetas» o «Préstamos» con esta deuda.
+            </p>
+          ) : (
+            <>
+              <div>
+                <div className="flex items-baseline justify-between gap-2 text-xs">
+                  <span className="text-slate-600 dark:text-slate-400">Pagado</span>
+                  <span className="tabular-nums font-semibold text-slate-900 dark:text-white">
+                    {formatMoney(totalPagado)} <span className="font-normal text-slate-600 dark:text-slate-400">de {formatMoney(original)}</span>
+                  </span>
+                </div>
+                <div className="mt-1.5">
+                  <ProgressBar pct={pct} label={`${debt.name}: ${pct.toFixed(0)}% pagado`} color="bg-income-500 dark:bg-income-400" />
+                </div>
+              </div>
+              <ul className="divide-y divide-slate-200 dark:divide-slate-700">
+                {pagos.map((p) => (
+                  <li key={p.id} className="py-2 flex items-start justify-between gap-3 text-xs">
+                    <div className="min-w-0">
+                      <p className="text-slate-900 dark:text-white">
+                        {safeParseDate(p.date).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                      <p className="text-slate-600 dark:text-slate-400 break-words">
+                        {p.accountId ? accountName(accounts, p.accountId) : 'Sin cuenta'}
+                      </p>
+                      <p className="text-slate-600 dark:text-slate-400">
+                        {p.esGasto ? 'gasto del mes' : 'no cuenta como gasto'}
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="tabular-nums font-semibold text-income-600 dark:text-income-400">−{formatMoney(p.amount)}</p>
+                      <p className="tabular-nums text-slate-600 dark:text-slate-400">saldo {formatMoney(p.saldoDespues)}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -249,3 +249,24 @@ describe('TransactionModal — sin «Repetir»', () => {
   });
 });
 
+
+describe('TransactionModal — pago de una deuda', () => {
+  it('con «Pago de Tarjetas» pide la deuda y al guardar baja su saldo', async () => {
+    const user = userEvent.setup();
+    const debtId = useFinanceStore.getState().addDebt({ name: 'Visa Pichincha', tag: 'personal', kind: 'Tarjeta de crédito', balance: 1000, annualRate: 30, minPayment: 50, payDay: null });
+    abrirModal();
+    montar();
+
+    expect(screen.queryByLabelText('¿Qué deuda pagas?')).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText(/Monto/i), '250');
+    await user.click(
+      within(screen.getByRole('group', { name: 'Categoría del movimiento' })).getByRole('button', { name: /Pago de Tarjetas/ }),
+    );
+    await user.selectOptions(screen.getByLabelText('¿Qué deuda pagas?'), debtId);
+    await user.click(screen.getByRole('button', { name: 'Registrar movimiento' }));
+
+    const [tx] = useFinanceStore.getState().expenses;
+    expect(tx).toMatchObject({ category: 'pago-tarjetas', debtId, amount: 250 });
+    expect(useFinanceStore.getState().debts[0].balance).toBe(750);
+  });
+});

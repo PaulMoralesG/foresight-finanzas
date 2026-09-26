@@ -90,11 +90,12 @@ describe('DebtsPage', () => {
     expect(s.expenses[0]).toMatchObject({ type: 'expense', amount: 85, category: 'pago-tarjetas', businessType: 'business', accountId: banco, concept: 'Pago Tarjeta' });
   });
 
-  it('un pago sin registrarlo como gasto solo baja el saldo, y nunca por debajo de cero', () => {
+  it('un pago que no cuenta como gasto baja el saldo (nunca por debajo de cero) y queda en el historial como salida, no como gasto', () => {
     const id = useFinanceStore.getState().addDebt({ name: 'X', tag: 'personal', kind: 'Otro', balance: 50, annualRate: 0, minPayment: 10, payDay: null });
     useFinanceStore.getState().registerDebtPayment(id, { amount: 80, date: '2026-09-01', accountId: null, asExpense: false });
     expect(useFinanceStore.getState().debts[0].balance).toBe(0);
-    expect(useFinanceStore.getState().expenses).toHaveLength(0);
+    const [mov] = useFinanceStore.getState().expenses;
+    expect(mov).toMatchObject({ type: 'transfer', amount: 80, debtId: id, toAccountId: null });
   });
 });
 
@@ -107,5 +108,25 @@ describe('migración v10 del estado persistido (deudas y ajustes)', () => {
     };
     expect(migrado.debts).toEqual([]);
     expect(migrado.settings).toEqual({ debtMethod: 'snowball', extraPayment: 0, netWorthGoal: 0, updated_at: '' });
+  });
+});
+
+describe('DebtsPage — historial de pagos', () => {
+  it('muestra los pagos de la deuda, lo pagado y el saldo tras cada pago', async () => {
+    const user = userEvent.setup();
+    const id = useFinanceStore.getState().addDebt({ name: 'Visa', tag: 'personal', kind: 'Tarjeta de crédito', balance: 1000, annualRate: 30, minPayment: 50, payDay: null });
+    useFinanceStore.getState().registerDebtPayment(id, { amount: 200, date: '2026-09-10', accountId: null, asExpense: true });
+    useFinanceStore.getState().registerDebtPayment(id, { amount: 100, date: '2026-09-20', accountId: null, asExpense: false });
+    render(<DebtsPage />);
+
+    await user.click(screen.getByRole('button', { name: 'Historial de pagos (2)' }));
+    const panel = document.getElementById(`historial-${id}`)!;
+    expect(within(panel).getByText(/de \$1,000\.00/)).toBeInTheDocument(); // pagado 300 de 1,000
+    expect(within(panel).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '30');
+    const filas = within(panel).getAllByRole('listitem');
+    expect(filas[0]).toHaveTextContent('no cuenta como gasto');
+    expect(filas[0]).toHaveTextContent('saldo $700.00');
+    expect(filas[1]).toHaveTextContent('gasto del mes');
+    expect(filas[1]).toHaveTextContent('saldo $800.00');
   });
 });

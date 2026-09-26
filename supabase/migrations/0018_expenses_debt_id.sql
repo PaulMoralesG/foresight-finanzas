@@ -1,0 +1,25 @@
+-- ============================================================
+-- Foresight Finanzas — Migración 0018
+--   expenses.debt_id: enlaza un movimiento con la deuda que paga.
+--
+--   Un pago de deuda es un movimiento con `debt_id` (gasto del mes o, si no
+--   cuenta como gasto, una salida de cuenta sin destino). Con él, Deudas
+--   muestra el historial de pagos de cada deuda y un gasto «Pago de tarjetas»
+--   registrado en Movimientos baja el saldo de la tarjeta elegida.
+--
+--   Nullable y sin default: la inmensa mayoría de movimientos no pagan una
+--   deuda, y el upsert de un tombstone no la manda. Sin FK a `debts`: el id
+--   de deuda es texto generado en el cliente y un movimiento debe sobrevivir
+--   al borrado de su deuda (queda como gasto normal).
+--
+--   ORDEN: aplicar ANTES de desplegar el cliente que manda `debt_id`. Sin la
+--   columna, PostgREST responde 42703 y el cliente desactiva el sync. Los
+--   clientes anteriores no mandan la columna y el upsert no la toca.
+--
+--   Verificación: debe devolver una fila `debt_id | text | YES`.
+--     select column_name, data_type, is_nullable
+--     from information_schema.columns
+--     where table_schema = 'public' and table_name = 'expenses' and column_name = 'debt_id';
+-- ============================================================
+
+alter table public.expenses add column if not exists debt_id text;
