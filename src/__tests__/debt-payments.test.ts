@@ -3,7 +3,7 @@
 // ================================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { deltaDeSaldos, enlazarPagosAntiguos, historialDeuda, categoriaDePago } from '@/lib/debt-payments';
+import { deltaDeSaldos, enlazarPagosAntiguos, historialDeuda, categoriaDePago, ultimaCuentaDePago } from '@/lib/debt-payments';
 import { useFinanceStore, migrateV15 } from '@/stores/financeStore';
 import type { Debt, Transaction } from '@/types';
 
@@ -50,6 +50,18 @@ describe('lib/debt-payments', () => {
     ], debts, '2026-09-26T00:00:00.000Z');
     expect(out.map((m) => m.debtId ?? null)).toEqual(['d1', 'd2', null, null, null]);
     expect(out[0].updated_at).toBe('2026-09-26T00:00:00.000Z');
+  });
+
+  it('ultimaCuentaDePago: la cuenta del pago más reciente que aún existe', () => {
+    const movs = [
+      mov({ id: 'a', debtId: 'd1', date: '2026-07-10', accountId: 'ahorro' }),
+      mov({ id: 'b', debtId: 'd1', date: '2026-09-10', accountId: 'borrada' }),
+      mov({ id: 'c', debtId: 'd1', date: '2026-08-10', accountId: null }),
+      mov({ id: 'otra', debtId: 'd2', date: '2026-09-20', accountId: 'corriente' }),
+    ];
+    expect(ultimaCuentaDePago(deuda(), movs, ['ahorro', 'corriente'])).toBe('ahorro');
+    expect(ultimaCuentaDePago(deuda(), movs, ['ahorro', 'borrada'])).toBe('borrada');
+    expect(ultimaCuentaDePago(deuda(), [], ['ahorro'])).toBe('');
   });
 
   it('categoriaDePago: tarjeta → pago-tarjetas; el resto → prestamos', () => {
