@@ -117,8 +117,16 @@ export interface Debt {
   /** Interés anual en %, p. ej. 22. */
   annualRate: number;
   minPayment: number;
-  /** Día del mes en que se paga, 1–31, o null. */
+  /** Día del mes en que se paga, 1–31, o null. En tarjetas: «Pagar hasta». */
   payDay: number | null;
+  // ── Estado de cuenta (solo tarjetas, opcionales; 0019) ──
+  // Las claves solo existen cuando tienen valor (ver normalizarDeuda).
+  /** Día de corte del mes, 1–31. */
+  cutDay?: number;
+  /** Pago de contado del corte actual: pagándolo antes de `payDay` no hay intereses. */
+  statementBalance?: number;
+  /** Cupo total de la tarjeta. */
+  creditLimit?: number;
   updated_at: string; // ISO — usado por el merge de sync
 }
 

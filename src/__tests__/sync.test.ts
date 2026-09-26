@@ -201,6 +201,22 @@ describe('syncService', () => {
     expect(expenses[0].concept).toBe('Remoto');
   });
 
+  it('trae los datos de tarjeta de debts y omite las claves vacías', async () => {
+    const base = { user_id: 'user-1', tag: 'personal', kind: 'Tarjeta de crédito', balance: '1500.00', annual_rate: 30, min_payment: 50, pay_day: 10, updated_at: '2026-08-01T00:00:00.000Z', deleted_at: null };
+    mockFrom.mockImplementation(makeBuilder({
+      debts: [
+        { ...base, id: 'd1', name: 'Visa', cut_day: 28, statement_balance: '480.00', credit_limit: '2000.00' },
+        { ...base, id: 'd2', name: 'Master', cut_day: null, statement_balance: null, credit_limit: null },
+      ],
+    }));
+
+    await syncService.attach('user-1');
+    const debts = useFinanceStore.getState().debts;
+    expect(debts.find((d) => d.id === 'd1')).toMatchObject({ cutDay: 28, statementBalance: 480, creditLimit: 2000, balance: 1500 });
+    const master = debts.find((d) => d.id === 'd2')!;
+    expect(['cutDay', 'statementBalance', 'creditLimit'].some((k) => k in master)).toBe(false);
+  });
+
   // C-2 de la auditoría: PostgREST corta cualquier select sin `range` en
   // 1000 filas. Sin paginar, una cuenta con más de 1000 movimientos perdía
   // el resto del historial en silencio, sin error visible. Este test
