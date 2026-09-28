@@ -12,9 +12,16 @@ import type { Transaction, MonthlyBudget, FilterType, Ambito, Category, SavingsG
 import { convertGlobalBudgets } from '@/lib/budget-lines';
 import { accountIsUsed, TRANSFER_CATEGORY } from '@/lib/accounts';
 import { fechasPendientes } from '@/lib/recurrence';
-import { aplicarDeltas, categoriaDePago, deltaDeSaldos, enlazarPagosAntiguos } from '@/lib/debt-payments';
+import { aplicarCambioDePagos, enlazarPagosAntiguos, type DescuentosDePago } from '@/lib/debt-payments';
 import { normalizarDeuda } from '@/lib/credit-card';
 import type { BackupData } from '@/lib/backup';
+
+/** Ids que pudieron perder claves de v16 (cutDay, debtId...) por un cliente
+ *  antiguo; el sync los hidrata desde el remoto y luego vacía las listas. */
+export interface PendienteHidratar {
+  debts: string[];
+  expenses: string[];
+}
 
 interface FinanceState {
   // --- Estado ---
@@ -42,6 +49,11 @@ interface FinanceState {
   currentFilter: FilterType;
   /** Ámbito global: filtra Resumen, Presupuestos, Deudas y Metas. */
   ambito: Ambito;
+  /** Ids por hidratar en el próximo ciclo completo de sync (ver migrateV16). */
+  pendienteHidratar: PendienteHidratar;
+  /** Lo que cada pago descontó de verdad de su deuda (id del movimiento → descuento).
+   *  Local: se persiste pero no se sincroniza (ver `DescuentoPago`). */
+  descuentosDePago: DescuentosDePago;
 
   // --- Acciones de fecha y filtro ---
   setViewDate: (step: number) => void;
@@ -104,11 +116,19 @@ interface FinanceState {
   addDebt: (d: Omit<Debt, 'id' | 'updated_at'>) => string;
   updateDebt: (id: string, partial: Partial<Omit<Debt, 'id' | 'updated_at'>>) => void;
   deleteDebt: (id: string) => void;
-  /** Baja el saldo de la deuda y, si se pide, deja el pago como gasto del mes. */
+  /** Registra un pago: una transferencia sin destino enlazada a la deuda
+   *  (no es gasto) que resta de la cuenta de origen y baja el saldo. */
   registerDebtPayment: (
     id: string,
-    pago: { amount: number; date: string; accountId: string | null; asExpense: boolean },
+    pago: { amount: number; date: string; accountId: string | null },
   ) => void;
+  /** Enlaza un movimiento antiguo (sin deuda) a una deuda SIN cambiar ningún
+   *  saldo. Queda marcado como vinculado: borrarlo o editarlo tampoco lo mueve. */
+  vincularPagoHistorico: (txId: string, debtId: string) => void;
+  /** Quita el enlace de un pago a su deuda SIN cambiar ningún saldo. */
+  desvincularPago: (txId: string) => void;
+  /** Vacía `pendienteHidratar` tras un ciclo completo de sync confirmado. */
+  limpiarPendienteHidratar: () => void;
 
   // --- Activos y patrimonio ---
   addAsset: (a: Omit<Asset, 'id' | 'updated_at'>) => string;
@@ -148,6 +168,24 @@ export function migrateV15(state: Record<string, unknown>): Record<string, unkno
   return state;
 }
 
+/** v16: entra `pendienteHidratar`. Un dispositivo con la PWA anterior pudo dejar
+ *  deudas sin cutDay/statementBalance/creditLimit y movimientos sin debtId
+ *  aunque el remoto los tenga: se anotan los ids que existían al migrar
+ *  (todas las deudas y los movimientos sin debtId) para que el sync los
+ *  hidrate en el primer ciclo completo. Idempotente. */
+export function migrateV16(state: Record<string, unknown>): Record<string, unknown> {
+  const ids = (rows: unknown, soloSinDebtId: boolean): string[] =>
+    (Array.isArray(rows) ? (rows as Array<Record<string, unknown>>) : [])
+      .filter((r) => !!r && typeof r.id === 'string' && (!soloSinDebtId || !r.debtId))
+      .map((r) => r.id as string);
+  // `descuentosDePago` también nace en la v16 (aún sin publicar): sin versión aparte.
+  if (!state.descuentosDePago || typeof state.descuentosDePago !== 'object') state.descuentosDePago = {};
+  const previo = state.pendienteHidratar as Partial<PendienteHidratar> | undefined;
+  if (previo && Array.isArray(previo.debts) && Array.isArray(previo.expenses)) return state;
+  state.pendienteHidratar = { debts: ids(state.debts, false), expenses: ids(state.expenses, true) };
+  return state;
+}
+
 const emptyState = {
   expenses: [] as Transaction[],
   budgets: {} as MonthlyBudget,
@@ -166,7 +204,20 @@ const emptyState = {
   currentViewDate: new Date().toISOString(),
   currentFilter: 'all' as FilterType,
   ambito: 'all' as Ambito,
+  pendienteHidratar: { debts: [], expenses: [] } as PendienteHidratar,
+  descuentosDePago: {} as DescuentosDePago,
 };
+
+/** Ajusta las deudas y el registro de descuentos al pasar de `antes` a
+ *  `despues` (invariante de deudas; ver `aplicarCambioDePagos`). */
+function cambioDePagos(
+  state: Pick<FinanceState, 'debts' | 'descuentosDePago'>,
+  antes: Transaction[],
+  despues: Transaction[],
+): Pick<FinanceState, 'debts' | 'descuentosDePago'> {
+  const r = aplicarCambioDePagos(state.debts, state.descuentosDePago ?? {}, antes, despues, nowIso());
+  return { debts: r.debts, descuentosDePago: r.descuentos };
+}
 
 /** Marca un id como borrado (borrado lógico para sync). */
 function tombstoned(tombstones: Record<string, string>, id: string): Record<string, string> {
@@ -335,7 +386,8 @@ export const useFinanceStore = create<FinanceState>()(
     (set, get) => ({
       ...emptyState,
 
-      reset: () => set({ ...emptyState, currentViewDate: new Date().toISOString() }),
+      reset: () =>
+        set({ ...emptyState, pendienteHidratar: { debts: [], expenses: [] }, descuentosDePago: {}, currentViewDate: new Date().toISOString() }),
 
       setViewDate: (step) => {
         const state = get();
@@ -372,7 +424,7 @@ export const useFinanceStore = create<FinanceState>()(
           const nuevo = { ...t, id, created_at: nowIso(), updated_at: nowIso() };
           return {
             expenses: [...state.expenses, nuevo],
-            debts: aplicarDeltas(state.debts, deltaDeSaldos([], [nuevo]), nowIso()),
+            ...cambioDePagos(state, [], [nuevo]),
           };
         });
         return id;
@@ -385,7 +437,7 @@ export const useFinanceStore = create<FinanceState>()(
           return {
             expenses: state.expenses.map((e) => (e.id === id && nuevo ? nuevo : e)),
             tombstones: clearedTombstone(state.tombstones, id),
-            debts: viejo && nuevo ? aplicarDeltas(state.debts, deltaDeSaldos([viejo], [nuevo]), nowIso()) : state.debts,
+            ...(viejo && nuevo ? cambioDePagos(state, [viejo], [nuevo]) : {}),
           };
         }),
 
@@ -395,7 +447,7 @@ export const useFinanceStore = create<FinanceState>()(
           return {
             expenses: state.expenses.filter((e) => e.id !== id),
             tombstones: tombstoned(state.tombstones, id),
-            debts: aplicarDeltas(state.debts, deltaDeSaldos(borrados, []), nowIso()),
+            ...cambioDePagos(state, borrados, []),
           };
         }),
 
@@ -410,7 +462,7 @@ export const useFinanceStore = create<FinanceState>()(
           return {
             expenses: state.expenses.filter((e) => !idSet.has(e.id)),
             tombstones,
-            debts: aplicarDeltas(state.debts, deltaDeSaldos(borrados, []), nowIso()),
+            ...cambioDePagos(state, borrados, []),
           };
         }),
 
@@ -423,7 +475,7 @@ export const useFinanceStore = create<FinanceState>()(
           return {
             expenses: [...state.expenses, ...items],
             tombstones,
-            debts: aplicarDeltas(state.debts, deltaDeSaldos([], items), nowIso()),
+            ...cambioDePagos(state, [], items),
           };
         }),
 
@@ -700,18 +752,19 @@ export const useFinanceStore = create<FinanceState>()(
           tombstones: tombstoned(state.tombstones, id),
         })),
 
-      // Siempre deja un movimiento enlazado (es el historial del pago). Si no
-      // cuenta como gasto del mes, va como salida de cuenta sin destino: resta
-      // de la cuenta de origen y no suma a los gastos.
+      // Un pago de deuda NO es gasto: va siempre como salida de cuenta sin
+      // destino (transferencia + debtId). Resta de la cuenta de origen, no
+      // suma a los gastos y es el historial de la deuda. addTransaction baja
+      // el saldo en el mismo set() (invariante de deudas).
       registerDebtPayment: (id, pago) => {
         const debt = get().debts.find((d) => d.id === id);
         if (!debt) return;
         get().addTransaction({
-          type: pago.asExpense ? 'expense' : 'transfer',
+          type: 'transfer',
           amount: pago.amount,
           concept: `Pago ${debt.name}`,
           date: pago.date,
-          category: pago.asExpense ? categoriaDePago(debt.kind) : TRANSFER_CATEGORY,
+          category: TRANSFER_CATEGORY,
           method: pago.accountId ? 'transfer' : 'cash',
           businessType: debt.tag,
           accountId: pago.accountId,
@@ -719,6 +772,38 @@ export const useFinanceStore = create<FinanceState>()(
           debtId: debt.id,
         });
       },
+
+      // Vincular/desvincular NO mueven saldos (a diferencia de updateTransaction
+      // con debtId): el pago histórico ya se había descontado al hacerlo. Lo
+      // vinculado queda marcado en `descuentosDePago`, así borrarlo o editarlo
+      // tampoco devuelve nada a la deuda (subiría una deuda que nunca bajó).
+      vincularPagoHistorico: (txId, debtId) =>
+        set((state) => {
+          if (!state.debts.some((d) => d.id === debtId)) return {};
+          const tx = state.expenses.find((e) => e.id === txId);
+          // Un movimiento que ya paga una deuda ya tiene su propio descuento.
+          if (!tx || tx.debtId) return {};
+          return {
+            expenses: state.expenses.map((e) => (e.id === txId ? { ...e, debtId, updated_at: nowIso() } : e)),
+            tombstones: clearedTombstone(state.tombstones, txId),
+            descuentosDePago: { ...state.descuentosDePago, [txId]: { balance: 0, vinculado: true as const } },
+          };
+        }),
+
+      desvincularPago: (txId) =>
+        set((state) => {
+          const { [txId]: _descuento, ...descuentosDePago } = state.descuentosDePago;
+          return {
+            descuentosDePago,
+            expenses: state.expenses.map((e) => {
+              if (e.id !== txId || !e.debtId) return e;
+              const { debtId: _quitado, ...resto } = e;
+              return { ...resto, updated_at: nowIso() };
+            }),
+          };
+        }),
+
+      limpiarPendienteHidratar: () => set({ pendienteHidratar: { debts: [], expenses: [] } }),
 
       // ── Activos y patrimonio ──
       addAsset: (a) => {
@@ -782,10 +867,10 @@ export const useFinanceStore = create<FinanceState>()(
     }),
     {
       name: 'foresight-finance-storage',
-      version: 15,
+      version: 16,
       migrate: (persistedState: unknown, _version: number) => {
         try {
-          return migrateV15(migrateV14(migrateV13(migrateV12(migrateV11(migrateV10(migrateV9(migrateV8(persistedState))))))));
+          return migrateV16(migrateV15(migrateV14(migrateV13(migrateV12(migrateV11(migrateV10(migrateV9(migrateV8(persistedState)))))))));
         } catch (err) {
           // Estado inesperado: arrancar limpio antes que romper la app
           console.error('[financeStore] Migración de estado persistido fallida — reseteando:', err);
@@ -811,6 +896,8 @@ export const useFinanceStore = create<FinanceState>()(
         customExpenseCategories: state.customExpenseCategories,
         customIncomeCategories: state.customIncomeCategories,
         tombstones: state.tombstones,
+        pendienteHidratar: state.pendienteHidratar,
+        descuentosDePago: state.descuentosDePago,
       }),
     }
   )

@@ -96,6 +96,49 @@ export function mergeById<T extends { id: string; updated_at?: string }>(
 }
 
 /**
+ * Rellena en los items locales las claves que les faltan y que el servidor sí
+ * tiene. Evita que una copia local escrita por un cliente viejo (sin las
+ * columnas nuevas) pise con `null` los valores del servidor en el merge/push.
+ *
+ * - Solo actúa sobre los items cuyo id esté en `ids` y tenga fila remota.
+ * - Solo copia claves ausentes en local (undefined/null) y presentes en remoto;
+ *   nunca pisa un valor local.
+ * - No toca `updated_at` ni muta las entradas: devuelve copias nuevas solo de
+ *   los items modificados.
+ */
+export function hidratarAusentes<T extends { id: string }>(
+  local: readonly T[],
+  remotos: readonly T[],
+  ids: Iterable<string>,
+  claves: ReadonlyArray<keyof T>,
+): T[] {
+  const objetivo = new Set(ids);
+  if (objetivo.size === 0) return [...local];
+  const remotoPorId = new Map(remotos.map((r) => [r.id, r]));
+
+  return local.map((item) => {
+    if (!objetivo.has(item.id)) return item;
+    const remoto = remotoPorId.get(item.id);
+    if (!remoto) return item;
+
+    let copia: T | null = null;
+    for (const clave of claves) {
+      const valorLocal = item[clave];
+      const valorRemoto = remoto[clave];
+      if (
+        (valorLocal === undefined || valorLocal === null) &&
+        valorRemoto !== undefined &&
+        valorRemoto !== null
+      ) {
+        copia ??= { ...item };
+        copia[clave] = valorRemoto;
+      }
+    }
+    return copia ?? item;
+  });
+}
+
+/**
  * Merge de presupuestos por mes (sin tombstones: no existe delete de presupuestos).
  * Gana el updated_at más nuevo; empate → mayor monto; empate total → local.
  */

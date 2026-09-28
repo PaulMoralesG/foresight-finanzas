@@ -8,11 +8,12 @@
 // ================================================================
 
 import { formatMoney, LOCALE, roundMoney, safeParseDate, sortByDateAsc } from './utils';
+import { cuentaComoGasto, esPagoDeDeuda } from './debt-payments';
 import type { Transaction } from '@/types';
 
 interface FilaReporte {
   fecha: string;
-  tipo: 'Ingreso' | 'Gasto' | 'Transferencia';
+  tipo: 'Ingreso' | 'Gasto' | 'Transferencia' | 'Pago de deuda';
   ambito: 'Personal' | 'Negocio';
   monto: string;
   concepto: string;
@@ -35,7 +36,7 @@ export function construirReporte(movimientos: Transaction[], viewDate: Date, lab
   const ordenados = sortByDateAsc(movimientos);
 
   const ingresos = roundMoney(ordenados.filter((i) => i.type === 'income').reduce((s, i) => s + i.amount, 0));
-  const gastos = roundMoney(ordenados.filter((i) => i.type === 'expense').reduce((s, i) => s + i.amount, 0));
+  const gastos = roundMoney(ordenados.filter(cuentaComoGasto).reduce((s, i) => s + i.amount, 0));
   const saldo = roundMoney(ingresos - gastos);
 
   const anio = viewDate.getFullYear();
@@ -55,7 +56,9 @@ export function construirReporte(movimientos: Transaction[], viewDate: Date, lab
     totales: { ingresos, gastos, saldo },
     filas: ordenados.map((item) => ({
       fecha: safeParseDate(item.date).toLocaleDateString(LOCALE),
-      tipo: item.type === 'income' ? 'Ingreso' : item.type === 'transfer' ? 'Transferencia' : 'Gasto',
+      tipo: esPagoDeDeuda(item)
+        ? 'Pago de deuda'
+        : item.type === 'income' ? 'Ingreso' : item.type === 'transfer' ? 'Transferencia' : 'Gasto',
       ambito: item.businessType === 'personal' ? 'Personal' : 'Negocio',
       monto: formatMoney(item.amount),
       concepto: item.concept || '',

@@ -15,7 +15,7 @@ import { useDebtsEnAmbito } from '@/hooks/useAmbito';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
 import { formatMoney, getTodayISO, parseMoneyInput, roundMoney, syncToCloud, downloadBlob, safeParseDate, LOCALE } from '@/lib/utils';
-import { projectDebts, totalDebt, monthlyDebtPayment, payoffDate, debtsToCsv, DEBT_KINDS, type DebtPlan } from '@/lib/debts';
+import { projectDebts, totalDebt, monthlyDebtPayment, payoffDate, debtsToCsv, tieneMinimoFijo, DEBT_KINDS, type DebtPlan } from '@/lib/debts';
 import { imprimirDeudas } from '@/lib/print-debts';
 import { escalaBonita, formatoTickDinero, trazarLinea } from '@/lib/chart-geometry';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
@@ -27,10 +27,11 @@ import { ModalSheet } from '@/components/ui/ModalSheet';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ScopeBadge } from '@/components/ui/TransactionBits';
 import { ProgressBar } from '@/components/ui/ProgressBar';
-import { historialDeuda } from '@/lib/debt-payments';
+import { historialDeuda, cuentaSugeridaParaPago, gastosSinVincular, etiquetaPago, type DescuentosDePago } from '@/lib/debt-payments';
+import { interesEstimadoMensual } from '@/lib/interes';
 import { esTarjeta, estadoTarjeta } from '@/lib/credit-card';
 import { accountName } from '@/lib/accounts';
-import type { Debt, DebtKind, DebtMethod, BusinessType } from '@/types';
+import type { Debt, DebtKind, DebtMethod, BusinessType, Transaction } from '@/types';
 
 export function DebtsPage() {
   const debts = useDebtsEnAmbito();
@@ -41,6 +42,10 @@ export function DebtsPage() {
   const updateDebt = useFinanceStore((s) => s.updateDebt);
   const deleteDebt = useFinanceStore((s) => s.deleteDebt);
   const registerDebtPayment = useFinanceStore((s) => s.registerDebtPayment);
+  const vincularPagoHistorico = useFinanceStore((s) => s.vincularPagoHistorico);
+  const desvincularPago = useFinanceStore((s) => s.desvincularPago);
+  const descuentosDePago = useFinanceStore((s) => s.descuentosDePago);
+  const expenses = useFinanceStore((s) => s.expenses);
   const addToast = useUiStore((s) => s.addToast);
   const { saveData } = useAuth();
 
@@ -78,7 +83,6 @@ export function DebtsPage() {
   const [pAmount, setPAmount] = useState('');
   const [pDate, setPDate] = useState(getTodayISO());
   const [pAccount, setPAccount] = useState('');
-  const [pAsExpense, setPAsExpense] = useState(true);
 
   const [confirmDelete, setConfirmDelete] = useState<Debt | null>(null);
   const [extraInput, setExtraInput] = useState(String(extra));
@@ -93,7 +97,7 @@ export function DebtsPage() {
   function openEdit(d: Debt) {
     setEditing(d);
     setFName(d.name); setFTag(d.tag); setFKind(d.kind);
-    setFBalance(String(d.balance)); setFRate(String(d.annualRate)); setFMin(String(d.minPayment));
+    setFBalance(String(d.balance)); setFRate(String(d.annualRate)); setFMin(d.minPayment > 0 ? String(d.minPayment) : '');
     setFDay(d.payDay ? String(d.payDay) : '');
     setFCut(d.cutDay ? String(d.cutDay) : '');
     setFContado(d.statementBalance !== undefined ? String(d.statementBalance) : '');
@@ -131,17 +135,18 @@ export function DebtsPage() {
 
   function openPay(d: Debt) {
     setPaying(d);
-    setPAmount(d.minPayment ? String(d.minPayment) : '');
+    // Monto: el pago de contado pendiente (si lo hay) y, si no, el mínimo fijo.
+    const contado = d.statementBalance !== undefined && d.statementBalance > 0 ? d.statementBalance : null;
+    setPAmount(contado !== null ? String(contado) : tieneMinimoFijo(d) ? String(d.minPayment) : '');
     setPDate(getTodayISO());
-    setPAccount('');
-    setPAsExpense(true);
+    setPAccount(cuentaSugeridaParaPago(d, expenses, accounts) ?? '');
   }
   function handlePay(e: FormEvent) {
     e.preventDefault();
     if (!paying) return;
     const amount = roundMoney(parseMoneyInput(pAmount));
     if (amount <= 0) { addToast('Ingresa un monto mayor a 0', 'error'); return; }
-    registerDebtPayment(paying.id, { amount, date: pDate, accountId: pAccount || null, asExpense: pAsExpense });
+    registerDebtPayment(paying.id, { amount, date: pDate, accountId: pAccount || null });
     addToast(`Pago de ${formatMoney(amount)} registrado ✅`, 'success');
     syncToCloud(saveData, addToast);
     setPaying(null);
@@ -151,7 +156,7 @@ export function DebtsPage() {
     setEstado(d);
     setETotal(String(d.balance));
     setEContado(d.statementBalance !== undefined ? String(d.statementBalance) : '');
-    setEMin(String(d.minPayment));
+    setEMin(d.minPayment > 0 ? String(d.minPayment) : '');
   }
   function handleEstado(e: FormEvent) {
     e.preventDefault();
@@ -164,6 +169,17 @@ export function DebtsPage() {
     addToast('Estado de cuenta actualizado ✅', 'success');
     syncToCloud(saveData, addToast);
     setEstado(null);
+  }
+
+  function handleVincular(t: Transaction, d: Debt) {
+    vincularPagoHistorico(t.id, d.id);
+    addToast(`Pago vinculado a ${d.name}: el saldo no cambió`, 'success');
+    syncToCloud(saveData, addToast);
+  }
+  function handleDesvincular(t: Transaction) {
+    desvincularPago(t.id);
+    addToast('Pago desvinculado: el saldo no cambió', 'info');
+    syncToCloud(saveData, addToast);
   }
 
   function handleDelete() {
@@ -183,8 +199,9 @@ export function DebtsPage() {
     setExtraInput(String(v));
   }
 
-  const expenses = useFinanceStore((s) => s.expenses);
   const [historialAbierto, setHistorialAbierto] = useState<string | null>(null);
+
+  const ultimoPagoEstado = useMemo(() => (estado ? historialDeuda(estado, expenses).pagos[0] ?? null : null), [estado, expenses]);
 
   const anyOpen = formOpen || !!paying || !!confirmDelete || !!estado;
   useEscapeKey(() => {
@@ -196,6 +213,13 @@ export function DebtsPage() {
   useScrollLock(anyOpen);
 
   const ordered = plan.order.map((id) => debts.find((d) => d.id === id)).filter((d): d is Debt => !!d);
+  // Pago variable: no entran en la proyección, pero siguen en la lista (para
+  // registrar pagos, editar o eliminar) y se avisa de que están fuera.
+  const variables = plan.sinMinimo.map((id) => debts.find((d) => d.id === id)).filter((d): d is Debt => !!d);
+  const filas: { d: Debt; n: number | null }[] = [
+    ...ordered.map((d, i) => ({ d, n: i + 1 })),
+    ...variables.map((d) => ({ d, n: null })),
+  ];
 
   async function handleCSV() {
     try {
@@ -250,20 +274,35 @@ export function DebtsPage() {
           {/* KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-slide-up">
             <Kpi label="Deuda total" value={formatMoney(totalDebt(debts))} sub={`${debts.length} ${debts.length === 1 ? 'deuda' : 'deudas'}`} />
-            <Kpi label="Pago mensual" value={formatMoney(monthlyDebtPayment(debts, extra))} sub={`mínimos + ${formatMoney(extra)} extra`} />
+            <Kpi
+              label="Pago mensual"
+              value={formatMoney(monthlyDebtPayment(debts, extra))}
+              sub={variables.length > 0 ? `mínimos fijos + ${formatMoney(extra)} extra · ${variables.length} con pago variable` : `mínimos + ${formatMoney(extra)} extra`}
+            />
             <Kpi
               label="Libre de deudas"
-              value={plan.ok ? payoffDate(plan.months) : '—'}
-              sub={plan.ok ? `en ${plan.months} meses` : 'el pago no alcanza'}
-              tone={plan.ok ? 'good' : 'crit'}
+              value={plan.ok && !plan.empty ? payoffDate(plan.months) : '—'}
+              sub={plan.empty ? 'sin pagos fijos que proyectar' : plan.ok ? `en ${plan.months} meses` : 'el pago no alcanza'}
+              tone={plan.empty ? undefined : plan.ok ? 'good' : 'crit'}
             />
-            <Kpi label="Intereses proyectados" value={plan.ok ? formatMoney(plan.totalInterest) : '—'} sub="hasta saldar todo" />
+            <Kpi label="Intereses proyectados" value={plan.ok && !plan.empty ? formatMoney(plan.totalInterest) : '—'} sub="hasta saldar todo" />
           </div>
 
           {!plan.ok && (
             <div role="alert" className="saas-card p-3 border-expense-500/50 flex items-start gap-2 text-xs text-expense-700 dark:text-expense-400">
               <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <span>Con los pagos actuales los intereses crecen más rápido que los abonos: sube el pago mínimo de alguna deuda o el aporte extra para que el plan cierre.</span>
+            </div>
+          )}
+
+          {variables.length > 0 && (
+            <div role="status" className="saas-card p-3 flex items-start gap-2 text-xs text-slate-700 dark:text-slate-300">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+              <span>
+                {variables.length === 1 ? 'Esta deuda tiene pago variable y queda fuera de la proyección' : 'Estas deudas tienen pago variable y quedan fuera de la proyección'}
+                {' '}(fecha libre de deudas, intereses y gráfica): <strong className="font-semibold">{variables.map((d) => d.name).join(', ')}</strong>.
+                {' '}Ponles un pago mínimo con «Editar» si quieres incluirlas.
+              </span>
             </div>
           )}
 
@@ -285,18 +324,19 @@ export function DebtsPage() {
               sub={method === 'snowball' ? 'De menor a mayor saldo — bola de nieve: victorias rápidas.' : 'Del interés más alto al más bajo — avalancha: menos intereses.'}
             />
             <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-              {ordered.map((d, i) => {
+              {filas.map(({ d, n }) => {
                 const months = plan.payoff[d.id];
                 return (
                   <li key={d.id} className="py-2.5 flex flex-wrap items-start gap-x-3 gap-y-1">
-                    <span className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-bold tabular-nums flex items-center justify-center flex-shrink-0">{i + 1}</span>
+                    <span className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-bold tabular-nums flex items-center justify-center flex-shrink-0">{n ?? '—'}</span>
                     <div className="flex-1 min-w-[180px]">
                       <p className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-1.5 flex-wrap">
                         {d.name} <ScopeBadge businessType={d.tag} />
                       </p>
                       <p className="text-2xs text-slate-600 dark:text-slate-400">
-                        {d.kind} · {d.annualRate}% anual · mínimo {formatMoney(d.minPayment)}{d.payDay ? ` · paga el ${d.payDay}` : ''}
+                        {d.kind} · {d.annualRate}% anual · {tieneMinimoFijo(d) ? `mínimo ${formatMoney(d.minPayment)}` : 'pago variable'}{d.payDay ? ` · paga el ${d.payDay}` : ''}
                       </p>
+                      <PagoPendienteTarjeta debt={d} />
                       <div className="flex gap-x-2 gap-y-1 mt-1.5 flex-wrap">
                         <button onClick={() => openPay(d)} className="saas-btn saas-btn-secondary saas-btn-sm text-xs">Registrar pago</button>
                         {esTarjeta(d) && (
@@ -310,13 +350,17 @@ export function DebtsPage() {
                         de la referencia) en vez de estrangular el nombre. */}
                     <div className="w-full sm:w-auto flex sm:block items-baseline gap-2 sm:text-right flex-shrink-0 pl-9 sm:pl-0">
                       <p className="text-sm font-bold tabular-nums text-slate-900 dark:text-white">{formatMoney(d.balance)}</p>
-                      <p className="text-2xs text-slate-600 dark:text-slate-400">{months ? `libre en ${payoffDate(months)}` : 'sin proyección'}</p>
+                      <p className="text-2xs text-slate-600 dark:text-slate-400">{months ? `libre en ${payoffDate(months)}` : n === null ? 'pago variable · sin proyección' : 'sin proyección'}</p>
                     </div>
                     <ResumenTarjeta debt={d} />
                     <HistorialPagos
                       debt={d}
                       expenses={expenses}
                       accounts={accounts}
+                      debts={debts}
+                      onVincular={handleVincular}
+                      onDesvincular={handleDesvincular}
+                      descuentos={descuentosDePago}
                       abierto={historialAbierto === d.id}
                       onToggle={() => setHistorialAbierto(historialAbierto === d.id ? null : d.id)}
                     />
@@ -358,10 +402,13 @@ export function DebtsPage() {
               <Campo id="d-rate" label="Interés anual (%)">
                 <input id="d-rate" type="text" inputMode="decimal" value={fRate} onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setFRate(e.target.value); }} className="saas-input py-1.5 text-sm tabular-nums" required />
               </Campo>
-              <Campo id="d-min" label="Pago mínimo mensual">
-                <input id="d-min" type="text" inputMode="decimal" value={fMin} onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setFMin(e.target.value); }} className="saas-input py-1.5 text-sm tabular-nums" required />
+              <Campo id="d-min" label="Pago mínimo (opcional)">
+                <input id="d-min" type="text" inputMode="decimal" value={fMin} onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setFMin(e.target.value); }} className="saas-input py-1.5 text-sm tabular-nums" aria-describedby="d-min-ayuda" />
               </Campo>
             </div>
+            <p id="d-min-ayuda" className="text-xs text-slate-600 dark:text-slate-400 -mt-1">
+              Déjalo vacío si cambia cada mes: la deuda queda como «pago variable» y fuera de la proyección.
+            </p>
             {fKind === 'Tarjeta de crédito' ? (
               <>
                 {/* Como en el estado de cuenta del banco: corte y fecha límite
@@ -411,13 +458,19 @@ export function DebtsPage() {
               <Campo id="e-contado" label="Pago de contado">
                 <input id="e-contado" type="text" inputMode="decimal" value={eContado} onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setEContado(e.target.value); }} className="saas-input py-1.5 text-sm tabular-nums" placeholder="Opcional" />
               </Campo>
-              <Campo id="e-min" label="Pago mínimo">
-                <input id="e-min" type="text" inputMode="decimal" value={eMin} onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setEMin(e.target.value); }} className="saas-input py-1.5 text-sm tabular-nums" required />
+              <Campo id="e-min" label="Pago mínimo (opcional)">
+                <input id="e-min" type="text" inputMode="decimal" value={eMin} onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setEMin(e.target.value); }} className="saas-input py-1.5 text-sm tabular-nums" placeholder="Variable" />
               </Campo>
             </div>
             <p className="text-2xs text-slate-600 dark:text-slate-400">
               El pago de contado es lo que debes pagar antes de la fecha límite para no pagar intereses. Los pagos que registres después lo irán bajando.
             </p>
+            {ultimoPagoEstado && (
+              <p className="text-xs text-slate-700 dark:text-slate-300">
+                Último pago registrado: <span className="tabular-nums font-semibold">{formatMoney(ultimoPagoEstado.amount)}</span> el {safeParseDate(ultimoPagoEstado.date).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short', year: 'numeric' })}.
+                Si tu estado de cuenta ya incluye ese pago, el total nuevo lo refleja; si es posterior al corte, réstalo tú.
+              </p>
+            )}
             <div className="flex gap-2 pt-1">
               <button type="button" onClick={() => setEstado(null)} className="saas-btn saas-btn-secondary flex-1 py-2 text-xs">Cancelar</button>
               <button type="submit" className="saas-btn saas-btn-primary flex-1 py-2 text-xs">Guardar</button>
@@ -439,15 +492,16 @@ export function DebtsPage() {
                 <input id="p-amount" type="text" inputMode="decimal" value={pAmount} onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setPAmount(e.target.value); }} className="saas-input py-1.5 text-sm font-bold tabular-nums" required />
               </Campo>
             </div>
-            {/* La etiqueta entera es la zona táctil (44px de alto): la casilla
-                sola medía 16px y había que acertarle con el dedo. */}
-            <label className="flex items-center gap-2.5 min-h-[44px] cursor-pointer text-sm text-slate-700 dark:text-slate-300">
-              <input type="checkbox" checked={pAsExpense} onChange={(e) => setPAsExpense(e.target.checked)} className="w-5 h-5 flex-shrink-0 rounded border-slate-300 dark:border-slate-600 accent-brand-600" />
-              Contar como gasto del mes
-            </label>
-            <p className="text-xs text-slate-600 dark:text-slate-400 -mt-2">
-              El pago siempre queda en el historial de la deuda. Si lo desmarcas, sale de la cuenta pero no suma a tus gastos (útil si ya registras cada compra con la tarjeta).
-            </p>
+            {paying.statementBalance !== undefined && paying.statementBalance > 0 && tieneMinimoFijo(paying) && (
+              <div className="flex flex-wrap gap-1.5 -mt-1" role="group" aria-label="Montos sugeridos">
+                <button type="button" onClick={() => setPAmount(String(paying.statementBalance))} className="saas-chip-filter">
+                  Contado {formatMoney(paying.statementBalance)}
+                </button>
+                <button type="button" onClick={() => setPAmount(String(paying.minPayment))} className="saas-chip-filter">
+                  Mínimo {formatMoney(paying.minPayment)}
+                </button>
+              </div>
+            )}
             {accounts.length > 0 && (
               <Campo id="p-acc" label="Cuenta de origen">
                 <select id="p-acc" value={pAccount} onChange={(e) => setPAccount(e.target.value)} className="saas-input py-1.5 text-sm">
@@ -456,8 +510,8 @@ export function DebtsPage() {
                 </select>
               </Campo>
             )}
-            <p className="text-2xs text-slate-600 dark:text-slate-400">
-              Baja el saldo de la deuda y, si lo registras como gasto, queda además como movimiento del mes{accounts.length > 0 ? ' (descontado de la cuenta que elijas)' : ''}.
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              Baja el saldo de la deuda{accounts.length > 0 ? ' y sale de la cuenta que elijas' : ''}. No cuenta como gasto del mes: la compra ya la registraste cuando la hiciste.
             </p>
             <div className="flex gap-2 pt-1">
               <button type="button" onClick={() => setPaying(null)} className="saas-btn saas-btn-secondary flex-1 py-2 text-xs">Cancelar</button>
@@ -631,14 +685,22 @@ function MethodCompareCard({ plan, alt, method, onMethod, extra }: {
 }
 
 /* ─── Historial de pagos de una deuda: sus movimientos enlazados (debtId) ─── */
-function HistorialPagos({ debt, expenses, accounts, abierto, onToggle }: {
+const fechaLarga = (iso: string) => safeParseDate(iso).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short', year: 'numeric' });
+
+function HistorialPagos({ debt, expenses, accounts, debts, onVincular, onDesvincular, descuentos, abierto, onToggle }: {
   debt: Debt;
-  expenses: ReturnType<typeof useFinanceStore.getState>['expenses'];
+  expenses: Transaction[];
   accounts: ReturnType<typeof useFinanceStore.getState>['accounts'];
+  debts: Debt[];
+  onVincular: (t: Transaction, d: Debt) => void;
+  onDesvincular: (t: Transaction) => void;
+  descuentos: DescuentosDePago;
   abierto: boolean;
   onToggle: () => void;
 }) {
   const { pagos, totalPagado } = useMemo(() => historialDeuda(debt, expenses), [debt, expenses]);
+  const sinVincular = useMemo(() => gastosSinVincular(debt, expenses), [debt, expenses]);
+  const porId = useMemo(() => new Map(expenses.map((e) => [e.id, e])), [expenses]);
   const panelId = `historial-${debt.id}`;
   // Lo pagado frente a lo que se debía al primer pago registrado: saldo de
   // hoy + todo lo pagado desde entonces.
@@ -654,7 +716,7 @@ function HistorialPagos({ debt, expenses, accounts, abierto, onToggle }: {
         aria-controls={panelId}
         className="saas-hit text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
       >
-        {abierto ? 'Ocultar historial' : `Historial de pagos (${pagos.length})`}
+        {abierto ? 'Ocultar historial' : `Historial de pagos (${pagos.length})${sinVincular.length > 0 ? ` · ${sinVincular.length} sin vincular` : ''}`}
       </button>
       {abierto && (
         <div id={panelId} className="mt-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 p-3 space-y-2.5">
@@ -676,27 +738,68 @@ function HistorialPagos({ debt, expenses, accounts, abierto, onToggle }: {
                 </div>
               </div>
               <ul className="divide-y divide-slate-200 dark:divide-slate-700">
-                {pagos.map((p) => (
-                  <li key={p.id} className="py-2 flex items-start justify-between gap-3 text-xs">
+                {pagos.map((p) => {
+                  const tx = porId.get(p.id);
+                  return (
+                    <li key={p.id} className="py-2 flex items-start justify-between gap-3 text-xs">
+                      <div className="min-w-0">
+                        <p className="text-slate-900 dark:text-white">{fechaLarga(p.date)}</p>
+                        <p className="text-slate-700 dark:text-slate-300 break-words">{tx ? etiquetaPago(tx, debts) : 'Pago de deuda'}</p>
+                        <p className="text-slate-600 dark:text-slate-400 break-words">
+                          {p.accountId ? accountName(accounts, p.accountId) : 'Sin cuenta'}
+                        </p>
+                        {/* Solo se desvincula un gasto vinculado a mano (o uno
+                            antiguo sin registro de descuento). Un pago que sí
+                            bajó la deuda —lo registra `descuentosDePago`— no tiene
+                            «antes», y quitarle el enlace lo dejaría huérfano. */}
+                        {tx && tx.type === 'expense' && (!descuentos[tx.id] || descuentos[tx.id].vinculado) && (
+                          <button
+                            type="button"
+                            onClick={() => onDesvincular(tx)}
+                            aria-label={`Desvincular pago de ${formatMoney(p.amount)} del ${fechaLarga(p.date)} (no cambia el saldo)`}
+                            className="saas-hit mt-0.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:underline"
+                          >
+                            Desvincular
+                          </button>
+                        )}
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="tabular-nums font-semibold text-income-600 dark:text-income-400 whitespace-nowrap">−{formatMoney(p.amount)}</p>
+                        <p className="tabular-nums text-slate-600 dark:text-slate-400 whitespace-nowrap">saldo {formatMoney(p.saldoDespues)}</p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
+
+          {sinVincular.length > 0 && (
+            <div className={pagos.length > 0 ? 'pt-2.5 border-t border-slate-200 dark:border-slate-700' : ''}>
+              <p className="text-xs font-semibold text-slate-900 dark:text-white">Pagos anteriores sin vincular ({sinVincular.length})</p>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                Gastos de esta categoría registrados antes de enlazar pagos con deudas. Al vincularlos dejan de contar como gasto y entran al historial; el saldo de la deuda no cambia.
+              </p>
+              <ul className="mt-1.5 max-h-64 overflow-y-auto divide-y divide-slate-200 dark:divide-slate-700">
+                {sinVincular.map((t) => (
+                  <li key={t.id} className="py-2 flex items-start justify-between gap-3 text-xs">
                     <div className="min-w-0">
-                      <p className="text-slate-900 dark:text-white">
-                        {safeParseDate(p.date).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </p>
-                      <p className="text-slate-600 dark:text-slate-400 break-words">
-                        {p.accountId ? accountName(accounts, p.accountId) : 'Sin cuenta'}
-                      </p>
-                      <p className="text-slate-600 dark:text-slate-400">
-                        {p.esGasto ? 'gasto del mes' : 'no cuenta como gasto'}
-                      </p>
+                      <p className="text-slate-900 dark:text-white break-words">{t.concept}</p>
+                      <p className="text-slate-600 dark:text-slate-400">{fechaLarga(t.date)}</p>
+                      <button
+                        type="button"
+                        onClick={() => onVincular(t, debt)}
+                        aria-label={`Vincular (no cambia el saldo): ${t.concept}, ${formatMoney(t.amount)}, ${fechaLarga(t.date)}`}
+                        className="saas-hit mt-0.5 text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
+                      >
+                        Vincular (no cambia el saldo)
+                      </button>
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="tabular-nums font-semibold text-income-600 dark:text-income-400">−{formatMoney(p.amount)}</p>
-                      <p className="tabular-nums text-slate-600 dark:text-slate-400">saldo {formatMoney(p.saldoDespues)}</p>
-                    </div>
+                    <p className="tabular-nums font-semibold text-slate-900 dark:text-white whitespace-nowrap flex-shrink-0">{formatMoney(t.amount)}</p>
                   </li>
                 ))}
               </ul>
-            </>
+            </div>
           )}
         </div>
       )}
@@ -704,28 +807,47 @@ function HistorialPagos({ debt, expenses, accounts, abierto, onToggle }: {
   );
 }
 
-/* ─── Resumen de tarjeta: pago de contado, corte y cupo disponible ─── */
+/* ─── Tarjeta: dato principal «Pagar $X antes del día Y» ─── */
 const fechaCorta = (iso: string) => safeParseDate(iso).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' });
 
+function PagoPendienteTarjeta({ debt }: { debt: Debt }) {
+  const e = estadoTarjeta(debt, getTodayISO());
+  if (!e) return null;
+  const urgente = e.diasParaPagar !== null && e.diasParaPagar <= 3;
+  const faltan = e.diasParaPagar === null ? '' : e.diasParaPagar === 0 ? ' (vence hoy)' : ` (faltan ${e.diasParaPagar} ${e.diasParaPagar === 1 ? 'día' : 'días'})`;
+  const color = urgente ? 'text-amber-700 dark:text-amber-400' : 'text-slate-900 dark:text-white';
+  const clase = `text-sm font-semibold tabular-nums mt-1 ${color}`;
+
+  // Contado ya cubierto: no hay nada que pagar para evitar intereses.
+  if (e.contadoCubierto) {
+    return <p className="text-sm font-semibold text-income-700 dark:text-income-400 mt-1">✅ Pago de contado cubierto: este corte no genera intereses.</p>;
+  }
+  if (e.montoAPagar !== null) {
+    return (
+      <p className={clase}>
+        {`Pagar ${formatMoney(e.montoAPagar)}${e.origenMonto === 'minimo' ? ' mínimo' : ''}${e.proximoPago ? ` antes del ${fechaCorta(e.proximoPago)}` : ''}${faltan}${e.origenMonto === 'contado' ? ' para no pagar intereses' : ''}.`}
+      </p>
+    );
+  }
+  if (e.proximoPago) {
+    return <p className={clase}>{`Paga antes del ${fechaCorta(e.proximoPago)}${faltan}.`}</p>;
+  }
+  return null;
+}
+
+/* ─── Resumen de tarjeta: corte, cupo disponible e interés estimado ─── */
 function ResumenTarjeta({ debt }: { debt: Debt }) {
   const e = estadoTarjeta(debt, getTodayISO());
   if (!e) return null;
-  const sinDatos = e.contado === null && e.proximoCorte === null && e.cupoDisponible === null;
-  const urgente = e.diasParaPagar !== null && e.diasParaPagar <= 3;
+  const sinDatos = e.contado === null && e.proximoCorte === null && e.cupoDisponible === null && e.montoAPagar === null;
+  // Si solo se paga el pago de contado, el interés corre sobre lo que queda del
+  // saldo (saldo − contado); no sobre el saldo completo, para no sobreestimar.
+  // Es una orientación (tasa 0 = sin definir: no se muestra).
+  const saldoRestante = e.contado !== null && e.contado > 0 ? Math.max(0, debt.balance - e.contado) : 0;
+  const interes = saldoRestante > 0 ? interesEstimadoMensual(saldoRestante, debt.annualRate) : 0;
 
   return (
     <div className="w-full pl-9 space-y-1.5">
-      {e.contado !== null && (
-        e.contadoCubierto ? (
-          <p className="text-xs text-income-700 dark:text-income-400">✅ Pago de contado cubierto: este corte no genera intereses.</p>
-        ) : (
-          <p className={`text-xs ${urgente ? 'text-amber-700 dark:text-amber-400 font-semibold' : 'text-slate-700 dark:text-slate-300'}`}>
-            Paga <span className="tabular-nums font-semibold">{formatMoney(e.contado)}</span>
-            {e.proximoPago ? ` antes del ${fechaCorta(e.proximoPago)}` : ''} para no pagar intereses
-            {e.diasParaPagar !== null ? (e.diasParaPagar === 0 ? ' (vence hoy)' : ` (faltan ${e.diasParaPagar} ${e.diasParaPagar === 1 ? 'día' : 'días'})`) : ''}.
-          </p>
-        )
-      )}
       {(e.proximoCorte || e.proximoPago) && (
         <p className="text-2xs text-slate-600 dark:text-slate-400">
           {[e.proximoCorte && `Corte: ${fechaCorta(e.proximoCorte)}`, e.proximoPago && `Pagar hasta: ${fechaCorta(e.proximoPago)}`].filter(Boolean).join(' · ')}
@@ -748,6 +870,11 @@ function ResumenTarjeta({ debt }: { debt: Debt }) {
           </div>
           <p className="text-2xs text-slate-600 dark:text-slate-400 mt-0.5">{e.usoPct.toFixed(0)}% en uso{e.usoPct > 70 ? ' · por encima del 70% afecta tu historial crediticio' : ''}</p>
         </div>
+      )}
+      {interes > 0 && (
+        <p className="text-xs text-slate-600 dark:text-slate-400">
+          {`Si pagas solo el pago de contado, el saldo restante generaría ~${formatMoney(interes)} de interés al mes (estimación; consulta tu estado de cuenta).`}
+        </p>
       )}
       {sinDatos && (
         <p className="text-2xs text-slate-600 dark:text-slate-400">Usa «Actualizar estado de cuenta» para ver el pago de contado y tu cupo disponible.</p>

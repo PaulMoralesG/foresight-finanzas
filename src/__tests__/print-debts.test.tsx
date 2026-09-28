@@ -54,4 +54,14 @@ describe('imprimirDeudas', () => {
     expect(document.title).toBe('foresight-deudas');
     expect(print).toHaveBeenCalledTimes(1);
   });
+
+  it('un pago mínimo de 0 se imprime como «Variable», no como $0.00', () => {
+    act(() => {
+      imprimirDeudas([deuda({ minPayment: 0 })]);
+    });
+
+    const celdas = Array.from(host()!.querySelectorAll('tbody td')).map((td) => td.textContent);
+    expect(celdas).toContain('Variable');
+    expect(celdas).not.toContain('$0.00');
+  });
 });

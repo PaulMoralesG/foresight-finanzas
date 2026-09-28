@@ -63,6 +63,13 @@ export interface EstadoTarjeta {
   contado: number | null;
   /** true si el pago de contado ya está cubierto (0). */
   contadoCubierto: boolean;
+  /**
+   * Cuánto pagar antes de la fecha límite: el pago de contado si se conoce
+   * (0 si ya está cubierto), si no el pago mínimo fijo, si no null (variable).
+   */
+  montoAPagar: number | null;
+  /** De dónde sale `montoAPagar`: null si no hay monto. */
+  origenMonto: 'contado' | 'minimo' | null;
   cupoDisponible: number | null;
   /** % del cupo en uso (0–100+), si hay cupo. */
   usoPct: number | null;
@@ -73,12 +80,17 @@ export function estadoTarjeta(debt: Debt, hoy: string): EstadoTarjeta | null {
   const proximoPago = debt.payDay ? proximaFechaConDia(debt.payDay, hoy) : null;
   const contado = debt.statementBalance ?? null;
   const cupo = debt.creditLimit ?? null;
+  const minimo = debt.minPayment > 0 ? debt.minPayment : null;
+  const montoAPagar = contado !== null ? contado : minimo;
+  const origenMonto = contado !== null ? 'contado' : minimo !== null ? 'minimo' : null;
   return {
     proximoPago,
     diasParaPagar: proximoPago ? diasEntre(hoy, proximoPago) : null,
     proximoCorte: debt.cutDay ? proximaFechaConDia(debt.cutDay, hoy) : null,
     contado,
     contadoCubierto: contado === 0,
+    montoAPagar,
+    origenMonto,
     cupoDisponible: cupo !== null ? roundMoney(cupo - debt.balance) : null,
     usoPct: cupo ? roundMoney((debt.balance / cupo) * 100) : null,
   };

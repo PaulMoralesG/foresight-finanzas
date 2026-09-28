@@ -7,7 +7,8 @@
 // ================================================================
 
 import { roundMoney } from './utils';
-import type { Debt, DebtKind, Transaction } from '@/types';
+import { esTarjeta } from './credit-card';
+import type { Account, Debt, DebtKind, Transaction } from '@/types';
 
 /** Categorías en las que un gasto puede ser el pago de una deuda. */
 export const CATEGORIAS_DE_PAGO = ['pago-tarjetas', 'prestamos'] as const;
@@ -21,50 +22,176 @@ export function categoriaDePago(kind: DebtKind): string {
   return kind === 'Tarjeta de crédito' ? 'pago-tarjetas' : 'prestamos';
 }
 
-/** Lo que un movimiento descuenta de cada deuda (0 si no paga ninguna). */
-function aportes(movs: Transaction[]): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const m of movs) {
-    if (!m.debtId) continue;
-    out[m.debtId] = (out[m.debtId] ?? 0) + m.amount;
-  }
-  return out;
+/** ¿El movimiento paga una deuda? (lleva `debtId`, sea gasto o transferencia). */
+export function esPagoDeDeuda(t: Pick<Transaction, 'debtId'>): boolean {
+  return !!t.debtId;
 }
 
 /**
- * Cuánto cambia el saldo de cada deuda al pasar de `antes` a `despues`
- * (los movimientos afectados, no todos). Positivo = el saldo sube (se deshizo
- * un pago), negativo = baja (se registró uno).
+ * ¿Suma a los gastos del mes? Un pago de deuda NO es gasto: la compra ya se
+ * contó al hacerla. Todo lo que suma gastos debe pasar por aquí, también los
+ * `expense` con `debtId` que ya existían.
+ */
+export function cuentaComoGasto(t: Pick<Transaction, 'type' | 'debtId'>): boolean {
+  return t.type === 'expense' && !t.debtId;
+}
+
+/**
+ * Etiqueta de un pago de deuda para listados: «Pago de tarjeta · Visa»,
+ * «Pago de préstamo · Auto» o «Pago de deuda eliminada». Un movimiento sin
+ * `debtId` devuelve su concepto.
+ */
+export function etiquetaPago(t: Pick<Transaction, 'debtId' | 'concept'>, debts: Pick<Debt, 'id' | 'name' | 'kind'>[]): string {
+  if (!t.debtId) return t.concept;
+  const deuda = debts.find((d) => d.id === t.debtId);
+  if (!deuda) return 'Pago de deuda eliminada';
+  return `Pago de ${esTarjeta(deuda) ? 'tarjeta' : 'préstamo'} · ${deuda.name}`;
+}
+
+const porFechaDesc = (a: Transaction, b: Transaction) =>
+  a.date === b.date ? (b.created_at ?? '').localeCompare(a.created_at ?? '') : b.date.localeCompare(a.date);
+
+/**
+ * Cuenta de origen con la que preseleccionar «Registrar pago»: la del último
+ * pago enlazado de esa deuda (si la cuenta aún existe); si no, la primera
+ * cuenta de tipo Banco; si no, la primera cuenta; sin cuentas, null.
+ */
+export function cuentaSugeridaParaPago(debt: Debt, expenses: Transaction[], accounts: Account[]): string | null {
+  const ids = new Set(accounts.map((a) => a.id));
+  const ultimo = expenses
+    .filter((e) => e.debtId === debt.id && !!e.accountId && ids.has(e.accountId))
+    .sort(porFechaDesc)[0];
+  if (ultimo?.accountId) return ultimo.accountId;
+  return (accounts.find((a) => a.kind === 'Banco') ?? accounts[0])?.id ?? null;
+}
+
+/**
+ * Gastos de la categoría de pago de esta deuda que aún no están enlazados a
+ * ninguna (registrados antes de `debtId`), del más reciente al más antiguo.
+ * Se pueden vincular a mano sin tocar el saldo.
+ */
+export function gastosSinVincular(debt: Debt, expenses: Transaction[]): Transaction[] {
+  const categoria = categoriaDePago(debt.kind);
+  return expenses
+    .filter((e) => e.type === 'expense' && !e.debtId && e.category === categoria)
+    .sort(porFechaDesc);
+}
+
+/**
+ * Lo que un pago descontó de verdad de su deuda. Descontar no es simétrico:
+ * el saldo (y el pago de contado) nunca bajan de 0, así que un pago mayor que
+ * lo que había descontó menos que su monto, y devolver el monto entero al
+ * borrarlo dejaría la deuda más alta que antes. Por eso se guarda lo efectivo.
+ *
+ * Es estado LOCAL (`financeStore.descuentosDePago`, persistido pero no
+ * sincronizado: no hay columna en BD). Sin entrada —dispositivo que no
+ * registró el pago, dato anterior— se revierte el monto completo.
+ */
+export interface DescuentoPago {
+  /** Lo que bajó `balance`. */
+  balance: number;
+  /** Lo que bajó `statementBalance`; ausente si la deuda no lo tenía. */
+  statement?: number;
+  /** Pago histórico enlazado a mano: ya estaba descontado, no mueve el saldo. */
+  vinculado?: true;
+}
+
+export type DescuentosDePago = Record<string, DescuentoPago>;
+
+/** Lo que descontaría hoy un pago de `monto` a esta deuda (acotado a 0). */
+export function descuentoEfectivo(debt: Pick<Debt, 'balance' | 'statementBalance'>, monto: number): DescuentoPago {
+  const tope = (saldo: number) => roundMoney(Math.max(0, Math.min(monto, saldo)));
+  const d: DescuentoPago = { balance: tope(debt.balance) };
+  if (debt.statementBalance !== undefined) d.statement = tope(debt.statementBalance);
+  return d;
+}
+
+/**
+ * Lo que devolvería a su deuda borrar este movimiento: su descuento efectivo
+ * si se conoce, el monto entero si no, y 0 si es un pago vinculado a mano.
+ * Sirve para avisar al usuario antes de borrar.
+ */
+export function montoQueRevierte(t: Pick<Transaction, 'id' | 'debtId' | 'amount'>, descuentos: DescuentosDePago): number {
+  if (!t.debtId) return 0;
+  const rec = descuentos[t.id];
+  return rec ? rec.balance : t.amount;
+}
+
+/**
+ * Aplica a las deudas el paso de `antes` a `despues` (los movimientos
+ * afectados, no todos): primero revierte lo que descontaron los de `antes` y
+ * luego descuenta los de `despues`, guardando lo efectivo de cada uno.
  *
  * Alta: antes = [], despues = [nuevo]. Borrado: al revés. Edición: [viejo] →
- * [nuevo], que cubre a la vez un cambio de monto y un cambio de deuda.
- */
-export function deltaDeSaldos(antes: Transaction[], despues: Transaction[]): Record<string, number> {
-  const delta: Record<string, number> = {};
-  for (const [id, monto] of Object.entries(aportes(antes))) delta[id] = (delta[id] ?? 0) + monto;
-  for (const [id, monto] of Object.entries(aportes(despues))) delta[id] = (delta[id] ?? 0) - monto;
-  for (const id of Object.keys(delta)) if (Math.abs(delta[id]) < 0.005) delete delta[id];
-  return delta;
-}
-
-/**
- * Aplica los deltas a las deudas. El saldo nunca baja de 0.
+ * [nuevo], que cubre a la vez un cambio de monto y un cambio de deuda; si no
+ * cambia ni la deuda ni el monto no toca nada.
  *
- * En una tarjeta con pago de contado conocido, el pago también se descuenta
- * de él (y borrarlo lo devuelve): así la tarjeta dice cuánto falta para no
- * pagar intereses en este corte.
+ * En una tarjeta con pago de contado conocido el pago también se descuenta de
+ * él (y borrarlo lo devuelve). El saldo nunca baja de 0. Un movimiento
+ * vinculado a mano (`vinculado`) no mueve el saldo: al editarlo conserva el
+ * enlace, al quitarle `debtId` pierde la marca.
  */
-export function aplicarDeltas(debts: Debt[], delta: Record<string, number>, ahora: string): Debt[] {
-  if (Object.keys(delta).length === 0) return debts;
-  return debts.map((d) => {
-    const cambio = delta[d.id];
-    if (cambio === undefined) return d;
-    const siguiente: Debt = { ...d, balance: Math.max(0, roundMoney(d.balance + cambio)), updated_at: ahora };
-    if (d.statementBalance !== undefined) {
-      siguiente.statementBalance = Math.max(0, roundMoney(d.statementBalance + cambio));
+export function aplicarCambioDePagos(
+  debts: Debt[],
+  descuentos: DescuentosDePago,
+  antes: Transaction[],
+  despues: Transaction[],
+  ahora: string,
+): { debts: Debt[]; descuentos: DescuentosDePago } {
+  const sig: DescuentosDePago = { ...descuentos };
+  const porId = new Map(debts.map((d) => [d.id, d]));
+  const tocadas = new Set<string>();
+  const cambiar = (id: string, balance: number, statement: number) => {
+    const d = porId.get(id);
+    if (!d) return;
+    const n: Debt = { ...d, balance: roundMoney(d.balance + balance) };
+    if (d.statementBalance !== undefined) n.statementBalance = roundMoney(d.statementBalance + statement);
+    porId.set(id, n);
+    tocadas.add(id);
+  };
+
+  const nuevos = new Map(despues.map((m) => [m.id, m]));
+  const intactos = new Set<string>();
+  for (const v of antes) {
+    const n = nuevos.get(v.id);
+    if (!v.debtId || !n) continue;
+    const rec = descuentos[v.id];
+    if (rec?.vinculado && n.debtId) {
+      sig[v.id] = rec; // sigue siendo un pago vinculado, aunque cambie la deuda
+      intactos.add(v.id);
+    } else if (n.debtId === v.debtId && n.amount === v.amount) {
+      intactos.add(v.id);
     }
-    return siguiente;
-  });
+  }
+
+  for (const v of antes) {
+    if (!v.debtId || intactos.has(v.id)) continue;
+    const rec = descuentos[v.id];
+    if (rec?.vinculado) {
+      // Borrado: la marca se conserva para que deshacer no lo descuente. Edición
+      // que le quita la deuda: la marca ya no tiene sentido.
+      if (nuevos.has(v.id)) delete sig[v.id];
+      continue;
+    }
+    delete sig[v.id];
+    cambiar(v.debtId, rec ? rec.balance : v.amount, rec ? (rec.statement ?? 0) : v.amount);
+  }
+  for (const n of despues) {
+    if (!n.debtId || intactos.has(n.id)) continue;
+    // Deshacer el borrado de un pago vinculado a mano: sigue sin mover el saldo.
+    if (descuentos[n.id]?.vinculado) continue;
+    const d = porId.get(n.debtId);
+    if (!d) continue;
+    const ef = descuentoEfectivo(d, n.amount);
+    sig[n.id] = ef;
+    cambiar(n.debtId, -ef.balance, -(ef.statement ?? 0));
+  }
+
+  if (tocadas.size === 0) return { debts, descuentos: sig };
+  return {
+    debts: debts.map((d) => (tocadas.has(d.id) ? { ...porId.get(d.id)!, updated_at: ahora } : d)),
+    descuentos: sig,
+  };
 }
 
 export interface PagoDeDeuda {
@@ -72,8 +199,6 @@ export interface PagoDeDeuda {
   date: string;
   amount: number;
   accountId: string | null;
-  /** true si cuenta como gasto del mes; false si es solo una salida de cuenta. */
-  esGasto: boolean;
   /** Saldo de la deuda justo después de este pago (reconstruido). */
   saldoDespues: number;
 }
@@ -103,7 +228,6 @@ export function historialDeuda(debt: Debt, expenses: Transaction[]): HistorialDe
       date: e.date,
       amount: e.amount,
       accountId: e.accountId ?? null,
-      esGasto: e.type === 'expense',
       saldoDespues: roundMoney(saldo),
     };
     saldo += e.amount;

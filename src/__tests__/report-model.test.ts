@@ -80,3 +80,22 @@ describe('construirReporte', () => {
     expect(r.totales).toEqual({ ingresos: 0, gastos: 0, saldo: 0 });
   });
 });
+
+describe('construirReporte — pagos de deuda', () => {
+  const movs = () => [
+    tx({ type: 'income', amount: 1000, date: '2026-08-01' }),
+    tx({ amount: 100, date: '2026-08-02' }),
+    tx({ amount: 200, date: '2026-08-03', category: 'pago-tarjetas', debtId: 'd1' }),
+    tx({ type: 'transfer', amount: 300, date: '2026-08-04', category: 'transferencia', debtId: 'd1', accountId: 'a1', toAccountId: null }),
+  ];
+
+  it('no suma los pagos de deuda a los gastos ni al saldo', () => {
+    const r = construirReporte(movs(), agosto);
+    expect(r.totales).toEqual({ ingresos: 1000, gastos: 100, saldo: 900 });
+  });
+
+  it('los lista con el tipo «Pago de deuda» (sea expense o transfer)', () => {
+    const r = construirReporte(movs(), agosto);
+    expect(r.filas.map((f) => f.tipo)).toEqual(['Ingreso', 'Gasto', 'Pago de deuda', 'Pago de deuda']);
+  });
+});

@@ -3,7 +3,7 @@
 // ================================================================
 
 import { describe, it, expect } from 'vitest';
-import { mergeById, mergeBudgets, type MergeSet } from '@/lib/merge';
+import { mergeById, mergeBudgets, hidratarAusentes, type MergeSet } from '@/lib/merge';
 
 interface Item {
   id: string;
@@ -192,5 +192,57 @@ describe('mergeBudgets', () => {
       [{ month: '2026-07', amount: 7000, updated_at: T1 }],
     );
     expect(budgets['2026-07']).toBe(7000);
+  });
+});
+
+describe('hidratarAusentes', () => {
+  interface Deuda {
+    id: string;
+    updated_at: string;
+    name: string;
+    cutDay?: number;
+    creditLimit?: number;
+  }
+  const CLAVES: Array<keyof Deuda> = ['cutDay', 'creditLimit'];
+
+  it('copia la clave ausente en local cuando el remoto la tiene', () => {
+    const local: Deuda[] = [{ id: 'd1', updated_at: T2, name: 'Visa' }];
+    const remoto: Deuda[] = [{ id: 'd1', updated_at: T2, name: 'Visa', cutDay: 24, creditLimit: 5000 }];
+    const res = hidratarAusentes(local, remoto, ['d1'], CLAVES);
+    expect(res).toEqual([{ id: 'd1', updated_at: T2, name: 'Visa', cutDay: 24, creditLimit: 5000 }]);
+  });
+
+  it('no pisa una clave presente en local (ni con valor distinto)', () => {
+    const local: Deuda[] = [{ id: 'd1', updated_at: T2, name: 'Visa', cutDay: 10 }];
+    const remoto: Deuda[] = [{ id: 'd1', updated_at: T2, name: 'Visa', cutDay: 24, creditLimit: 5000 }];
+    const res = hidratarAusentes(local, remoto, ['d1'], CLAVES);
+    expect(res[0].cutDay).toBe(10);
+    expect(res[0].creditLimit).toBe(5000);
+  });
+
+  it('ignora ids fuera de `ids` y los que no tienen fila remota', () => {
+    const local: Deuda[] = [
+      { id: 'd1', updated_at: T2, name: 'Fuera' },
+      { id: 'd2', updated_at: T2, name: 'Sin remoto' },
+    ];
+    const remoto: Deuda[] = [{ id: 'd1', updated_at: T2, name: 'Fuera', cutDay: 24 }];
+    const res = hidratarAusentes(local, remoto, ['d2'], CLAVES);
+    expect(res).toEqual(local);
+  });
+
+  it('no cambia updated_at ni muta los arrays de entrada', () => {
+    const local: Deuda[] = [{ id: 'd1', updated_at: T3, name: 'Visa' }];
+    const remoto: Deuda[] = [{ id: 'd1', updated_at: T1, name: 'Visa', cutDay: 24 }];
+    const res = hidratarAusentes(local, remoto, new Set(['d1']), CLAVES);
+    expect(res[0].updated_at).toBe(T3);
+    expect(res[0].cutDay).toBe(24);
+    expect(local[0]).toEqual({ id: 'd1', updated_at: T3, name: 'Visa' });
+  });
+
+  it('no inventa claves cuando el remoto tampoco las tiene', () => {
+    const local: Deuda[] = [{ id: 'd1', updated_at: T2, name: 'Visa' }];
+    const remoto: Deuda[] = [{ id: 'd1', updated_at: T2, name: 'Visa' }];
+    const res = hidratarAusentes(local, remoto, ['d1'], CLAVES);
+    expect('cutDay' in res[0]).toBe(false);
   });
 });

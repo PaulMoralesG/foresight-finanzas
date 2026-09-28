@@ -7,6 +7,7 @@ import { X, Calendar, Printer, FileSpreadsheet, Building2, User } from '@/compon
 import { useFinanceStore } from '@/stores/financeStore';
 import { useExpensesDelMesEnAmbito } from '@/hooks/useAmbito';
 import { useUiStore } from '@/stores/uiStore';
+import { cuentaComoGasto } from '@/lib/debt-payments';
 import { formatMoney, MONTH_NAMES, downloadBlob, roundMoney } from '@/lib/utils';
 import { movementsToCsv } from '@/lib/movements-csv';
 import { imprimirReporte } from '@/lib/print-report';
@@ -49,7 +50,7 @@ export function ReportModal() {
     .filter((i) => i.type === 'income')
     .reduce((s, i) => s + i.amount, 0));
   const totalExpenses = roundMoney(monthData
-    .filter((i) => i.type === 'expense')
+    .filter(cuentaComoGasto)
     .reduce((s, i) => s + i.amount, 0));
   const balance = roundMoney(totalIncome - totalExpenses);
   const count = monthData.length;

@@ -14,19 +14,32 @@
 
 import { formatMoney } from '@/lib/utils';
 import { typeLabel, typePillClasses } from '@/lib/transaction-labels';
-import type { BusinessType, TransactionType } from '@/types';
+import { esPagoDeDeuda } from '@/lib/debt-payments';
+import type { BusinessType, Transaction, TransactionType } from '@/types';
 
-/** Importe con signo y color según sea ingreso o gasto. */
+/**
+ * Importe con signo y color según sea ingreso o gasto. Con `debtId` es el pago
+ * de una deuda: sale dinero (signo −) pero no es gasto, así que va en neutro.
+ */
 export function TransactionAmount({
   type,
   amount,
+  debtId,
   className = '',
 }: {
   type: TransactionType;
   amount: number;
+  debtId?: Transaction['debtId'];
   className?: string;
 }) {
   const esIngreso = type === 'income';
+  if (esPagoDeDeuda({ debtId })) {
+    return (
+      <span className={`tabular-nums text-slate-700 dark:text-slate-300 ${className}`}>
+        −{formatMoney(amount)}
+      </span>
+    );
+  }
   // Una transferencia no es ni entrada ni salida: va en tinta neutra y sin
   // signo, porque el dinero solo cambió de cuenta.
   if (type === 'transfer') {
@@ -81,14 +94,17 @@ export function ScopeBadge({ businessType }: { businessType: BusinessType }) {
  */
 export function TypePill({
   type,
+  debtId,
   className = 'text-xs px-2 py-0.5 rounded-full',
 }: {
   type: TransactionType;
+  debtId?: Transaction['debtId'];
   className?: string;
 }) {
+  const movimiento = { type, debtId };
   return (
-    <span className={`font-medium ${typePillClasses(type)} ${className}`}>
-      {typeLabel(type)}
+    <span className={`font-medium ${typePillClasses(movimiento)} ${className}`}>
+      {typeLabel(movimiento)}
     </span>
   );
 }
