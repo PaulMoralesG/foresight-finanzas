@@ -27,7 +27,7 @@ import { ModalSheet } from '@/components/ui/ModalSheet';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ScopeBadge } from '@/components/ui/TransactionBits';
 import { ProgressBar } from '@/components/ui/ProgressBar';
-import { historialDeuda } from '@/lib/debt-payments';
+import { historialDeuda, ultimaCuentaDePago } from '@/lib/debt-payments';
 import { esTarjeta, estadoTarjeta } from '@/lib/credit-card';
 import { accountName } from '@/lib/accounts';
 import type { Debt, DebtKind, DebtMethod, BusinessType } from '@/types';
@@ -133,7 +133,8 @@ export function DebtsPage() {
     setPaying(d);
     setPAmount(d.minPayment ? String(d.minPayment) : '');
     setPDate(getTodayISO());
-    setPAccount('');
+    // La cuenta del último pago de esta deuda: casi siempre se paga desde la misma.
+    setPAccount(ultimaCuentaDePago(d, useFinanceStore.getState().expenses, accounts.map((a) => a.id)));
     setPAsExpense(true);
   }
   function handlePay(e: FormEvent) {

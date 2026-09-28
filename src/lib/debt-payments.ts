@@ -114,6 +114,17 @@ export function historialDeuda(debt: Debt, expenses: Transaction[]): HistorialDe
 }
 
 /**
+ * Cuenta de origen del pago más reciente de la deuda, para precargarla en
+ * «Registrar pago». Sale de los propios movimientos (sin estado nuevo, así
+ * vale igual en todos los dispositivos). Ignora cuentas que ya no existen;
+ * '' si no hay ninguna.
+ */
+export function ultimaCuentaDePago(debt: Debt, expenses: Transaction[], cuentasValidas: string[]): string {
+  const pago = historialDeuda(debt, expenses).pagos.find((p) => p.accountId && cuentasValidas.includes(p.accountId));
+  return pago?.accountId ?? '';
+}
+
+/**
  * Enlaza a su deuda los pagos registrados antes de que existiera `debtId`:
  * los que creaba «Registrar pago» se llaman «Pago <nombre de la deuda>» y van
  * en una categoría de pago. Solo enlaza si el nombre identifica una única

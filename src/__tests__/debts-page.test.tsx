@@ -90,6 +90,16 @@ describe('DebtsPage', () => {
     expect(s.expenses[0]).toMatchObject({ type: 'expense', amount: 85, category: 'pago-tarjetas', businessType: 'business', accountId: banco, concept: 'Pago Tarjeta' });
   });
 
+  it('«Registrar pago» recuerda la cuenta del último pago de esa deuda', async () => {
+    const ahorro = useFinanceStore.getState().addAccount({ name: 'Ahorro', kind: 'Banco', initialBalance: 1000 });
+    const id = useFinanceStore.getState().addDebt({ name: 'Tarjeta', tag: 'personal', kind: 'Tarjeta de crédito', balance: 500, annualRate: 22, minPayment: 85, payDay: null });
+    useFinanceStore.getState().registerDebtPayment(id, { amount: 50, date: '2026-09-01', accountId: ahorro, asExpense: true });
+    render(<DebtsPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar pago' }));
+    expect(within(screen.getByRole('dialog')).getByLabelText('Cuenta de origen')).toHaveValue(ahorro);
+  });
+
   it('un pago que no cuenta como gasto baja el saldo (nunca por debajo de cero) y queda en el historial como salida, no como gasto', () => {
     const id = useFinanceStore.getState().addDebt({ name: 'X', tag: 'personal', kind: 'Otro', balance: 50, annualRate: 0, minPayment: 10, payDay: null });
     useFinanceStore.getState().registerDebtPayment(id, { amount: 80, date: '2026-09-01', accountId: null, asExpense: false });
