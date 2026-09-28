@@ -35,6 +35,23 @@ There is no `typecheck` script in `package.json` — `vite build` does not type-
 
 Before considering any change done, this repo's own convention (see recent commit history) is: `npx tsc --noEmit`, `npx eslint .`, `npx vitest run` all clean, then `npx vite build` (and remove the resulting `dist/` if not deploying). Feature work goes on a branch, opened as a PR against `main`, merged only once CI (`lint-and-test` + Vercel preview) is green — never push straight to `main`, and never merge/deploy without explicit confirmation from the user.
 
+## Forma de trabajo: delegar en subagentes
+
+La sesión principal no ejecuta el trabajo por su cuenta: planifica y delega
+siempre cada tarea en un subagente (herramienta Agent).
+
+- Un subagente por tarea. Planificar antes de ejecutar.
+- Los subagentes independientes se lanzan en paralelo.
+- La sesión principal lee el informe del subagente, no los archivos.
+- No usar siempre Fable.
+- Especificar el modelo en cada llamada al subagente, según esta distribución:
+  - Opus 5.5: arquitectura, bugs complejos y revisión de código.
+  - Sonnet 5.5: ediciones, pruebas, documentación y refactorización.
+  - Haiku 4.5: investigación y resúmenes.
+
+Para Claude Code, esta distribución reemplaza la de "Claude Code CLI" en
+`.agents/rules/project-rules.md`.
+
 ## Architecture
 
 ### Path alias
