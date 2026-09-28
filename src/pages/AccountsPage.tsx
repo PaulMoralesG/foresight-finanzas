@@ -15,6 +15,7 @@ import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
 import { formatMoney, parseMoneyInput, roundMoney, safeParseDate, syncToCloud } from '@/lib/utils';
 import { accountBalance, accountIsUsed, accountName, totalBalance, ACCOUNT_KINDS } from '@/lib/accounts';
+import { esPagoDeDeuda } from '@/lib/debt-payments';
 import { currentMonthKey, shiftMonthKey, monthKeyLabel, monthKeyLabelCorto } from '@/lib/month-keys';
 import { getCategoryById } from '@/config/categories';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
@@ -262,6 +263,12 @@ function AccountSummaryCard() {
       const d = safeParseDate(t.date);
       if (d.getFullYear() !== y || d.getMonth() !== m - 1) continue;
       if (t.accountId !== cuenta.id && t.toAccountId !== cuenta.id) continue;
+      // Un pago de deuda sale de la cuenta pero no es gasto ni transferencia
+      // entre cuentas: bucket propio (expense antiguo o transfer sin destino).
+      if (esPagoDeDeuda(t)) {
+        salidas['Pagos de deudas'] = (salidas['Pagos de deudas'] ?? 0) + t.amount;
+        continue;
+      }
       if (t.type === 'transfer') {
         const bucket = t.toAccountId === cuenta.id ? entradas : salidas;
         bucket['Transferencias'] = (bucket['Transferencias'] ?? 0) + t.amount;

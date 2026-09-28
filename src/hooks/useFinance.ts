@@ -6,6 +6,7 @@
 import { useMemo } from 'react';
 import { useExpensesDelMesEnAmbito } from '@/hooks/useAmbito';
 import { roundMoney } from '@/lib/utils';
+import { cuentaComoGasto } from '@/lib/debt-payments';
 import type { Transaction } from '@/types';
 
 interface MonthlySummary {
@@ -27,7 +28,7 @@ export function useMonthlyData(): {
   return useMemo(() => {
 
     const incomeItems = monthlyData.filter((i) => i.type === 'income');
-    const expenseItems = monthlyData.filter((i) => i.type === 'expense');
+    const expenseItems = monthlyData.filter(cuentaComoGasto);
 
     const totalIncome = roundMoney(incomeItems.reduce((s, i) => s + i.amount, 0));
     const totalSpent = roundMoney(expenseItems.reduce((s, i) => s + i.amount, 0));

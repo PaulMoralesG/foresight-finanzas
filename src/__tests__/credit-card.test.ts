@@ -48,7 +48,7 @@ describe('lib/credit-card', () => {
     const e = estadoTarjeta(tarjeta({ balance: 1500, cutDay: 28, statementBalance: 480, creditLimit: 2000 }), '2026-09-26');
     expect(e).toEqual({
       proximoPago: '2026-10-10', diasParaPagar: 14, proximoCorte: '2026-09-28',
-      contado: 480, contadoCubierto: false, cupoDisponible: 500, usoPct: 75,
+      contado: 480, contadoCubierto: false, montoAPagar: 480, origenMonto: 'contado', cupoDisponible: 500, usoPct: 75,
     });
     expect(estadoTarjeta(tarjeta({ statementBalance: 0 }), '2026-09-26')?.contadoCubierto).toBe(true);
     expect(estadoTarjeta(tarjeta({ kind: 'Préstamo' }), '2026-09-26')).toBeNull();
@@ -63,12 +63,12 @@ describe('store: tarjetas', () => {
   it('un pago baja saldo y pago de contado; borrarlo los devuelve', () => {
     const s = useFinanceStore.getState();
     const id = s.addDebt({ name: 'Visa', tag: 'personal', kind: 'Tarjeta de crédito', balance: 1000, annualRate: 30, minPayment: 50, payDay: 10, statementBalance: 300 });
-    useFinanceStore.getState().registerDebtPayment(id, { amount: 200, date: '2026-09-20', accountId: null, asExpense: true });
+    useFinanceStore.getState().registerDebtPayment(id, { amount: 200, date: '2026-09-20', accountId: null });
     let deuda = useFinanceStore.getState().debts[0];
     expect(deuda.balance).toBe(800);
     expect(deuda.statementBalance).toBe(100);
     // Pagar de más deja el contado en 0 (cubierto), nunca negativo
-    useFinanceStore.getState().registerDebtPayment(id, { amount: 150, date: '2026-09-21', accountId: null, asExpense: true });
+    useFinanceStore.getState().registerDebtPayment(id, { amount: 150, date: '2026-09-21', accountId: null });
     deuda = useFinanceStore.getState().debts[0];
     expect(deuda.balance).toBe(650);
     expect(deuda.statementBalance).toBe(0);

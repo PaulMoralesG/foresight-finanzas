@@ -8,10 +8,10 @@ import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_COLORS, DEFAULT_GROUP } from '@/config/categories';
 import { ColorPicker, IconPicker } from '@/components/ui/CategoryStylePicker';
-import { getTodayISO, parseMoneyInput, roundMoney, syncToCloud } from '@/lib/utils';
+import { formatMoney, getTodayISO, parseMoneyInput, roundMoney, syncToCloud } from '@/lib/utils';
 import { makeCategoryId } from '@/lib/category-id';
 import { TRANSFER_CATEGORY } from '@/lib/accounts';
-import { esCategoriaDePago } from '@/lib/debt-payments';
+import { esCategoriaDePago, categoriaDePago, montoQueRevierte } from '@/lib/debt-payments';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { ModalSheet } from '@/components/ui/ModalSheet';
@@ -72,14 +72,20 @@ export function TransactionModal({
   const [accountId, setAccountId] = useState('');
   const [toAccountId, setToAccountId] = useState('');
   // Deuda que paga este movimiento (solo gastos en «Pago de tarjetas» o
-  // «Préstamos»). Al guardar, el store baja el saldo de esa deuda.
+  // «Préstamos»). '' = ninguna. Con deuda, el movimiento se guarda como pago
+  // (transferencia + debtId): no cuenta como gasto y el store baja el saldo.
   const [debtId, setDebtId] = useState('');
+  // ¿El movimiento que se edita ya estaba enlazado a una deuda? Solo entonces
+  // se puede cambiar la deuda al editar: enlazar uno viejo sin `debtId` bajaría
+  // el saldo otra vez (para eso está «Vincular» en Deudas, que no toca saldos).
+  const [yaEnlazado, setYaEnlazado] = useState(false);
   const debts = useFinanceStore((s) => s.debts);
   const isTransfer = type === 'transfer';
-  // Un pago de deuda que no cuenta como gasto se guarda como salida de cuenta
-  // sin destino; al editarlo no se le exige cuenta destino.
+  // Un pago de deuda se guarda como salida de cuenta sin destino; al editarlo
+  // no se le pide cuenta destino.
   const esPagoSinDestino = isTransfer && !!debtId;
-  const muestraDeuda = type === 'expense' && esCategoriaDePago(category) && debts.length > 0;
+  const muestraDeuda =
+    type === 'expense' && esCategoriaDePago(category) && debts.length > 0 && (editingId === null || yaEnlazado);
   // El selector aparece al final de la rejilla de categorías: al elegir
   // «Pago de Tarjetas» o «Préstamos» se lleva a la vista para que no pase
   // desapercibido en el móvil.
@@ -87,6 +93,19 @@ export function TransactionModal({
   useEffect(() => {
     if (muestraDeuda) deudaRef.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
   }, [muestraDeuda]);
+
+  /** Deuda cuyo tipo encaja con la categoría de pago elegida (o '' si no hay). */
+  function deudaSugerida(categoryId: string): string {
+    if (!esCategoriaDePago(categoryId)) return '';
+    return debts.find((d) => categoriaDePago(d.kind) === categoryId)?.id ?? '';
+  }
+
+  function elegirCategoria(categoryId: string) {
+    setCategory(categoryId);
+    // Al crear, la deuda que encaja queda elegida de entrada; al editar un
+    // movimiento no se toca el enlace que ya tenía.
+    if (editingId === null) setDebtId(deudaSugerida(categoryId));
+  }
 
   // ── Nueva categoría ──
   const [showNewCat, setShowNewCat] = useState(false);
@@ -144,6 +163,7 @@ export function TransactionModal({
           setAccountId(item.accountId ?? '');
           setToAccountId(item.toAccountId ?? '');
           setDebtId(item.debtId ?? '');
+          setYaEnlazado(!!item.debtId);
         } else {
           console.error('[TransactionModal] No se encontró transacción con id:', editingId);
         }
@@ -163,6 +183,7 @@ export function TransactionModal({
       setAccountId('');
       setToAccountId('');
       setDebtId('');
+      setYaEnlazado(false);
     } else if (!isOpen) {
       // Reset al cerrar
       setType('expense');
@@ -175,6 +196,7 @@ export function TransactionModal({
       setAccountId('');
       setToAccountId('');
       setDebtId('');
+      setYaEnlazado(false);
     }
     // Solo montar al abrir/cerrar o cambiar item
   }, [editingId, isOpen, modalPrefill, defaultDate, addToast]);
@@ -191,6 +213,17 @@ export function TransactionModal({
   if (!isOpen) return null;
 
   const isEditing = editingId !== null;
+
+  // Borrar un pago devuelve su monto al saldo de la deuda (invariante del
+  // store): se le dice al usuario antes de confirmar.
+  const porBorrar = deletingId !== null ? useFinanceStore.getState().expenses.find((e) => e.id === deletingId) : undefined;
+  const deudaDelPago = porBorrar?.debtId ? debts.find((d) => d.id === porBorrar.debtId) : undefined;
+  const devolucion = porBorrar ? montoQueRevierte(porBorrar, useFinanceStore.getState().descuentosDePago) : 0;
+  const mensajeBorrado = porBorrar && deudaDelPago
+    ? devolucion > 0
+      ? `El saldo de «${deudaDelPago.name}» volverá a subir ${formatMoney(devolucion)}. Esta acción no se puede deshacer.`
+      : `Es un pago vinculado a mano: el saldo de «${deudaDelPago.name}» no cambiará. Esta acción no se puede deshacer.`
+    : 'Esta acción no se puede deshacer.';
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -211,26 +244,32 @@ export function TransactionModal({
         addToast('Elige dos cuentas distintas para la transferencia', 'error');
         return;
       }
-    } else if (!category) {
+    } else if (!isTransfer && !category) {
       addToast('Selecciona una categoría', 'error');
       return;
     }
 
+    // Un pago de deuda NO es gasto: con deuda elegida se guarda siempre como
+    // transferencia sin destino + debtId (lo restan las cuentas, no lo suman
+    // los gastos y baja el saldo de la deuda). Un gasto viejo enlazado que se
+    // edita queda así normalizado sin mover el saldo (mismo debtId).
+    const conDeuda = (muestraDeuda || esPagoSinDestino) && !!debtId;
+
     const data = {
-      type,
+      type: conDeuda ? ('transfer' as const) : type,
       amount: numAmount,
       concept,
       date,
       // Una transferencia no tiene categoría: lleva una fija para que los
       // filtros por categoría no la confundan con un gasto real.
-      category: isTransfer ? TRANSFER_CATEGORY : category,
+      category: isTransfer || conDeuda ? TRANSFER_CATEGORY : category,
       method,
       businessType,
       accountId: accountId || null,
-      toAccountId: isTransfer && toAccountId ? toAccountId : null,
-      // Solo un gasto de pago (o un pago que no cuenta como gasto) conserva la
-      // deuda; al cambiar de categoría se suelta y el store devuelve el saldo.
-      debtId: (muestraDeuda || esPagoSinDestino) && debtId ? debtId : null,
+      toAccountId: !conDeuda && isTransfer && toAccountId ? toAccountId : null,
+      // Solo un pago conserva la deuda; al cambiar de categoría se suelta y el
+      // store devuelve el saldo. Al crear, sin deuda no se escribe la clave.
+      debtId: conDeuda ? debtId : isEditing ? null : undefined,
     };
 
     if (isEditing) {
@@ -292,11 +331,18 @@ export function TransactionModal({
               <div className="flex gap-1" role="group" aria-label="Tipo de movimiento">
                 {/* Transferencia solo cuando hay al menos dos cuentas entre las
                     que mover dinero; sin cuentas, el modal es el de siempre. */}
-                {(accounts.length >= 2 ? ['expense', 'income', 'transfer'] : ['expense', 'income']).map((t) => (
+                {(accounts.length >= 2 || isTransfer ? ['expense', 'income', 'transfer'] : ['expense', 'income']).map((t) => (
                   <button
                     key={t}
                     type="button"
-                    onClick={() => { setType(t as TransactionType); setCategory(''); }}
+                    onClick={() => {
+                      if (t === type) return;
+                      setType(t as TransactionType);
+                      setCategory('');
+                      // Cambiar de tipo suelta la deuda: un pago solo lo es como
+                      // gasto en su categoría o como transferencia ya enlazada.
+                      setDebtId('');
+                    }}
                     className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1 ${
                       type === t
                         ? t === 'expense'
@@ -432,26 +478,26 @@ export function TransactionModal({
 
           {/* Cuenta / cuentas: solo si el usuario tiene alguna (fase 3.1) */}
           {accounts.length > 0 && (
-            <div className={`grid gap-2 ${isTransfer ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            <div className={`grid gap-2 ${isTransfer && !esPagoSinDestino ? 'grid-cols-2' : 'grid-cols-1'}`}>
               <div>
                 <label htmlFor="tx-account" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">
-                  {isTransfer ? 'Cuenta de origen' : 'Cuenta'}
+                  {isTransfer && !esPagoSinDestino ? 'Cuenta de origen' : 'Cuenta'}
                 </label>
                 <select
                   id="tx-account"
                   value={accountId}
                   onChange={(e) => setAccountId(e.target.value)}
                   className="saas-input py-1 text-sm"
-                  required={isTransfer}
+                  required={isTransfer && !esPagoSinDestino}
                 >
-                  {!isTransfer && <option value="">Sin cuenta</option>}
-                  {isTransfer && !accountId && <option value="">Elige una cuenta</option>}
+                  {(!isTransfer || esPagoSinDestino) && <option value="">Sin cuenta</option>}
+                  {isTransfer && !esPagoSinDestino && !accountId && <option value="">Elige una cuenta</option>}
                   {accounts.map((a) => (
                     <option key={a.id} value={a.id}>{a.name}</option>
                   ))}
                 </select>
               </div>
-              {isTransfer && (
+              {isTransfer && !esPagoSinDestino && (
                 <div>
                   <label htmlFor="tx-to-account" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">
                     Cuenta destino
@@ -504,7 +550,7 @@ export function TransactionModal({
                     )}
                     <button
                       type="button"
-                      onClick={() => setCategory(cat.id)}
+                      onClick={() => elegirCategoria(cat.id)}
                       className={`flex flex-col items-center gap-0.5 p-1.5 rounded-lg transition-all ${
                         category === cat.id
                           ? 'ring-2 ring-brand-500 bg-brand-50 dark:bg-brand-950'
@@ -575,9 +621,10 @@ export function TransactionModal({
           </div>
           )}
 
-          {/* Deuda que se paga: con ella, este gasto aparece en el historial de
-              la deuda y baja su saldo (ver Deudas). */}
-          {muestraDeuda && (
+          {/* Deuda que se paga: con ella, el movimiento se guarda como pago (no
+              cuenta como gasto), aparece en el historial de la deuda y baja su
+              saldo (ver Deudas). */}
+          {(muestraDeuda || esPagoSinDestino) && (
             <div ref={deudaRef}>
               <label htmlFor="tx-debt" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">¿Qué deuda pagas?</label>
               <select
@@ -586,12 +633,19 @@ export function TransactionModal({
                 onChange={(e) => setDebtId(e.target.value)}
                 className="saas-input py-1 text-sm"
               >
-                <option value="">Ninguna (solo registrar el gasto)</option>
+                {/* Un pago ya enlazado no vuelve a ser gasto desde aquí: para eso
+                    se cambia el tipo a «Gasto». */}
+                {!esPagoSinDestino && <option value="">Ninguna (solo registrar el gasto)</option>}
+                {debtId && !debts.some((d) => d.id === debtId) && <option value={debtId}>Deuda eliminada</option>}
                 {debts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
-              {debtId && (
+              {debtId ? (
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                  Al guardar, el saldo de «{debts.find((d) => d.id === debtId)?.name}» baja en este monto y el pago queda en su historial.
+                  No cuenta como gasto; baja el saldo de «{debts.find((d) => d.id === debtId)?.name ?? 'la deuda'}» y el pago queda en su historial.
+                </p>
+              ) : (
+                <p className="text-xs text-amber-800 dark:text-amber-300 mt-1">
+                  Contará como gasto y no bajará ninguna deuda.
                 </p>
               )}
             </div>
@@ -654,7 +708,7 @@ export function TransactionModal({
     <ConfirmDialog
       open={isDeleteModalOpen}
       title="¿Eliminar movimiento?"
-      message="Esta acción no se puede deshacer."
+      message={mensajeBorrado}
       confirmLabel="Eliminar"
       onConfirm={handleDelete}
       onCancel={closeDeleteModal}

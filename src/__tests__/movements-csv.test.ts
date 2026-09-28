@@ -130,3 +130,33 @@ describe('movementsToCsv', () => {
     expect(csv).toContain('"Pago ""urgente"""');
   });
 });
+
+describe('movementsToRows — pagos de deuda', () => {
+  it('el tipo es «Pago de deuda» tanto en un expense antiguo como en un transfer con debtId', () => {
+    const filas = movementsToRows(
+      [
+        tx({ id: 'a', date: '2026-08-01', amount: 200, category: 'pago-tarjetas', debtId: 'd1' }),
+        tx({ id: 'b', date: '2026-08-02', type: 'transfer', amount: 300, category: 'transferencia', debtId: 'd1' }),
+        tx({ id: 'c', date: '2026-08-03', amount: 40 }),
+      ],
+      [],
+    );
+    expect(filas.map((f) => f[1])).toEqual(['Pago de deuda', 'Pago de deuda', 'Gasto']);
+  });
+
+  it('el monto del pago va en negativo: no es gasto, pero el dinero sale de una cuenta', () => {
+    const filas = movementsToRows(
+      [
+        tx({ id: 'a', date: '2026-08-01', amount: 200, debtId: 'd1' }),
+        tx({ id: 'b', date: '2026-08-02', type: 'transfer', amount: 300, category: 'transferencia', debtId: 'd1' }),
+      ],
+      [],
+    );
+    expect(filas.map((f) => f[6])).toEqual(['-200.00', '-300.00']);
+  });
+
+  it('una transferencia entre cuentas sigue sin signo', () => {
+    const [fila] = movementsToRows([tx({ type: 'transfer', amount: 500, category: 'transferencia' })], []);
+    expect(fila[6]).toBe('500.00');
+  });
+});
