@@ -42,6 +42,23 @@ const OFFLINE_USER: User = {
 
 type ModoCierre = 'preguntar' | 'descartar' | 'conservar';
 
+/** Cierre global; si falla (sin red), al menos el local: si no, supabase-js
+ *  conserva la sesión y al reabrir se volvería a entrar ya sin los datos. */
+async function cerrarSesionSupabase(cliente: NonNullable<typeof supabase>): Promise<void> {
+  try {
+    const { error } = await cliente.auth.signOut();
+    if (!error) return;
+    console.warn('[useAuth] signOut global falló, se cierra en local:', error);
+  } catch (err: unknown) {
+    console.warn('[useAuth] signOut global falló, se cierra en local:', err);
+  }
+  try {
+    await cliente.auth.signOut({ scope: 'local' });
+  } catch (err: unknown) {
+    console.error('[useAuth] signOut local falló:', err);
+  }
+}
+
 function basicUser(id: string, email: string, firstName?: string, lastName?: string, pendingEmail?: string): User {
   return { id, email, firstName: firstName || '', lastName: lastName || '', pendingEmail };
 }
@@ -416,7 +433,7 @@ export function useAuth() {
       // Antes del SIGNED_OUT: la memoria deja de tener dueño, así su
       // listener no la trata como cambios de la cuenta que conservar.
       fijarDuenoEnMemoria(null);
-      await supabase.auth.signOut();
+      await cerrarSesionSupabase(supabase);
     }
     // Limpiar todo: auth + finanzas (evita cross-contamination entre cuentas)
     syncService.detach();

@@ -106,6 +106,15 @@ describe('signOut con cambios sin subir', () => {
     expect(useAuthStore.getState().user).toBeNull();
   });
 
+  it('"descartar" sin red: si el cierre global falla, cierra la sesión en local', async () => {
+    supabaseMock.auth.signOut.mockResolvedValueOnce({ error: new Error('Failed to fetch') } as never);
+
+    await cerrar('descartar');
+
+    expect(supabaseMock.auth.signOut).toHaveBeenLastCalledWith({ scope: 'local' });
+    expect(useFinanceStore.getState().expenses).toHaveLength(0);
+  });
+
   it('por inactividad ("conservar"): vuelve al login sin borrar los datos locales', async () => {
     await cerrar('conservar');
 
