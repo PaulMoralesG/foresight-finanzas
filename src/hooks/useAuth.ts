@@ -19,7 +19,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { supabase, supabaseAvailable } from '@/config/supabase';
 import { useAuthStore } from '@/stores/authStore';
-import { useFinanceStore } from '@/stores/financeStore';
+import { useFinanceStore, borrarRespaldoMigracion } from '@/stores/financeStore';
 import { syncService, isSchemaError, isTransientSchemaError } from '@/lib/sync';
 import type { User } from '@/types';
 
@@ -330,6 +330,7 @@ export function useAuth() {
     // completo de la cuenta queda en el navegador en texto plano bajo la
     // misma clave que usaría la siguiente cuenta que inicie sesión ahí.
     financeStore.persist.clearStorage();
+    borrarRespaldoMigracion();
   }
 
   /** Guardar datos financieros (no-op en modo offline). Debounced dentro del sync service. */
