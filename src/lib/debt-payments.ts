@@ -11,7 +11,7 @@ import { esTarjeta } from './credit-card';
 import type { Account, Debt, DebtKind, Transaction } from '@/types';
 
 /** Categorías en las que un gasto puede ser el pago de una deuda. */
-export const CATEGORIAS_DE_PAGO = ['pago-tarjetas', 'prestamos'] as const;
+const CATEGORIAS_DE_PAGO = ['pago-tarjetas', 'prestamos'] as const;
 
 export function esCategoriaDePago(category: string): boolean {
   return (CATEGORIAS_DE_PAGO as readonly string[]).includes(category);
@@ -87,7 +87,7 @@ export function gastosSinVincular(debt: Debt, expenses: Transaction[]): Transact
  * sincronizado: no hay columna en BD). Sin entrada —dispositivo que no
  * registró el pago, dato anterior— se revierte el monto completo.
  */
-export interface DescuentoPago {
+interface DescuentoPago {
   /** Lo que bajó `balance`. */
   balance: number;
   /** Lo que bajó `statementBalance`; ausente si la deuda no lo tenía. */
@@ -99,7 +99,7 @@ export interface DescuentoPago {
 export type DescuentosDePago = Record<string, DescuentoPago>;
 
 /** Lo que descontaría hoy un pago de `monto` a esta deuda (acotado a 0). */
-export function descuentoEfectivo(debt: Pick<Debt, 'balance' | 'statementBalance'>, monto: number): DescuentoPago {
+function descuentoEfectivo(debt: Pick<Debt, 'balance' | 'statementBalance'>, monto: number): DescuentoPago {
   const tope = (saldo: number) => roundMoney(Math.max(0, Math.min(monto, saldo)));
   const d: DescuentoPago = { balance: tope(debt.balance) };
   if (debt.statementBalance !== undefined) d.statement = tope(debt.statementBalance);
@@ -194,7 +194,7 @@ export function aplicarCambioDePagos(
   };
 }
 
-export interface PagoDeDeuda {
+interface PagoDeDeuda {
   id: string;
   date: string;
   amount: number;
