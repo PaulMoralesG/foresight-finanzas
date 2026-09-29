@@ -20,6 +20,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { supabase, supabaseAvailable } from '@/config/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useFinanceStore, borrarRespaldoMigracion } from '@/stores/financeStore';
+import { useUiStore } from '@/stores/uiStore';
 import { syncService, isSchemaError, isTransientSchemaError } from '@/lib/sync';
 import { leerDuenoDatos, guardarDuenoDatos, borrarDuenoDatos, esFalloDeRed } from '@/lib/dueno-datos';
 import type { User } from '@/types';
@@ -31,6 +32,8 @@ const OFFLINE_USER: User = {
   firstName: 'Usuario',
   lastName: 'Local',
 };
+
+type ModoCierre = 'preguntar' | 'descartar' | 'conservar';
 
 function basicUser(id: string, email: string, firstName?: string, lastName?: string, pendingEmail?: string): User {
   return { id, email, firstName: firstName || '', lastName: lastName || '', pendingEmail };
@@ -358,10 +361,33 @@ export function useAuth() {
     return data;
   }
 
-  async function signOut() {
+  /**
+   * Cierra la sesión. Si quedan cambios sin subir (sin red, o el sync nunca
+   * se adjuntó), NO borra nada salvo que `modo` lo diga:
+   *   · 'preguntar'  — abre la confirmación de App (uiStore.cierreConPendientes).
+   *   · 'descartar'  — el usuario ya confirmó perderlos: borra todo.
+   *   · 'conservar'  — cierre por inactividad: vuelve al login y guarda los
+   *                    datos locales hasta que la misma cuenta vuelva a entrar.
+   */
+  async function signOut(modo: ModoCierre = 'preguntar') {
     if (supabase) {
       // ALT-3: flush del último cambio ANTES de invalidar el token
-      await syncService.flush();
+      let subido = false;
+      if (modo !== 'descartar') {
+        try {
+          subido = syncService.adjuntado() && (await syncService.flush());
+        } catch (err: unknown) {
+          console.error('[useAuth] flush() antes de cerrar sesión falló:', err);
+        }
+      }
+      if (!subido && modo === 'preguntar') {
+        useUiStore.getState().setCierreConPendientes(true);
+        return;
+      }
+      if (!subido && modo === 'conservar') {
+        await cerrarConservandoDatos(supabase);
+        return;
+      }
       await supabase.auth.signOut();
     }
     // Limpiar todo: auth + finanzas (evita cross-contamination entre cuentas)
@@ -375,6 +401,31 @@ export function useAuth() {
     financeStore.persist.clearStorage();
     borrarRespaldoMigracion();
     borrarDuenoDatos();
+  }
+
+  /** Vuelve al login sin borrar el estado local ni su copia persistida. La
+   *  marca `conservarDatos` evita que el SIGNED_OUT y el próximo arranque sin
+   *  sesión lo reinicien; si entra otra cuenta, loadProfile sí lo borra. */
+  async function cerrarConservandoDatos(cliente: NonNullable<typeof supabase>) {
+    const actual = useAuthStore.getState().user;
+    const dueno = leerDuenoDatos();
+    if (actual) {
+      guardarDuenoDatos({
+        ...(dueno?.id === actual.id ? dueno : {}),
+        id: actual.id,
+        email: actual.email,
+        conservarDatos: true,
+      });
+    }
+    try {
+      // 'local': sin red no se puede revocar en el servidor, y no hace falta
+      // esperar a un timeout para bloquear la pantalla.
+      await cliente.auth.signOut({ scope: 'local' });
+    } catch (err: unknown) {
+      console.error('[useAuth] signOut local falló:', err);
+    }
+    syncService.detach();
+    clearUser();
   }
 
   /** Guardar datos financieros (no-op en modo offline). Debounced dentro del sync service. */

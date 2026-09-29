@@ -217,7 +217,7 @@ export function Header() {
       <ConfirmDialog
         open={showSignOutConfirm}
         title="Cerrar sesión"
-        message="¿Estás seguro? Los datos no sincronizados se guardarán localmente y se enviarán cuando vuelvas a iniciar sesión."
+        message="¿Estás seguro? Antes de salir se sincronizarán tus cambios; si alguno no se puede subir, te avisaremos antes de borrar nada."
         confirmLabel="Cerrar sesión"
         onConfirm={confirmSignOut}
         onCancel={() => setShowSignOutConfirm(false)}
