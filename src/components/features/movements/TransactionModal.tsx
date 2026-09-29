@@ -94,10 +94,18 @@ export function TransactionModal({
     if (muestraDeuda) deudaRef.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
   }, [muestraDeuda]);
 
-  /** Deuda cuyo tipo encaja con la categoría de pago elegida (o '' si no hay). */
+  /**
+   * Deuda cuyo tipo encaja con la categoría de pago elegida, o '' si no hay
+   * ninguna o si hay más de una (dos tarjetas, dos préstamos): ahí no hay
+   * forma de adivinar cuál quiso el usuario por el `kind` solo, así que se
+   * deja sin elegir en vez de preseleccionar la primera del array — eso fue
+   * justo el bug real: con «Tarjeta Pacífico» y «Tarjeta Pichincha», un pago
+   * quedaba vinculado en silencio a la que apareciera primero.
+   */
   function deudaSugerida(categoryId: string): string {
     if (!esCategoriaDePago(categoryId)) return '';
-    return debts.find((d) => categoriaDePago(d.kind) === categoryId)?.id ?? '';
+    const candidatas = debts.filter((d) => categoriaDePago(d.kind) === categoryId);
+    return candidatas.length === 1 ? candidatas[0].id : '';
   }
 
   function elegirCategoria(categoryId: string) {

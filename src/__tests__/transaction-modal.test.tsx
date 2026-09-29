@@ -291,6 +291,41 @@ describe('TransactionModal — pago de una deuda (un pago no es gasto)', () => {
     expect(screen.getByLabelText('¿Qué deuda pagas?')).toHaveValue(prestamo);
   });
 
+  it('con dos tarjetas no preselecciona ninguna: hay ambigüedad real y debe elegir el usuario', async () => {
+    // Bug real: con «Tarjeta Pacífico» y «Tarjeta Pichincha», preseleccionar
+    // la primera del array vinculaba en silencio el pago a la tarjeta
+    // equivocada cuando el usuario no tocaba el selector a mano.
+    const user = userEvent.setup();
+    nuevaDeuda({ name: 'Tarjeta Pacífico' });
+    nuevaDeuda({ name: 'Tarjeta Pichincha' });
+    abrirModal();
+    montar();
+
+    await user.type(screen.getByLabelText(/Monto/i), '250');
+    await clicCategoria(/Pago de Tarjetas/);
+
+    expect(screen.getByLabelText('¿Qué deuda pagas?')).toHaveValue('');
+    expect(screen.getByText(/Contará como gasto y no bajará ninguna deuda/)).toBeInTheDocument();
+  });
+
+  it('con ambigüedad y sin elegir deuda, guarda un gasto normal en vez de un pago sin deuda', async () => {
+    // La preselección vacía no debe colarse como transferencia con debtId=''.
+    const user = userEvent.setup();
+    nuevaDeuda({ name: 'Tarjeta Pacífico' });
+    nuevaDeuda({ name: 'Tarjeta Pichincha' });
+    abrirModal();
+    montar();
+
+    await user.type(screen.getByLabelText(/Monto/i), '250');
+    await clicCategoria(/Pago de Tarjetas/);
+    await user.click(screen.getByRole('button', { name: 'Registrar movimiento' }));
+
+    const [tx] = useFinanceStore.getState().expenses;
+    expect(tx).toMatchObject({ type: 'expense', category: 'pago-tarjetas' });
+    expect(tx.debtId).toBeUndefined();
+    expect(useFinanceStore.getState().debts.every((d) => d.balance === 1000)).toBe(true);
+  });
+
   it('con «Ninguna» guarda un gasto normal sin debtId, avisa y no baja ninguna deuda', async () => {
     const user = userEvent.setup();
     nuevaDeuda();
