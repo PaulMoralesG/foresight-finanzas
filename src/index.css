@@ -480,10 +480,9 @@ textarea {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  /* El esqueleto de carga sí conserva su pulso: comunica "esto está cargando"
-     y es una atenuación suave, no un desplazamiento. La excepción apuntaba a
-     `.saas-skeleton`, una clase que ya no usaba nadie —el componente Skeleton
-     usa `animate-pulse`—, así que en la práctica el pulso quedaba congelado. */
+  /* El esqueleto de carga (Skeleton, con `animate-pulse`) sí conserva su pulso:
+     comunica "esto está cargando" y es una atenuación suave, no un
+     desplazamiento. */
   .animate-pulse {
     animation-duration: 1.5s !important;
     animation-iteration-count: infinite !important;
