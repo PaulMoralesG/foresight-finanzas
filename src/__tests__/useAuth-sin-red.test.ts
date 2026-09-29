@@ -106,6 +106,15 @@ describe('useAuthSession sin red', () => {
     expect(leerDuenoDatos()?.id).toBe('u1');
   });
 
+  it('fallo de red sin dueño registrado: reinicia, para que otra cuenta no adopte esos datos', async () => {
+    sb.errorSesion = new AuthRetryableFetchError('Failed to fetch', 0);
+
+    await arrancar();
+
+    expect(useFinanceStore.getState().expenses).toHaveLength(0);
+    expect(useAuthStore.getState().user).toBeNull();
+  });
+
   it('sin sesión de verdad (sin error de red), sigue limpiando', async () => {
     guardarDuenoDatos({ id: 'u1', email: 'ana@example.com' });
 

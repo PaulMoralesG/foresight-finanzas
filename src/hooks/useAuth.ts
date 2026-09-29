@@ -119,8 +119,10 @@ export function useAuthSession(): void {
       const dueno = leerDuenoDatos();
       syncService.detach();
       sesionCargadaPara = null;
-      if (error && esFalloDeRed(error)) {
-        setUser(dueno ? basicUser(dueno.id, dueno.email, dueno.firstName, dueno.lastName) : null);
+      // Sin dueño registrado no se sabe de quién son los datos: se conservan
+      // solo si lo hay, o la siguiente cuenta que entrara los adoptaría.
+      if (dueno && error && esFalloDeRed(error)) {
+        setUser(basicUser(dueno.id, dueno.email, dueno.firstName, dueno.lastName));
         setLoading(false);
         return;
       }
