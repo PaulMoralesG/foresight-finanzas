@@ -127,14 +127,40 @@ describe('useAuthSession sin red', () => {
     expect(useAuthStore.getState().user).toBeNull();
   });
 
-  it('sin sesión de verdad (sin error de red), sigue limpiando', async () => {
+  // Arranque real: la memoria acaba de hidratarse del disco (su dueño es el
+  // guardado) y syncService arranca con cambiosSinSubir=true, porque no sabe
+  // si lo persistido se editó sin red. Una sesión inválida conserva entonces
+  // los datos marcados; no hay fuga: si entra otra cuenta, loadProfile reinicia.
+  it('sesión inválida al arrancar con datos del dueño: los conserva marcados, sin sesión', async () => {
     guardarDuenoDatos({ id: 'u1', email: 'ana@example.com' });
+    fijarDuenoEnMemoria('u1');
+    mocks.hayCambiosSinSubir.mockReturnValue(true);
+
+    await arrancar();
+
+    expect(useAuthStore.getState().user).toBeNull();
+    expect(useFinanceStore.getState().expenses).toHaveLength(1);
+    expect(leerDuenoDatos()).toMatchObject({ id: 'u1', conservarDatos: true });
+  });
+
+  it('…y si después entra otra cuenta, esos datos se borran', async () => {
+    guardarDuenoDatos({ id: 'u1', email: 'ana@example.com', conservarDatos: true });
+    fijarDuenoEnMemoria('u1');
+    sb.sesion = { user: { id: 'u2', email: 'bea@example.com', user_metadata: {}, new_email: undefined } };
+
+    await arrancar();
+
+    expect(useFinanceStore.getState().expenses).toHaveLength(0);
+    expect(leerDuenoDatos()?.id).toBe('u2');
+  });
+
+  it('sesión inválida y datos sin dueño (ni en disco ni en memoria): limpia', async () => {
+    mocks.hayCambiosSinSubir.mockReturnValue(true);
 
     await arrancar();
 
     expect(useFinanceStore.getState().expenses).toHaveLength(0);
     expect(useAuthStore.getState().user).toBeNull();
-    expect(leerDuenoDatos()).toBeNull();
     expect(localStorage.getItem(CLAVE_RESPALDO_MIGRACION)).toBeNull();
   });
 
