@@ -685,6 +685,7 @@ export const useFinanceStore = create<FinanceState>()(
               toAccountId: regla.toAccountId ?? null,
               recurrenceId: regla.id,
               created_at: nowIso(),
+              // Compromiso aceptado: generada sin red, pisa una edición/borrado de otro dispositivo (gana el updated_at más nuevo).
               updated_at: nowIso(),
             });
           }
