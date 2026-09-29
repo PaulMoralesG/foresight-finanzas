@@ -12,6 +12,7 @@ import { mergeById, mergeBudgets, hidratarAusentes, type MergeSet } from '@/lib/
 import { nowIso } from '@/lib/ids';
 import { reportarError } from '@/lib/error-reporter';
 import { getTodayISO } from '@/lib/utils';
+import { esFalloDeRed } from '@/lib/dueno-datos';
 import {
   shouldImportLegacy,
   buildImportRows,
@@ -514,6 +515,8 @@ let initialized = false;
 // Hay datos locales que ningún ciclo ha confirmado en el servidor. Arranca en
 // true: lo persistido pudo editarse sin red en una sesión anterior.
 let cambiosSinSubir = true;
+// Error con el que terminó el último ciclo fallido (tras agotar reintentos).
+let ultimoErrorDeCiclo: unknown = null;
 
 // ── Marca de agua del ciclo (DAT-01) ──
 //
@@ -1270,6 +1273,7 @@ async function pushWithRetry(uid: string, fullPush = false): Promise<boolean> {
       }
     }
   }
+  ultimoErrorDeCiclo = lastError;
   console.error('[sync] Todos los reintentos fallaron:', lastError);
   reportarErrorSync(lastError, 'reintentos-agotados');
   return false;
@@ -1417,6 +1421,9 @@ export const syncService = {
         useUiStore.getState().setSyncState('error');
         reportarErrorSync(err, 'attach-fallo');
       }
+      if (fallaSinRemedio(err) && userId === uid) {
+        useUiStore.getState().setPrimerSyncCompleto(true);
+      }
     }
   },
 
@@ -1543,6 +1550,27 @@ export const syncService = {
   },
 };
 
+/**
+ * El ciclo no va a poder hacer el pull pronto: sin red, o un error que no se
+ * arregla reintentando (RLS/permisos, JWT rechazado). Entonces se deja
+ * materializar recurrencias como en modo offline, en vez de no generarlas
+ * nunca. Un error de servidor con red NO cuenta: el siguiente ciclo puede
+ * traer ediciones de otro dispositivo sobre esas ocurrencias.
+ */
+function fallaSinRemedio(err: unknown): boolean {
+  if (!err) return false;
+  if (esFalloDeRed(err)) return true;
+  if (typeof err !== 'object') return false;
+  const e = err as { code?: unknown; status?: unknown };
+  return (
+    e.code === '42501' ||
+    e.code === 'PGRST301' ||
+    e.code === 'PGRST303' ||
+    e.status === 401 ||
+    e.status === 403
+  );
+}
+
 async function performPush(fullPush = false): Promise<boolean> {
   if (pushInFlight) {
     queuedAfterPush = true;
@@ -1555,6 +1583,7 @@ async function performPush(fullPush = false): Promise<boolean> {
 
   pushInFlight = (async (): Promise<boolean> => {
     let ok = false;
+    ultimoErrorDeCiclo = null;
     useUiStore.getState().setSyncState('syncing');
     try {
       isSyncing = true;
@@ -1574,7 +1603,7 @@ async function performPush(fullPush = false): Promise<boolean> {
         useUiStore.getState().setSyncState(ok ? 'idle' : 'error');
       }
       // Un detach en pleno ciclo ya soltó al usuario: no marcar su sesión.
-      if ((ok || syncDisabled) && userId === uid) {
+      if ((ok || syncDisabled || fallaSinRemedio(ultimoErrorDeCiclo)) && userId === uid) {
         useUiStore.getState().setPrimerSyncCompleto(true);
       }
       if (queuedAfterPush) {
