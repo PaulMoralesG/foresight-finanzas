@@ -3,7 +3,7 @@
 // ================================================================
 
 import { useState, useEffect, useRef } from 'react';
-import { Sun, Moon, Settings, LogOut, Wifi, WifiOff, Loader2, CloudOff } from '@/components/ui/icons.generated';
+import { Settings, LogOut, Wifi, WifiOff, Loader2, CloudOff } from '@/components/ui/icons.generated';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,14 +12,13 @@ import { supabaseAvailable } from '@/config/supabase';
 import { userInitials } from '@/lib/utils';
 import { vistaPorId } from '@/config/views';
 import { AmbitoSegmentado } from '@/components/layout/AmbitoSegmentado';
+import { DarkModeToggle } from '@/components/ui/DarkModeToggle';
 
 /** Vistas sin ámbito: cuentas y patrimonio no se etiquetan; ajustes es global. */
 const SIN_AMBITO = new Set(['accounts', 'networth', 'settings']);
 
 export function Header() {
   const activeTab = useUiStore((s) => s.activeTab);
-  const isDark = useUiStore((s) => s.isDark);
-  const toggleDarkMode = useUiStore((s) => s.toggleDarkMode);
   // isOnline = conectividad de red (navigator.onLine).
   // syncState = resultado REAL del último push a Supabase (lo controla
   // syncService, no este componente). Antes el indicador solo miraba
@@ -148,19 +147,7 @@ export function Header() {
             )}
 
             {/* Dark mode toggle pill */}
-            <button
-              onClick={toggleDarkMode}
-              className="dark-mode-pill"
-              aria-label={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-              title={isDark ? 'Modo claro' : 'Modo oscuro'}
-            >
-              <span className={`dark-mode-pill-option ${!isDark ? 'active' : ''}`}>
-                <Sun className="w-3.5 h-3.5" />
-              </span>
-              <span className={`dark-mode-pill-option ${isDark ? 'active' : ''}`}>
-                <Moon className="w-3.5 h-3.5" />
-              </span>
-            </button>
+            <DarkModeToggle />
 
             {/* User avatar */}
             {user && (

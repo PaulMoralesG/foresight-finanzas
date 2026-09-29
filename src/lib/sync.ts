@@ -1093,7 +1093,7 @@ async function upsert(
 }
 
 /** ¿Violación de NOT NULL (23502)? */
-export function esViolacionNotNull(err: unknown): boolean {
+function esViolacionNotNull(err: unknown): boolean {
   return (err as { code?: string } | null)?.code === '23502';
 }
 

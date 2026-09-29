@@ -3,20 +3,19 @@
 // ================================================================
 
 import { useState, type FormEvent } from 'react';
-import { TrendingUp, Sun, Moon, MailCheck, Loader2, ArrowLeft, Gauge, FileText, PiggyBank, Smartphone } from '@/components/ui/icons.generated';
+import { TrendingUp, MailCheck, Loader2, ArrowLeft, Gauge, FileText, PiggyBank, Smartphone } from '@/components/ui/icons.generated';
 import { LoginForm } from '@/components/features/auth/LoginForm';
 import { SignUpForm } from '@/components/features/auth/SignUpForm';
 import { useAuth } from '@/hooks/useAuth';
 import { useUiStore } from '@/stores/uiStore';
 import { Toast } from '@/components/ui/Toast';
+import { DarkModeToggle } from '@/components/ui/DarkModeToggle';
 
 type Mode = 'login' | 'signup' | 'forgot';
 
 export function LoginPage() {
   const [mode, setMode] = useState<Mode>('login');
   const { resetPassword } = useAuth();
-  const isDark = useUiStore((s) => s.isDark);
-  const toggleDarkMode = useUiStore((s) => s.toggleDarkMode);
   const addToast = useUiStore((s) => s.addToast);
 
   // ── Forgot password state ──
@@ -136,19 +135,7 @@ export function LoginPage() {
         <div className="w-full max-w-sm">
           {/* Toggle de tema en la esquina del viewport (donde vive en la app) */}
           <div className="fixed top-4 right-4 z-sticky pt-safe">
-            <button
-              onClick={toggleDarkMode}
-              className="dark-mode-pill"
-              aria-label={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-              title={isDark ? 'Modo claro' : 'Modo oscuro'}
-            >
-              <span className={`dark-mode-pill-option ${!isDark ? 'active' : ''}`}>
-                <Sun className="w-3.5 h-3.5" />
-              </span>
-              <span className={`dark-mode-pill-option ${isDark ? 'active' : ''}`}>
-                <Moon className="w-3.5 h-3.5" />
-              </span>
-            </button>
+            <DarkModeToggle />
           </div>
 
           {/* Mobile brand (shown only on small screens) */}
