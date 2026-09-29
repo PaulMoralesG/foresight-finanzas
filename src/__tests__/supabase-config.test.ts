@@ -8,7 +8,7 @@
 // ================================================================
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchConTimeout, SUPABASE_REQUEST_TIMEOUT_MS } from '@/config/supabase';
+import { fetchConTimeout, SUPABASE_REQUEST_TIMEOUT_MS, claveSesionAuth, olvidarSesionGuardada } from '@/config/supabase';
 
 describe('fetchConTimeout', () => {
   const fetchOriginal = global.fetch;
@@ -58,5 +58,25 @@ describe('fetchConTimeout', () => {
     const controller = new AbortController();
     controller.abort();
     await expect(fetchConTimeout('https://example.com', { signal: controller.signal })).rejects.toThrow();
+  });
+});
+
+// Sin red, supabase-js sale de signOut sin borrar la sesión guardada si el
+// token caducó: al reabrir con red, el refresco volvía a entrar sin contraseña.
+describe('olvidarSesionGuardada', () => {
+  it('la clave es la misma que supabase-js usa por defecto (no desloguea a nadie)', () => {
+    expect(claveSesionAuth('https://abcdefgh.supabase.co')).toBe('sb-abcdefgh-auth-token');
+  });
+
+  it('borra solo la sesión de Auth y su code-verifier', () => {
+    localStorage.setItem('sb-abcdefgh-auth-token', '{"access_token":"x"}');
+    localStorage.setItem('sb-abcdefgh-auth-token-code-verifier', 'v');
+    localStorage.setItem('foresight-finance-storage', '{"state":{}}');
+
+    olvidarSesionGuardada('sb-abcdefgh-auth-token');
+
+    expect(localStorage.getItem('sb-abcdefgh-auth-token')).toBeNull();
+    expect(localStorage.getItem('sb-abcdefgh-auth-token-code-verifier')).toBeNull();
+    expect(localStorage.getItem('foresight-finance-storage')).toBe('{"state":{}}');
   });
 });

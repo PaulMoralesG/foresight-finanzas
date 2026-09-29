@@ -31,9 +31,12 @@ const supabaseMock = vi.hoisted(() => ({
   },
 }));
 
+const olvidarSesionGuardada = vi.hoisted(() => vi.fn());
+
 vi.mock('@/config/supabase', () => ({
   supabase: supabaseMock,
   supabaseAvailable: true,
+  olvidarSesionGuardada,
 }));
 
 import { useAuth, useAuthSession } from '@/hooks/useAuth';
@@ -49,7 +52,8 @@ beforeEach(() => {
   mocks.flush.mockReset().mockResolvedValue(false);
   mocks.adjuntado.mockReset().mockReturnValue(true);
   mocks.hayCambiosSinSubir.mockReset().mockReturnValue(false);
-  supabaseMock.auth.signOut.mockClear();
+  supabaseMock.auth.signOut.mockReset().mockResolvedValue({ error: null });
+  olvidarSesionGuardada.mockClear();
   useUiStore.setState({ cierreConPendientes: false });
   useAuthStore.setState({ user: { id: 'u1', email: 'ana@example.com', firstName: 'Ana', lastName: '' }, isLoading: false });
   guardarDuenoDatos({ id: 'u1', email: 'ana@example.com' });
@@ -151,5 +155,30 @@ describe('signOut con cambios sin subir', () => {
     expect(useUiStore.getState().cierreConPendientes).toBe(false);
     expect(useFinanceStore.getState().expenses).toHaveLength(0);
     expect(localStorage.getItem(CLAVE)).toBeNull();
+  });
+
+  it('"descartar" sin red y con el token caducado: borra a mano la sesión guardada', async () => {
+    const red = { error: new Error('Failed to fetch') } as never;
+    supabaseMock.auth.signOut.mockResolvedValueOnce(red).mockResolvedValueOnce(red);
+
+    await cerrar('descartar');
+
+    expect(olvidarSesionGuardada).toHaveBeenCalled();
+    expect(useFinanceStore.getState().expenses).toHaveLength(0);
+  });
+
+  it('"conservar" sin red y con el token caducado: borra la sesión, no los datos', async () => {
+    supabaseMock.auth.signOut.mockRejectedValueOnce(new Error('Failed to fetch'));
+
+    await cerrar('conservar');
+
+    expect(olvidarSesionGuardada).toHaveBeenCalled();
+    expect(useFinanceStore.getState().expenses).toHaveLength(1);
+  });
+
+  it('si el cierre local va bien, no toca la clave de sesión a mano', async () => {
+    await cerrar('conservar');
+
+    expect(olvidarSesionGuardada).not.toHaveBeenCalled();
   });
 });
