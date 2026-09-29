@@ -16,10 +16,16 @@ const mocks = vi.hoisted(() => ({
   attach: vi.fn(() => Promise.resolve()),
   detach: vi.fn(),
   disable: vi.fn(),
+  hayCambiosSinSubir: vi.fn(() => false),
 }));
 
 vi.mock('@/lib/sync', () => ({
-  syncService: { attach: mocks.attach, detach: mocks.detach, disable: mocks.disable },
+  syncService: {
+    attach: mocks.attach,
+    detach: mocks.detach,
+    disable: mocks.disable,
+    hayCambiosSinSubir: mocks.hayCambiosSinSubir,
+  },
   isSchemaError: () => false,
   isTransientSchemaError: () => false,
 }));
@@ -29,12 +35,16 @@ const sb = vi.hoisted(() => ({
   sesion: null as unknown,
   errorSesion: null as unknown,
   perfil: { data: null, error: null } as Resultado,
+  alCambiarSesion: null as ((evento: string, sesion: unknown) => Promise<void> | void) | null,
 }));
 
 const supabaseMock = vi.hoisted(() => ({
   auth: {
     getSession: vi.fn(() => Promise.resolve({ data: { session: sb.sesion }, error: sb.errorSesion })),
-    onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
+    onAuthStateChange: vi.fn((cb: (evento: string, sesion: unknown) => Promise<void> | void) => {
+      sb.alCambiarSesion = cb;
+      return { data: { subscription: { unsubscribe: vi.fn() } } };
+    }),
   },
   from: vi.fn(() => ({
     select: vi.fn(() => ({
@@ -71,6 +81,7 @@ function conGastoSinSubir() {
 beforeEach(() => {
   localStorage.clear();
   mocks.attach.mockClear();
+  mocks.hayCambiosSinSubir.mockReset().mockReturnValue(false);
   sb.sesion = null;
   sb.errorSesion = null;
   sb.perfil = { data: { email: 'ana@example.com', first_name: 'Ana', last_name: 'Pérez' }, error: null };
@@ -158,5 +169,31 @@ describe('useAuthSession sin red', () => {
 
     expect(useFinanceStore.getState().expenses).toHaveLength(0);
     expect(duenoEnMemoria()).toBe('u1');
+  });
+
+  it('SIGNED_OUT remoto con cambios sin subir del mismo dueño: conserva los datos', async () => {
+    guardarDuenoDatos({ id: 'u1', email: 'ana@example.com' });
+    fijarDuenoEnMemoria('u1');
+    sb.sesion = sesionU1;
+    await arrancar();
+    mocks.hayCambiosSinSubir.mockReturnValue(true);
+
+    await act(async () => { await sb.alCambiarSesion?.('SIGNED_OUT', null); });
+
+    expect(useAuthStore.getState().user).toBeNull();
+    expect(useFinanceStore.getState().expenses).toHaveLength(1);
+    expect(leerDuenoDatos()).toMatchObject({ id: 'u1', conservarDatos: true });
+  });
+
+  it('SIGNED_OUT remoto sin nada pendiente: limpia como siempre', async () => {
+    guardarDuenoDatos({ id: 'u1', email: 'ana@example.com' });
+    fijarDuenoEnMemoria('u1');
+    sb.sesion = sesionU1;
+    await arrancar();
+
+    await act(async () => { await sb.alCambiarSesion?.('SIGNED_OUT', null); });
+
+    expect(useFinanceStore.getState().expenses).toHaveLength(0);
+    expect(leerDuenoDatos()).toBeNull();
   });
 });
