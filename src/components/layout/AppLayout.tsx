@@ -12,6 +12,7 @@ import { Toast } from '@/components/ui/Toast';
 import { useUiStore } from '@/stores/uiStore';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { supabaseAvailable } from '@/config/supabase';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -36,19 +37,25 @@ export function AppLayout({ children }: AppLayoutProps) {
   // efecto que dependa de `recurrences` o `expenses`: materializar escribe en
   // esos mismos campos, así que esa dependencia sería un bucle de render.
   // La función es idempotente, de modo que llamarla de más no duplica nada.
+  //
+  // Con Supabase, no antes de que termine el primer ciclo de sync: otro
+  // dispositivo pudo editar o borrar una ocurrencia, y regenerarla aquí con el
+  // mismo id y un `updated_at` más nuevo le ganaría el merge a ese cambio.
+  const puedeMaterializar = useUiStore((s) => !supabaseAvailable || s.primerSyncCompleto);
   useEffect(() => {
     let corriendo = false;
     const alDia = () => {
       if (corriendo) return;
-      corriendo = true;
       ensureCurrentMonth();
+      if (!puedeMaterializar) return;
+      corriendo = true;
       void materializarRecurrencias().finally(() => { corriendo = false; });
     };
     alDia();
     const alVolver = () => { if (document.visibilityState === 'visible') alDia(); };
     document.addEventListener('visibilitychange', alVolver);
     return () => document.removeEventListener('visibilitychange', alVolver);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [puedeMaterializar]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div
