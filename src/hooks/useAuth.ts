@@ -21,7 +21,7 @@ import { supabase, supabaseAvailable } from '@/config/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useFinanceStore, borrarRespaldoMigracion } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { syncService, isSchemaError, isTransientSchemaError } from '@/lib/sync';
+import { syncService, isSchemaError, isTransientSchemaError, borrarMarcaDeAgua } from '@/lib/sync';
 import {
   leerDuenoDatos,
   guardarDuenoDatos,
@@ -160,6 +160,7 @@ export function useAuthSession(): void {
       }
       // ALT-1: sin sesión → limpiar todo (evita contaminación entre cuentas)
       financeStore.getState().reset();
+      borrarRespaldoMigracion();
       fijarDuenoEnMemoria(null);
       borrarDuenoDatos();
       setUser(null);
@@ -175,6 +176,7 @@ export function useAuthSession(): void {
       if ((dueno && dueno.id !== uid) || (enMemoria && enMemoria !== uid)) {
         syncService.detach();
         financeStore.getState().reset();
+        borrarRespaldoMigracion();
       }
       fijarDuenoEnMemoria(uid);
       guardarDuenoDatos({ id: uid, email, firstName: metaFirst, lastName: metaLast });
@@ -411,6 +413,7 @@ export function useAuth() {
    *                    datos locales hasta que la misma cuenta vuelva a entrar.
    */
   async function signOut(modo: ModoCierre = 'preguntar') {
+    const saliente = useAuthStore.getState().user?.id;
     if (supabase) {
       // ALT-3: flush del último cambio ANTES de invalidar el token
       let subido = false;
@@ -448,6 +451,7 @@ export function useAuth() {
     financeStore.persist.clearStorage();
     borrarRespaldoMigracion();
     borrarDuenoDatos();
+    if (saliente) borrarMarcaDeAgua(saliente);
   }
 
   /** Vuelve al login sin borrar el estado local ni su copia persistida. La

@@ -60,7 +60,7 @@ vi.mock('@/config/supabase', () => ({
 
 import { useAuthSession } from '@/hooks/useAuth';
 import { useAuthStore } from '@/stores/authStore';
-import { useFinanceStore } from '@/stores/financeStore';
+import { useFinanceStore, CLAVE_RESPALDO_MIGRACION } from '@/stores/financeStore';
 import { guardarDuenoDatos, leerDuenoDatos, duenoEnMemoria, fijarDuenoEnMemoria } from '@/lib/dueno-datos';
 
 const sesionU1 = { user: { id: 'u1', email: 'ana@example.com', user_metadata: {}, new_email: undefined } };
@@ -88,6 +88,7 @@ beforeEach(() => {
   useAuthStore.setState({ user: null, isLoading: true });
   fijarDuenoEnMemoria(null);
   conGastoSinSubir();
+  localStorage.setItem(CLAVE_RESPALDO_MIGRACION, '{"state":{},"version":7}');
   vi.spyOn(console, 'error').mockImplementation(() => {});
   vi.spyOn(console, 'warn').mockImplementation(() => {});
 });
@@ -134,6 +135,7 @@ describe('useAuthSession sin red', () => {
     expect(useFinanceStore.getState().expenses).toHaveLength(0);
     expect(useAuthStore.getState().user).toBeNull();
     expect(leerDuenoDatos()).toBeNull();
+    expect(localStorage.getItem(CLAVE_RESPALDO_MIGRACION)).toBeNull();
   });
 
   it('si entra otra cuenta distinta a la dueña de los datos locales, los borra', async () => {
@@ -143,6 +145,7 @@ describe('useAuthSession sin red', () => {
     await arrancar();
 
     expect(useFinanceStore.getState().expenses).toHaveLength(0);
+    expect(localStorage.getItem(CLAVE_RESPALDO_MIGRACION)).toBeNull();
     expect(useAuthStore.getState().user).toMatchObject({ id: 'u1' });
     expect(leerDuenoDatos()?.id).toBe('u1');
   });

@@ -554,6 +554,14 @@ function watermarkKey(uid: string): string {
   return `foresight-sync-watermark:${uid}`;
 }
 
+/** Logout: borra la marca de agua de `uid` aunque el sync nunca se adjuntara
+ *  (arranque sin red), caso en que detach() no sabe de qué usuario es. */
+export function borrarMarcaDeAgua(uid: string): void {
+  try {
+    localStorage.removeItem(watermarkKey(uid));
+  } catch { /* modo privado, cuota llena: nada que borrar */ }
+}
+
 function loadWatermark(uid: string): string | null {
   try {
     return localStorage.getItem(watermarkKey(uid));
