@@ -17,10 +17,10 @@ const mocks = vi.hoisted(() => ({
   disable: vi.fn(),
 }));
 
-vi.mock('@/lib/sync', () => ({
+// El resto del módulo real (borrarMarcaDeAgua) sí se usa: solo se sustituye el servicio.
+vi.mock('@/lib/sync', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/sync')>()),
   syncService: mocks,
-  isSchemaError: () => false,
-  isTransientSchemaError: () => false,
 }));
 
 const supabaseMock = vi.hoisted(() => ({
@@ -38,7 +38,7 @@ vi.mock('@/config/supabase', () => ({
 
 import { useAuth, useAuthSession } from '@/hooks/useAuth';
 import { useAuthStore } from '@/stores/authStore';
-import { useFinanceStore } from '@/stores/financeStore';
+import { useFinanceStore, CLAVE_RESPALDO_MIGRACION } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { guardarDuenoDatos, leerDuenoDatos } from '@/lib/dueno-datos';
 
@@ -96,9 +96,14 @@ describe('signOut con cambios sin subir', () => {
     expect(useFinanceStore.getState().expenses).toHaveLength(1);
   });
 
-  it('confirmado ("descartar"): borra estado, almacenamiento y dueño', async () => {
+  it('confirmado ("descartar"): borra estado, almacenamiento, dueño, respaldo y marca de agua', async () => {
+    localStorage.setItem(CLAVE_RESPALDO_MIGRACION, '{"state":{},"version":7}');
+    localStorage.setItem('foresight-sync-watermark:u1', '2026-09-01T00:00:00.000Z');
+
     await cerrar('descartar');
 
+    expect(localStorage.getItem(CLAVE_RESPALDO_MIGRACION)).toBeNull();
+    expect(localStorage.getItem('foresight-sync-watermark:u1')).toBeNull();
     expect(supabaseMock.auth.signOut).toHaveBeenCalled();
     expect(useFinanceStore.getState().expenses).toHaveLength(0);
     expect(localStorage.getItem(CLAVE)).toBeNull();
