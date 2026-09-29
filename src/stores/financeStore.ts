@@ -381,6 +381,32 @@ function migrateV13(state: Record<string, unknown>): Record<string, unknown> {
   return state;
 }
 
+/** Pasos de la cadena posteriores a v8: [versión que introduce, migración]. */
+const MIGRACIONES: ReadonlyArray<readonly [number, (state: Record<string, unknown>) => Record<string, unknown>]> = [
+  [9, migrateV9],
+  [10, migrateV10],
+  [11, migrateV11],
+  [12, migrateV12],
+  [13, migrateV13],
+  [14, migrateV14],
+  [15, migrateV15],
+  [16, migrateV16],
+];
+
+/**
+ * Migración incremental: cada paso corre solo si la versión persistida es
+ * anterior a la que lo introduce. Re-aplicar un paso ya aplicado no es
+ * inocuo: migrateV15 revincularía un pago que el usuario desvinculó a mano.
+ * migrateV8 recoge además todo lo anterior a v8 (v5→v6, v6→v7).
+ */
+function migrarEstadoPersistido(persistedState: unknown, version: number): Record<string, unknown> {
+  let state = version < 8 ? migrateV8(persistedState) : ((persistedState ?? {}) as Record<string, unknown>);
+  for (const [introducida, paso] of MIGRACIONES) {
+    if (version < introducida) state = paso(state);
+  }
+  return state;
+}
+
 export const useFinanceStore = create<FinanceState>()(
   persist(
     (set, get) => ({
@@ -868,9 +894,9 @@ export const useFinanceStore = create<FinanceState>()(
     {
       name: 'foresight-finance-storage',
       version: 16,
-      migrate: (persistedState: unknown, _version: number) => {
+      migrate: (persistedState: unknown, version: number) => {
         try {
-          return migrateV16(migrateV15(migrateV14(migrateV13(migrateV12(migrateV11(migrateV10(migrateV9(migrateV8(persistedState)))))))));
+          return migrarEstadoPersistido(persistedState, version);
         } catch (err) {
           // Estado inesperado: arrancar limpio antes que romper la app
           console.error('[financeStore] Migración de estado persistido fallida — reseteando:', err);
