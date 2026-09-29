@@ -22,14 +22,9 @@ import { CardHeader } from '@/components/ui/CardHeader';
 import { describirRegla, proximaFecha } from '@/lib/recurrence';
 import { filtrarPorAmbito } from '@/lib/ambito';
 import { useAmbito } from '@/hooks/useAmbito';
-import { formatMoney, getTodayISO, safeParseDate, syncToCloud, LOCALE } from '@/lib/utils';
+import { formatMoney, getTodayISO, syncToCloud, formatFechaConAnio } from '@/lib/utils';
 import { getCategoryById } from '@/config/categories';
 import type { Recurrence } from '@/types';
-
-/** '2026-10-03' → '3 oct 2026'; en la lista, la ISO no se lee de un vistazo. */
-function fechaCorta(iso: string): string {
-  return safeParseDate(iso).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short', year: 'numeric' });
-}
 
 export function RecurrencesPanel() {
   const recurrences = useFinanceStore((s) => s.recurrences);
@@ -124,8 +119,8 @@ export function RecurrencesPanel() {
                   </p>
                   <p className="text-xs text-slate-600 dark:text-slate-400">
                     {describirRegla(r)}
-                    {r.activa && proxima ? ` · próxima el ${fechaCorta(proxima)}` : ''}
-                    {r.hasta ? ` · hasta ${fechaCorta(r.hasta)}` : ''}
+                    {r.activa && proxima ? ` · próxima el ${formatFechaConAnio(proxima)}` : ''}
+                    {r.hasta ? ` · hasta ${formatFechaConAnio(r.hasta)}` : ''}
                   </p>
                   <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                     {r.frecuencia === 'monthly' && (
