@@ -14,7 +14,7 @@ import { useFinanceStore } from '@/stores/financeStore';
 import { useDebtsEnAmbito } from '@/hooks/useAmbito';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
-import { formatMoney, getTodayISO, parseMoneyInput, roundMoney, syncToCloud, downloadBlob, safeParseDate, LOCALE } from '@/lib/utils';
+import { formatMoney, getTodayISO, parseMoneyInput, roundMoney, syncToCloud, downloadBlob, formatFechaCorta, formatFechaConAnio } from '@/lib/utils';
 import { projectDebts, totalDebt, monthlyDebtPayment, payoffDate, debtsToCsv, tieneMinimoFijo, DEBT_KINDS, type DebtPlan } from '@/lib/debts';
 import { imprimirDeudas } from '@/lib/print-debts';
 import { escalaBonita, formatoTickDinero, trazarLinea } from '@/lib/chart-geometry';
@@ -26,6 +26,9 @@ import { CardHeader } from '@/components/ui/CardHeader';
 import { ModalSheet } from '@/components/ui/ModalSheet';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ScopeBadge } from '@/components/ui/TransactionBits';
+import { AmbitoField } from '@/components/ui/AmbitoField';
+import { Kpi } from '@/components/ui/Kpi';
+import { Campo } from '@/components/ui/Campo';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { historialDeuda, cuentaSugeridaParaPago, gastosSinVincular, etiquetaPago, type DescuentosDePago } from '@/lib/debt-payments';
 import { interesEstimadoMensual } from '@/lib/interes';
@@ -376,17 +379,7 @@ export function DebtsPage() {
       {formOpen && (
         <ModalSheet id="debt-form-title" titulo={editing ? 'Editar deuda' : 'Nueva deuda'} onClose={() => setFormOpen(false)} trapActivo={!confirmDelete} focoInicial="#d-name">
           <form onSubmit={handleSubmit} className="p-3 space-y-3 flex-1 overflow-y-auto">
-            <div>
-              <span className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Ámbito</span>
-              <div className="flex gap-1" role="group" aria-label="Ámbito">
-                {(['personal', 'business'] as BusinessType[]).map((t) => (
-                  <button key={t} type="button" onClick={() => setFTag(t)}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${fTag === t ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
-                    {t === 'personal' ? 'Personal' : 'Negocio'}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <AmbitoField value={fTag} onChange={setFTag} />
             <Campo id="d-name" label="Nombre">
               <input id="d-name" type="text" value={fName} onChange={(e) => setFName(e.target.value)} placeholder="Tarjeta Banco Pichincha" className="saas-input py-1.5 text-sm" required maxLength={80} />
             </Campo>
@@ -467,7 +460,7 @@ export function DebtsPage() {
             </p>
             {ultimoPagoEstado && (
               <p className="text-xs text-slate-700 dark:text-slate-300">
-                Último pago registrado: <span className="tabular-nums font-semibold">{formatMoney(ultimoPagoEstado.amount)}</span> el {safeParseDate(ultimoPagoEstado.date).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short', year: 'numeric' })}.
+                Último pago registrado: <span className="tabular-nums font-semibold">{formatMoney(ultimoPagoEstado.amount)}</span> el {formatFechaConAnio(ultimoPagoEstado.date)}.
                 Si tu estado de cuenta ya incluye ese pago, el total nuevo lo refleja; si es posterior al corte, réstalo tú.
               </p>
             )}
@@ -530,26 +523,6 @@ export function DebtsPage() {
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(null)}
       />
-    </div>
-  );
-}
-
-function Campo({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label htmlFor={id} className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">{label}</label>
-      {children}
-    </div>
-  );
-}
-
-function Kpi({ label, value, sub, tone }: { label: string; value: string; sub: string; tone?: 'good' | 'crit' }) {
-  const color = tone === 'good' ? 'text-income-600 dark:text-income-400' : tone === 'crit' ? 'text-expense-600 dark:text-expense-400' : 'text-slate-900 dark:text-white';
-  return (
-    <div className="saas-card p-4">
-      <p className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">{label}</p>
-      <p className={`text-[clamp(1rem,4.6vw,1.25rem)] md:text-xl font-bold tabular-nums mt-1 whitespace-nowrap ${color}`}>{value}</p>
-      <p className="text-2xs text-slate-600 dark:text-slate-400 mt-0.5">{sub}</p>
     </div>
   );
 }
@@ -685,8 +658,6 @@ function MethodCompareCard({ plan, alt, method, onMethod, extra }: {
 }
 
 /* ─── Historial de pagos de una deuda: sus movimientos enlazados (debtId) ─── */
-const fechaLarga = (iso: string) => safeParseDate(iso).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short', year: 'numeric' });
-
 function HistorialPagos({ debt, expenses, accounts, debts, onVincular, onDesvincular, descuentos, abierto, onToggle }: {
   debt: Debt;
   expenses: Transaction[];
@@ -743,7 +714,7 @@ function HistorialPagos({ debt, expenses, accounts, debts, onVincular, onDesvinc
                   return (
                     <li key={p.id} className="py-2 flex items-start justify-between gap-3 text-xs">
                       <div className="min-w-0">
-                        <p className="text-slate-900 dark:text-white">{fechaLarga(p.date)}</p>
+                        <p className="text-slate-900 dark:text-white">{formatFechaConAnio(p.date)}</p>
                         <p className="text-slate-700 dark:text-slate-300 break-words">{tx ? etiquetaPago(tx, debts) : 'Pago de deuda'}</p>
                         <p className="text-slate-600 dark:text-slate-400 break-words">
                           {p.accountId ? accountName(accounts, p.accountId) : 'Sin cuenta'}
@@ -756,7 +727,7 @@ function HistorialPagos({ debt, expenses, accounts, debts, onVincular, onDesvinc
                           <button
                             type="button"
                             onClick={() => onDesvincular(tx)}
-                            aria-label={`Desvincular pago de ${formatMoney(p.amount)} del ${fechaLarga(p.date)} (no cambia el saldo)`}
+                            aria-label={`Desvincular pago de ${formatMoney(p.amount)} del ${formatFechaConAnio(p.date)} (no cambia el saldo)`}
                             className="saas-hit mt-0.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:underline"
                           >
                             Desvincular
@@ -785,11 +756,11 @@ function HistorialPagos({ debt, expenses, accounts, debts, onVincular, onDesvinc
                   <li key={t.id} className="py-2 flex items-start justify-between gap-3 text-xs">
                     <div className="min-w-0">
                       <p className="text-slate-900 dark:text-white break-words">{t.concept}</p>
-                      <p className="text-slate-600 dark:text-slate-400">{fechaLarga(t.date)}</p>
+                      <p className="text-slate-600 dark:text-slate-400">{formatFechaConAnio(t.date)}</p>
                       <button
                         type="button"
                         onClick={() => onVincular(t, debt)}
-                        aria-label={`Vincular (no cambia el saldo): ${t.concept}, ${formatMoney(t.amount)}, ${fechaLarga(t.date)}`}
+                        aria-label={`Vincular (no cambia el saldo): ${t.concept}, ${formatMoney(t.amount)}, ${formatFechaConAnio(t.date)}`}
                         className="saas-hit mt-0.5 text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
                       >
                         Vincular (no cambia el saldo)
@@ -808,8 +779,6 @@ function HistorialPagos({ debt, expenses, accounts, debts, onVincular, onDesvinc
 }
 
 /* ─── Tarjeta: dato principal «Pagar $X antes del día Y» ─── */
-const fechaCorta = (iso: string) => safeParseDate(iso).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' });
-
 function PagoPendienteTarjeta({ debt }: { debt: Debt }) {
   const e = estadoTarjeta(debt, getTodayISO());
   if (!e) return null;
@@ -825,12 +794,12 @@ function PagoPendienteTarjeta({ debt }: { debt: Debt }) {
   if (e.montoAPagar !== null) {
     return (
       <p className={clase}>
-        {`Pagar ${formatMoney(e.montoAPagar)}${e.origenMonto === 'minimo' ? ' mínimo' : ''}${e.proximoPago ? ` antes del ${fechaCorta(e.proximoPago)}` : ''}${faltan}${e.origenMonto === 'contado' ? ' para no pagar intereses' : ''}.`}
+        {`Pagar ${formatMoney(e.montoAPagar)}${e.origenMonto === 'minimo' ? ' mínimo' : ''}${e.proximoPago ? ` antes del ${formatFechaCorta(e.proximoPago)}` : ''}${faltan}${e.origenMonto === 'contado' ? ' para no pagar intereses' : ''}.`}
       </p>
     );
   }
   if (e.proximoPago) {
-    return <p className={clase}>{`Paga antes del ${fechaCorta(e.proximoPago)}${faltan}.`}</p>;
+    return <p className={clase}>{`Paga antes del ${formatFechaCorta(e.proximoPago)}${faltan}.`}</p>;
   }
   return null;
 }
@@ -850,7 +819,7 @@ function ResumenTarjeta({ debt }: { debt: Debt }) {
     <div className="w-full pl-9 space-y-1.5">
       {(e.proximoCorte || e.proximoPago) && (
         <p className="text-2xs text-slate-600 dark:text-slate-400">
-          {[e.proximoCorte && `Corte: ${fechaCorta(e.proximoCorte)}`, e.proximoPago && `Pagar hasta: ${fechaCorta(e.proximoPago)}`].filter(Boolean).join(' · ')}
+          {[e.proximoCorte && `Corte: ${formatFechaCorta(e.proximoCorte)}`, e.proximoPago && `Pagar hasta: ${formatFechaCorta(e.proximoPago)}`].filter(Boolean).join(' · ')}
         </p>
       )}
       {e.cupoDisponible !== null && e.usoPct !== null && debt.creditLimit !== undefined && (
