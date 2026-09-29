@@ -116,6 +116,19 @@ describe('syncService', () => {
     expect(useUiStore.getState().primerSyncCompleto).toBe(false);
   });
 
+  it('hayCambiosSinSubir: false tras un ciclo confirmado, true tras editar y con el sync desactivado', async () => {
+    await syncService.attach('user-1');
+    expect(syncService.hayCambiosSinSubir()).toBe(false);
+
+    useFinanceStore.getState().addSavingsGoal({ concept: 'Viaje', target: 100 });
+    expect(syncService.hayCambiosSinSubir()).toBe(true);
+    await syncService.flush();
+    expect(syncService.hayCambiosSinSubir()).toBe(false);
+
+    syncService.disable();
+    expect(syncService.hayCambiosSinSubir()).toBe(true);
+  });
+
   it('no-op en modo offline (sin supabase configurado)', async () => {
     mocks.supabase = null;
     await syncService.attach('user-1'); // setea userId pero no sincroniza

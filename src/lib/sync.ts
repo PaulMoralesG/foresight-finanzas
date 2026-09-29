@@ -511,6 +511,9 @@ let isSyncing = false; // evita auto-schedule durante merges internos
 let dirtyDuringSync = false; // el usuario editó mientras sincronizábamos
 let syncDisabled = false; // esquema no migrado → modo local-only
 let initialized = false;
+// Hay datos locales que ningún ciclo ha confirmado en el servidor. Arranca en
+// true: lo persistido pudo editarse sin red en una sesión anterior.
+let cambiosSinSubir = true;
 
 // ── Marca de agua del ciclo (DAT-01) ──
 //
@@ -1352,7 +1355,6 @@ export const syncService = {
 
     // Auto-save: cualquier cambio de datos agenda un push (debounced)
     useFinanceStore.subscribe((state, prev) => {
-      if (!userId || syncDisabled) return;
       const dataChanged =
         state.expenses !== prev.expenses ||
         state.budgets !== prev.budgets ||
@@ -1369,6 +1371,8 @@ export const syncService = {
         state.customIncomeCategories !== prev.customIncomeCategories ||
         state.tombstones !== prev.tombstones;
       if (!dataChanged) return;
+      cambiosSinSubir = true;
+      if (!userId || syncDisabled) return;
       if (isSyncing) {
         dirtyDuringSync = true;
         return;
@@ -1524,6 +1528,12 @@ export const syncService = {
     return userId !== null;
   },
 
+  /** Hay datos locales sin confirmar en el servidor. En modo local-only
+   *  siempre: flush() resuelve true sin haber subido nada. */
+  hayCambiosSinSubir(): boolean {
+    return syncDisabled || cambiosSinSubir || timer !== null || pushInFlight !== null;
+  },
+
   /** Desactiva el sync definitivamente (esquema no migrado). */
   disable(): void {
     syncDisabled = true;
@@ -1552,6 +1562,10 @@ async function performPush(fullPush = false): Promise<boolean> {
     } catch (err) {
       console.error('[sync] push falló:', err);
     } finally {
+      // Confirmado solo si no quedó nada editado ni encolado detrás.
+      if (ok && !syncDisabled && !queuedAfterPush && !dirtyDuringSync) {
+        cambiosSinSubir = false;
+      }
       isSyncing = false;
       pushInFlight = null;
       // pushWithRetry ya dejó 'local-only' si el esquema no está migrado —

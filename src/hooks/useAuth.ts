@@ -376,8 +376,8 @@ export function useAuth() {
   }
 
   /**
-   * Cierra la sesión. Si quedan cambios sin subir (sin red, o el sync nunca
-   * se adjuntó), NO borra nada salvo que `modo` lo diga:
+   * Cierra la sesión. Si quedan cambios sin subir (sin red, el sync nunca se
+   * adjuntó o está en modo local-only), NO borra nada salvo que `modo` lo diga:
    *   · 'preguntar'  — abre la confirmación de App (uiStore.cierreConPendientes).
    *   · 'descartar'  — el usuario ya confirmó perderlos: borra todo.
    *   · 'conservar'  — cierre por inactividad: vuelve al login y guarda los
@@ -389,7 +389,8 @@ export function useAuth() {
       let subido = false;
       if (modo !== 'descartar') {
         try {
-          subido = syncService.adjuntado() && (await syncService.flush());
+          subido =
+            syncService.adjuntado() && (await syncService.flush()) && !syncService.hayCambiosSinSubir();
         } catch (err: unknown) {
           console.error('[useAuth] flush() antes de cerrar sesión falló:', err);
         }

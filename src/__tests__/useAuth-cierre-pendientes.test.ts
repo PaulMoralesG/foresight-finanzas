@@ -11,6 +11,7 @@ import { renderHook, act } from '@testing-library/react';
 const mocks = vi.hoisted(() => ({
   flush: vi.fn(() => Promise.resolve(false)),
   adjuntado: vi.fn(() => true),
+  hayCambiosSinSubir: vi.fn(() => false),
   attach: vi.fn(() => Promise.resolve()),
   detach: vi.fn(),
   disable: vi.fn(),
@@ -47,6 +48,7 @@ beforeEach(() => {
   localStorage.clear();
   mocks.flush.mockReset().mockResolvedValue(false);
   mocks.adjuntado.mockReset().mockReturnValue(true);
+  mocks.hayCambiosSinSubir.mockReset().mockReturnValue(false);
   supabaseMock.auth.signOut.mockClear();
   useUiStore.setState({ cierreConPendientes: false });
   useAuthStore.setState({ user: { id: 'u1', email: 'ana@example.com', firstName: 'Ana', lastName: '' }, isLoading: false });
@@ -77,6 +79,16 @@ describe('signOut con cambios sin subir', () => {
   it('sin sync adjuntado (arranque sin red) también cuenta como pendiente', async () => {
     mocks.adjuntado.mockReturnValue(false);
     mocks.flush.mockResolvedValue(true);
+
+    await cerrar();
+
+    expect(useUiStore.getState().cierreConPendientes).toBe(true);
+    expect(useFinanceStore.getState().expenses).toHaveLength(1);
+  });
+
+  it('modo local-only: flush() da true sin subir nada, y aun así pide confirmación', async () => {
+    mocks.flush.mockResolvedValue(true);
+    mocks.hayCambiosSinSubir.mockReturnValue(true);
 
     await cerrar();
 
