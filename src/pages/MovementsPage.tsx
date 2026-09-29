@@ -507,11 +507,7 @@ export function MovementsPage() {
                       >
                         {typeLabel(tx)}
                       </button>
-                      {esPago ? (
-                        <span className="text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
-                          {tx.accountId ? `Desde ${accountName(accounts, tx.accountId)}` : 'Sin cuenta'}
-                        </span>
-                      ) : tx.type === 'transfer' ? (
+                      {tx.type === 'transfer' ? (
                         <span className="text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
                           {accountName(accounts, tx.accountId)} → {accountName(accounts, tx.toAccountId)}
                         </span>
@@ -662,11 +658,7 @@ export function MovementsPage() {
                         </button>
                       </td>
                       <td className="whitespace-nowrap">
-                        {esPago ? (
-                          <span className="text-xs text-slate-600 dark:text-slate-400">
-                            {tx.accountId ? `Desde ${accountName(accounts, tx.accountId)}` : 'Sin cuenta'}
-                          </span>
-                        ) : tx.type === 'transfer' ? (
+                        {tx.type === 'transfer' ? (
                           <span className="text-xs text-slate-600 dark:text-slate-400">
                             {accountName(accounts, tx.accountId)} <span className="text-slate-400">→</span> {accountName(accounts, tx.toAccountId)}
                           </span>
