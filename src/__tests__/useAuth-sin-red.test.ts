@@ -51,7 +51,7 @@ vi.mock('@/config/supabase', () => ({
 import { useAuthSession } from '@/hooks/useAuth';
 import { useAuthStore } from '@/stores/authStore';
 import { useFinanceStore } from '@/stores/financeStore';
-import { guardarDuenoDatos, leerDuenoDatos } from '@/lib/dueno-datos';
+import { guardarDuenoDatos, leerDuenoDatos, duenoEnMemoria, fijarDuenoEnMemoria } from '@/lib/dueno-datos';
 
 const sesionU1 = { user: { id: 'u1', email: 'ana@example.com', user_metadata: {}, new_email: undefined } };
 
@@ -75,6 +75,7 @@ beforeEach(() => {
   sb.errorSesion = null;
   sb.perfil = { data: { email: 'ana@example.com', first_name: 'Ana', last_name: 'Pérez' }, error: null };
   useAuthStore.setState({ user: null, isLoading: true });
+  fijarDuenoEnMemoria(null);
   conGastoSinSubir();
   vi.spyOn(console, 'error').mockImplementation(() => {});
   vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -127,11 +128,26 @@ describe('useAuthSession sin red', () => {
   });
 
   it('la misma cuenta con el perfil bien conserva los datos y queda como dueña', async () => {
+    guardarDuenoDatos({ id: 'u1', email: 'ana@example.com' });
+    fijarDuenoEnMemoria('u1');
     sb.sesion = sesionU1;
 
     await arrancar();
 
     expect(useFinanceStore.getState().expenses).toHaveLength(1);
     expect(leerDuenoDatos()).toMatchObject({ id: 'u1', firstName: 'Ana' });
+    expect(duenoEnMemoria()).toBe('u1');
+  });
+
+  it('varias pestañas: si la memoria es de otra cuenta, reinicia aunque localStorage ya diga la nueva', async () => {
+    // La pestaña 1 ya dejó dueño=u1; ésta conserva en memoria los datos de A.
+    guardarDuenoDatos({ id: 'u1', email: 'ana@example.com' });
+    fijarDuenoEnMemoria('cuenta-a');
+    sb.sesion = sesionU1;
+
+    await arrancar();
+
+    expect(useFinanceStore.getState().expenses).toHaveLength(0);
+    expect(duenoEnMemoria()).toBe('u1');
   });
 });
