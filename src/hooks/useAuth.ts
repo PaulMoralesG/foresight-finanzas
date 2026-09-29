@@ -17,7 +17,7 @@
 // ================================================================
 
 import { useEffect, useCallback, useRef } from 'react';
-import { supabase, supabaseAvailable } from '@/config/supabase';
+import { supabase, supabaseAvailable, olvidarSesionGuardada } from '@/config/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useFinanceStore, borrarRespaldoMigracion } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
@@ -52,11 +52,20 @@ async function cerrarSesionSupabase(cliente: NonNullable<typeof supabase>): Prom
   } catch (err: unknown) {
     console.warn('[useAuth] signOut global falló, se cierra en local:', err);
   }
+  await cerrarSesionLocal(cliente);
+}
+
+/** Cierre local; si auth-js falla (sin red y con el token caducado sale sin
+ *  borrar la sesión guardada), se borra a mano para no reentrar sin contraseña. */
+async function cerrarSesionLocal(cliente: NonNullable<typeof supabase>): Promise<void> {
   try {
-    await cliente.auth.signOut({ scope: 'local' });
+    const { error } = await cliente.auth.signOut({ scope: 'local' });
+    if (!error) return;
+    console.error('[useAuth] signOut local falló:', error);
   } catch (err: unknown) {
     console.error('[useAuth] signOut local falló:', err);
   }
+  olvidarSesionGuardada();
 }
 
 function basicUser(id: string, email: string, firstName?: string, lastName?: string, pendingEmail?: string): User {
@@ -468,13 +477,9 @@ export function useAuth() {
         conservarDatos: true,
       });
     }
-    try {
-      // 'local': sin red no se puede revocar en el servidor, y no hace falta
-      // esperar a un timeout para bloquear la pantalla.
-      await cliente.auth.signOut({ scope: 'local' });
-    } catch (err: unknown) {
-      console.error('[useAuth] signOut local falló:', err);
-    }
+    // 'local': sin red no se puede revocar en el servidor, y no hace falta
+    // esperar a un timeout para bloquear la pantalla.
+    await cerrarSesionLocal(cliente);
     syncService.detach();
     clearUser();
     // Si la inactividad saltó con la confirmación abierta, que no la vea
