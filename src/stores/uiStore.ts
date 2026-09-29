@@ -65,6 +65,12 @@ interface UiState {
   syncState: 'idle' | 'syncing' | 'error' | 'local-only';
   setSyncState: (state: UiState['syncState']) => void;
 
+  // --- Primer ciclo de sync de la sesión terminado (lo marca syncService).
+  //     Hasta entonces no se materializan recurrencias: el pull puede traer
+  //     ediciones o borrados de otro dispositivo sobre esas ocurrencias. ---
+  primerSyncCompleto: boolean;
+  setPrimerSyncCompleto: (completo: boolean) => void;
+
 }
 
 let toastId = 0;
@@ -143,5 +149,8 @@ export const useUiStore = create<UiState>((set) => ({
   // Estado de sincronización real (idle/syncing/error/local-only)
   syncState: 'idle',
   setSyncState: (state) => set({ syncState: state }),
+
+  primerSyncCompleto: false,
+  setPrimerSyncCompleto: (completo) => set({ primerSyncCompleto: completo }),
 
 }));
