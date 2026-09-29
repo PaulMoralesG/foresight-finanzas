@@ -122,9 +122,26 @@ export default defineConfig({
     // Code-splitting: separa vendors estables del bundle principal.
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'zustand'],
-          'vendor-supabase': ['@supabase/supabase-js'],
+        // Función por id y no objeto de nombres de paquete: el objeto solo
+        // enlaza el punto de entrada exacto de cada paquete ('react-dom' no
+        // cubre 'react-dom/client'), así que vendor-react pesaba 12 kB y
+        // React DOM (~180 kB) acababa dentro de `index`, invalidando su caché
+        // en cada despliegue. Por id se captura todo el árbol de cada paquete.
+        // (Vite 8 elimina la forma de objeto; la de función sigue admitida.)
+        //
+        // Ojo al medir: sin VITE_SUPABASE_URL/KEY en el entorno del build,
+        // supabaseAvailable es false y Rollup elimina supabase-js como código
+        // muerto: "Generated an empty chunk: vendor-supabase" es de ese caso,
+        // no un fallo del chunking. Para comparar tamaños, definir ambas.
+        manualChunks(id: string) {
+          if (!id.includes('/node_modules/')) return undefined;
+          if (id.includes('/node_modules/@supabase/')) return 'vendor-supabase';
+          if (
+            /\/node_modules\/(react|react-dom|scheduler|zustand)\//.test(id)
+          ) {
+            return 'vendor-react';
+          }
+          return undefined;
         },
       },
     },
