@@ -25,6 +25,9 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ModalSheet } from '@/components/ui/ModalSheet';
 import { ScopeBadge } from '@/components/ui/TransactionBits';
+import { AmbitoField } from '@/components/ui/AmbitoField';
+import { Kpi } from '@/components/ui/Kpi';
+import { Campo } from '@/components/ui/Campo';
 import type { SavingsGoal, BusinessType } from '@/types';
 
 export function GoalsPage() {
@@ -199,17 +202,7 @@ export function GoalsPage() {
       {formOpen && (
         <ModalSheet id="goal-form-title" titulo={editing ? 'Editar meta' : 'Nueva meta de ahorro'} onClose={() => setFormOpen(false)} trapActivo={!confirmDelete} focoInicial="#g-name">
           <form onSubmit={handleSubmit} className="p-3 space-y-3 flex-1 overflow-y-auto">
-            <div>
-              <span className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Ámbito</span>
-              <div className="flex gap-1" role="group" aria-label="Ámbito">
-                {(['personal', 'business'] as BusinessType[]).map((t) => (
-                  <button key={t} type="button" onClick={() => setFTag(t)}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${fTag === t ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
-                    {t === 'personal' ? 'Personal' : 'Negocio'}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <AmbitoField value={fTag} onChange={setFTag} />
             <Campo id="g-name" label="Nombre">
               <input id="g-name" type="text" value={fName} onChange={(e) => setFName(e.target.value)} placeholder="Fondo de emergencia" className="saas-input py-1.5 text-sm" required maxLength={80} />
             </Campo>
@@ -282,21 +275,3 @@ export function GoalsPage() {
   );
 }
 
-function Campo({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label htmlFor={id} className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">{label}</label>
-      {children}
-    </div>
-  );
-}
-
-function Kpi({ label, value, sub }: { label: string; value: string; sub: string }) {
-  return (
-    <div className="saas-card p-4">
-      <p className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">{label}</p>
-      <p className="text-[clamp(1rem,4.6vw,1.25rem)] md:text-xl font-bold tabular-nums mt-1 whitespace-nowrap text-slate-900 dark:text-white">{value}</p>
-      <p className="text-2xs text-slate-600 dark:text-slate-400 mt-0.5">{sub}</p>
-    </div>
-  );
-}

@@ -3,8 +3,10 @@
 // ================================================================
 
 import { useState, type FormEvent, useRef } from 'react';
-import { Eye, EyeOff, AlertCircle, Loader2, LogIn } from '@/components/ui/icons.generated';
+import { AlertCircle, Loader2, LogIn } from '@/components/ui/icons.generated';
 import { useAuth } from '@/hooks/useAuth';
+import { authInputClass } from './auth-input-class';
+import { PasswordToggle } from './PasswordToggle';
 
 /** Traduce errores de Supabase a español amigable */
 function authErrorToSpanish(err: unknown): string {
@@ -115,8 +117,7 @@ export function LoginForm({ onSwitchToSignUp, onForgotPassword }: Props) {
     }
   }
 
-  const inputClass = (hasError: boolean) =>
-    `saas-input pr-10 ${hasError ? '!border-expense-500 !ring-expense-500/20 focus:!ring-expense-500/30' : ''}`;
+  const inputClass = (hasError: boolean) => `${authInputClass(hasError)} pr-10`;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
@@ -150,15 +151,7 @@ export function LoginForm({ onSwitchToSignUp, onForgotPassword }: Props) {
             className={inputClass(!!error && !!password)}
             autoComplete="current-password"
           />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-            aria-pressed={showPassword}
-            className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-          >
-            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </button>
+          <PasswordToggle visible={showPassword} onToggle={() => setShowPassword(!showPassword)} />
         </div>
       </div>
 
