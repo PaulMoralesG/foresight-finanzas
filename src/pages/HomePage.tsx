@@ -15,7 +15,7 @@ import { proximaFecha } from '@/lib/recurrence';
 import { filtrarPorAmbito } from '@/lib/ambito';
 import { useAmbito, useBudgetLinesEnAmbito, useDebtsEnAmbito, useExpensesEnAmbito, useGoalsEnAmbito } from '@/hooks/useAmbito';
 import { useStatsPeriod, pctChange } from '@/hooks/useStatsPeriod';
-import { formatMoney, LOCALE, safeParseDate, getTodayISO, roundMoney } from '@/lib/utils';
+import { formatMoney, LOCALE, safeParseDate, getTodayISO, roundMoney, formatFechaCorta, formatFechaConAnio } from '@/lib/utils';
 import { goalMath, goalTotals } from '@/lib/goals';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, getCategoryById } from '@/config/categories';
 import { MonthNav } from '@/components/layout/MonthNav';
@@ -211,7 +211,7 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
                   </td>
                   <td className="whitespace-nowrap">
                     <span className="text-xs text-slate-600 dark:text-slate-400">
-                      {safeParseDate(tx.date).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short', year: 'numeric' })}
+                      {formatFechaConAnio(tx.date)}
                     </span>
                   </td>
                   <td className="whitespace-nowrap text-right">
@@ -265,7 +265,7 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
                   {tx.businessType === 'business' ? 'Negocio' : 'Personal'}
                 </span>
                 <span className="text-2xs text-slate-600 dark:text-slate-400 ml-auto">
-                  {safeParseDate(tx.date).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })}
+                  {formatFechaCorta(tx.date)}
                 </span>
               </div>
             </div>
@@ -702,7 +702,7 @@ function ProximosCargos() {
             <span className="truncate text-slate-700 dark:text-slate-300">
               {r.concept || r.category}{' '}
               <span className="text-slate-600 dark:text-slate-400">
-                · {safeParseDate(fecha).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })}
+                · {formatFechaCorta(fecha)}
               </span>
             </span>
             <span className={`tabular-nums flex-shrink-0 font-semibold ${r.type === 'income' ? 'text-income-600 dark:text-income-400' : 'text-slate-900 dark:text-white'}`}>

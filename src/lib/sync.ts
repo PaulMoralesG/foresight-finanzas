@@ -1380,7 +1380,11 @@ export const syncService = {
   /** Login: import legacy (si aplica) → pull → merge → push. */
   async attach(uid: string): Promise<void> {
     userId = uid;
-    if (!supabase || syncDisabled) return;
+    if (!supabase || syncDisabled) {
+      useUiStore.getState().setPrimerSyncCompleto(true);
+      return;
+    }
+    useUiStore.getState().setPrimerSyncCompleto(false);
     pushWatermark = loadWatermark(uid);
     try {
       await maybeImportLegacy(uid);
@@ -1398,6 +1402,7 @@ export const syncService = {
         );
         syncDisabled = true;
         useUiStore.getState().setSyncState('local-only');
+        useUiStore.getState().setPrimerSyncCompleto(true);
         // Modo degradado intencional, pero si pasa en producción es señal de
         // un deploy sin migrar: vale la pena saberlo aunque la app siga viva.
         reportarErrorSync(err, 'esquema-no-migrado');
@@ -1511,6 +1516,12 @@ export const syncService = {
     userId = null;
     syncDisabled = false;
     useUiStore.getState().setSyncState('idle');
+    useUiStore.getState().setPrimerSyncCompleto(false);
+  },
+
+  /** Hay usuario adjuntado: sin él, flush() no sube nada aunque resuelva true. */
+  adjuntado(): boolean {
+    return userId !== null;
   },
 
   /** Desactiva el sync definitivamente (esquema no migrado). */
@@ -1518,6 +1529,7 @@ export const syncService = {
     syncDisabled = true;
     syncService.cancel();
     useUiStore.getState().setSyncState('local-only');
+    useUiStore.getState().setPrimerSyncCompleto(true);
   },
 };
 
@@ -1546,6 +1558,10 @@ async function performPush(fullPush = false): Promise<boolean> {
       // no pisarlo con 'idle'/'error' en ese caso.
       if (!syncDisabled) {
         useUiStore.getState().setSyncState(ok ? 'idle' : 'error');
+      }
+      // Un detach en pleno ciclo ya soltó al usuario: no marcar su sesión.
+      if ((ok || syncDisabled) && userId === uid) {
+        useUiStore.getState().setPrimerSyncCompleto(true);
       }
       if (queuedAfterPush) {
         queuedAfterPush = false;

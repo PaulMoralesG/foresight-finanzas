@@ -18,6 +18,7 @@ vi.mock('@/config/supabase', () => ({
 
 import { syncService, isSchemaError, isTransientSchemaError, desfaseDeRelojMinutos, igualEstructural } from '@/lib/sync';
 import { useFinanceStore } from '@/stores/financeStore';
+import { useUiStore } from '@/stores/uiStore';
 
 const mockFrom = (mocks.supabase as { from: ReturnType<typeof vi.fn> }).from;
 
@@ -102,6 +103,17 @@ describe('syncService', () => {
     // El schedule() cancelado por flush() también debe resolverse —antes se
     // quedaba pendiente para siempre porque flush() solo limpiaba el timer.
     await expect(p).resolves.toBe(true);
+  });
+
+  it('marca el primer ciclo completo al terminar attach, y lo desmarca al soltar la sesión', async () => {
+    useUiStore.setState({ primerSyncCompleto: false });
+    const attachP = syncService.attach('user-1');
+    expect(useUiStore.getState().primerSyncCompleto).toBe(false);
+    await attachP;
+    expect(useUiStore.getState().primerSyncCompleto).toBe(true);
+
+    syncService.detach();
+    expect(useUiStore.getState().primerSyncCompleto).toBe(false);
   });
 
   it('no-op en modo offline (sin supabase configurado)', async () => {
