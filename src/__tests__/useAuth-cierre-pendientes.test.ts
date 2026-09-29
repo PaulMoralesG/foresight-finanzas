@@ -121,6 +121,14 @@ describe('signOut con cambios sin subir', () => {
     expect(useFinanceStore.getState().expenses).toHaveLength(1);
   });
 
+  it('si salta la inactividad con la confirmación abierta, el aviso no queda para el siguiente usuario', async () => {
+    useUiStore.setState({ cierreConPendientes: true });
+
+    await cerrar('conservar');
+
+    expect(useUiStore.getState().cierreConPendientes).toBe(false);
+  });
+
   it('con todo subido, cierra y borra como siempre', async () => {
     mocks.flush.mockResolvedValue(true);
 

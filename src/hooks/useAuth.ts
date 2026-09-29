@@ -122,6 +122,7 @@ export function useAuthSession(): void {
         !!dueno && duenoEnMemoria() === dueno.id && syncService.hayCambiosSinSubir();
       syncService.detach();
       sesionCargadaPara = null;
+      useUiStore.getState().setCierreConPendientes(false);
       // Sin dueño registrado no se sabe de quién son los datos: se conservan
       // solo si lo hay, o la siguiente cuenta que entrara los adoptaría.
       if (dueno && error && esFalloDeRed(error)) {
@@ -420,6 +421,7 @@ export function useAuth() {
     // Limpiar todo: auth + finanzas (evita cross-contamination entre cuentas)
     syncService.detach();
     clearUser();
+    useUiStore.getState().setCierreConPendientes(false);
     financeStore.getState().reset();
     fijarDuenoEnMemoria(null);
     // Borra también la copia persistida en localStorage — reset() solo
@@ -454,6 +456,9 @@ export function useAuth() {
     }
     syncService.detach();
     clearUser();
+    // Si la inactividad saltó con la confirmación abierta, que no la vea
+    // (ni pueda aceptarla) el siguiente que entre.
+    useUiStore.getState().setCierreConPendientes(false);
   }
 
   /** Guardar datos financieros (no-op en modo offline). Debounced dentro del sync service. */
