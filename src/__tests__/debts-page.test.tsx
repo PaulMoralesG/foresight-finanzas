@@ -189,14 +189,17 @@ describe('DebtsPage — historial de pagos', () => {
     const panel = document.getElementById(`historial-${id}`)!;
     expect(within(panel).getByText(/de \$1,000\.00/)).toBeInTheDocument(); // pagado 300 de 1,000
     expect(within(panel).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '30');
+    // «Registrar pago» guarda concept: `Pago ${debt.name}` y ese concepto no
+    // vacío manda siempre sobre el label generado (fix: el usuario puede
+    // editarlo y ver reflejado lo que escribió).
     const filas = within(panel).getAllByRole('listitem');
-    expect(filas[0]).toHaveTextContent('Pago de tarjeta · Visa');
+    expect(filas[0]).toHaveTextContent('Pago Visa');
     expect(filas[0]).toHaveTextContent('saldo $700.00');
     expect(filas[1]).toHaveTextContent('saldo $800.00');
     expect(panel).not.toHaveTextContent('gasto del mes');
   });
 
-  it('«Pagos anteriores sin vincular»: vincular no cambia el saldo y el pago entra al historial; desvincular lo devuelve', async () => {
+  it('«Pagos anteriores sin vincular»: vincular pide confirmación antes de tocar el store, no cambia el saldo y el pago entra al historial; desvincular lo devuelve', async () => {
     const user = userEvent.setup();
     const st = useFinanceStore.getState();
     const id = st.addDebt({ name: 'Visa', tag: 'personal', kind: 'Tarjeta de crédito', balance: 1000, annualRate: 30, minPayment: 50, payDay: null });
@@ -210,16 +213,50 @@ describe('DebtsPage — historial de pagos', () => {
     expect(within(panel).queryByText('Café')).not.toBeInTheDocument();
 
     await user.click(within(panel).getByRole('button', { name: /Vincular \(no cambia el saldo\)/ }));
+
+    // El diálogo de confirmación aparece con concepto, fecha, monto y la deuda
+    // destino, y `vincularPagoHistorico` todavía no se llamó (bug real: el
+    // usuario vinculó por error pagos de otra tarjeta antes de tener este paso).
+    const dialogo = screen.getByRole('dialog', { name: '¿Vincular este pago?' });
+    expect(dialogo).toHaveTextContent('Pago Visa (viejo)');
+    expect(dialogo).toHaveTextContent('$300.00');
+    expect(dialogo).toHaveTextContent('Visa');
+    expect(dialogo).toHaveTextContent('15 ago');
     let s = useFinanceStore.getState();
+    expect(s.expenses.find((e) => e.concept === 'Pago Visa (viejo)')?.debtId).toBeUndefined();
+    expect(s.debts[0].balance).toBe(1000);
+
+    await user.click(within(dialogo).getByRole('button', { name: 'Vincular' }));
+    s = useFinanceStore.getState();
     expect(s.debts[0].balance).toBe(1000); // saldo intacto
     expect(s.expenses.find((e) => e.concept === 'Pago Visa (viejo)')?.debtId).toBe(id);
-    expect(within(panel).getByText('Pago de tarjeta · Visa')).toBeInTheDocument();
+    // El concepto original ('Pago Visa (viejo)') manda sobre el label generado.
+    expect(within(panel).getByText('Pago Visa (viejo)')).toBeInTheDocument();
     expect(within(panel).queryByText(/Pagos anteriores sin vincular/)).not.toBeInTheDocument();
 
     await user.click(within(panel).getByRole('button', { name: /Desvincular/ }));
     s = useFinanceStore.getState();
     expect(s.debts[0].balance).toBe(1000);
     expect(s.expenses.find((e) => e.concept === 'Pago Visa (viejo)')?.debtId).toBeUndefined();
+    expect(within(panel).getByText(/Pagos anteriores sin vincular \(1\)/)).toBeInTheDocument();
+  });
+
+  it('«Vincular»: cancelar el diálogo de confirmación no vincula el pago', async () => {
+    const user = userEvent.setup();
+    const st = useFinanceStore.getState();
+    const id = st.addDebt({ name: 'Visa', tag: 'personal', kind: 'Tarjeta de crédito', balance: 1000, annualRate: 30, minPayment: 50, payDay: null });
+    st.addTransaction({ type: 'expense', amount: 300, concept: 'Pago Visa (viejo)', date: '2026-08-15', category: 'pago-tarjetas', method: 'transfer', businessType: 'personal' });
+    render(<DebtsPage />);
+
+    await user.click(screen.getByRole('button', { name: /Historial de pagos \(0\)/ }));
+    const panel = document.getElementById(`historial-${id}`)!;
+    await user.click(within(panel).getByRole('button', { name: /Vincular \(no cambia el saldo\)/ }));
+
+    const dialogo = screen.getByRole('dialog', { name: '¿Vincular este pago?' });
+    await user.click(within(dialogo).getByRole('button', { name: 'Cancelar' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(useFinanceStore.getState().expenses.find((e) => e.concept === 'Pago Visa (viejo)')?.debtId).toBeUndefined();
     expect(within(panel).getByText(/Pagos anteriores sin vincular \(1\)/)).toBeInTheDocument();
   });
 
