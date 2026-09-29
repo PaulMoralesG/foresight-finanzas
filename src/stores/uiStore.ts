@@ -71,6 +71,11 @@ interface UiState {
   primerSyncCompleto: boolean;
   setPrimerSyncCompleto: (completo: boolean) => void;
 
+  // --- Cierre de sesión frenado por cambios sin sincronizar: App pide
+  //     confirmación antes de borrar nada (ver signOut en useAuth). ---
+  cierreConPendientes: boolean;
+  setCierreConPendientes: (pendiente: boolean) => void;
+
 }
 
 let toastId = 0;
@@ -152,5 +157,8 @@ export const useUiStore = create<UiState>((set) => ({
 
   primerSyncCompleto: false,
   setPrimerSyncCompleto: (completo) => set({ primerSyncCompleto: completo }),
+
+  cierreConPendientes: false,
+  setCierreConPendientes: (pendiente) => set({ cierreConPendientes: pendiente }),
 
 }));

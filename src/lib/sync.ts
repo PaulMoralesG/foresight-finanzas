@@ -1519,6 +1519,11 @@ export const syncService = {
     useUiStore.getState().setPrimerSyncCompleto(false);
   },
 
+  /** Hay usuario adjuntado: sin él, flush() no sube nada aunque resuelva true. */
+  adjuntado(): boolean {
+    return userId !== null;
+  },
+
   /** Desactiva el sync definitivamente (esquema no migrado). */
   disable(): void {
     syncDisabled = true;
