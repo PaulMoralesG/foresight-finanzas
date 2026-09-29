@@ -22,7 +22,14 @@ import { useAuthStore } from '@/stores/authStore';
 import { useFinanceStore, borrarRespaldoMigracion } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { syncService, isSchemaError, isTransientSchemaError } from '@/lib/sync';
-import { leerDuenoDatos, guardarDuenoDatos, borrarDuenoDatos, esFalloDeRed } from '@/lib/dueno-datos';
+import {
+  leerDuenoDatos,
+  guardarDuenoDatos,
+  borrarDuenoDatos,
+  duenoEnMemoria,
+  fijarDuenoEnMemoria,
+  esFalloDeRed,
+} from '@/lib/dueno-datos';
 import type { User } from '@/types';
 
 /** Usuario offline por defecto cuando no hay Supabase configurado */
@@ -124,6 +131,7 @@ export function useAuthSession(): void {
       }
       // ALT-1: sin sesión → limpiar todo (evita contaminación entre cuentas)
       financeStore.getState().reset();
+      fijarDuenoEnMemoria(null);
       borrarDuenoDatos();
       setUser(null);
       setLoading(false);
@@ -131,11 +139,15 @@ export function useAuthSession(): void {
 
     async function loadProfile(uid: string, email: string, metaFirst?: string, metaLast?: string, pendingEmail?: string) {
       // ALT-1: los datos locales son de OTRA cuenta → no mezclarlos con esta.
+      // Se mira también la memoria de esta pestaña: otra pestaña pudo dejar
+      // ya en localStorage dueño=uid mientras aquí siguen los datos de otra.
       const dueno = leerDuenoDatos();
-      if (dueno && dueno.id !== uid) {
+      const enMemoria = duenoEnMemoria();
+      if ((dueno && dueno.id !== uid) || (enMemoria && enMemoria !== uid)) {
         syncService.detach();
         financeStore.getState().reset();
       }
+      fijarDuenoEnMemoria(uid);
       guardarDuenoDatos({ id: uid, email, firstName: metaFirst, lastName: metaLast });
 
       try {
@@ -388,12 +400,16 @@ export function useAuth() {
         await cerrarConservandoDatos(supabase);
         return;
       }
+      // Antes del SIGNED_OUT: la memoria deja de tener dueño, así su
+      // listener no la trata como cambios de la cuenta que conservar.
+      fijarDuenoEnMemoria(null);
       await supabase.auth.signOut();
     }
     // Limpiar todo: auth + finanzas (evita cross-contamination entre cuentas)
     syncService.detach();
     clearUser();
     financeStore.getState().reset();
+    fijarDuenoEnMemoria(null);
     // Borra también la copia persistida en localStorage — reset() solo
     // limpia el estado en memoria; sin esto, el historial financiero
     // completo de la cuenta queda en el navegador en texto plano bajo la

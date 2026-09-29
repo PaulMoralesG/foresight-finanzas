@@ -58,6 +58,20 @@ export function borrarDuenoDatos(): void {
   }
 }
 
+// Dueño del store EN MEMORIA de esta pestaña. No basta con la clave de
+// localStorage: otra pestaña puede reescribirla (entra otra cuenta) mientras
+// ésta conserva en memoria los datos de la anterior. Al cargar el módulo, la
+// memoria acaba de hidratarse de localStorage: su dueño es el guardado.
+let duenoMemoria: string | null = leerDuenoDatos()?.id ?? null;
+
+export function duenoEnMemoria(): string | null {
+  return duenoMemoria;
+}
+
+export function fijarDuenoEnMemoria(id: string | null): void {
+  duenoMemoria = id;
+}
+
 const PATRON_RED = /failed to fetch|networkerror|network request failed|load failed|fetch failed|aborterror|timeout|timed out/i;
 
 /** Fallo de red o de conectividad (no una respuesta del servidor). */
