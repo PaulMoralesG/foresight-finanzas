@@ -117,6 +117,9 @@ export function useAuthSession(): void {
      */
     function sinSesion(error: unknown) {
       const dueno = leerDuenoDatos();
+      // Antes del detach, que cancela el ciclo agendado.
+      const pendientesDelDueno =
+        !!dueno && duenoEnMemoria() === dueno.id && syncService.hayCambiosSinSubir();
       syncService.detach();
       sesionCargadaPara = null;
       // Sin dueño registrado no se sabe de quién son los datos: se conservan
@@ -126,7 +129,13 @@ export function useAuthSession(): void {
         setLoading(false);
         return;
       }
-      if (dueno?.conservarDatos) {
+      // Sesión caída (refresco rechazado al volver la red, SIGNED_OUT remoto)
+      // con cambios de esta misma cuenta sin subir: se guardan como en el
+      // cierre por inactividad; se suben si la misma cuenta vuelve a entrar.
+      if (dueno && pendientesDelDueno && !dueno.conservarDatos) {
+        guardarDuenoDatos({ ...dueno, conservarDatos: true });
+      }
+      if (dueno?.conservarDatos || pendientesDelDueno) {
         setUser(null);
         setLoading(false);
         return;
