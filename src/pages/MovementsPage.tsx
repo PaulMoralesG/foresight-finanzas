@@ -16,7 +16,9 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ScopeBadge, TransactionAmount } from '@/components/ui/TransactionBits';
 import { typeLabel, typePillClasses } from '@/lib/transaction-labels';
 import { accountName } from '@/lib/accounts';
-import type { FilterType } from '@/types';
+import { cuentaComoGasto, esPagoDeDeuda, etiquetaPago, montoQueRevierte } from '@/lib/debt-payments';
+import { esTarjeta } from '@/lib/credit-card';
+import type { FilterType, Transaction } from '@/types';
 
 // Negocio/Personal ya no son chips de esta vista: es el ámbito global de la
 // cabecera (Todo / Personal / Negocio), que filtra todas las pantallas.
@@ -73,6 +75,12 @@ export function MovementsPage() {
     // Guardar copia de las transacciones antes de eliminar (para Undo)
     const deletedItems = monthlyData.filter((e) => selectedIds.has(e.id));
     const count = selectedIds.size;
+    // Borrar un pago de deuda devuelve su monto a la deuda: se avisa (como en
+    // el borrado individual). Los vinculados a mano no cambian ningún saldo.
+    const { descuentosDePago, debts } = useFinanceStore.getState();
+    const pagosQueSuben = deletedItems.filter(
+      (e) => debts.some((d) => d.id === e.debtId) && montoQueRevierte(e, descuentosDePago) > 0,
+    ).length;
 
     try {
       deleteTransactions([...selectedIds]);
@@ -82,7 +90,10 @@ export function MovementsPage() {
       syncToCloud(saveData, addToast);
 
       addToast(
-        `${count} transacci\u00f3n${count > 1 ? 'es' : ''} eliminada${count > 1 ? 's' : ''}`,
+        `${count} ${count > 1 ? 'transacciones eliminadas' : 'transacci\u00f3n eliminada'}` +
+          (pagosQueSuben > 0
+            ? `. ${pagosQueSuben === 1 ? 'El pago de deuda eliminado vuelve' : `Los ${pagosQueSuben} pagos de deuda eliminados vuelven`} a subir el saldo de su deuda`
+            : ''),
         'info',
         () => {
           // Undo: restaurar las transacciones eliminadas (conserva ids y timestamps)
@@ -121,6 +132,15 @@ export function MovementsPage() {
   const customExpenseCategories = useFinanceStore((s) => s.customExpenseCategories);
   const customIncomeCategories = useFinanceStore((s) => s.customIncomeCategories);
   const accounts = useFinanceStore((s) => s.accounts);
+  const debts = useFinanceStore((s) => s.debts);
+
+  // Un pago de deuda no es un gasto: se lista con su etiqueta («Pago de tarjeta
+  // · Visa»), su icono y una píldora propia, y su importe va en neutro.
+  const conceptoDe = (tx: Transaction) => etiquetaPago(tx, debts);
+  const iconoPago = (tx: Transaction) => {
+    const deuda = debts.find((d) => d.id === tx.debtId);
+    return deuda && esTarjeta(deuda) ? '💳' : '🏦';
+  };
 
   // Mapa para resolver etiquetas de categoría (por defecto + personalizadas)
   const categoryLabelMap = useMemo(() => {
@@ -143,7 +163,7 @@ export function MovementsPage() {
     // ── Filtros normales ──
     let items = monthlyData;
     if (currentFilter === 'income') items = items.filter((i) => i.type === 'income');
-    if (currentFilter === 'expense') items = items.filter((i) => i.type === 'expense');
+    if (currentFilter === 'expense') items = items.filter(cuentaComoGasto);
     if (currentFilter === 'business') items = items.filter((i) => i.businessType === 'business');
     if (currentFilter === 'personal') items = items.filter((i) => i.businessType === 'personal');
 
@@ -162,6 +182,7 @@ export function MovementsPage() {
         const businessWord = businessMap[i.businessType] || '';
         return (
           i.concept.toLowerCase().includes(q) ||
+          etiquetaPago(i, debts).toLowerCase().includes(q) ||
           i.category.toLowerCase().includes(q) ||
           catLabel.includes(q) ||
           typeWord.includes(q) ||
@@ -177,7 +198,7 @@ export function MovementsPage() {
         : a.amount - b.amount;
       return sortDir === 'asc' ? val : -val;
     });
-  }, [monthlyData, currentFilter, sortField, sortDir, categoryFilter, accountFilter, searchQuery, categoryLabelMap]);
+  }, [monthlyData, currentFilter, sortField, sortDir, categoryFilter, accountFilter, searchQuery, categoryLabelMap, debts]);
 
   const handleSort = (field: 'date' | 'amount') => {
     if (sortField === field) {
@@ -189,7 +210,7 @@ export function MovementsPage() {
   };
 
   const totalIncome = roundMoney(filtered.filter((i) => i.type === 'income').reduce((s, i) => s + i.amount, 0));
-  const totalExpense = roundMoney(filtered.filter((i) => i.type === 'expense').reduce((s, i) => s + i.amount, 0));
+  const totalExpense = roundMoney(filtered.filter(cuentaComoGasto).reduce((s, i) => s + i.amount, 0));
 
   // Las reglas ya no se crean desde el formulario (la fila «Repetir» metía
   // reglas sin querer). La pestaña solo aparece mientras quede alguna, para
@@ -429,6 +450,8 @@ export function MovementsPage() {
             {filtered.map((tx) => {
               const category = allCategories.find(c => c.id === tx.category);
               const isSelected = selectedIds.has(tx.id);
+              const esPago = esPagoDeDeuda(tx);
+              const concepto = conceptoDe(tx);
               return (
                 <div
                   key={tx.id}
@@ -448,20 +471,20 @@ export function MovementsPage() {
                       checked={isSelected}
                       onChange={() => toggleSelect(tx.id)}
                       className="w-5 h-5 rounded border-slate-300 dark:border-slate-600 text-brand-600 focus:ring-brand-500"
-                      aria-label={`Seleccionar ${tx.concept}`}
+                      aria-label={`Seleccionar ${concepto}`}
                     />
                   </div>
                   {/* Row 1: icon + concept + amount */}
                   <div className="flex items-center justify-between gap-1.5 mb-1 pr-6">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="text-lg flex-shrink-0 leading-none">{tx.type === 'transfer' ? '🔁' : category?.icon || '📌'}</span>
+                      <span className="text-lg flex-shrink-0 leading-none">{esPago ? iconoPago(tx) : tx.type === 'transfer' ? '🔁' : category?.icon || '📌'}</span>
                       <div className="min-w-0">
                         <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">
-                          {tx.concept}
+                          {concepto}
                         </p>
                       </div>
                     </div>
-                    <TransactionAmount type={tx.type} amount={tx.amount} className="text-xs font-bold flex-shrink-0" />
+                    <TransactionAmount type={tx.type} debtId={tx.debtId} amount={tx.amount} className="text-xs font-bold flex-shrink-0" />
                   </div>
                   {/* Row 2: badges + date.
                       Antes eran <span> sin onClick: en escritorio, la misma
@@ -475,16 +498,20 @@ export function MovementsPage() {
                     <div className="flex items-center gap-1 flex-wrap">
                       <button
                         type="button"
-                        className={`saas-chip-click text-xs font-medium px-1.5 py-0.5 rounded-full ${typePillClasses(tx.type)}`}
+                        className={`saas-chip-click text-xs font-medium px-1.5 py-0.5 rounded-full ${typePillClasses(tx)}`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (tx.type !== 'transfer') setFilter(tx.type);
+                          if (tx.type !== 'transfer' && !esPago) setFilter(tx.type);
                         }}
-                        title={tx.type === 'transfer' ? 'Transferencia entre cuentas' : `Filtrar solo ${tx.type === 'income' ? 'Ingresos' : 'Gastos'}`}
+                        title={esPago ? 'Pago de una deuda: no cuenta como gasto' : tx.type === 'transfer' ? 'Transferencia entre cuentas' : `Filtrar solo ${tx.type === 'income' ? 'Ingresos' : 'Gastos'}`}
                       >
-                        {typeLabel(tx.type)}
+                        {typeLabel(tx)}
                       </button>
-                      {tx.type === 'transfer' ? (
+                      {esPago ? (
+                        <span className="text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
+                          {tx.accountId ? `Desde ${accountName(accounts, tx.accountId)}` : 'Sin cuenta'}
+                        </span>
+                      ) : tx.type === 'transfer' ? (
                         <span className="text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
                           {accountName(accounts, tx.accountId)} → {accountName(accounts, tx.toAccountId)}
                         </span>
@@ -585,6 +612,8 @@ export function MovementsPage() {
                 {filtered.map((tx) => {
                   const category = allCategories.find(c => c.id === tx.category);
                   const isSelected = selectedIds.has(tx.id);
+                  const esPago = esPagoDeDeuda(tx);
+                  const concepto = conceptoDe(tx);
                   return (
                     <tr
                       key={tx.id}
@@ -592,7 +621,7 @@ export function MovementsPage() {
                       onClick={() => openModal(tx.id)}
                       role="button"
                       tabIndex={0}
-                      aria-label={`Editar ${tx.concept}`}
+                      aria-label={`Editar ${concepto}`}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
@@ -607,16 +636,16 @@ export function MovementsPage() {
                           checked={isSelected}
                           onChange={() => toggleSelect(tx.id)}
                           className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-600 text-brand-600 focus:ring-brand-500 cursor-pointer"
-                          aria-label={`Seleccionar ${tx.concept}`}
+                          aria-label={`Seleccionar ${concepto}`}
                         />
                         </span>
                       </td>
                       <td className="text-center hidden lg:table-cell">
-                        <span className="text-base">{tx.type === 'transfer' ? '🔁' : category?.icon || '📌'}</span>
+                        <span className="text-base">{esPago ? iconoPago(tx) : tx.type === 'transfer' ? '🔁' : category?.icon || '📌'}</span>
                       </td>
                       <td>
                         <span className="text-sm font-medium text-slate-900 dark:text-white">
-                          {tx.concept}
+                          {concepto}
                         </span>
                       </td>
                       <td className="whitespace-nowrap hidden lg:table-cell">
@@ -633,7 +662,11 @@ export function MovementsPage() {
                         </button>
                       </td>
                       <td className="whitespace-nowrap">
-                        {tx.type === 'transfer' ? (
+                        {esPago ? (
+                          <span className="text-xs text-slate-600 dark:text-slate-400">
+                            {tx.accountId ? `Desde ${accountName(accounts, tx.accountId)}` : 'Sin cuenta'}
+                          </span>
+                        ) : tx.type === 'transfer' ? (
                           <span className="text-xs text-slate-600 dark:text-slate-400">
                             {accountName(accounts, tx.accountId)} <span className="text-slate-400">→</span> {accountName(accounts, tx.toAccountId)}
                           </span>
@@ -649,14 +682,14 @@ export function MovementsPage() {
                       </td>
                       <td className="whitespace-nowrap">
                         <button
-                          className={`saas-cell-filter text-xs font-medium ${typePillClasses(tx.type)} px-2 py-0.5 rounded-full`}
+                          className={`saas-cell-filter text-xs font-medium ${typePillClasses(tx)} px-2 py-0.5 rounded-full`}
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (tx.type !== 'transfer') setFilter(tx.type);
+                            if (tx.type !== 'transfer' && !esPago) setFilter(tx.type);
                           }}
-                          title={tx.type === 'transfer' ? 'Transferencia entre cuentas' : `Filtrar solo ${tx.type === 'income' ? 'Ingresos' : 'Gastos'}`}
+                          title={esPago ? 'Pago de una deuda: no cuenta como gasto' : tx.type === 'transfer' ? 'Transferencia entre cuentas' : `Filtrar solo ${tx.type === 'income' ? 'Ingresos' : 'Gastos'}`}
                         >
-                          {typeLabel(tx.type)}
+                          {typeLabel(tx)}
                         </button>
                       </td>
                       <td className="whitespace-nowrap">
@@ -669,7 +702,7 @@ export function MovementsPage() {
                         </span>
                       </td>
                       <td className="whitespace-nowrap text-right">
-                    <TransactionAmount type={tx.type} amount={tx.amount} className="text-sm font-semibold" />
+                    <TransactionAmount type={tx.type} debtId={tx.debtId} amount={tx.amount} className="text-sm font-semibold" />
                   </td>
                     </tr>
                   );

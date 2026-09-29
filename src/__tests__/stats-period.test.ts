@@ -219,3 +219,40 @@ describe('tendencia', () => {
     expect(current.trendData[2].Ingresos).toBe(800);
   });
 });
+
+describe('pagos de deuda no cuentan como gasto', () => {
+  const pagos = () => [
+    tx({ type: 'expense', amount: 50, date: '2026-08-05', category: 'comida' }),
+    tx({ type: 'expense', amount: 200, date: '2026-08-06', category: 'pago-tarjetas', debtId: 'd1' }), // gasto antiguo enlazado
+    tx({ type: 'transfer', amount: 300, date: '2026-08-07', category: 'transferencia', debtId: 'd1', accountId: 'a1', toAccountId: null }),
+  ];
+
+  it('totales, categorías, mayor gasto y día pico ignoran los pagos', () => {
+    const { current } = conGastos(pagos());
+    expect(current.totals.spent).toBe(50);
+    expect(current.expensesByCategory).toEqual([['comida', 50]]);
+    expect(current.largestExpense?.amount).toBe(50);
+    expect(current.peakDay).toEqual({ date: '2026-08-05', amount: 50 });
+    expect(current.peakDayTransactions.map((t) => t.amount)).toEqual([50]);
+  });
+
+  it('la tendencia y el gasto del mes anterior tampoco los suman', () => {
+    const { current } = conGastos([
+      ...pagos(),
+      tx({ type: 'expense', amount: 10, date: '2026-07-10' }),
+      tx({ type: 'expense', amount: 500, date: '2026-07-11', category: 'pago-tarjetas', debtId: 'd1' }),
+    ]);
+    expect(current.trendData[5].Gastos).toBe(50);
+    expect(current.trendData[4].Gastos).toBe(10);
+    expect(current.prevTotals.spent).toBe(10);
+  });
+
+  it('un gasto de negocio con debtId no baja la utilidad del negocio', () => {
+    const { current } = conGastos([
+      tx({ type: 'income', amount: 1000, date: '2026-08-02', businessType: 'business' }),
+      tx({ type: 'expense', amount: 100, date: '2026-08-03', businessType: 'business', debtId: 'd1' }),
+    ]);
+    expect(current.totals.businessProfit).toBe(1000);
+    expect(current.totals.balance).toBe(1000);
+  });
+});

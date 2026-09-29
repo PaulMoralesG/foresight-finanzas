@@ -19,7 +19,7 @@ Presupuestos, Deudas y Metas:
 - **Resumen** — Saldo total y del mes, ingresos vs gastos, resultado del negocio, evolución de seis meses, categorías principales, presupuestos a vigilar, deudas y metas
 - **Movimientos** — Alta, edición y baja de transacciones y transferencias entre cuentas. Filtros por tipo, categoría, cuenta, negocio/personal y búsqueda libre
 - **Presupuestos** — Presupuesto por categoría y ámbito, plan de 12 meses y reporte anual (matriz categoría × mes)
-- **Deudas** — Saldo, interés y mínimo por deuda; orden de pago bola de nieve / avalancha y curva "rumbo a cero"
+- **Deudas** — Saldo, interés y mínimo por deuda; orden de pago bola de nieve / avalancha y curva "rumbo a cero". Un pago mínimo de `0` significa **pago variable**: esa deuda queda fuera de la proyección. Los pagos se registran como una transferencia sin cuenta destino con `debtId` (baja el saldo de la deuda y de la cuenta de origen) y **no cuentan como gasto** del mes; en Movimientos se ven como «Pago de deuda»
 - **Metas** — Metas de ahorro con fecha objetivo, aporte mensual necesario y registro de aportes desde una cuenta
 - **Patrimonio** — Cuentas + activos − deudas, con cierre mensual automático y curva histórica
 - **Cuentas** — Efectivo, banco, tarjeta y ahorros con saldo derivado de los movimientos
@@ -129,6 +129,13 @@ dispositivos). Iniciar sesión, volver a la pestaña y recuperar la red hacen un
 pestaña, y antes de cerrar sesión, se hace flush; el flush no termina hasta que no queda
 ningún ciclo en vuelo ni agendado, porque el cierre de sesión borra la copia local justo
 después.
+
+**Hidratación de campos ausentes (store v16):** un dispositivo con una versión anterior
+tiene deudas y movimientos locales sin `cutDay`/`statementBalance`/`creditLimit` (deudas) ni
+`debtId` (movimientos); en un empate de `updated_at` esa copia ganaría y el push borraría los
+valores de la nube. La migración v16 guarda en `pendienteHidratar` los ids afectados; mientras
+haya pendientes el sync fuerza un ciclo **completo**, copia del remoto solo las claves ausentes
+en local (`hidratarAusentes`, sin tocar `updated_at`) y, al confirmarse el ciclo, vacía la lista.
 
 ## Seguridad
 
