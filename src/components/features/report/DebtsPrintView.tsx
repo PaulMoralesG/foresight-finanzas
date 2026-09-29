@@ -3,6 +3,7 @@
 // ================================================================
 
 import { formatMoney } from '@/lib/utils';
+import { tieneMinimoFijo } from '@/lib/debts';
 import type { Debt } from '@/types';
 
 interface Props {
@@ -47,7 +48,7 @@ export function DebtsPrintView({ debts, totalBalance, generado }: Props) {
                 <td className="py-1 pr-2">{d.kind}</td>
                 <td className="whitespace-nowrap py-1 pr-2 text-right font-mono tabular-nums">{formatMoney(d.balance)}</td>
                 <td className="whitespace-nowrap py-1 pr-2 text-right font-mono tabular-nums">{d.annualRate}%</td>
-                <td className="whitespace-nowrap py-1 text-right font-mono tabular-nums">{formatMoney(d.minPayment)}</td>
+                <td className="whitespace-nowrap py-1 text-right font-mono tabular-nums">{tieneMinimoFijo(d) ? formatMoney(d.minPayment) : 'Variable'}</td>
               </tr>
             ))}
           </tbody>

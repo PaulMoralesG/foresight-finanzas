@@ -126,3 +126,28 @@ describe('migración v9 del estado persistido (cuentas)', () => {
     expect(migrado.accounts).toEqual(cuentas);
   });
 });
+
+describe('accountBalance — pagos de deuda', () => {
+  it('un pago (transfer sin cuenta destino con debtId) baja el saldo de la cuenta de origen', () => {
+    const banco = cuenta('a', 1000);
+    const pago = mov({ type: 'transfer', amount: 250, accountId: 'a', toAccountId: null, debtId: 'd1', category: 'transferencia' });
+    expect(accountBalance(banco, [pago])).toBe(750);
+  });
+
+  it('no toca a las demás cuentas', () => {
+    const otra = cuenta('b', 500);
+    const pago = mov({ type: 'transfer', amount: 250, accountId: 'a', toAccountId: null, debtId: 'd1', category: 'transferencia' });
+    expect(accountBalance(otra, [pago])).toBe(500);
+  });
+
+  it('un expense antiguo con debtId sigue restando de su cuenta', () => {
+    const banco = cuenta('a', 1000);
+    expect(accountBalance(banco, [mov({ amount: 200, accountId: 'a', debtId: 'd1' })])).toBe(800);
+  });
+
+  it('un pago sin cuenta de origen no mueve ninguna cuenta', () => {
+    const banco = cuenta('a', 1000);
+    const pago = mov({ type: 'transfer', amount: 250, accountId: null, toAccountId: null, debtId: 'd1', category: 'transferencia' });
+    expect(accountBalance(banco, [pago])).toBe(1000);
+  });
+});

@@ -207,7 +207,7 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
                     </span>
                   </td>
                   <td className="whitespace-nowrap">
-                    <TypePill type={tx.type} />
+                    <TypePill type={tx.type} debtId={tx.debtId} />
                   </td>
                   <td className="whitespace-nowrap">
                     <span className="text-xs text-slate-600 dark:text-slate-400">
@@ -215,7 +215,7 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
                     </span>
                   </td>
                   <td className="whitespace-nowrap text-right">
-                    <TransactionAmount type={tx.type} amount={tx.amount} className="text-sm font-semibold" />
+                    <TransactionAmount type={tx.type} amount={tx.amount} debtId={tx.debtId} className="text-sm font-semibold" />
                   </td>
                 </tr>
               );
@@ -253,11 +253,11 @@ function RecentTransactions({ allData }: { allData: Transaction[] }) {
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <TransactionAmount type={tx.type} amount={tx.amount} className="block text-sm font-bold" />
+                  <TransactionAmount type={tx.type} amount={tx.amount} debtId={tx.debtId} className="block text-sm font-bold" />
                 </div>
               </div>
               <div className="flex items-center gap-1 mt-1 flex-wrap">
-                <TypePill type={tx.type} className="text-2xs px-1.5 py-0.5 rounded" />
+                <TypePill type={tx.type} debtId={tx.debtId} className="text-2xs px-1.5 py-0.5 rounded" />
                 <span className="text-2xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
                   {cat?.label || tx.category}
                 </span>

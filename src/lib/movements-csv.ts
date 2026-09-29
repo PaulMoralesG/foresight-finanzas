@@ -17,6 +17,7 @@
 // ================================================================
 
 import { getCategoryById } from '@/config/categories';
+import { esPagoDeDeuda } from '@/lib/debt-payments';
 import { roundMoney, sortByDateAsc, toCsv } from '@/lib/utils';
 import type { Category, PaymentMethod, Transaction } from '@/types';
 
@@ -45,11 +46,14 @@ export function movementsToRows(
   // trae `order by updated_at`), así que sin esto el archivo sale con días y
   // meses entremezclados.
   return sortByDateAsc(movements).map((tx) => {
-    // Una transferencia no es entrada ni salida: monto sin signo.
-    const monto = tx.type === 'income' ? tx.amount : tx.type === 'transfer' ? tx.amount : -tx.amount;
+    // Una transferencia entre cuentas no es entrada ni salida: monto sin signo.
+    // Un pago de deuda no es gasto, pero el dinero SÍ sale de una cuenta: va en
+    // negativo (así la columna suma el flujo de caja real del periodo).
+    const pago = esPagoDeDeuda(tx);
+    const monto = pago ? -tx.amount : tx.type === 'income' || tx.type === 'transfer' ? tx.amount : -tx.amount;
     return [
       tx.date.slice(0, 10),
-      tx.type === 'income' ? 'Ingreso' : tx.type === 'transfer' ? 'Transferencia' : 'Gasto',
+      pago ? 'Pago de deuda' : tx.type === 'income' ? 'Ingreso' : tx.type === 'transfer' ? 'Transferencia' : 'Gasto',
       // businessType ausente cuenta como Negocio, igual que en el resto de la app
       tx.businessType === 'personal' ? 'Personal' : 'Negocio',
       // getCategoryById nunca devuelve undefined: ya trae su propio fallback

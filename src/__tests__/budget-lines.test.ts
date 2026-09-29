@@ -12,6 +12,7 @@ import {
   groupSummary,
   groupSummaryToCsv,
   annualReport,
+  actualFor,
 } from '@/lib/budget-lines';
 import type { BudgetLine, Transaction } from '@/types';
 
@@ -171,5 +172,42 @@ describe('annualReport', () => {
     expect(comida.total).toBe(400);
     expect(comida.average).toBe(200); // dos meses con movimiento
     expect(r.find((x) => x.kind === 'income')!.total).toBe(1000);
+  });
+});
+
+describe('pagos de deuda no cuentan como gasto', () => {
+  const deudaGasto = () => mov({ category: 'pago-tarjetas', amount: 200, debtId: 'd1' }); // expense antiguo enlazado
+  const deudaTransfer = () =>
+    mov({ type: 'transfer', category: 'transferencia', amount: 300, debtId: 'd1', accountId: 'a1', toAccountId: null });
+
+  it('actualFor: el real de la línea no suma un expense con debtId', () => {
+    const l = { tag: 'personal' as const, kind: 'expense' as const, categoryId: 'pago-tarjetas' };
+    expect(actualFor([mov({ category: 'pago-tarjetas', amount: 50 }), deudaGasto(), deudaTransfer()], l, '2026-08')).toBe(50);
+  });
+
+  it('groupSummary: ni el expense con debtId ni el transfer suman al real', () => {
+    const lines = [linea({ categoryId: 'pago-tarjetas', limit: 500 })];
+    const r = groupSummary(lines, [mov({ category: 'pago-tarjetas', amount: 50 }), deudaGasto(), deudaTransfer()], '2026-08', []);
+    const fila = r.rows.find((x) => x.kind === 'expense')!;
+    expect(fila.actual).toBe(50);
+    expect(r.realResult).toBe(-50);
+  });
+
+  it('groupSummary: un grupo solo con pagos de deuda no genera fila de real', () => {
+    const r = groupSummary([], [deudaGasto(), deudaTransfer()], '2026-08', []);
+    expect(r.rows).toEqual([]);
+  });
+
+  it('annualReport: el informe anual excluye los pagos de deuda', () => {
+    const r = annualReport([mov({ category: 'comida', amount: 100 }), deudaGasto(), deudaTransfer()], 2026, []);
+    expect(r).toHaveLength(1);
+    expect(r[0]).toMatchObject({ categoryId: 'comida', total: 100 });
+  });
+
+  it('convertGlobalBudgets: el reparto del presupuesto ignora los pagos de deuda', () => {
+    const lines = convertGlobalBudgets({ '2026-08': 400 }, [mov({ category: 'comida', amount: 100 }), deudaGasto()]);
+    expect(lines).toHaveLength(1);
+    expect(lines[0].categoryId).toBe('comida');
+    expect(lines[0].plan['2026-08']).toBe(400);
   });
 });

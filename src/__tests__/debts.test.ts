@@ -6,7 +6,7 @@
 // ================================================================
 
 import { describe, it, expect } from 'vitest';
-import { projectDebts, totalDebt, monthlyDebtPayment, payoffDate, debtsToCsv } from '@/lib/debts';
+import { projectDebts, totalDebt, monthlyDebtPayment, payoffDate, debtsToCsv, tieneMinimoFijo } from '@/lib/debts';
 import type { Debt } from '@/types';
 
 let n = 0;
@@ -95,6 +95,54 @@ describe('projectDebts', () => {
     expect(plan.payoff.a).toBe(1);
     expect(plan.payoff.b).toBe(2);
     expect(plan.months).toBe(2);
+  });
+});
+
+describe('pago mínimo opcional (0 = pago variable)', () => {
+  it('tieneMinimoFijo: solo con mínimo mayor que cero', () => {
+    expect(tieneMinimoFijo({ minPayment: 50 })).toBe(true);
+    expect(tieneMinimoFijo({ minPayment: 0 })).toBe(false);
+  });
+
+  it('una deuda sin mínimo va en sinMinimo, fuera de payoff/order, y el plan no se estanca', () => {
+    const plan = projectDebts([
+      deuda({ id: 'variable', balance: 800, annualRate: 30, minPayment: 0 }),
+      deuda({ id: 'fija', balance: 500, annualRate: 12, minPayment: 100 }),
+    ], 0, 'snowball');
+    expect(plan.sinMinimo).toEqual(['variable']);
+    expect(plan.order).toEqual(['fija']);
+    expect(plan.payoff.variable).toBeUndefined();
+    expect(plan.payoff.fija).toBeGreaterThan(0);
+    expect(plan.stalled).toBe(false);
+    expect(plan.ok).toBe(true);
+    // El saldo proyectado solo considera las deudas con mínimo fijo
+    expect(plan.schedule[0]).toEqual({ month: 0, total: 500 });
+  });
+
+  it('una deuda sin saldo no cuenta como sinMinimo', () => {
+    const plan = projectDebts([deuda({ id: 'saldada', balance: 0, minPayment: 0 }), deuda({ id: 'fija' })], 0, 'snowball');
+    expect(plan.sinMinimo).toEqual([]);
+  });
+
+  it('todas sin mínimo: plan vacío pero ok, con todas en sinMinimo', () => {
+    const plan = projectDebts([
+      deuda({ id: 'a', minPayment: 0, annualRate: 25 }),
+      deuda({ id: 'b', minPayment: 0, annualRate: 0 }),
+    ], 50, 'avalanche');
+    expect(plan.empty).toBe(true);
+    expect(plan.ok).toBe(true);
+    expect(plan.stalled).toBe(false);
+    expect(plan.sinMinimo).toEqual(['a', 'b']);
+    expect(plan.order).toEqual([]);
+  });
+
+  it('sin deudas sinMinimo es una lista vacía', () => {
+    expect(projectDebts([], 0, 'snowball').sinMinimo).toEqual([]);
+  });
+
+  it('debtsToCsv escribe «Variable» en vez de 0,00 cuando no hay mínimo', async () => {
+    const csv = await debtsToCsv([deuda({ name: 'Tarjeta libre', minPayment: 0 })]).text();
+    expect(csv).toContain('"Tarjeta libre","Personal","Préstamo","1000.00","12.00","Variable"');
   });
 });
 

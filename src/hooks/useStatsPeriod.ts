@@ -10,6 +10,7 @@
 import { useMemo } from 'react';
 import { useExpensesEnAmbito } from '@/hooks/useAmbito';
 import { MONTH_NAMES, roundMoney, safeParseDate } from '@/lib/utils';
+import { cuentaComoGasto } from '@/lib/debt-payments';
 import type { Transaction } from '@/types';
 
 export interface PeriodoStats {
@@ -55,9 +56,9 @@ function sumar(items: Transaction[], filtro: (t: Transaction) => boolean): numbe
 
 function totalesDe(items: Transaction[]): TotalesPeriodo {
   const income = sumar(items, (i) => i.type === 'income');
-  const spent = sumar(items, (i) => i.type === 'expense');
+  const spent = sumar(items, cuentaComoGasto);
   const businessInc = sumar(items, (i) => i.type === 'income' && i.businessType === 'business');
-  const businessSpent = sumar(items, (i) => i.type === 'expense' && i.businessType === 'business');
+  const businessSpent = sumar(items, (i) => cuentaComoGasto(i) && i.businessType === 'business');
   return {
     income,
     spent,
@@ -90,7 +91,7 @@ export function useStatsPeriod(periodo: PeriodoStats) {
         return fecha.getMonth() === m && fecha.getFullYear() === y;
       });
       const ingresos = sumar(items, (i) => i.type === 'income');
-      const gastos = sumar(items, (i) => i.type === 'expense');
+      const gastos = sumar(items, cuentaComoGasto);
       meses.push({
         month: MONTH_NAMES[m].slice(0, 3),
         Ingresos: ingresos,
@@ -139,7 +140,7 @@ export function useStatsPeriod(periodo: PeriodoStats) {
   const expensesByCategory = useMemo<[string, number][]>(() => {
     const map: Record<string, number> = {};
     filteredData
-      .filter((i) => i.type === 'expense')
+      .filter(cuentaComoGasto)
       .forEach((item) => {
         map[item.category] = roundMoney((map[item.category] || 0) + item.amount);
       });
@@ -147,14 +148,14 @@ export function useStatsPeriod(periodo: PeriodoStats) {
   }, [filteredData]);
 
   const largestExpense = useMemo<Transaction | null>(() => {
-    const gastos = filteredData.filter((i) => i.type === 'expense');
+    const gastos = filteredData.filter(cuentaComoGasto);
     if (gastos.length === 0) return null;
     return gastos.reduce((max, item) => (item.amount > max.amount ? item : max), gastos[0]);
   }, [filteredData]);
 
   /** Día con más gasto acumulado del periodo. */
   const peakDay = useMemo<{ date: string; amount: number } | null>(() => {
-    const gastos = filteredData.filter((i) => i.type === 'expense');
+    const gastos = filteredData.filter(cuentaComoGasto);
     if (gastos.length === 0) return null;
     const porDia: Record<string, number> = {};
     gastos.forEach((i) => {
@@ -175,7 +176,7 @@ export function useStatsPeriod(periodo: PeriodoStats) {
   const peakDayTransactions = useMemo(() => {
     if (!peakDay) return [];
     return filteredData
-      .filter((i) => i.type === 'expense' && i.date.slice(0, 10) === peakDay.date)
+      .filter((i) => cuentaComoGasto(i) && i.date.slice(0, 10) === peakDay.date)
       .sort((a, b) => b.amount - a.amount);
   }, [filteredData, peakDay]);
 

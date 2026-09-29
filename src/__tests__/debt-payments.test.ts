@@ -3,7 +3,7 @@
 // ================================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { deltaDeSaldos, enlazarPagosAntiguos, historialDeuda, categoriaDePago, ultimaCuentaDePago } from '@/lib/debt-payments';
+import { aplicarCambioDePagos, montoQueRevierte, enlazarPagosAntiguos, historialDeuda, categoriaDePago } from '@/lib/debt-payments';
 import { useFinanceStore, migrateV15 } from '@/stores/financeStore';
 import type { Debt, Transaction } from '@/types';
 
@@ -18,12 +18,81 @@ const mov = (o: Partial<Transaction> = {}): Transaction => ({
 });
 
 describe('lib/debt-payments', () => {
-  it('deltaDeSaldos: alta baja, borrado sube, edición compensa monto y cambio de deuda', () => {
-    expect(deltaDeSaldos([], [mov({ debtId: 'd1' })])).toEqual({ d1: -100 });
-    expect(deltaDeSaldos([mov({ debtId: 'd1' })], [])).toEqual({ d1: 100 });
-    expect(deltaDeSaldos([mov({ debtId: 'd1', amount: 100 })], [mov({ debtId: 'd1', amount: 150 })])).toEqual({ d1: -50 });
-    expect(deltaDeSaldos([mov({ debtId: 'd1' })], [mov({ debtId: 'd2' })])).toEqual({ d1: 100, d2: -100 });
-    expect(deltaDeSaldos([mov()], [mov({ amount: 999 })])).toEqual({});
+  const AHORA = '2026-09-28T00:00:00.000Z';
+  const saldos = (debts: Debt[]) => debts.map((d) => [d.balance, d.statementBalance]);
+
+  it('aplicarCambioDePagos: alta baja, borrado sube, edición compensa monto y cambio de deuda', () => {
+    const debts = [deuda({ id: 'd1', balance: 1000 }), deuda({ id: 'd2', balance: 500 })];
+    const alta = aplicarCambioDePagos(debts, {}, [], [mov({ debtId: 'd1' })], AHORA);
+    expect(saldos(alta.debts)).toEqual([[900, undefined], [500, undefined]]);
+    expect(alta.debts[0].updated_at).toBe(AHORA);
+    expect(alta.debts[1]).toBe(debts[1]); // la otra deuda ni se toca
+
+    const borrado = aplicarCambioDePagos(alta.debts, alta.descuentos, [mov({ debtId: 'd1' })], [], AHORA);
+    expect(saldos(borrado.debts)).toEqual([[1000, undefined], [500, undefined]]);
+    expect(borrado.descuentos).toEqual({});
+
+    const editado = aplicarCambioDePagos(alta.debts, alta.descuentos, [mov({ debtId: 'd1', amount: 100 })], [mov({ debtId: 'd1', amount: 150 })], AHORA);
+    expect(saldos(editado.debts)).toEqual([[850, undefined], [500, undefined]]);
+
+    const otraDeuda = aplicarCambioDePagos(alta.debts, alta.descuentos, [mov({ debtId: 'd1' })], [mov({ debtId: 'd2' })], AHORA);
+    expect(saldos(otraDeuda.debts)).toEqual([[1000, undefined], [400, undefined]]);
+  });
+
+  it('aplicarCambioDePagos: sin cambio de deuda ni de monto no toca nada', () => {
+    const debts = [deuda()];
+    expect(aplicarCambioDePagos(debts, {}, [mov()], [mov({ amount: 999 })], AHORA).debts).toBe(debts);
+    const igual = aplicarCambioDePagos(debts, {}, [mov({ debtId: 'd1' })], [mov({ debtId: 'd1', concept: 'Otro' })], AHORA);
+    expect(igual.debts).toBe(debts);
+  });
+
+  it('un pago mayor que el saldo y que el contado se revierte exactamente (borrar y editar)', () => {
+    const debts = [deuda({ balance: 100, statementBalance: 100 })];
+    const pago = mov({ debtId: 'd1', amount: 300 });
+    const alta = aplicarCambioDePagos(debts, {}, [], [pago], AHORA);
+    expect(saldos(alta.debts)).toEqual([[0, 0]]);
+    expect(alta.descuentos.m1).toEqual({ balance: 100, statement: 100 });
+
+    const borrado = aplicarCambioDePagos(alta.debts, alta.descuentos, [pago], [], AHORA);
+    expect(saldos(borrado.debts)).toEqual([[100, 100]]);
+
+    const editado = aplicarCambioDePagos(alta.debts, alta.descuentos, [pago], [mov({ debtId: 'd1', amount: 40 })], AHORA);
+    expect(saldos(editado.debts)).toEqual([[60, 60]]);
+  });
+
+  it('un pago mayor que el contado pero menor que el saldo devuelve el contado que de verdad bajó', () => {
+    const debts = [deuda({ balance: 1000, statementBalance: 100 })];
+    const alta = aplicarCambioDePagos(debts, {}, [], [mov({ debtId: 'd1', amount: 300 })], AHORA);
+    expect(saldos(alta.debts)).toEqual([[700, 0]]);
+    const borrado = aplicarCambioDePagos(alta.debts, alta.descuentos, [mov({ debtId: 'd1', amount: 300 })], [], AHORA);
+    expect(saldos(borrado.debts)).toEqual([[1000, 100]]);
+  });
+
+  it('sin registro de descuento (otro dispositivo, dato antiguo) se devuelve el monto entero', () => {
+    const debts = [deuda({ balance: 700, statementBalance: 0 })];
+    const borrado = aplicarCambioDePagos(debts, {}, [mov({ debtId: 'd1', amount: 300 })], [], AHORA);
+    expect(saldos(borrado.debts)).toEqual([[1000, 300]]);
+  });
+
+  it('un pago vinculado a mano no mueve el saldo ni al editarlo, borrarlo o deshacer el borrado', () => {
+    const debts = [deuda({ balance: 1000 })];
+    const vinc = { m1: { balance: 0, vinculado: true as const } };
+    const pago = mov({ debtId: 'd1', amount: 200 });
+    const borrado = aplicarCambioDePagos(debts, vinc, [pago], [], AHORA);
+    expect(borrado.debts).toBe(debts);
+    expect(borrado.descuentos).toEqual(vinc); // la marca sobrevive para el «deshacer»
+    expect(aplicarCambioDePagos(borrado.debts, borrado.descuentos, [], [pago], AHORA).debts).toBe(debts);
+    expect(aplicarCambioDePagos(debts, vinc, [pago], [mov({ debtId: 'd1', amount: 500 })], AHORA).debts).toBe(debts);
+    // Al quitarle la deuda por edición pierde la marca
+    expect(aplicarCambioDePagos(debts, vinc, [pago], [mov({ debtId: undefined })], AHORA).descuentos).toEqual({});
+  });
+
+  it('montoQueRevierte: lo efectivo si se conoce, el monto si no, 0 si es vinculado o no paga deuda', () => {
+    const p = mov({ debtId: 'd1', amount: 300 });
+    expect(montoQueRevierte(p, { m1: { balance: 100 } })).toBe(100);
+    expect(montoQueRevierte(p, {})).toBe(300);
+    expect(montoQueRevierte(p, { m1: { balance: 0, vinculado: true } })).toBe(0);
+    expect(montoQueRevierte(mov(), {})).toBe(0);
   });
 
   it('historialDeuda: pagos del más reciente al más antiguo, total y saldo reconstruido', () => {
@@ -35,8 +104,8 @@ describe('lib/debt-payments', () => {
     ]);
     expect(h.pagos.map((p) => p.id)).toEqual(['b', 'a']);
     expect(h.totalPagado).toBe(300);
-    expect(h.pagos[0]).toMatchObject({ saldoDespues: 700, esGasto: false });
-    expect(h.pagos[1]).toMatchObject({ saldoDespues: 900, esGasto: true });
+    expect(h.pagos[0]).toMatchObject({ saldoDespues: 700 });
+    expect(h.pagos[1]).toMatchObject({ saldoDespues: 900 });
   });
 
   it('enlazarPagosAntiguos: enlaza «Pago <deuda>» por nombre único y nada más', () => {
@@ -50,18 +119,6 @@ describe('lib/debt-payments', () => {
     ], debts, '2026-09-26T00:00:00.000Z');
     expect(out.map((m) => m.debtId ?? null)).toEqual(['d1', 'd2', null, null, null]);
     expect(out[0].updated_at).toBe('2026-09-26T00:00:00.000Z');
-  });
-
-  it('ultimaCuentaDePago: la cuenta del pago más reciente que aún existe', () => {
-    const movs = [
-      mov({ id: 'a', debtId: 'd1', date: '2026-07-10', accountId: 'ahorro' }),
-      mov({ id: 'b', debtId: 'd1', date: '2026-09-10', accountId: 'borrada' }),
-      mov({ id: 'c', debtId: 'd1', date: '2026-08-10', accountId: null }),
-      mov({ id: 'otra', debtId: 'd2', date: '2026-09-20', accountId: 'corriente' }),
-    ];
-    expect(ultimaCuentaDePago(deuda(), movs, ['ahorro', 'corriente'])).toBe('ahorro');
-    expect(ultimaCuentaDePago(deuda(), movs, ['ahorro', 'borrada'])).toBe('borrada');
-    expect(ultimaCuentaDePago(deuda(), [], ['ahorro'])).toBe('');
   });
 
   it('categoriaDePago: tarjeta → pago-tarjetas; el resto → prestamos', () => {
@@ -96,10 +153,10 @@ describe('store: el saldo de la deuda sigue a sus pagos', () => {
 
   it('borrar un pago devuelve el saldo, y deshacer lo vuelve a descontar', () => {
     const d = nuevaDeuda();
-    useFinanceStore.getState().registerDebtPayment(d, { amount: 200, date: '2026-09-20', accountId: null, asExpense: true });
+    useFinanceStore.getState().registerDebtPayment(d, { amount: 200, date: '2026-09-20', accountId: null });
     expect(saldo(d)).toBe(800);
     const pago = useFinanceStore.getState().expenses[0];
-    expect(pago).toMatchObject({ debtId: d, type: 'expense', category: 'pago-tarjetas' });
+    expect(pago).toMatchObject({ debtId: d, type: 'transfer', toAccountId: null, category: 'transferencia' });
     useFinanceStore.getState().deleteTransactions([pago.id]);
     expect(saldo(d)).toBe(1000);
     useFinanceStore.getState().restoreTransactions([pago]);
@@ -122,9 +179,9 @@ describe('migración v15 del estado persistido', () => {
     expect(migrado.debts[0].balance).toBe(400);
   });
 
-  it('está en la cadena de migrate con la versión 15', () => {
+  it('está en la cadena de migrate con la versión 16', () => {
     const opciones = useFinanceStore.persist.getOptions();
-    expect(opciones.version).toBe(15);
+    expect(opciones.version).toBe(16);
     const migrado = opciones.migrate!({ expenses: [mov({ concept: 'Pago Visa' })], debts: [deuda()], savingsGoals: [], accounts: [] }, 14) as { expenses: Transaction[] };
     expect(migrado.expenses[0].debtId).toBe('d1');
   });

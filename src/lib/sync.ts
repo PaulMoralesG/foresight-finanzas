@@ -6,9 +6,9 @@
 // ================================================================
 
 import { supabase } from '@/config/supabase';
-import { useFinanceStore } from '@/stores/financeStore';
+import { useFinanceStore, type PendienteHidratar } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { mergeById, mergeBudgets, type MergeSet } from '@/lib/merge';
+import { mergeById, mergeBudgets, hidratarAusentes, type MergeSet } from '@/lib/merge';
 import { nowIso } from '@/lib/ids';
 import { reportarError } from '@/lib/error-reporter';
 import { getTodayISO } from '@/lib/utils';
@@ -804,13 +804,28 @@ function universeOf<T extends { id: string }>(localLive: T[], remote: MergeSet<T
   ]);
 }
 
-function applyMerge(snapshot: Snapshot): MergeResult {
+/** Claves añadidas por las migraciones 0018/0019 que un cliente viejo no conoce. */
+const CLAVES_DEUDA_HIDRATABLES: ReadonlyArray<keyof Debt> = ['cutDay', 'statementBalance', 'creditLimit'];
+const CLAVES_GASTO_HIDRATABLES: ReadonlyArray<keyof Transaction> = ['debtId'];
+
+/**
+ * @param pendiente  ids cuyas copias locales pudieron perder claves (spec D2).
+ *                   Solo se usa en un ciclo COMPLETO (snapshot sin filtrar):
+ *                   con un snapshot parcial la fila remota puede no haber
+ *                   llegado y no habría de dónde hidratar.
+ */
+function applyMerge(snapshot: Snapshot, pendiente: PendienteHidratar | null = null): MergeResult {
   const state = useFinanceStore.getState();
 
   const remoteExpenses = buildRemoteSet(snapshot.expenses, rowToExpense);
-  const expUniverse = universeOf(state.expenses, remoteExpenses);
+  // Antes del merge: si la copia local (empatada o más nueva) sin `debtId`
+  // ganara tal cual, el push subiría `debt_id: null` encima del servidor.
+  const localExpenses = pendiente?.expenses.length
+    ? hidratarAusentes(state.expenses, remoteExpenses.live, pendiente.expenses, CLAVES_GASTO_HIDRATABLES)
+    : state.expenses;
+  const expUniverse = universeOf(localExpenses, remoteExpenses);
   const expenses = mergeById(
-    { live: state.expenses, tombstones: scopeTombstones(state.tombstones, expUniverse) },
+    { live: localExpenses, tombstones: scopeTombstones(state.tombstones, expUniverse) },
     remoteExpenses,
   );
 
@@ -829,9 +844,12 @@ function applyMerge(snapshot: Snapshot): MergeResult {
   );
 
   const remoteDebts = buildRemoteSet(snapshot.debts, rowToDebt);
-  const debtsUniverse = universeOf(state.debts, remoteDebts);
+  const localDebts = pendiente?.debts.length
+    ? hidratarAusentes(state.debts, remoteDebts.live, pendiente.debts, CLAVES_DEUDA_HIDRATABLES)
+    : state.debts;
+  const debtsUniverse = universeOf(localDebts, remoteDebts);
   const debts = mergeById(
-    { live: state.debts, tombstones: scopeTombstones(state.tombstones, debtsUniverse) },
+    { live: localDebts, tombstones: scopeTombstones(state.tombstones, debtsUniverse) },
     remoteDebts,
   );
 
@@ -1212,13 +1230,20 @@ async function pushWithRetry(uid: string, fullPush = false): Promise<boolean> {
       // queda por encima de la marca y entra en el push siguiente en vez de
       // caer en la grieta entre "ya sincronizado" y "aún no".
       const startedAt = nowIso();
-      const since = fullPush ? null : pushWatermark;
+      // Con ids pendientes de hidratar el ciclo es SIEMPRE completo: uno
+      // incremental subiría copias sin hidratar (o no traería la fila remota).
+      const pendiente = useFinanceStore.getState().pendienteHidratar;
+      const hayPendientes = pendiente.debts.length > 0 || pendiente.expenses.length > 0;
+      const since = fullPush || hayPendientes ? null : pushWatermark;
 
       const snapshot = await pullAll(uid, marcaDePull(since));
-      const merged = applyMerge(snapshot);
+      const merged = applyMerge(snapshot, hayPendientes ? pendiente : null);
       await pushAll(uid, merged, since);
 
       saveWatermark(uid, startedAt);
+      // Solo aquí, con el ciclo confirmado: si algo falló arriba, la lista
+      // sigue intacta y el reintento vuelve a hidratar.
+      if (hayPendientes) useFinanceStore.getState().limpiarPendienteHidratar();
       return true;
     } catch (err) {
       if (isSchemaError(err)) {

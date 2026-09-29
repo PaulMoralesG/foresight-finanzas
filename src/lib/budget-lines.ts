@@ -10,7 +10,17 @@
 import { roundMoney, safeParseDate, toCsv } from './utils';
 import { categoryGroup } from '@/config/categories';
 import { newId, nowIso } from './ids';
+import { cuentaComoGasto } from './debt-payments';
 import type { BudgetLine, BusinessType, Category, MonthlyBudget, Transaction } from '@/types';
+
+/**
+ * ¿El movimiento cuenta en el real de un presupuesto de este tipo? Los ingresos
+ * son los `income`; los gastos, lo que pasa por `cuentaComoGasto` (un pago de
+ * deuda no es gasto: la compra ya se contó al hacerla).
+ */
+function cuentaEnPresupuesto(t: Transaction, kind: 'income' | 'expense'): boolean {
+  return kind === 'income' ? t.type === 'income' : cuentaComoGasto(t);
+}
 
 const monthKeyOf = (iso: string): string => {
   const d = safeParseDate(iso);
@@ -37,7 +47,7 @@ export function budgetStatus(spent: number, limit: number): { pct: number; statu
 export function actualFor(expenses: Transaction[], line: Pick<BudgetLine, 'tag' | 'kind' | 'categoryId'>, monthKey: string): number {
   return roundMoney(
     expenses
-      .filter((t) => t.type === line.kind && t.businessType === line.tag && t.category === line.categoryId && monthKeyOf(t.date) === monthKey)
+      .filter((t) => cuentaEnPresupuesto(t, line.kind) && t.businessType === line.tag && t.category === line.categoryId && monthKeyOf(t.date) === monthKey)
       .reduce((s, t) => s + t.amount, 0),
   );
 }
@@ -76,9 +86,10 @@ export function groupSummary(lines: BudgetLine[], expenses: Transaction[], month
     bucket(l.kind, categoryGroup(l.categoryId, customCats)).planned += planFor(l, monthKey);
   }
   for (const t of expenses) {
-    if (t.type !== 'income' && t.type !== 'expense') continue;
+    const kind = t.type === 'income' ? 'income' : cuentaComoGasto(t) ? 'expense' : null;
+    if (!kind) continue;
     if (monthKeyOf(t.date) !== monthKey) continue;
-    bucket(t.type, categoryGroup(t.category, customCats)).actual += t.amount;
+    bucket(kind, categoryGroup(t.category, customCats)).actual += t.amount;
   }
 
   const sums = { income: { planned: 0, actual: 0 }, expense: { planned: 0, actual: 0 } };
@@ -129,13 +140,14 @@ export interface AnnualRow {
 export function annualReport(expenses: Transaction[], year: number, _customCats: Category[]): AnnualRow[] {
   const acc = new Map<string, AnnualRow>();
   for (const t of expenses) {
-    if (t.type !== 'income' && t.type !== 'expense') continue;
+    const kind = t.type === 'income' ? 'income' : cuentaComoGasto(t) ? 'expense' : null;
+    if (!kind) continue;
     const mk = monthKeyOf(t.date);
     if (!mk.startsWith(`${year}-`)) continue;
-    const k = `${t.businessType}|${t.type}|${t.category}`;
+    const k = `${t.businessType}|${kind}|${t.category}`;
     let r = acc.get(k);
     if (!r) {
-      r = { tag: t.businessType, kind: t.type, categoryId: t.category, byMonth: {}, total: 0, average: 0 };
+      r = { tag: t.businessType, kind, categoryId: t.category, byMonth: {}, total: 0, average: 0 };
       acc.set(k, r);
     }
     r.byMonth[mk] = (r.byMonth[mk] ?? 0) + t.amount;
@@ -172,7 +184,7 @@ export function convertGlobalBudgets(budgets: MonthlyBudget, expenses: Transacti
 
   for (const mk of meses) {
     const total = budgets[mk];
-    const delMes = expenses.filter((t) => t.type === 'expense' && monthKeyOf(t.date) === mk);
+    const delMes = expenses.filter((t) => cuentaComoGasto(t) && monthKeyOf(t.date) === mk);
     const porCat = new Map<string, number>();
     for (const t of delMes) {
       porCat.set(t.category, (porCat.get(t.category) ?? 0) + t.amount);

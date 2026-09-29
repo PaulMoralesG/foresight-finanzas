@@ -165,3 +165,26 @@ describe('TransactionModal — cuentas y transferencias', () => {
     expect(tx[0]).toMatchObject({ type: 'transfer', amount: 300, accountId: banco, toAccountId: efectivo, category: 'transferencia' });
   });
 });
+
+describe('AccountsPage — resumen por cuenta con pagos de deuda', () => {
+  it('los pagos de deuda salen en el bucket «Pagos de deudas», no en «Transferencias» ni por categoría', () => {
+    const banco = useFinanceStore.getState().addAccount({ name: 'Banco', kind: 'Banco', initialBalance: 1000 });
+    useFinanceStore.setState({
+      expenses: [
+        mov({ type: 'transfer', amount: 300, category: 'transferencia', accountId: banco, toAccountId: null, debtId: 'd1' }),
+        mov({ type: 'expense', amount: 200, category: 'pago-tarjetas', accountId: banco, debtId: 'd1' }), // antiguo enlazado
+        mov({ type: 'expense', amount: 45, category: 'comida', accountId: banco }),
+      ],
+    });
+    render(<AccountsPage />);
+
+    const resumen = screen.getByRole('heading', { name: 'Resumen por cuenta' }).closest('.saas-card') as HTMLElement;
+    expect(within(resumen).getByText('Pagos de deudas')).toBeInTheDocument();
+    expect(within(resumen).getByText('$500.00')).toBeInTheDocument(); // 300 + 200 juntos
+    expect(within(resumen).queryByText('Transferencias')).not.toBeInTheDocument();
+    expect(within(resumen).queryByText('Pago de Tarjetas')).not.toBeInTheDocument();
+    expect(within(resumen).getByText('$45.00')).toBeInTheDocument();
+    // Los pagos sí restan de la cuenta: 1000 − 300 − 200 − 45
+    expect(within(resumen).getByText('$455.00')).toBeInTheDocument();
+  });
+});

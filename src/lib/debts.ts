@@ -12,6 +12,13 @@ import type { Debt, DebtKind, DebtMethod } from '@/types';
 
 export const DEBT_KINDS: DebtKind[] = ['Tarjeta de crédito', 'Préstamo', 'Hipoteca', 'Otro'];
 
+/**
+ * ¿La deuda tiene un pago mínimo fijo? `minPayment: 0` es el centinela de
+ * «pago variable» (p. ej. una tarjeta cuyo pago cambia cada mes): no se puede
+ * proyectar, así que `projectDebts` la deja fuera del plan.
+ */
+export const tieneMinimoFijo = (d: Pick<Debt, 'minPayment'>): boolean => d.minPayment > 0;
+
 const DEBTS_CSV_HEADERS = ['Nombre', 'Ámbito', 'Tipo', 'Saldo', 'Interés anual (%)', 'Pago mínimo', 'Día de pago', 'Día de corte', 'Pago de contado', 'Cupo total'] as const;
 
 /** Lista de deudas a CSV, en el orden en que llegan (la página ya las ordena). */
@@ -22,7 +29,7 @@ export function debtsToCsv(debts: Debt[]): Blob {
     d.kind,
     d.balance.toFixed(2),
     d.annualRate.toFixed(2),
-    d.minPayment.toFixed(2),
+    tieneMinimoFijo(d) ? d.minPayment.toFixed(2) : 'Variable',
     d.payDay != null ? String(d.payDay) : '—',
     d.cutDay != null ? String(d.cutDay) : '—',
     d.statementBalance != null ? d.statementBalance.toFixed(2) : '—',
@@ -45,8 +52,13 @@ export interface DebtPlan {
   ok: boolean;
   /** Los pagos no alcanzan: el saldo no baja de un mes al siguiente. */
   stalled: boolean;
-  /** No había deudas con saldo. */
+  /** No había deudas con saldo que proyectar. */
   empty: boolean;
+  /**
+   * ids de las deudas con saldo pero sin pago mínimo fijo (pago variable):
+   * no entran en `payoff`, `order` ni `schedule`.
+   */
+  sinMinimo: string[];
 }
 
 interface Trabajo {
@@ -60,12 +72,16 @@ const CASI_CERO = 0.005;
 const MAX_MESES = 600;
 
 export function projectDebts(debts: Debt[], extra: number, method: DebtMethod): DebtPlan {
-  const work: Trabajo[] = debts
-    .filter((d) => (d.balance || 0) > 0)
+  const conSaldo = debts.filter((d) => (d.balance || 0) > 0);
+  // Sin mínimo fijo no hay nada que proyectar: con interés y sin extra dejaba
+  // el plan «estancado» para todas las demás.
+  const sinMinimo = conSaldo.filter((d) => !tieneMinimoFijo({ minPayment: d.minPayment || 0 })).map((d) => d.id);
+  const work: Trabajo[] = conSaldo
+    .filter((d) => tieneMinimoFijo({ minPayment: d.minPayment || 0 }))
     .map((d) => ({ id: d.id, balance: d.balance, rate: (d.annualRate || 0) / 100 / 12, min: d.minPayment || 0 }));
 
   if (work.length === 0) {
-    return { months: 0, totalInterest: 0, schedule: [], payoff: {}, order: [], ok: true, stalled: false, empty: true };
+    return { months: 0, totalInterest: 0, schedule: [], payoff: {}, order: [], ok: true, stalled: false, empty: true, sinMinimo };
   }
 
   const order = [...work].sort((a, b) =>
@@ -135,6 +151,7 @@ export function projectDebts(debts: Debt[], extra: number, method: DebtMethod): 
     ok: cleared && !stalled,
     stalled: stalled || !cleared,
     empty: false,
+    sinMinimo,
   };
 }
 
