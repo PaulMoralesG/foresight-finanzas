@@ -3,8 +3,10 @@
 // ================================================================
 
 import { useState, type FormEvent, useRef } from 'react';
-import { Eye, EyeOff, MailCheck, AlertCircle, Loader2, UserPlus } from '@/components/ui/icons.generated';
+import { MailCheck, AlertCircle, Loader2, UserPlus } from '@/components/ui/icons.generated';
 import { useAuth } from '@/hooks/useAuth';
+import { authInputClass } from './auth-input-class';
+import { PasswordToggle } from './PasswordToggle';
 import { MIN_PASSWORD_LENGTH, STRENGTH_TRACK_CLASS, passwordStrength, validateNewPassword, leakedPasswordCount, LEAKED_PASSWORD_MESSAGE } from '@/lib/password';
 
 /** Traduce errores de Supabase a español amigable */
@@ -144,9 +146,6 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
     }
   }
 
-  const inputClass = (hasError: boolean) =>
-    `saas-input ${hasError ? '!border-expense-500 !ring-expense-500/20 focus:!ring-expense-500/30' : ''}`;
-
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       {/* Nombre + Apellido */}
@@ -164,7 +163,7 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
             value={firstName}
             onChange={(e) => { setFirstName(e.target.value); clearError(); if (touched.firstName) validateField('firstName', e.target.value); }}
             onBlur={(e) => handleBlur('firstName', e.target.value)}
-            className={inputClass(!!fieldErrors.firstName && touched.firstName)}
+            className={authInputClass(!!fieldErrors.firstName && touched.firstName)}
           />
           {touched.firstName && fieldErrors.firstName && (
             <p className="text-2xs text-expense-600 dark:text-expense-400 mt-1 ml-1">{fieldErrors.firstName}</p>
@@ -200,7 +199,7 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
           value={email}
           onChange={(e) => { setEmail(e.target.value); clearError(); if (touched.email) validateField('email', e.target.value); }}
           onBlur={(e) => handleBlur('email', e.target.value)}
-          className={inputClass(!!fieldErrors.email && touched.email)}
+          className={authInputClass(!!fieldErrors.email && touched.email)}
           autoComplete="email"
         />
         {touched.email && fieldErrors.email && (
@@ -222,18 +221,10 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
             value={password}
             onChange={(e) => { setPassword(e.target.value); clearError(); if (touched.password) validateField('password', e.target.value); }}
             onBlur={(e) => handleBlur('password', e.target.value)}
-            className={inputClass(!!fieldErrors.password && touched.password) + ' pr-10'}
+            className={authInputClass(!!fieldErrors.password && touched.password) + ' pr-10'}
             autoComplete="new-password"
           />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-            aria-pressed={showPassword}
-            className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-          >
-            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </button>
+          <PasswordToggle visible={showPassword} onToggle={() => setShowPassword(!showPassword)} />
         </div>
         {touched.password && fieldErrors.password && (
           <p className="text-2xs text-expense-600 dark:text-expense-400 mt-1 ml-1">{fieldErrors.password}</p>
