@@ -69,12 +69,16 @@ export function App() {
   }, [isDark]);
 
   // Cierre por inactividad. Solo con sesión real: en modo offline no hay nada
-  // que cerrar y desloguear solo estorbaría. signOut() ya hace flush del sync
-  // antes de invalidar el token, así que no se pierde ningún cambio pendiente.
+  // que cerrar y desloguear solo estorbaría. signOut() hace flush del sync
+  // antes de invalidar el token; si aun así quedan cambios sin subir (sin
+  // red), 'conservar' vuelve al login SIN borrar los datos locales: nadie está
+  // delante para confirmar que se pierdan.
   const { avisando, segundosRestantes } = useIdleLogout({
     enabled: supabaseAvailable && !!user,
-    onTimeout: signOut,
+    onTimeout: () => signOut('conservar'),
   });
+  const cierreConPendientes = useUiStore((s) => s.cierreConPendientes);
+  const setCierreConPendientes = useUiStore((s) => s.setCierreConPendientes);
 
   if (isLoading) {
     return <AppLoadingSkeleton />;
@@ -157,11 +161,23 @@ export function App() {
         open={avisando}
         variant="warning"
         title="¿Sigues ahí?"
-        message={`Por seguridad cerraremos tu sesión en ${segundosRestantes} segundo${segundosRestantes === 1 ? '' : 's'} por inactividad. Tus datos ya están guardados.`}
+        message={`Por seguridad cerraremos tu sesión en ${segundosRestantes} segundo${segundosRestantes === 1 ? '' : 's'} por inactividad. Si hay cambios sin sincronizar, se conservarán en este dispositivo hasta que vuelvas a entrar.`}
         confirmLabel="Seguir conectado"
         cancelLabel="Cerrar sesión"
         onConfirm={() => { /* el propio clic reinicia el contador */ }}
-        onCancel={signOut}
+        onCancel={() => { void signOut(); }}
+      />
+
+      {/* signOut() lo abre cuando el flush no pudo subir todo. */}
+      <ConfirmDialog
+        open={cierreConPendientes}
+        variant="danger"
+        title="Hay cambios sin sincronizar"
+        message="Algunos cambios de este dispositivo todavía no se han subido a la nube (quizás no hay conexión). Si cierras sesión ahora, se perderán. Para conservarlos, sigue conectado y vuelve a intentarlo cuando tengas conexión."
+        confirmLabel="Cerrar sesión y perderlos"
+        cancelLabel="Seguir conectado"
+        onConfirm={() => { setCierreConPendientes(false); void signOut('descartar'); }}
+        onCancel={() => setCierreConPendientes(false)}
       />
 
       <AppLayout>

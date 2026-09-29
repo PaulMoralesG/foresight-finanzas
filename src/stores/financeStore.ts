@@ -407,6 +407,30 @@ function migrarEstadoPersistido(persistedState: unknown, version: number): Recor
   return state;
 }
 
+const CLAVE_PERSISTENCIA = 'foresight-finance-storage';
+/** Copia del estado persistido tomada cuando una migración falla. */
+export const CLAVE_RESPALDO_MIGRACION = `${CLAVE_PERSISTENCIA}.backup`;
+
+function respaldarEstadoPersistido(persistedState: unknown): void {
+  try {
+    // Al migrar, persist aún no ha reescrito la clave: ahí sigue el original
+    // intacto (con su versión). Si no se puede leer, el estado ya parseado.
+    const crudo = localStorage.getItem(CLAVE_PERSISTENCIA) ?? JSON.stringify(persistedState);
+    localStorage.setItem(CLAVE_RESPALDO_MIGRACION, crudo);
+  } catch (e: unknown) {
+    console.error('[financeStore] No se pudo guardar el respaldo del estado persistido:', e instanceof Error ? e.message : e);
+  }
+}
+
+/** Borra el respaldo de una migración fallida (logout: no dejar datos de la cuenta). */
+export function borrarRespaldoMigracion(): void {
+  try {
+    localStorage.removeItem(CLAVE_RESPALDO_MIGRACION);
+  } catch (e: unknown) {
+    console.warn('[financeStore] No se pudo borrar el respaldo de migración:', e instanceof Error ? e.message : e);
+  }
+}
+
 export const useFinanceStore = create<FinanceState>()(
   persist(
     (set, get) => ({
@@ -892,14 +916,17 @@ export const useFinanceStore = create<FinanceState>()(
       },
     }),
     {
-      name: 'foresight-finance-storage',
+      name: CLAVE_PERSISTENCIA,
       version: 16,
       migrate: (persistedState: unknown, version: number) => {
         try {
           return migrarEstadoPersistido(persistedState, version);
-        } catch (err) {
-          // Estado inesperado: arrancar limpio antes que romper la app
+        } catch (err: unknown) {
+          // Estado inesperado: arrancar limpio antes que romper la app. Pero
+          // persist guardará enseguida el estado vacío encima del original,
+          // así que antes se copia el crudo a un respaldo recuperable a mano.
           console.error('[financeStore] Migración de estado persistido fallida — reseteando:', err);
+          respaldarEstadoPersistido(persistedState);
           return { ...emptyState, currentViewDate: new Date().toISOString() };
         }
       },

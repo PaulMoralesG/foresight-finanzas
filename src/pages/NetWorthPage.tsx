@@ -29,6 +29,8 @@ import { CardHeader } from '@/components/ui/CardHeader';
 import { ModalSheet } from '@/components/ui/ModalSheet';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ScopeBadge } from '@/components/ui/TransactionBits';
+import { AmbitoField } from '@/components/ui/AmbitoField';
+import { Kpi } from '@/components/ui/Kpi';
 import type { Asset, AssetGroup, BusinessType, NetWorthSnapshot } from '@/types';
 
 export function NetWorthPage() {
@@ -161,17 +163,7 @@ export function NetWorthPage() {
       {formOpen && (
         <ModalSheet id="asset-form-title" titulo={editing ? 'Editar activo' : 'Nuevo activo'} onClose={() => setFormOpen(false)} trapActivo={!confirmDelete} focoInicial="#as-name">
           <form onSubmit={handleSubmit} className="p-3 space-y-3 flex-1 overflow-y-auto">
-            <div>
-              <span className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Ámbito</span>
-              <div className="flex gap-1" role="group" aria-label="Ámbito">
-                {(['personal', 'business'] as BusinessType[]).map((t) => (
-                  <button key={t} type="button" onClick={() => setFTag(t)}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${fTag === t ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
-                    {t === 'personal' ? 'Personal' : 'Negocio'}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <AmbitoField value={fTag} onChange={setFTag} />
             <div>
               <label htmlFor="as-name" className="text-2xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Nombre</label>
               <input id="as-name" type="text" value={fName} onChange={(e) => setFName(e.target.value)} placeholder="Moto, terreno, fondo de inversión" className="saas-input py-1.5 text-sm" required maxLength={80} />
@@ -205,17 +197,6 @@ export function NetWorthPage() {
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(null)}
       />
-    </div>
-  );
-}
-
-function Kpi({ label, value, sub, tone }: { label: string; value: string; sub: string; tone?: 'good' | 'crit' }) {
-  const color = tone === 'good' ? 'text-income-600 dark:text-income-400' : tone === 'crit' ? 'text-expense-600 dark:text-expense-400' : 'text-slate-900 dark:text-white';
-  return (
-    <div className="saas-card p-4">
-      <p className="text-2xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">{label}</p>
-      <p className={`text-[clamp(1rem,4.6vw,1.25rem)] md:text-xl font-bold tabular-nums mt-1 whitespace-nowrap ${color}`}>{value}</p>
-      <p className="text-2xs text-slate-600 dark:text-slate-400 mt-0.5">{sub}</p>
     </div>
   );
 }
