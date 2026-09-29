@@ -40,8 +40,13 @@ export function cuentaComoGasto(t: Pick<Transaction, 'type' | 'debtId'>): boolea
  * Etiqueta de un pago de deuda para listados: «Pago de tarjeta · Visa»,
  * «Pago de préstamo · Auto» o «Pago de deuda eliminada». Un movimiento sin
  * `debtId` devuelve su concepto.
+ *
+ * Si el usuario editó el concepto, ese texto manda siempre (es lo que
+ * escribió a propósito) — el label generado a partir de la deuda es solo el
+ * valor por defecto cuando no hay concepto.
  */
 export function etiquetaPago(t: Pick<Transaction, 'debtId' | 'concept'>, debts: Pick<Debt, 'id' | 'name' | 'kind'>[]): string {
+  if (t.concept) return t.concept;
   if (!t.debtId) return t.concept;
   const deuda = debts.find((d) => d.id === t.debtId);
   if (!deuda) return 'Pago de deuda eliminada';

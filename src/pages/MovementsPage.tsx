@@ -16,9 +16,9 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ScopeBadge, TransactionAmount } from '@/components/ui/TransactionBits';
 import { typeLabel, typePillClasses } from '@/lib/transaction-labels';
 import { accountName } from '@/lib/accounts';
-import { cuentaComoGasto, esPagoDeDeuda, etiquetaPago, montoQueRevierte } from '@/lib/debt-payments';
+import { categoriaDePago, cuentaComoGasto, esPagoDeDeuda, etiquetaPago, montoQueRevierte } from '@/lib/debt-payments';
 import { esTarjeta } from '@/lib/credit-card';
-import type { FilterType, Transaction } from '@/types';
+import type { Category, Debt, FilterType, Transaction } from '@/types';
 
 // Negocio/Personal ya no son chips de esta vista: es el ámbito global de la
 // cabecera (Todo / Personal / Negocio), que filtra todas las pantallas.
@@ -137,6 +137,18 @@ export function MovementsPage() {
   // Un pago de deuda no es un gasto: se lista con su etiqueta («Pago de tarjeta
   // · Visa»), su icono y una píldora propia, y su importe va en neutro.
   const conceptoDe = (tx: Transaction) => etiquetaPago(tx, debts);
+
+  // Un pago de deuda se guarda como `type: 'transfer'` con `category:
+  // 'transferencia'` y sin cuentas (ver registerDebtPayment): la columna
+  // Categoría no debe mostrar el formato de transferencia (cuenta → cuenta,
+  // ambas vacías) ni la categoría cruda. Se muestra la categoría real de la
+  // deuda (pago-tarjetas/préstamos), resuelta igual que cualquier otra.
+  const categoriaDePagoLabel = (tx: Transaction, allCats: Category[]) => {
+    const deuda: Debt | undefined = debts.find((d) => d.id === tx.debtId);
+    if (!deuda) return 'Pago de deuda';
+    const catId = categoriaDePago(deuda.kind);
+    return allCats.find((c) => c.id === catId)?.label || catId;
+  };
   const iconoPago = (tx: Transaction) => {
     const deuda = debts.find((d) => d.id === tx.debtId);
     return deuda && esTarjeta(deuda) ? '💳' : '🏦';
@@ -507,7 +519,11 @@ export function MovementsPage() {
                       >
                         {typeLabel(tx)}
                       </button>
-                      {tx.type === 'transfer' ? (
+                      {tx.debtId ? (
+                        <span className="text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
+                          {categoriaDePagoLabel(tx, allCategories)}
+                        </span>
+                      ) : tx.type === 'transfer' ? (
                         <span className="text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
                           {accountName(accounts, tx.accountId)} → {accountName(accounts, tx.toAccountId)}
                         </span>
@@ -655,7 +671,11 @@ export function MovementsPage() {
                         </button>
                       </td>
                       <td className="whitespace-nowrap">
-                        {tx.type === 'transfer' ? (
+                        {tx.debtId ? (
+                          <span className="text-xs text-slate-600 dark:text-slate-400">
+                            {categoriaDePagoLabel(tx, allCategories)}
+                          </span>
+                        ) : tx.type === 'transfer' ? (
                           <span className="text-xs text-slate-600 dark:text-slate-400">
                             {accountName(accounts, tx.accountId)} <span className="text-slate-400">→</span> {accountName(accounts, tx.toAccountId)}
                           </span>

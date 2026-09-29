@@ -88,6 +88,11 @@ export function DebtsPage() {
   const [pAccount, setPAccount] = useState('');
 
   const [confirmDelete, setConfirmDelete] = useState<Debt | null>(null);
+  // Confirmación antes de vincular un pago histórico sin categorizar a una
+  // deuda: dos tarjetas comparten categoría de gasto, así que los candidatos
+  // de una aparecen también en el panel de la otra — sin este paso un clic
+  // al lado equivocado vincula por error (bug real reportado por un usuario).
+  const [confirmVincular, setConfirmVincular] = useState<{ t: Transaction; d: Debt } | null>(null);
   const [extraInput, setExtraInput] = useState(String(extra));
 
   function openCreate() {
@@ -174,10 +179,16 @@ export function DebtsPage() {
     setEstado(null);
   }
 
-  function handleVincular(t: Transaction, d: Debt) {
+  function openVincular(t: Transaction, d: Debt) {
+    setConfirmVincular({ t, d });
+  }
+  function handleVincular() {
+    if (!confirmVincular) return;
+    const { t, d } = confirmVincular;
     vincularPagoHistorico(t.id, d.id);
     addToast(`Pago vinculado a ${d.name}: el saldo no cambió`, 'success');
     syncToCloud(saveData, addToast);
+    setConfirmVincular(null);
   }
   function handleDesvincular(t: Transaction) {
     desvincularPago(t.id);
@@ -206,9 +217,10 @@ export function DebtsPage() {
 
   const ultimoPagoEstado = useMemo(() => (estado ? historialDeuda(estado, expenses).pagos[0] ?? null : null), [estado, expenses]);
 
-  const anyOpen = formOpen || !!paying || !!confirmDelete || !!estado;
+  const anyOpen = formOpen || !!paying || !!confirmDelete || !!estado || !!confirmVincular;
   useEscapeKey(() => {
     if (confirmDelete) setConfirmDelete(null);
+    else if (confirmVincular) setConfirmVincular(null);
     else if (estado) setEstado(null);
     else if (paying) setPaying(null);
     else if (formOpen) setFormOpen(false);
@@ -361,7 +373,7 @@ export function DebtsPage() {
                       expenses={expenses}
                       accounts={accounts}
                       debts={debts}
-                      onVincular={handleVincular}
+                      onVincular={openVincular}
                       onDesvincular={handleDesvincular}
                       descuentos={descuentosDePago}
                       abierto={historialAbierto === d.id}
@@ -522,6 +534,20 @@ export function DebtsPage() {
         variant="danger"
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(null)}
+      />
+
+      <ConfirmDialog
+        open={!!confirmVincular}
+        title="¿Vincular este pago?"
+        message={
+          confirmVincular
+            ? `¿Vincular «${confirmVincular.t.concept}» (${formatFechaConAnio(confirmVincular.t.date)}, ${formatMoney(confirmVincular.t.amount)}) al historial de «${confirmVincular.d.name}»? El saldo no cambia.`
+            : ''
+        }
+        confirmLabel="Vincular"
+        variant="warning"
+        onConfirm={handleVincular}
+        onCancel={() => setConfirmVincular(null)}
       />
     </div>
   );
