@@ -9,7 +9,7 @@ import { useExpensesDelMesEnAmbito } from '@/hooks/useAmbito';
 import { RecurrencesPanel } from '@/components/features/movements/RecurrencesPanel';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
-import { formatMoney, LOCALE, roundMoney, safeParseDate, syncToCloud } from '@/lib/utils';
+import { formatMoney, roundMoney, safeParseDate, syncToCloud, formatFechaCorta, formatFechaConAnio } from '@/lib/utils';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/config/categories';
 import { MonthNav } from '@/components/layout/MonthNav';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -539,10 +539,7 @@ export function MovementsPage() {
                       </button>
                     </div>
                     <span className="text-2xs text-slate-600 dark:text-slate-400 flex-shrink-0">
-                      {safeParseDate(tx.date).toLocaleDateString(LOCALE, {
-                        day: 'numeric',
-                        month: 'short',
-                      })}
+                      {formatFechaCorta(tx.date)}
                     </span>
                   </div>
                 </div>
@@ -694,11 +691,7 @@ export function MovementsPage() {
                       </td>
                       <td className="whitespace-nowrap">
                         <span className="text-xs text-slate-600 dark:text-slate-400">
-                          {safeParseDate(tx.date).toLocaleDateString(LOCALE, {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })}
+                          {formatFechaConAnio(tx.date)}
                         </span>
                       </td>
                       <td className="whitespace-nowrap text-right">

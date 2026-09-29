@@ -152,6 +152,16 @@ export function safeParseDate(iso: string): Date {
   return new Date(y, m - 1, d);
 }
 
+/** '2026-10-03' → '3 oct'. Para listas donde el año ya se sobreentiende. */
+export function formatFechaCorta(iso: string): string {
+  return safeParseDate(iso).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' });
+}
+
+/** '2026-10-03' → '3 oct 2026'; la ISO no se lee de un vistazo en una lista. */
+export function formatFechaConAnio(iso: string): string {
+  return safeParseDate(iso).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 export type DownloadOutcome = 'downloaded' | 'shared' | 'cancelled';
 
 /**

@@ -10,6 +10,8 @@ import {
   getTodayISO,
   MONTH_NAMES,
   safeParseDate,
+  formatFechaCorta,
+  formatFechaConAnio,
   userInitials,
 } from '@/lib/utils';
 
@@ -131,6 +133,26 @@ describe('safeParseDate', () => {
     expect(result.getFullYear()).toBe(2026);
     expect(result.getMonth()).toBe(1);
     expect(result.getDate()).toBe(13);
+  });
+});
+
+describe('formatFechaCorta / formatFechaConAnio', () => {
+  it('formatFechaCorta muestra día y mes abreviado, sin año', () => {
+    const r = formatFechaCorta('2026-10-03');
+    expect(r).toMatch(/3/);
+    expect(r).toMatch(/oct/i);
+    expect(r).not.toMatch(/2026/);
+  });
+
+  it('formatFechaConAnio añade el año', () => {
+    const r = formatFechaConAnio('2026-10-03');
+    expect(r).toMatch(/3/);
+    expect(r).toMatch(/oct/i);
+    expect(r).toMatch(/2026/);
+  });
+
+  it('acepta ISO completo con hora', () => {
+    expect(formatFechaConAnio('2026-02-13T17:00:00.000Z')).toBe(formatFechaConAnio('2026-02-13'));
   });
 });
 
