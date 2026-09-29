@@ -21,6 +21,7 @@ import { supabase, supabaseAvailable } from '@/config/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useFinanceStore, borrarRespaldoMigracion } from '@/stores/financeStore';
 import { syncService, isSchemaError, isTransientSchemaError } from '@/lib/sync';
+import { leerDuenoDatos, guardarDuenoDatos, borrarDuenoDatos, esFalloDeRed } from '@/lib/dueno-datos';
 import type { User } from '@/types';
 
 /** Usuario offline por defecto cuando no hay Supabase configurado */
@@ -87,8 +88,53 @@ export function useAuthSession(): void {
     }
 
     let cancelled = false;
+    // Usuario cuya sesión ya se cargó (perfil + sync). Mientras sea null, un
+    // TOKEN_REFRESHED del mismo usuario sí rehace la carga: es la forma de
+    // adjuntar el sync tras haber arrancado sin red.
+    let sesionCargadaPara: string | null = null;
+
+    function adjuntarSync(uid: string) {
+      sesionCargadaPara = uid;
+      void syncService.attach(uid).catch((err: unknown) => {
+        console.error('[useAuth] attach() en segundo plano falló inesperadamente:', err);
+      });
+    }
+
+    /**
+     * Arranque sin sesión. Solo se borra el estado local si la sesión es
+     * inválida de verdad: un refresco de token fallido por falta de red deja
+     * la sesión guardada y los cambios sin subir siguen siendo de su dueño.
+     */
+    function sinSesion(error: unknown) {
+      const dueno = leerDuenoDatos();
+      syncService.detach();
+      sesionCargadaPara = null;
+      if (error && esFalloDeRed(error)) {
+        setUser(dueno ? basicUser(dueno.id, dueno.email, dueno.firstName, dueno.lastName) : null);
+        setLoading(false);
+        return;
+      }
+      if (dueno?.conservarDatos) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+      // ALT-1: sin sesión → limpiar todo (evita contaminación entre cuentas)
+      financeStore.getState().reset();
+      borrarDuenoDatos();
+      setUser(null);
+      setLoading(false);
+    }
 
     async function loadProfile(uid: string, email: string, metaFirst?: string, metaLast?: string, pendingEmail?: string) {
+      // ALT-1: los datos locales son de OTRA cuenta → no mezclarlos con esta.
+      const dueno = leerDuenoDatos();
+      if (dueno && dueno.id !== uid) {
+        syncService.detach();
+        financeStore.getState().reset();
+      }
+      guardarDuenoDatos({ id: uid, email, firstName: metaFirst, lastName: metaLast });
+
       try {
         // 1) Perfil por uid (PK nueva). Si no existe, inicializarlo con metadata.
         type ProfileRow = { email?: string | null; first_name?: string | null; last_name?: string | null };
@@ -137,24 +183,20 @@ export function useAuthSession(): void {
         // header (syncState); nunca rechaza (ver su propio try/catch), pero
         // se atrapa el `.catch` igual como red de seguridad ante lo
         // inesperado, ya que aquí ya no se espera con `await`.
-        setUser({
-          id: uid,
-          email,
-          // Prioridad: perfil DB → metadata Auth → vacío
-          firstName: profile?.first_name || metaFirst || '',
-          lastName: profile?.last_name || metaLast || '',
-          pendingEmail,
-        });
+        // Prioridad: perfil DB → metadata Auth → vacío
+        const firstName = profile?.first_name || metaFirst || '';
+        const lastName = profile?.last_name || metaLast || '';
+        setUser({ id: uid, email, firstName, lastName, pendingEmail });
+        guardarDuenoDatos({ id: uid, email, firstName, lastName });
         setLoading(false);
 
-        void syncService.attach(uid).catch((err) => {
-          console.error('[useAuth] attach() en segundo plano falló inesperadamente:', err);
-        });
-      } catch (err) {
-        // ALT-1: nunca dejar datos de otra cuenta en el store
+        adjuntarSync(uid);
+      } catch (err: unknown) {
+        // Sin reset: la cuenta es la dueña de los datos locales (comprobado
+        // arriba) y un perfil ilegible —sin red, casi siempre— no justifica
+        // borrar cambios que aún no se subieron.
         console.error('[useAuth] Error al cargar perfil:', err);
         syncService.detach();
-        financeStore.getState().reset();
 
         if (isSchemaError(err)) {
           // SQL de migración no ejecutado: operar en modo local-only
@@ -162,19 +204,23 @@ export function useAuthSession(): void {
             '[useAuth] Esquema de Supabase no migrado — ejecutá supabase/migrations/0001_entities_and_rls.sql en el SQL Editor. Modo local-only.',
           );
           syncService.disable();
+          sesionCargadaPara = uid;
           setUser(basicUser(uid, email, metaFirst, metaLast, pendingEmail));
           setLoading(false);
           return;
         }
 
-        if (isTransientSchemaError(err)) {
-          // Caché de esquema de PostgREST desactualizada (redeploy/DDL reciente).
-          // Es pasajero: NO desactivar el sync ni desloguear al usuario — antes
-          // isSchemaError() trataba esto igual que un esquema sin migrar y
-          // dejaba la cuenta en modo local-only permanente por un solo golpe.
-          console.warn('[useAuth] Caché de esquema desactualizada (transitorio) al cargar perfil — reintentará solo.');
+        if (isTransientSchemaError(err) || esFalloDeRed(err)) {
+          // Caché de esquema de PostgREST desactualizada (redeploy/DDL reciente)
+          // o sin red. Es pasajero: NO desactivar el sync ni desloguear al
+          // usuario — antes isSchemaError() trataba lo primero igual que un
+          // esquema sin migrar y dejaba la cuenta en modo local-only
+          // permanente por un solo golpe. El sync se adjunta igual: al volver
+          // la red, el evento `online` hace el ciclo completo.
+          console.warn('[useAuth] Error transitorio al cargar perfil — se conservan los datos locales.');
           setUser(basicUser(uid, email, metaFirst, metaLast, pendingEmail));
           setLoading(false);
+          adjuntarSync(uid);
           return;
         }
 
@@ -184,21 +230,20 @@ export function useAuthSession(): void {
     }
 
     // Intentar restaurar sesión al montar
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (cancelled) return;
       if (session?.user) {
         const meta = session.user.user_metadata as Record<string, string> | undefined;
         loadProfile(session.user.id, session.user.email!, meta?.first_name, meta?.last_name, session.user.new_email);
       } else {
-        // ALT-1: sin sesión → limpiar todo. Simétrico con la rama equivalente
-        // de onAuthStateChange (línea ~165) — antes esta rama solo hacía
-        // setLoading(false) y dejaba datos rehidratados de localStorage de
-        // una cuenta anterior en el store hasta que algo más lo pisara.
-        syncService.detach();
-        financeStore.getState().reset();
-        setUser(null);
-        setLoading(false);
+        // Sin red, supabase-js devuelve `session: null` con un
+        // AuthRetryableFetchError pero conserva la sesión guardada.
+        sinSesion(error);
       }
+    }).catch((err: unknown) => {
+      if (cancelled) return;
+      console.error('[useAuth] getSession() falló:', err);
+      sinSesion(err);
     });
 
     // Escuchar cambios de sesión en tiempo real
@@ -242,18 +287,16 @@ export function useAuthSession(): void {
         // —como la de updatePassword— disparaba una sincronización entera del
         // historial sin que nada hubiera cambiado.
         const loaded = useAuthStore.getState().user;
-        if (loaded && loaded.id === session.user.id) {
+        if (loaded && loaded.id === session.user.id && sesionCargadaPara === session.user.id) {
           setLoading(false);
           return;
         }
         const meta = session.user.user_metadata as Record<string, string> | undefined;
         loadProfile(session.user.id, session.user.email!, meta?.first_name, meta?.last_name, session.user.new_email);
-      } else {
-        // ALT-1: sin sesión → limpiar todo (evita contaminación entre cuentas)
-        syncService.detach();
-        financeStore.getState().reset();
-        setUser(null);
-        setLoading(false);
+      } else if (event !== 'INITIAL_SESSION') {
+        // INITIAL_SESSION sin sesión no dice por qué; lo resuelve getSession,
+        // que sí trae el error (red o sesión inválida).
+        sinSesion(null);
       }
     });
 
@@ -331,6 +374,7 @@ export function useAuth() {
     // misma clave que usaría la siguiente cuenta que inicie sesión ahí.
     financeStore.persist.clearStorage();
     borrarRespaldoMigracion();
+    borrarDuenoDatos();
   }
 
   /** Guardar datos financieros (no-op en modo offline). Debounced dentro del sync service. */
