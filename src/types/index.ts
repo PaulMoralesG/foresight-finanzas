@@ -53,6 +53,10 @@ export interface Transaction {
   /** Si paga una deuda, su id: el saldo de la deuda se ajusta con este
    *  movimiento y aparece en su historial de pagos (ver lib/debt-payments). */
   debtId?: string | null;
+  /** Pago histórico enlazado a mano (vincularPagoHistorico): aparece en el
+   *  historial de la deuda pero NO descuenta de su saldo, en ningún
+   *  dispositivo. Solo existe con valor `true` (ver lib/debt-balance). */
+  debtHistorico?: true;
   created_at?: string;
   updated_at: string; // ISO — usado por el merge de sync
 }
@@ -107,7 +111,12 @@ export interface SavingsGoal {
 export type DebtKind = 'Tarjeta de crédito' | 'Préstamo' | 'Hipoteca' | 'Otro';
 export type DebtMethod = 'snowball' | 'avalanche';
 
-/** Deuda (Balance Dual: `debts`). El saldo baja con cada pago registrado. */
+/**
+ * Deuda (Balance Dual: `debts`). Si está ANCLADA (`saldoBase` presente), el
+ * saldo no es un contador: `balance = max(0, saldoBase − Σ pagos)` y
+ * `balance`/`statementBalance` son caché (ver lib/debt-balance). Sin
+ * `saldoBase` sigue el camino legado: cada pago baja el saldo (lib/debt-payments).
+ */
 export interface Debt {
   id: string;
   name: string;
@@ -127,6 +136,11 @@ export interface Debt {
   statementBalance?: number;
   /** Cupo total de la tarjeta. */
   creditLimit?: number;
+  // ── Saldo derivado (0020; spec sync-saldo-deudas) ──
+  /** Presente ⇔ deuda anclada. Solo cambia cuando el usuario FIJA el saldo. */
+  saldoBase?: number;
+  /** Solo tarjetas con pago de contado: base de `statementBalance`, mismo esquema. */
+  contadoBase?: number;
   updated_at: string; // ISO — usado por el merge de sync
 }
 
