@@ -106,7 +106,10 @@ export function reportarError(err: unknown, ctx: ContextoError = {}): void {
       message: recortar(message, MAX_MENSAJE),
       stack: stack ? recortar(stack, MAX_STACK) : null,
       tag,
-      url: recortar(window.location.href, MAX_URL),
+      // Sin query ni fragmento: con detectSessionInUrl, el enlace de
+      // confirmación/recuperación trae `#access_token=…&refresh_token=…` (o
+      // `?code=…`), y un error en ese arranque los dejaba en la tabla.
+      url: recortar(window.location.origin + window.location.pathname, MAX_URL),
       user_agent: recortar(navigator.userAgent, MAX_USER_AGENT),
       app_version: __APP_VERSION__,
       context: ctx.componentStack ? { componentStack: recortar(ctx.componentStack, MAX_STACK) } : null,
