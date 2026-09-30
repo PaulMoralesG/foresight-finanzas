@@ -830,9 +830,9 @@ function universeOf<T extends { id: string }>(localLive: T[], remote: MergeSet<T
   ]);
 }
 
-/** Claves añadidas por las migraciones 0018/0019 que un cliente viejo no conoce. */
-const CLAVES_DEUDA_HIDRATABLES: ReadonlyArray<keyof Debt> = ['cutDay', 'statementBalance', 'creditLimit'];
-const CLAVES_GASTO_HIDRATABLES: ReadonlyArray<keyof Transaction> = ['debtId'];
+/** Claves añadidas por las migraciones 0018/0019/0020 que un cliente viejo no conoce. */
+const CLAVES_DEUDA_HIDRATABLES: ReadonlyArray<keyof Debt> = ['cutDay', 'statementBalance', 'creditLimit', 'saldoBase', 'contadoBase'];
+const CLAVES_GASTO_HIDRATABLES: ReadonlyArray<keyof Transaction> = ['debtId', 'debtHistorico'];
 
 /**
  * @param pendiente  ids cuyas copias locales pudieron perder claves (spec D2).

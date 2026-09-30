@@ -836,6 +836,7 @@ describe('debts.saldo_base y expenses.debt_historico (0020)', () => {
   });
 
   it('un ciclo sin novedades con la caché remota distinta no produce setState ni push de deudas', async () => {
+    // Local: anclada en T0 con su pago de 100 → 900.
     meterDeuda(deudaBase({ saldoBase: 1000, balance: 900 }));
     const pago: Transaction = {
       id: 'p', type: 'expense', amount: 100, concept: 'Pago', date: '2026-07-20', category: 'pago-tarjetas',
@@ -843,18 +844,26 @@ describe('debts.saldo_base y expenses.debt_historico (0020)', () => {
       debtId: 'd1', updated_at: T0,
     };
     useFinanceStore.setState({ expenses: [pago] });
+    // Servidor: la fila es MÁS NUEVA (T2, reescrita y re-anclada por otro
+    // dispositivo) y trae una caché `balance` vieja (950). La remota gana el
+    // merge en el primer ciclo por updated_at y, en el segundo, el empate por
+    // canonicalJson ("950" > "900"): sin recalcularSaldos, la caché 950
+    // llegaría al estado local en cada ciclo.
+    const T2 = '2026-08-20T00:00:00.000Z';
     const { upserts } = armar({
       filas: {
-        debts: [filaDeuda({ balance: 1000 })], // caché vieja en el servidor
+        debts: [filaDeuda({ balance: 950, updated_at: T2, saldo_base_at: T2 })],
         expenses: [filaGasto({ id: 'p', amount: 100, concept: 'Pago', date: '2026-07-20', category: 'pago-tarjetas', debt_id: 'd1', updated_at: T0 })],
       },
     });
+
+    // Ciclo 1: adopta la fila remota y recalcula la caché.
     await syncService.attach('user-1');
     const debtsTrasAttach = useFinanceStore.getState().debts;
-    expect(debtsTrasAttach[0].balance).toBe(900);
+    expect(debtsTrasAttach[0]).toMatchObject({ updated_at: T2, saldoBase: 1000, balance: 900 });
 
+    // Ciclo 2 (incremental), sin novedades: el servidor sigue devolviendo la caché 950.
     upserts.length = 0;
-    await vi.advanceTimersByTimeAsync(10);
     await syncService.flush();
 
     expect(useFinanceStore.getState().debts).toBe(debtsTrasAttach);
