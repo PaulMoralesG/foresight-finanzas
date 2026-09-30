@@ -96,6 +96,25 @@ describe('reportarError', () => {
     expect(fila.context).toEqual({ componentStack: '\n  at App' });
   });
 
+  // Auditoría 2026-09: con detectSessionInUrl, el enlace de confirmación o de
+  // recuperación llega con `#access_token=…&refresh_token=…` (o `?code=…`).
+  // Un error en ese arranque guardaba los tokens en error_log.
+  it('la url no incluye query ni fragmento (pueden llevar tokens de sesión)', async () => {
+    const original = window.location.href;
+    window.history.replaceState(null, '', '/login?code=secreto#access_token=aaa&refresh_token=bbb');
+    try {
+      reportarError(new Error('boom en el callback'));
+      await flush();
+    } finally {
+      window.history.replaceState(null, '', original);
+    }
+
+    const fila = filaInsertada();
+    expect(fila.url).toBe(`${window.location.origin}/login`);
+    expect(String(fila.url)).not.toContain('token');
+    expect(String(fila.url)).not.toContain('code');
+  });
+
   it('acepta valores que no son Error (strings, objetos)', async () => {
     reportarError('texto suelto');
     reportarError({ code: 'PGRST205' });
