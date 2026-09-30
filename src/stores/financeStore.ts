@@ -47,7 +47,7 @@ interface FinanceState {
   tombstones: Record<string, string>;
   currentViewDate: string; // ISO string para que serialize bien
   currentFilter: FilterType;
-  /** Ámbito global: filtra Resumen, Presupuestos, Deudas y Metas. */
+  /** Ámbito global: filtra Resumen, Movimientos, Presupuestos, Deudas y Metas. */
   ambito: Ambito;
   /** Ids por hidratar en el próximo ciclo completo de sync (ver migrateV16). */
   pendienteHidratar: PendienteHidratar;
@@ -109,7 +109,7 @@ interface FinanceState {
   // --- Cuentas ---
   addAccount: (a: Omit<Account, 'id' | 'updated_at'>) => string;
   updateAccount: (id: string, partial: Partial<Omit<Account, 'id' | 'updated_at'>>) => void;
-  /** No borra (ni deja tombstone) si algún movimiento usa la cuenta. */
+  /** No borra (ni deja tombstone) si algún movimiento o recurrencia usa la cuenta. */
   deleteAccount: (id: string) => void;
 
   // --- Deudas ---
@@ -772,11 +772,12 @@ export const useFinanceStore = create<FinanceState>()(
           tombstones: clearedTombstone(state.tombstones, id),
         })),
 
-      // No-op si tiene movimientos: el invariante "ningún accountId huérfano"
-      // lo garantiza el store, no solo la pantalla que hoy lo comprueba.
+      // No-op si tiene movimientos o recurrencias: el invariante "ningún
+      // accountId huérfano" lo garantiza el store, no solo la pantalla que hoy
+      // lo comprueba.
       deleteAccount: (id) =>
         set((state) => {
-          if (accountIsUsed(id, state.expenses)) return {};
+          if (accountIsUsed(id, state.expenses, state.recurrences)) return {};
           return {
             accounts: state.accounts.filter((a) => a.id !== id),
             tombstones: tombstoned(state.tombstones, id),

@@ -86,7 +86,7 @@ describe('AccountsPage', () => {
     render(<AccountsPage />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Eliminar Usada' }));
-    expect(useUiStore.getState().toasts.some((t) => t.message.includes('movimientos asociados'))).toBe(true);
+    expect(useUiStore.getState().toasts.some((t) => t.message.includes('movimientos o recurrencias asociados'))).toBe(true);
     expect(useFinanceStore.getState().accounts).toHaveLength(2);
 
     await userEvent.click(screen.getByRole('button', { name: 'Eliminar Vacía' }));
