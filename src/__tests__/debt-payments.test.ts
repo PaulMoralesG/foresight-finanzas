@@ -204,9 +204,9 @@ describe('migración v15 del estado persistido', () => {
     expect(migrado.debts[0].balance).toBe(400);
   });
 
-  it('está en la cadena de migrate con la versión 16', () => {
+  it('está en la cadena de migrate con la versión 17', () => {
     const opciones = useFinanceStore.persist.getOptions();
-    expect(opciones.version).toBe(16);
+    expect(opciones.version).toBe(17);
     const migrado = opciones.migrate!({ expenses: [mov({ concept: 'Pago Visa' })], debts: [deuda()], savingsGoals: [], accounts: [] }, 14) as { expenses: Transaction[] };
     expect(migrado.expenses[0].debtId).toBe('d1');
   });

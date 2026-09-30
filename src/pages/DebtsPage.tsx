@@ -745,11 +745,16 @@ function HistorialPagos({ debt, expenses, accounts, debts, onVincular, onDesvinc
                         <p className="text-slate-600 dark:text-slate-400 break-words">
                           {p.accountId ? accountName(accounts, p.accountId) : 'Sin cuenta'}
                         </p>
-                        {/* Solo se desvincula un gasto vinculado a mano (o uno
-                            antiguo sin registro de descuento). Un pago que sí
-                            bajó la deuda —lo registra `descuentosDePago`— no tiene
-                            «antes», y quitarle el enlace lo dejaría huérfano. */}
-                        {tx && tx.type === 'expense' && (!descuentos[tx.id] || descuentos[tx.id].vinculado) && (
+                        {/* Solo se desvincula un pago histórico (vinculado a
+                            mano): la marca `debtHistorico` viaja con el
+                            movimiento, así todos los dispositivos muestran lo
+                            mismo. En una deuda NO anclada se mantiene además la
+                            regla legada (gasto sin registro de descuento o
+                            marcado «vinculado» en este dispositivo). */}
+                        {tx && tx.type === 'expense' && (
+                          tx.debtHistorico ||
+                          (debt.saldoBase === undefined && (!descuentos[tx.id] || descuentos[tx.id].vinculado))
+                        ) && (
                           <button
                             type="button"
                             onClick={() => onDesvincular(tx)}
