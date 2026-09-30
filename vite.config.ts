@@ -87,10 +87,12 @@ export default defineConfig({
         // descargara ~2.2 MB en cada visita nueva y compitiera con los assets
         // críticos por ancho de banda. Esos chunks ya no existen: Sentry es
         // lib/error-reporter, el PDF es window.print() y StatsPage pesa ~25 KB.
-        // Las páginas lazy que quedan (StatsPage, LoginPage, SavingsPage) suman
-        // ~55 KB: dejarlas fuera solo las expondría a que un despliegue borrara
-        // su chunk mientras el shell viejo lo sigue pidiendo (ver
-        // lib/lazy-recovery, que sigue como red de seguridad).
+        // Las ocho vistas ahora se importan de forma estática (ver CLAUDE.md,
+        // "Routing and code-splitting"); las únicas páginas que quedan lazy son
+        // LoginPage y ReportModal, y pesan poco. Dejarlas fuera del precache
+        // solo las expondría a que un despliegue borrara su chunk mientras el
+        // shell viejo lo sigue pidiendo (ver lib/lazy-recovery, que sigue como
+        // red de seguridad).
         runtimeCaching: [
           {
             // Chunks con hash (inmutables): CacheFirst, seguros para cachear siempre
