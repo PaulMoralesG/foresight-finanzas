@@ -399,6 +399,8 @@ describe('TransactionModal — pago de una deuda (un pago no es gasto)', () => {
   it('editar un gasto enlazado antiguo (expense + debtId) lo normaliza a transferencia sin tocar el saldo', async () => {
     const user = userEvent.setup();
     const debtId = nuevaDeuda({ balance: 750 });
+    // Dato antiguo: deuda sin anclar (anterior a la v17), como la tendría un usuario real.
+    useFinanceStore.setState((s) => ({ debts: s.debts.map(({ saldoBase: _b, contadoBase: _c, ...d }) => d) }));
     useFinanceStore.setState({
       expenses: [{
         id: 'viejo', type: 'expense', amount: 250, concept: 'Pago Visa', date: '2026-08-10',

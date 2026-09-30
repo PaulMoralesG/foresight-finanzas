@@ -768,7 +768,7 @@ describe('saldo de deudas convergente (Paso 0 del spec sync-saldo-deudas)', () =
     expect(saldoD1()).toBe(1000);
   });
 
-  it.fails('4. un pago de 150 sobre una deuda de 100, creado en A y borrado en B, devuelve 100', async () => {
+  it('4. un pago de 150 sobre una deuda de 100, creado en A y borrado en B, devuelve 100', async () => {
     armar({
       filas: {
         debts: [filaDeuda({ balance: 0, saldo_base: 100 })],
