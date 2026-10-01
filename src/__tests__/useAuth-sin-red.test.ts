@@ -16,10 +16,16 @@ const mocks = vi.hoisted(() => ({
   attach: vi.fn(() => Promise.resolve()),
   detach: vi.fn(),
   disable: vi.fn(),
+  hayCambiosSinSubir: vi.fn(() => false),
 }));
 
 vi.mock('@/lib/sync', () => ({
-  syncService: { attach: mocks.attach, detach: mocks.detach, disable: mocks.disable },
+  syncService: {
+    attach: mocks.attach,
+    detach: mocks.detach,
+    disable: mocks.disable,
+    hayCambiosSinSubir: mocks.hayCambiosSinSubir,
+  },
   isSchemaError: () => false,
   isTransientSchemaError: () => false,
 }));
@@ -29,12 +35,16 @@ const sb = vi.hoisted(() => ({
   sesion: null as unknown,
   errorSesion: null as unknown,
   perfil: { data: null, error: null } as Resultado,
+  alCambiarSesion: null as ((evento: string, sesion: unknown) => Promise<void> | void) | null,
 }));
 
 const supabaseMock = vi.hoisted(() => ({
   auth: {
     getSession: vi.fn(() => Promise.resolve({ data: { session: sb.sesion }, error: sb.errorSesion })),
-    onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
+    onAuthStateChange: vi.fn((cb: (evento: string, sesion: unknown) => Promise<void> | void) => {
+      sb.alCambiarSesion = cb;
+      return { data: { subscription: { unsubscribe: vi.fn() } } };
+    }),
   },
   from: vi.fn(() => ({
     select: vi.fn(() => ({
@@ -50,8 +60,8 @@ vi.mock('@/config/supabase', () => ({
 
 import { useAuthSession } from '@/hooks/useAuth';
 import { useAuthStore } from '@/stores/authStore';
-import { useFinanceStore } from '@/stores/financeStore';
-import { guardarDuenoDatos, leerDuenoDatos } from '@/lib/dueno-datos';
+import { useFinanceStore, CLAVE_RESPALDO_MIGRACION } from '@/stores/financeStore';
+import { guardarDuenoDatos, leerDuenoDatos, duenoEnMemoria, fijarDuenoEnMemoria } from '@/lib/dueno-datos';
 
 const sesionU1 = { user: { id: 'u1', email: 'ana@example.com', user_metadata: {}, new_email: undefined } };
 
@@ -71,11 +81,14 @@ function conGastoSinSubir() {
 beforeEach(() => {
   localStorage.clear();
   mocks.attach.mockClear();
+  mocks.hayCambiosSinSubir.mockReset().mockReturnValue(false);
   sb.sesion = null;
   sb.errorSesion = null;
   sb.perfil = { data: { email: 'ana@example.com', first_name: 'Ana', last_name: 'Pérez' }, error: null };
   useAuthStore.setState({ user: null, isLoading: true });
+  fijarDuenoEnMemoria(null);
   conGastoSinSubir();
+  localStorage.setItem(CLAVE_RESPALDO_MIGRACION, '{"state":{},"version":7}');
   vi.spyOn(console, 'error').mockImplementation(() => {});
   vi.spyOn(console, 'warn').mockImplementation(() => {});
 });
@@ -105,14 +118,50 @@ describe('useAuthSession sin red', () => {
     expect(leerDuenoDatos()?.id).toBe('u1');
   });
 
-  it('sin sesión de verdad (sin error de red), sigue limpiando', async () => {
-    guardarDuenoDatos({ id: 'u1', email: 'ana@example.com' });
+  it('fallo de red sin dueño registrado: reinicia, para que otra cuenta no adopte esos datos', async () => {
+    sb.errorSesion = new AuthRetryableFetchError('Failed to fetch', 0);
 
     await arrancar();
 
     expect(useFinanceStore.getState().expenses).toHaveLength(0);
     expect(useAuthStore.getState().user).toBeNull();
-    expect(leerDuenoDatos()).toBeNull();
+  });
+
+  // Arranque real: la memoria acaba de hidratarse del disco (su dueño es el
+  // guardado) y syncService arranca con cambiosSinSubir=true, porque no sabe
+  // si lo persistido se editó sin red. Una sesión inválida conserva entonces
+  // los datos marcados; no hay fuga: si entra otra cuenta, loadProfile reinicia.
+  it('sesión inválida al arrancar con datos del dueño: los conserva marcados, sin sesión', async () => {
+    guardarDuenoDatos({ id: 'u1', email: 'ana@example.com' });
+    fijarDuenoEnMemoria('u1');
+    mocks.hayCambiosSinSubir.mockReturnValue(true);
+
+    await arrancar();
+
+    expect(useAuthStore.getState().user).toBeNull();
+    expect(useFinanceStore.getState().expenses).toHaveLength(1);
+    expect(leerDuenoDatos()).toMatchObject({ id: 'u1', conservarDatos: true });
+  });
+
+  it('…y si después entra otra cuenta, esos datos se borran', async () => {
+    guardarDuenoDatos({ id: 'u1', email: 'ana@example.com', conservarDatos: true });
+    fijarDuenoEnMemoria('u1');
+    sb.sesion = { user: { id: 'u2', email: 'bea@example.com', user_metadata: {}, new_email: undefined } };
+
+    await arrancar();
+
+    expect(useFinanceStore.getState().expenses).toHaveLength(0);
+    expect(leerDuenoDatos()?.id).toBe('u2');
+  });
+
+  it('sesión inválida y datos sin dueño (ni en disco ni en memoria): limpia', async () => {
+    mocks.hayCambiosSinSubir.mockReturnValue(true);
+
+    await arrancar();
+
+    expect(useFinanceStore.getState().expenses).toHaveLength(0);
+    expect(useAuthStore.getState().user).toBeNull();
+    expect(localStorage.getItem(CLAVE_RESPALDO_MIGRACION)).toBeNull();
   });
 
   it('si entra otra cuenta distinta a la dueña de los datos locales, los borra', async () => {
@@ -122,16 +171,58 @@ describe('useAuthSession sin red', () => {
     await arrancar();
 
     expect(useFinanceStore.getState().expenses).toHaveLength(0);
+    expect(localStorage.getItem(CLAVE_RESPALDO_MIGRACION)).toBeNull();
     expect(useAuthStore.getState().user).toMatchObject({ id: 'u1' });
     expect(leerDuenoDatos()?.id).toBe('u1');
   });
 
   it('la misma cuenta con el perfil bien conserva los datos y queda como dueña', async () => {
+    guardarDuenoDatos({ id: 'u1', email: 'ana@example.com' });
+    fijarDuenoEnMemoria('u1');
     sb.sesion = sesionU1;
 
     await arrancar();
 
     expect(useFinanceStore.getState().expenses).toHaveLength(1);
     expect(leerDuenoDatos()).toMatchObject({ id: 'u1', firstName: 'Ana' });
+    expect(duenoEnMemoria()).toBe('u1');
+  });
+
+  it('varias pestañas: si la memoria es de otra cuenta, reinicia aunque localStorage ya diga la nueva', async () => {
+    // La pestaña 1 ya dejó dueño=u1; ésta conserva en memoria los datos de A.
+    guardarDuenoDatos({ id: 'u1', email: 'ana@example.com' });
+    fijarDuenoEnMemoria('cuenta-a');
+    sb.sesion = sesionU1;
+
+    await arrancar();
+
+    expect(useFinanceStore.getState().expenses).toHaveLength(0);
+    expect(duenoEnMemoria()).toBe('u1');
+  });
+
+  it('SIGNED_OUT remoto con cambios sin subir del mismo dueño: conserva los datos', async () => {
+    guardarDuenoDatos({ id: 'u1', email: 'ana@example.com' });
+    fijarDuenoEnMemoria('u1');
+    sb.sesion = sesionU1;
+    await arrancar();
+    mocks.hayCambiosSinSubir.mockReturnValue(true);
+
+    await act(async () => { await sb.alCambiarSesion?.('SIGNED_OUT', null); });
+
+    expect(useAuthStore.getState().user).toBeNull();
+    expect(useFinanceStore.getState().expenses).toHaveLength(1);
+    expect(leerDuenoDatos()).toMatchObject({ id: 'u1', conservarDatos: true });
+  });
+
+  it('SIGNED_OUT remoto sin nada pendiente: limpia como siempre', async () => {
+    guardarDuenoDatos({ id: 'u1', email: 'ana@example.com' });
+    fijarDuenoEnMemoria('u1');
+    sb.sesion = sesionU1;
+    await arrancar();
+
+    await act(async () => { await sb.alCambiarSesion?.('SIGNED_OUT', null); });
+
+    expect(useFinanceStore.getState().expenses).toHaveLength(0);
+    expect(leerDuenoDatos()).toBeNull();
   });
 });

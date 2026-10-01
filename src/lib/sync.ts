@@ -12,6 +12,7 @@ import { mergeById, mergeBudgets, hidratarAusentes, type MergeSet } from '@/lib/
 import { nowIso } from '@/lib/ids';
 import { reportarError } from '@/lib/error-reporter';
 import { getTodayISO } from '@/lib/utils';
+import { esFalloDeRed } from '@/lib/dueno-datos';
 import { recalcularSaldos } from '@/lib/debt-balance';
 import {
   shouldImportLegacy,
@@ -537,6 +538,11 @@ let isSyncing = false; // evita auto-schedule durante merges internos
 let dirtyDuringSync = false; // el usuario editó mientras sincronizábamos
 let syncDisabled = false; // esquema no migrado → modo local-only
 let initialized = false;
+// Hay datos locales que ningún ciclo ha confirmado en el servidor. Arranca en
+// true: lo persistido pudo editarse sin red en una sesión anterior.
+let cambiosSinSubir = true;
+// Error con el que terminó el último ciclo fallido (tras agotar reintentos).
+let ultimoErrorDeCiclo: unknown = null;
 
 // ── Marca de agua del ciclo (DAT-01) ──
 //
@@ -572,6 +578,14 @@ function marcaDePull(marca: string | null): string | null {
 
 function watermarkKey(uid: string): string {
   return `foresight-sync-watermark:${uid}`;
+}
+
+/** Logout: borra la marca de agua de `uid` aunque el sync nunca se adjuntara
+ *  (arranque sin red), caso en que detach() no sabe de qué usuario es. */
+export function borrarMarcaDeAgua(uid: string): void {
+  try {
+    localStorage.removeItem(watermarkKey(uid));
+  } catch { /* modo privado, cuota llena: nada que borrar */ }
 }
 
 function loadWatermark(uid: string): string | null {
@@ -1299,6 +1313,7 @@ async function pushWithRetry(uid: string, fullPush = false): Promise<boolean> {
       }
     }
   }
+  ultimoErrorDeCiclo = lastError;
   console.error('[sync] Todos los reintentos fallaron:', lastError);
   reportarErrorSync(lastError, 'reintentos-agotados');
   return false;
@@ -1384,7 +1399,6 @@ export const syncService = {
 
     // Auto-save: cualquier cambio de datos agenda un push (debounced)
     useFinanceStore.subscribe((state, prev) => {
-      if (!userId || syncDisabled) return;
       const dataChanged =
         state.expenses !== prev.expenses ||
         state.budgets !== prev.budgets ||
@@ -1401,6 +1415,8 @@ export const syncService = {
         state.customIncomeCategories !== prev.customIncomeCategories ||
         state.tombstones !== prev.tombstones;
       if (!dataChanged) return;
+      cambiosSinSubir = true;
+      if (!userId || syncDisabled) return;
       if (isSyncing) {
         dirtyDuringSync = true;
         return;
@@ -1444,6 +1460,9 @@ export const syncService = {
       } else {
         useUiStore.getState().setSyncState('error');
         reportarErrorSync(err, 'attach-fallo');
+      }
+      if (fallaSinRemedio(err) && userId === uid) {
+        useUiStore.getState().setPrimerSyncCompleto(true);
       }
     }
   },
@@ -1559,6 +1578,12 @@ export const syncService = {
     return userId !== null && !syncDisabled;
   },
 
+  /** Hay datos locales sin confirmar en el servidor. En modo local-only
+   *  siempre: flush() resuelve true sin haber subido nada. */
+  hayCambiosSinSubir(): boolean {
+    return syncDisabled || cambiosSinSubir || timer !== null || pushInFlight !== null;
+  },
+
   /** Desactiva el sync definitivamente (esquema no migrado). */
   disable(): void {
     syncDisabled = true;
@@ -1567,6 +1592,27 @@ export const syncService = {
     useUiStore.getState().setPrimerSyncCompleto(true);
   },
 };
+
+/**
+ * El ciclo no va a poder hacer el pull pronto: sin red, o un error que no se
+ * arregla reintentando (RLS/permisos, JWT rechazado). Entonces se deja
+ * materializar recurrencias como en modo offline, en vez de no generarlas
+ * nunca. Un error de servidor con red NO cuenta: el siguiente ciclo puede
+ * traer ediciones de otro dispositivo sobre esas ocurrencias.
+ */
+function fallaSinRemedio(err: unknown): boolean {
+  if (!err) return false;
+  if (esFalloDeRed(err)) return true;
+  if (typeof err !== 'object') return false;
+  const e = err as { code?: unknown; status?: unknown };
+  return (
+    e.code === '42501' ||
+    e.code === 'PGRST301' ||
+    e.code === 'PGRST303' ||
+    e.status === 401 ||
+    e.status === 403
+  );
+}
 
 async function performPush(fullPush = false): Promise<boolean> {
   if (pushInFlight) {
@@ -1580,6 +1626,7 @@ async function performPush(fullPush = false): Promise<boolean> {
 
   pushInFlight = (async (): Promise<boolean> => {
     let ok = false;
+    ultimoErrorDeCiclo = null;
     useUiStore.getState().setSyncState('syncing');
     try {
       isSyncing = true;
@@ -1587,6 +1634,10 @@ async function performPush(fullPush = false): Promise<boolean> {
     } catch (err) {
       console.error('[sync] push falló:', err);
     } finally {
+      // Confirmado solo si no quedó nada editado ni encolado detrás.
+      if (ok && !syncDisabled && !queuedAfterPush && !dirtyDuringSync) {
+        cambiosSinSubir = false;
+      }
       isSyncing = false;
       pushInFlight = null;
       // pushWithRetry ya dejó 'local-only' si el esquema no está migrado —
@@ -1595,7 +1646,7 @@ async function performPush(fullPush = false): Promise<boolean> {
         useUiStore.getState().setSyncState(ok ? 'idle' : 'error');
       }
       // Un detach en pleno ciclo ya soltó al usuario: no marcar su sesión.
-      if ((ok || syncDisabled) && userId === uid) {
+      if ((ok || syncDisabled || fallaSinRemedio(ultimoErrorDeCiclo)) && userId === uid) {
         useUiStore.getState().setPrimerSyncCompleto(true);
       }
       if (queuedAfterPush) {

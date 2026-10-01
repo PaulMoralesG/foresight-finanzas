@@ -17,12 +17,19 @@
 // ================================================================
 
 import { useEffect, useCallback, useRef } from 'react';
-import { supabase, supabaseAvailable } from '@/config/supabase';
+import { supabase, supabaseAvailable, olvidarSesionGuardada } from '@/config/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useFinanceStore, borrarRespaldoMigracion } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { syncService, isSchemaError, isTransientSchemaError } from '@/lib/sync';
-import { leerDuenoDatos, guardarDuenoDatos, borrarDuenoDatos, esFalloDeRed } from '@/lib/dueno-datos';
+import { syncService, isSchemaError, isTransientSchemaError, borrarMarcaDeAgua } from '@/lib/sync';
+import {
+  leerDuenoDatos,
+  guardarDuenoDatos,
+  borrarDuenoDatos,
+  duenoEnMemoria,
+  fijarDuenoEnMemoria,
+  esFalloDeRed,
+} from '@/lib/dueno-datos';
 import type { User } from '@/types';
 
 /** Usuario offline por defecto cuando no hay Supabase configurado */
@@ -34,6 +41,32 @@ const OFFLINE_USER: User = {
 };
 
 type ModoCierre = 'preguntar' | 'descartar' | 'conservar';
+
+/** Cierre global; si falla (sin red), al menos el local: si no, supabase-js
+ *  conserva la sesión y al reabrir se volvería a entrar ya sin los datos. */
+async function cerrarSesionSupabase(cliente: NonNullable<typeof supabase>): Promise<void> {
+  try {
+    const { error } = await cliente.auth.signOut();
+    if (!error) return;
+    console.warn('[useAuth] signOut global falló, se cierra en local:', error);
+  } catch (err: unknown) {
+    console.warn('[useAuth] signOut global falló, se cierra en local:', err);
+  }
+  await cerrarSesionLocal(cliente);
+}
+
+/** Cierre local; si auth-js falla (sin red y con el token caducado sale sin
+ *  borrar la sesión guardada), se borra a mano para no reentrar sin contraseña. */
+async function cerrarSesionLocal(cliente: NonNullable<typeof supabase>): Promise<void> {
+  try {
+    const { error } = await cliente.auth.signOut({ scope: 'local' });
+    if (!error) return;
+    console.error('[useAuth] signOut local falló:', error);
+  } catch (err: unknown) {
+    console.error('[useAuth] signOut local falló:', err);
+  }
+  olvidarSesionGuardada();
+}
 
 function basicUser(id: string, email: string, firstName?: string, lastName?: string, pendingEmail?: string): User {
   return { id, email, firstName: firstName || '', lastName: lastName || '', pendingEmail };
@@ -110,20 +143,34 @@ export function useAuthSession(): void {
      */
     function sinSesion(error: unknown) {
       const dueno = leerDuenoDatos();
+      // Antes del detach, que cancela el ciclo agendado.
+      const pendientesDelDueno =
+        !!dueno && duenoEnMemoria() === dueno.id && syncService.hayCambiosSinSubir();
       syncService.detach();
       sesionCargadaPara = null;
-      if (error && esFalloDeRed(error)) {
-        setUser(dueno ? basicUser(dueno.id, dueno.email, dueno.firstName, dueno.lastName) : null);
+      useUiStore.getState().setCierreConPendientes(false);
+      // Sin dueño registrado no se sabe de quién son los datos: se conservan
+      // solo si lo hay, o la siguiente cuenta que entrara los adoptaría.
+      if (dueno && error && esFalloDeRed(error)) {
+        setUser(basicUser(dueno.id, dueno.email, dueno.firstName, dueno.lastName));
         setLoading(false);
         return;
       }
-      if (dueno?.conservarDatos) {
+      // Sesión caída (refresco rechazado al volver la red, SIGNED_OUT remoto)
+      // con cambios de esta misma cuenta sin subir: se guardan como en el
+      // cierre por inactividad; se suben si la misma cuenta vuelve a entrar.
+      if (dueno && pendientesDelDueno && !dueno.conservarDatos) {
+        guardarDuenoDatos({ ...dueno, conservarDatos: true });
+      }
+      if (dueno?.conservarDatos || pendientesDelDueno) {
         setUser(null);
         setLoading(false);
         return;
       }
       // ALT-1: sin sesión → limpiar todo (evita contaminación entre cuentas)
       financeStore.getState().reset();
+      borrarRespaldoMigracion();
+      fijarDuenoEnMemoria(null);
       borrarDuenoDatos();
       setUser(null);
       setLoading(false);
@@ -131,11 +178,16 @@ export function useAuthSession(): void {
 
     async function loadProfile(uid: string, email: string, metaFirst?: string, metaLast?: string, pendingEmail?: string) {
       // ALT-1: los datos locales son de OTRA cuenta → no mezclarlos con esta.
+      // Se mira también la memoria de esta pestaña: otra pestaña pudo dejar
+      // ya en localStorage dueño=uid mientras aquí siguen los datos de otra.
       const dueno = leerDuenoDatos();
-      if (dueno && dueno.id !== uid) {
+      const enMemoria = duenoEnMemoria();
+      if ((dueno && dueno.id !== uid) || (enMemoria && enMemoria !== uid)) {
         syncService.detach();
         financeStore.getState().reset();
+        borrarRespaldoMigracion();
       }
+      fijarDuenoEnMemoria(uid);
       guardarDuenoDatos({ id: uid, email, firstName: metaFirst, lastName: metaLast });
 
       try {
@@ -362,20 +414,22 @@ export function useAuth() {
   }
 
   /**
-   * Cierra la sesión. Si quedan cambios sin subir (sin red, o el sync nunca
-   * se adjuntó), NO borra nada salvo que `modo` lo diga:
+   * Cierra la sesión. Si quedan cambios sin subir (sin red, el sync nunca se
+   * adjuntó o está en modo local-only), NO borra nada salvo que `modo` lo diga:
    *   · 'preguntar'  — abre la confirmación de App (uiStore.cierreConPendientes).
    *   · 'descartar'  — el usuario ya confirmó perderlos: borra todo.
    *   · 'conservar'  — cierre por inactividad: vuelve al login y guarda los
    *                    datos locales hasta que la misma cuenta vuelva a entrar.
    */
   async function signOut(modo: ModoCierre = 'preguntar') {
+    const saliente = useAuthStore.getState().user?.id;
     if (supabase) {
       // ALT-3: flush del último cambio ANTES de invalidar el token
       let subido = false;
       if (modo !== 'descartar') {
         try {
-          subido = syncService.adjuntado() && (await syncService.flush());
+          subido =
+            syncService.adjuntado() && (await syncService.flush()) && !syncService.hayCambiosSinSubir();
         } catch (err: unknown) {
           console.error('[useAuth] flush() antes de cerrar sesión falló:', err);
         }
@@ -388,12 +442,17 @@ export function useAuth() {
         await cerrarConservandoDatos(supabase);
         return;
       }
-      await supabase.auth.signOut();
+      // Antes del SIGNED_OUT: la memoria deja de tener dueño, así su
+      // listener no la trata como cambios de la cuenta que conservar.
+      fijarDuenoEnMemoria(null);
+      await cerrarSesionSupabase(supabase);
     }
     // Limpiar todo: auth + finanzas (evita cross-contamination entre cuentas)
     syncService.detach();
     clearUser();
+    useUiStore.getState().setCierreConPendientes(false);
     financeStore.getState().reset();
+    fijarDuenoEnMemoria(null);
     // Borra también la copia persistida en localStorage — reset() solo
     // limpia el estado en memoria; sin esto, el historial financiero
     // completo de la cuenta queda en el navegador en texto plano bajo la
@@ -401,6 +460,7 @@ export function useAuth() {
     financeStore.persist.clearStorage();
     borrarRespaldoMigracion();
     borrarDuenoDatos();
+    if (saliente) borrarMarcaDeAgua(saliente);
   }
 
   /** Vuelve al login sin borrar el estado local ni su copia persistida. La
@@ -417,15 +477,14 @@ export function useAuth() {
         conservarDatos: true,
       });
     }
-    try {
-      // 'local': sin red no se puede revocar en el servidor, y no hace falta
-      // esperar a un timeout para bloquear la pantalla.
-      await cliente.auth.signOut({ scope: 'local' });
-    } catch (err: unknown) {
-      console.error('[useAuth] signOut local falló:', err);
-    }
+    // 'local': sin red no se puede revocar en el servidor, y no hace falta
+    // esperar a un timeout para bloquear la pantalla.
+    await cerrarSesionLocal(cliente);
     syncService.detach();
     clearUser();
+    // Si la inactividad saltó con la confirmación abierta, que no la vea
+    // (ni pueda aceptarla) el siguiente que entre.
+    useUiStore.getState().setCierreConPendientes(false);
   }
 
   /** Guardar datos financieros (no-op en modo offline). Debounced dentro del sync service. */

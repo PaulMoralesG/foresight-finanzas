@@ -418,6 +418,43 @@ describe('reintentos y errores de esquema', () => {
     expect(mocks.reportarError).toHaveBeenCalledWith(red, { tag: 'reintentos-agotados' });
   });
 
+  // Sin este desbloqueo, con Supabase y sin red (o con un 403 permanente)
+  // las recurrencias no se materializaban nunca.
+  it('attach que falla por red deja materializar recurrencias (primerSyncCompleto)', async () => {
+    useUiStore.setState({ primerSyncCompleto: false });
+    armar({ erroresPull: { expenses: [red, red, red, red] } });
+
+    const p = syncService.attach('user-1');
+    await vi.advanceTimersByTimeAsync(1000 + 2000 + 4000);
+    await p;
+
+    expect(useUiStore.getState().primerSyncCompleto).toBe(true);
+  });
+
+  it('attach que falla por RLS (42501) también desbloquea', async () => {
+    useUiStore.setState({ primerSyncCompleto: false });
+    const rls = { code: '42501', message: 'new row violates row-level security policy' };
+    armar({ erroresPull: { expenses: [rls, rls, rls, rls] } });
+
+    const p = syncService.attach('user-1');
+    await vi.advanceTimersByTimeAsync(1000 + 2000 + 4000);
+    await p;
+
+    expect(useUiStore.getState().primerSyncCompleto).toBe(true);
+  });
+
+  it('un error de servidor con red NO desbloquea: el pull aún no se ha hecho', async () => {
+    useUiStore.setState({ primerSyncCompleto: false });
+    const servidor = { code: '500', message: 'internal server error' };
+    armar({ erroresPull: { expenses: [servidor, servidor, servidor, servidor] } });
+
+    const p = syncService.attach('user-1');
+    await vi.advanceTimersByTimeAsync(1000 + 2000 + 4000);
+    await p;
+
+    expect(useUiStore.getState().primerSyncCompleto).toBe(false);
+  });
+
   it('un error de esquema permanente en el pull desactiva el sync sin reintentar', async () => {
     const { contadorPull } = armar({ erroresPull: { expenses: [{ code: '42P01', message: 'relation does not exist' }] } });
 

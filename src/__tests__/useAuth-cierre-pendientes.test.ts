@@ -11,15 +11,16 @@ import { renderHook, act } from '@testing-library/react';
 const mocks = vi.hoisted(() => ({
   flush: vi.fn(() => Promise.resolve(false)),
   adjuntado: vi.fn(() => true),
+  hayCambiosSinSubir: vi.fn(() => false),
   attach: vi.fn(() => Promise.resolve()),
   detach: vi.fn(),
   disable: vi.fn(),
 }));
 
-vi.mock('@/lib/sync', () => ({
+// El resto del módulo real (borrarMarcaDeAgua) sí se usa: solo se sustituye el servicio.
+vi.mock('@/lib/sync', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/sync')>()),
   syncService: mocks,
-  isSchemaError: () => false,
-  isTransientSchemaError: () => false,
 }));
 
 const supabaseMock = vi.hoisted(() => ({
@@ -30,14 +31,17 @@ const supabaseMock = vi.hoisted(() => ({
   },
 }));
 
+const olvidarSesionGuardada = vi.hoisted(() => vi.fn());
+
 vi.mock('@/config/supabase', () => ({
   supabase: supabaseMock,
   supabaseAvailable: true,
+  olvidarSesionGuardada,
 }));
 
 import { useAuth, useAuthSession } from '@/hooks/useAuth';
 import { useAuthStore } from '@/stores/authStore';
-import { useFinanceStore } from '@/stores/financeStore';
+import { useFinanceStore, CLAVE_RESPALDO_MIGRACION } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
 import { guardarDuenoDatos, leerDuenoDatos } from '@/lib/dueno-datos';
 
@@ -47,7 +51,9 @@ beforeEach(() => {
   localStorage.clear();
   mocks.flush.mockReset().mockResolvedValue(false);
   mocks.adjuntado.mockReset().mockReturnValue(true);
-  supabaseMock.auth.signOut.mockClear();
+  mocks.hayCambiosSinSubir.mockReset().mockReturnValue(false);
+  supabaseMock.auth.signOut.mockReset().mockResolvedValue({ error: null });
+  olvidarSesionGuardada.mockClear();
   useUiStore.setState({ cierreConPendientes: false });
   useAuthStore.setState({ user: { id: 'u1', email: 'ana@example.com', firstName: 'Ana', lastName: '' }, isLoading: false });
   guardarDuenoDatos({ id: 'u1', email: 'ana@example.com' });
@@ -84,14 +90,38 @@ describe('signOut con cambios sin subir', () => {
     expect(useFinanceStore.getState().expenses).toHaveLength(1);
   });
 
-  it('confirmado ("descartar"): borra estado, almacenamiento y dueño', async () => {
+  it('modo local-only: flush() da true sin subir nada, y aun así pide confirmación', async () => {
+    mocks.flush.mockResolvedValue(true);
+    mocks.hayCambiosSinSubir.mockReturnValue(true);
+
+    await cerrar();
+
+    expect(useUiStore.getState().cierreConPendientes).toBe(true);
+    expect(useFinanceStore.getState().expenses).toHaveLength(1);
+  });
+
+  it('confirmado ("descartar"): borra estado, almacenamiento, dueño, respaldo y marca de agua', async () => {
+    localStorage.setItem(CLAVE_RESPALDO_MIGRACION, '{"state":{},"version":7}');
+    localStorage.setItem('foresight-sync-watermark:u1', '2026-09-01T00:00:00.000Z');
+
     await cerrar('descartar');
 
+    expect(localStorage.getItem(CLAVE_RESPALDO_MIGRACION)).toBeNull();
+    expect(localStorage.getItem('foresight-sync-watermark:u1')).toBeNull();
     expect(supabaseMock.auth.signOut).toHaveBeenCalled();
     expect(useFinanceStore.getState().expenses).toHaveLength(0);
     expect(localStorage.getItem(CLAVE)).toBeNull();
     expect(leerDuenoDatos()).toBeNull();
     expect(useAuthStore.getState().user).toBeNull();
+  });
+
+  it('"descartar" sin red: si el cierre global falla, cierra la sesión en local', async () => {
+    supabaseMock.auth.signOut.mockResolvedValueOnce({ error: new Error('Failed to fetch') } as never);
+
+    await cerrar('descartar');
+
+    expect(supabaseMock.auth.signOut).toHaveBeenLastCalledWith({ scope: 'local' });
+    expect(useFinanceStore.getState().expenses).toHaveLength(0);
   });
 
   it('por inactividad ("conservar"): vuelve al login sin borrar los datos locales', async () => {
@@ -109,6 +139,14 @@ describe('signOut con cambios sin subir', () => {
     expect(useFinanceStore.getState().expenses).toHaveLength(1);
   });
 
+  it('si salta la inactividad con la confirmación abierta, el aviso no queda para el siguiente usuario', async () => {
+    useUiStore.setState({ cierreConPendientes: true });
+
+    await cerrar('conservar');
+
+    expect(useUiStore.getState().cierreConPendientes).toBe(false);
+  });
+
   it('con todo subido, cierra y borra como siempre', async () => {
     mocks.flush.mockResolvedValue(true);
 
@@ -117,5 +155,30 @@ describe('signOut con cambios sin subir', () => {
     expect(useUiStore.getState().cierreConPendientes).toBe(false);
     expect(useFinanceStore.getState().expenses).toHaveLength(0);
     expect(localStorage.getItem(CLAVE)).toBeNull();
+  });
+
+  it('"descartar" sin red y con el token caducado: borra a mano la sesión guardada', async () => {
+    const red = { error: new Error('Failed to fetch') } as never;
+    supabaseMock.auth.signOut.mockResolvedValueOnce(red).mockResolvedValueOnce(red);
+
+    await cerrar('descartar');
+
+    expect(olvidarSesionGuardada).toHaveBeenCalled();
+    expect(useFinanceStore.getState().expenses).toHaveLength(0);
+  });
+
+  it('"conservar" sin red y con el token caducado: borra la sesión, no los datos', async () => {
+    supabaseMock.auth.signOut.mockRejectedValueOnce(new Error('Failed to fetch'));
+
+    await cerrar('conservar');
+
+    expect(olvidarSesionGuardada).toHaveBeenCalled();
+    expect(useFinanceStore.getState().expenses).toHaveLength(1);
+  });
+
+  it('si el cierre local va bien, no toca la clave de sesión a mano', async () => {
+    await cerrar('conservar');
+
+    expect(olvidarSesionGuardada).not.toHaveBeenCalled();
   });
 });
