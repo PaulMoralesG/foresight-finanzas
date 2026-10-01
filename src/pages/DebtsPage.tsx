@@ -47,6 +47,7 @@ export function DebtsPage() {
   const registerDebtPayment = useFinanceStore((s) => s.registerDebtPayment);
   const vincularPagoHistorico = useFinanceStore((s) => s.vincularPagoHistorico);
   const desvincularPago = useFinanceStore((s) => s.desvincularPago);
+  const confirmarSaldoDeuda = useFinanceStore((s) => s.confirmarSaldoDeuda);
   const descuentosDePago = useFinanceStore((s) => s.descuentosDePago);
   const expenses = useFinanceStore((s) => s.expenses);
   const addToast = useUiStore((s) => s.addToast);
@@ -88,6 +89,11 @@ export function DebtsPage() {
   const [pAccount, setPAccount] = useState('');
 
   const [confirmDelete, setConfirmDelete] = useState<Debt | null>(null);
+  // Confirmación antes de vincular un pago histórico sin categorizar a una
+  // deuda: dos tarjetas comparten categoría de gasto, así que los candidatos
+  // de una aparecen también en el panel de la otra — sin este paso un clic
+  // al lado equivocado vincula por error (bug real reportado por un usuario).
+  const [confirmVincular, setConfirmVincular] = useState<{ t: Transaction; d: Debt } | null>(null);
   const [extraInput, setExtraInput] = useState(String(extra));
 
   function openCreate() {
@@ -174,14 +180,26 @@ export function DebtsPage() {
     setEstado(null);
   }
 
-  function handleVincular(t: Transaction, d: Debt) {
+  function openVincular(t: Transaction, d: Debt) {
+    setConfirmVincular({ t, d });
+  }
+  function handleVincular() {
+    if (!confirmVincular) return;
+    const { t, d } = confirmVincular;
     vincularPagoHistorico(t.id, d.id);
     addToast(`Pago vinculado a ${d.name}: el saldo no cambió`, 'success');
     syncToCloud(saveData, addToast);
+    setConfirmVincular(null);
   }
   function handleDesvincular(t: Transaction) {
     desvincularPago(t.id);
     addToast('Pago desvinculado: el saldo no cambió', 'info');
+    syncToCloud(saveData, addToast);
+  }
+
+  function handleConfirmarSaldo(d: Debt) {
+    confirmarSaldoDeuda(d.id);
+    addToast(`Saldo de ${d.name} confirmado: se mantendrá igual en todos tus dispositivos`, 'success');
     syncToCloud(saveData, addToast);
   }
 
@@ -206,9 +224,10 @@ export function DebtsPage() {
 
   const ultimoPagoEstado = useMemo(() => (estado ? historialDeuda(estado, expenses).pagos[0] ?? null : null), [estado, expenses]);
 
-  const anyOpen = formOpen || !!paying || !!confirmDelete || !!estado;
+  const anyOpen = formOpen || !!paying || !!confirmDelete || !!estado || !!confirmVincular;
   useEscapeKey(() => {
     if (confirmDelete) setConfirmDelete(null);
+    else if (confirmVincular) setConfirmVincular(null);
     else if (estado) setEstado(null);
     else if (paying) setPaying(null);
     else if (formOpen) setFormOpen(false);
@@ -348,6 +367,24 @@ export function DebtsPage() {
                         <button onClick={() => openEdit(d)} className="saas-btn saas-btn-ghost saas-btn-sm text-xs flex items-center gap-1" aria-label={`Editar ${d.name}`}><Pencil className="w-3 h-3" /> Editar</button>
                         <button onClick={() => setConfirmDelete(d)} className="saas-btn saas-btn-ghost saas-btn-sm text-xs flex items-center gap-1 text-expense-600 dark:text-expense-400" aria-label={`Eliminar ${d.name}`}><Trash2 className="w-3 h-3" /> Eliminar</button>
                       </div>
+                      {/* Deuda no anclada (anterior al saldo derivado): su saldo
+                          aún se lleva como contador en este dispositivo. Anclarla
+                          es decisión del usuario (spec sync-saldo-deudas §5.4). */}
+                      {d.saldoBase === undefined && (
+                        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <p className="text-xs text-slate-600 dark:text-slate-400">
+                            Confirma que el saldo de {formatMoney(d.balance)} coincide con tu banco para que se mantenga igual en todos tus dispositivos.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => handleConfirmarSaldo(d)}
+                            className="saas-btn saas-btn-secondary saas-btn-sm text-xs"
+                            aria-label={`Confirmar saldo de ${d.name}`}
+                          >
+                            Confirmar saldo
+                          </button>
+                        </div>
+                      )}
                     </div>
                     {/* En móvil las cifras bajan a su propia línea (como .debt-figs
                         de la referencia) en vez de estrangular el nombre. */}
@@ -361,7 +398,7 @@ export function DebtsPage() {
                       expenses={expenses}
                       accounts={accounts}
                       debts={debts}
-                      onVincular={handleVincular}
+                      onVincular={openVincular}
                       onDesvincular={handleDesvincular}
                       descuentos={descuentosDePago}
                       abierto={historialAbierto === d.id}
@@ -522,6 +559,20 @@ export function DebtsPage() {
         variant="danger"
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(null)}
+      />
+
+      <ConfirmDialog
+        open={!!confirmVincular}
+        title="¿Vincular este pago?"
+        message={
+          confirmVincular
+            ? `¿Vincular «${confirmVincular.t.concept}» (${formatFechaConAnio(confirmVincular.t.date)}, ${formatMoney(confirmVincular.t.amount)}) al historial de «${confirmVincular.d.name}»? El saldo no cambia.`
+            : ''
+        }
+        confirmLabel="Vincular"
+        variant="warning"
+        onConfirm={handleVincular}
+        onCancel={() => setConfirmVincular(null)}
       />
     </div>
   );
@@ -719,11 +770,16 @@ function HistorialPagos({ debt, expenses, accounts, debts, onVincular, onDesvinc
                         <p className="text-slate-600 dark:text-slate-400 break-words">
                           {p.accountId ? accountName(accounts, p.accountId) : 'Sin cuenta'}
                         </p>
-                        {/* Solo se desvincula un gasto vinculado a mano (o uno
-                            antiguo sin registro de descuento). Un pago que sí
-                            bajó la deuda —lo registra `descuentosDePago`— no tiene
-                            «antes», y quitarle el enlace lo dejaría huérfano. */}
-                        {tx && tx.type === 'expense' && (!descuentos[tx.id] || descuentos[tx.id].vinculado) && (
+                        {/* Solo se desvincula un pago histórico (vinculado a
+                            mano): la marca `debtHistorico` viaja con el
+                            movimiento, así todos los dispositivos muestran lo
+                            mismo. En una deuda NO anclada se mantiene además la
+                            regla legada (gasto sin registro de descuento o
+                            marcado «vinculado» en este dispositivo). */}
+                        {tx && tx.type === 'expense' && (
+                          tx.debtHistorico ||
+                          (debt.saldoBase === undefined && (!descuentos[tx.id] || descuentos[tx.id].vinculado))
+                        ) && (
                           <button
                             type="button"
                             onClick={() => onDesvincular(tx)}

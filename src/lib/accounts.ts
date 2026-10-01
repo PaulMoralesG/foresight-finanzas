@@ -3,7 +3,7 @@
 // ================================================================
 
 import { roundMoney } from './utils';
-import type { Account, AccountKind, Transaction } from '@/types';
+import type { Account, AccountKind, Recurrence, Transaction } from '@/types';
 
 export const ACCOUNT_KINDS: AccountKind[] = ['Efectivo', 'Banco', 'Tarjeta', 'Ahorros'];
 
@@ -38,7 +38,17 @@ export function accountName(accounts: Account[], id: string | null | undefined):
   return accounts.find((a) => a.id === id)?.name ?? '—';
 }
 
-/** ¿Hay movimientos que la usen (como origen o como destino)? Si sí, no se borra. */
-export function accountIsUsed(id: string, transactions: Transaction[]): boolean {
-  return transactions.some((t) => t.accountId === id || t.toAccountId === id);
+/**
+ * ¿Hay movimientos —o recurrencias, que los seguirán generando— que la usen
+ * (como origen o como destino)? Si sí, no se borra: una recurrencia con la
+ * cuenta borrada crearía movimientos con un `accountId` huérfano que
+ * `accountBalance` ya no suma a ningún saldo.
+ */
+export function accountIsUsed(
+  id: string,
+  transactions: Transaction[],
+  recurrences: Pick<Recurrence, 'accountId' | 'toAccountId'>[] = [],
+): boolean {
+  const usa = (t: { accountId?: string | null; toAccountId?: string | null }) => t.accountId === id || t.toAccountId === id;
+  return transactions.some(usa) || recurrences.some(usa);
 }

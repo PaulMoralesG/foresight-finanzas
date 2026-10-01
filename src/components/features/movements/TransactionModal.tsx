@@ -11,7 +11,8 @@ import { ColorPicker, IconPicker } from '@/components/ui/CategoryStylePicker';
 import { formatMoney, getTodayISO, parseMoneyInput, roundMoney, syncToCloud } from '@/lib/utils';
 import { makeCategoryId } from '@/lib/category-id';
 import { TRANSFER_CATEGORY } from '@/lib/accounts';
-import { esCategoriaDePago, categoriaDePago, montoQueRevierte } from '@/lib/debt-payments';
+import { esCategoriaDePago, categoriaDePago } from '@/lib/debt-payments';
+import { efectoDeBorrar } from '@/lib/debt-balance';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { ModalSheet } from '@/components/ui/ModalSheet';
@@ -94,10 +95,18 @@ export function TransactionModal({
     if (muestraDeuda) deudaRef.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
   }, [muestraDeuda]);
 
-  /** Deuda cuyo tipo encaja con la categoría de pago elegida (o '' si no hay). */
+  /**
+   * Deuda cuyo tipo encaja con la categoría de pago elegida, o '' si no hay
+   * ninguna o si hay más de una (dos tarjetas, dos préstamos): ahí no hay
+   * forma de adivinar cuál quiso el usuario por el `kind` solo, así que se
+   * deja sin elegir en vez de preseleccionar la primera del array — eso fue
+   * justo el bug real: con «Tarjeta Pacífico» y «Tarjeta Pichincha», un pago
+   * quedaba vinculado en silencio a la que apareciera primero.
+   */
   function deudaSugerida(categoryId: string): string {
     if (!esCategoriaDePago(categoryId)) return '';
-    return debts.find((d) => categoriaDePago(d.kind) === categoryId)?.id ?? '';
+    const candidatas = debts.filter((d) => categoriaDePago(d.kind) === categoryId);
+    return candidatas.length === 1 ? candidatas[0].id : '';
   }
 
   function elegirCategoria(categoryId: string) {
@@ -214,15 +223,19 @@ export function TransactionModal({
 
   const isEditing = editingId !== null;
 
-  // Borrar un pago devuelve su monto al saldo de la deuda (invariante del
-  // store): se le dice al usuario antes de confirmar.
-  const porBorrar = deletingId !== null ? useFinanceStore.getState().expenses.find((e) => e.id === deletingId) : undefined;
+  // Borrar un pago puede subir el saldo de su deuda (invariante del store):
+  // se le dice al usuario antes de confirmar, con el efecto real
+  // (`efectoDeBorrar`: igual en todos los dispositivos y con el tope a 0).
+  const { expenses: todosLosMovimientos, descuentosDePago } = useFinanceStore.getState();
+  const porBorrar = deletingId !== null ? todosLosMovimientos.find((e) => e.id === deletingId) : undefined;
   const deudaDelPago = porBorrar?.debtId ? debts.find((d) => d.id === porBorrar.debtId) : undefined;
-  const devolucion = porBorrar ? montoQueRevierte(porBorrar, useFinanceStore.getState().descuentosDePago) : 0;
+  const devolucion = porBorrar ? efectoDeBorrar(porBorrar, debts, todosLosMovimientos, descuentosDePago) : 0;
   const mensajeBorrado = porBorrar && deudaDelPago
     ? devolucion > 0
       ? `El saldo de «${deudaDelPago.name}» volverá a subir ${formatMoney(devolucion)}. Esta acción no se puede deshacer.`
-      : `Es un pago vinculado a mano: el saldo de «${deudaDelPago.name}» no cambiará. Esta acción no se puede deshacer.`
+      : porBorrar.debtHistorico
+        ? `Es un pago vinculado a mano: el saldo de «${deudaDelPago.name}» no cambiará. Esta acción no se puede deshacer.`
+        : `El saldo de «${deudaDelPago.name}» no cambiará. Esta acción no se puede deshacer.`
     : 'Esta acción no se puede deshacer.';
 
   async function handleSubmit(e: FormEvent) {

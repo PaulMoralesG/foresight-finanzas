@@ -29,6 +29,7 @@ import type { Account, AccountKind } from '@/types';
 export function AccountsPage() {
   const accounts = useFinanceStore((s) => s.accounts);
   const expenses = useFinanceStore((s) => s.expenses);
+  const recurrences = useFinanceStore((s) => s.recurrences);
   const addAccount = useFinanceStore((s) => s.addAccount);
   const updateAccount = useFinanceStore((s) => s.updateAccount);
   const deleteAccount = useFinanceStore((s) => s.deleteAccount);
@@ -84,8 +85,8 @@ export function AccountsPage() {
   }
 
   function requestDelete(a: Account) {
-    if (accountIsUsed(a.id, expenses)) {
-      addToast('Esta cuenta tiene movimientos asociados. Elimínalos primero o reasígnalos.', 'error');
+    if (accountIsUsed(a.id, expenses, recurrences)) {
+      addToast('Esta cuenta tiene movimientos o recurrencias asociados. Elimínalos primero o reasígnalos.', 'error');
       return;
     }
     setConfirmDelete(a);

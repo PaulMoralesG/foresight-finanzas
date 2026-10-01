@@ -16,9 +16,10 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ScopeBadge, TransactionAmount } from '@/components/ui/TransactionBits';
 import { typeLabel, typePillClasses } from '@/lib/transaction-labels';
 import { accountName } from '@/lib/accounts';
-import { cuentaComoGasto, esPagoDeDeuda, etiquetaPago, montoQueRevierte } from '@/lib/debt-payments';
+import { categoriaDePago, cuentaComoGasto, esPagoDeDeuda, etiquetaPago } from '@/lib/debt-payments';
+import { efectoDeBorrar } from '@/lib/debt-balance';
 import { esTarjeta } from '@/lib/credit-card';
-import type { FilterType, Transaction } from '@/types';
+import type { Category, Debt, FilterType, Transaction } from '@/types';
 
 // Negocio/Personal ya no son chips de esta vista: es el ámbito global de la
 // cabecera (Todo / Personal / Negocio), que filtra todas las pantallas.
@@ -75,11 +76,12 @@ export function MovementsPage() {
     // Guardar copia de las transacciones antes de eliminar (para Undo)
     const deletedItems = monthlyData.filter((e) => selectedIds.has(e.id));
     const count = selectedIds.size;
-    // Borrar un pago de deuda devuelve su monto a la deuda: se avisa (como en
-    // el borrado individual). Los vinculados a mano no cambian ningún saldo.
-    const { descuentosDePago, debts } = useFinanceStore.getState();
+    // Borrar un pago de deuda puede subir su saldo: se avisa (como en el
+    // borrado individual). `efectoDeBorrar` da lo mismo en todos los
+    // dispositivos; los históricos vinculados a mano no cambian ningún saldo.
+    const { descuentosDePago, debts, expenses } = useFinanceStore.getState();
     const pagosQueSuben = deletedItems.filter(
-      (e) => debts.some((d) => d.id === e.debtId) && montoQueRevierte(e, descuentosDePago) > 0,
+      (e) => efectoDeBorrar(e, debts, expenses, descuentosDePago) > 0,
     ).length;
 
     try {
@@ -137,6 +139,18 @@ export function MovementsPage() {
   // Un pago de deuda no es un gasto: se lista con su etiqueta («Pago de tarjeta
   // · Visa»), su icono y una píldora propia, y su importe va en neutro.
   const conceptoDe = (tx: Transaction) => etiquetaPago(tx, debts);
+
+  // Un pago de deuda se guarda como `type: 'transfer'` con `category:
+  // 'transferencia'` y sin cuentas (ver registerDebtPayment): la columna
+  // Categoría no debe mostrar el formato de transferencia (cuenta → cuenta,
+  // ambas vacías) ni la categoría cruda. Se muestra la categoría real de la
+  // deuda (pago-tarjetas/préstamos), resuelta igual que cualquier otra.
+  const categoriaDePagoLabel = (tx: Transaction, allCats: Category[]) => {
+    const deuda: Debt | undefined = debts.find((d) => d.id === tx.debtId);
+    if (!deuda) return 'Pago de deuda';
+    const catId = categoriaDePago(deuda.kind);
+    return allCats.find((c) => c.id === catId)?.label || catId;
+  };
   const iconoPago = (tx: Transaction) => {
     const deuda = debts.find((d) => d.id === tx.debtId);
     return deuda && esTarjeta(deuda) ? '💳' : '🏦';
@@ -507,9 +521,9 @@ export function MovementsPage() {
                       >
                         {typeLabel(tx)}
                       </button>
-                      {esPago ? (
+                      {tx.debtId ? (
                         <span className="text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
-                          {tx.accountId ? `Desde ${accountName(accounts, tx.accountId)}` : 'Sin cuenta'}
+                          {categoriaDePagoLabel(tx, allCategories)}
                         </span>
                       ) : tx.type === 'transfer' ? (
                         <span className="text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
@@ -659,9 +673,9 @@ export function MovementsPage() {
                         </button>
                       </td>
                       <td className="whitespace-nowrap">
-                        {esPago ? (
+                        {tx.debtId ? (
                           <span className="text-xs text-slate-600 dark:text-slate-400">
-                            {tx.accountId ? `Desde ${accountName(accounts, tx.accountId)}` : 'Sin cuenta'}
+                            {categoriaDePagoLabel(tx, allCategories)}
                           </span>
                         ) : tx.type === 'transfer' ? (
                           <span className="text-xs text-slate-600 dark:text-slate-400">
