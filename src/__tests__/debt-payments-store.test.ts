@@ -309,6 +309,28 @@ describe('store: pendienteHidratar', () => {
     estado().updateTransaction(txId, { amount: 250 });
     expect(estado().pendienteHidratar.expenses).toContain(txId);
   });
+
+  // Reproduce lo que manda TransactionModal al editar: SIEMPRE incluye la
+  // clave `debtId` en el partial (con el mismo valor que ya tenía el
+  // movimiento), aunque el usuario no haya tocado el vínculo con la deuda.
+  // La sola presencia de la clave no debe disparar la limpieza de
+  // pendienteHidratar — solo un cambio real de valor debe hacerlo.
+  it('updateTransaction con debtId igual al valor previo (null→null) NO quita el id de pendienteHidratar', () => {
+    const txId = estado().addTransaction({ type: 'expense', amount: 200, concept: 'Gasto', date: '2026-09-10', category: 'otros', method: 'cash', businessType: 'personal', debtId: null });
+    useFinanceStore.setState((s) => ({ pendienteHidratar: { ...s.pendienteHidratar, expenses: [...s.pendienteHidratar.expenses, txId] } }));
+
+    estado().updateTransaction(txId, { amount: 250, debtId: null });
+    expect(estado().pendienteHidratar.expenses).toContain(txId);
+  });
+
+  it('updateTransaction con debtId igual al valor previo (no-nulo) NO quita el id de pendienteHidratar', () => {
+    const id = estado().addDebt({ name: 'Visa', tag: 'personal', kind: 'Tarjeta de crédito', balance: 1000, annualRate: 30, minPayment: 50, payDay: 10 });
+    const txId = estado().addTransaction({ type: 'expense', amount: 200, concept: 'Pago', date: '2026-09-10', category: 'pago-tarjetas', method: 'cash', businessType: 'personal', debtId: id });
+    useFinanceStore.setState((s) => ({ pendienteHidratar: { ...s.pendienteHidratar, expenses: [...s.pendienteHidratar.expenses, txId] } }));
+
+    estado().updateTransaction(txId, { amount: 250, debtId: id });
+    expect(estado().pendienteHidratar.expenses).toContain(txId);
+  });
 });
 
 // ================================================================
