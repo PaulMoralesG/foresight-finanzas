@@ -12,6 +12,7 @@ import { mergeById, mergeBudgets, hidratarAusentes, type MergeSet } from '@/lib/
 import { nowIso } from '@/lib/ids';
 import { reportarError } from '@/lib/error-reporter';
 import { getTodayISO } from '@/lib/utils';
+import { recalcularSaldos } from '@/lib/debt-balance';
 import {
   shouldImportLegacy,
   buildImportRows,
@@ -60,6 +61,8 @@ interface ExpenseRow {
   recurrence_id: string | null;
   /** 0018. Opcional en la forma: filas de antes de la migración no la traen. */
   debt_id?: string | null;
+  /** 0020. Pago histórico vinculado a mano (no descuenta). Opcional en la forma. */
+  debt_historico?: boolean | null;
   created_at: string | null;
   updated_at: string;
   deleted_at: string | null;
@@ -89,6 +92,10 @@ interface DebtRow {
   cut_day?: number | null;
   statement_balance?: number | null;
   credit_limit?: number | null;
+  /** 0020. Saldo derivado: presentes solo en filas que escribió un cliente nuevo. */
+  saldo_base?: number | null;
+  contado_base?: number | null;
+  saldo_base_at?: string | null;
   updated_at: string;
   deleted_at: string | null;
 }
@@ -218,6 +225,7 @@ function expenseToRow(t: Transaction, userId: string): ExpenseRow {
     to_account_id: t.toAccountId ?? null,
     recurrence_id: t.recurrenceId ?? null,
     debt_id: t.debtId ?? null,
+    debt_historico: t.debtHistorico ?? null,
     created_at: t.created_at ?? null,
     updated_at: t.updated_at,
     deleted_at: null,
@@ -240,6 +248,8 @@ function rowToExpense(r: ExpenseRow): Transaction {
     // Como created_at: la clave solo existe si hay deuda, para que un
     // movimiento sin deuda sea estructuralmente igual a su copia local.
     ...(r.debt_id ? { debtId: r.debt_id } : {}),
+    // Solo con valor (como debtId): un movimiento normal no lleva la clave.
+    ...(r.debt_historico === true ? { debtHistorico: true as const } : {}),
     // La clave solo aparece si hay valor: con `created_at: undefined` el objeto
     // tenía una clave más que su equivalente local y igualEstructural (que
     // compara el número de claves) daba "distinto" en cada ciclo, disparando
@@ -279,12 +289,26 @@ function debtToRow(d: Debt, userId: string): DebtRow {
     cut_day: d.cutDay ?? null,
     statement_balance: d.statementBalance ?? null,
     credit_limit: d.creditLimit ?? null,
+    saldo_base: d.saldoBase ?? null,
+    contado_base: d.contadoBase ?? null,
+    // La base es de ESTA escritura: si un cliente viejo reescribe la fila,
+    // cambia updated_at sin tocar esta columna y la deuda se lee no anclada.
+    saldo_base_at: d.saldoBase !== undefined ? d.updated_at : null,
     updated_at: d.updated_at,
     deleted_at: null,
   };
 }
 
 function rowToDebt(r: DebtRow): Debt {
+  // Anclada solo si la base la escribió la MISMA escritura que fijó
+  // updated_at (spec sync-saldo-deudas §5.3). Un cliente viejo cambia
+  // updated_at sin conocer saldo_base_at: la deuda queda no anclada, con el
+  // `balance` que él escribió (su pago incluido). Se compara como instante:
+  // Postgres devuelve `+00:00` y el cliente escribe `Z`.
+  const anclada =
+    r.saldo_base != null &&
+    r.saldo_base_at != null &&
+    Date.parse(r.saldo_base_at) === Date.parse(r.updated_at);
   return {
     id: r.id,
     name: r.name ?? '',
@@ -299,6 +323,8 @@ function rowToDebt(r: DebtRow): Debt {
     ...(r.cut_day != null ? { cutDay: Number(r.cut_day) } : {}),
     ...(r.statement_balance != null ? { statementBalance: Number(r.statement_balance) } : {}),
     ...(r.credit_limit != null ? { creditLimit: Number(r.credit_limit) } : {}),
+    ...(anclada ? { saldoBase: Number(r.saldo_base) } : {}),
+    ...(anclada && r.contado_base != null ? { contadoBase: Number(r.contado_base) } : {}),
     updated_at: r.updated_at,
   };
 }
@@ -804,9 +830,9 @@ function universeOf<T extends { id: string }>(localLive: T[], remote: MergeSet<T
   ]);
 }
 
-/** Claves añadidas por las migraciones 0018/0019 que un cliente viejo no conoce. */
-const CLAVES_DEUDA_HIDRATABLES: ReadonlyArray<keyof Debt> = ['cutDay', 'statementBalance', 'creditLimit'];
-const CLAVES_GASTO_HIDRATABLES: ReadonlyArray<keyof Transaction> = ['debtId'];
+/** Claves añadidas por las migraciones 0018/0019/0020 que un cliente viejo no conoce. */
+const CLAVES_DEUDA_HIDRATABLES: ReadonlyArray<keyof Debt> = ['cutDay', 'statementBalance', 'creditLimit', 'saldoBase', 'contadoBase'];
+const CLAVES_GASTO_HIDRATABLES: ReadonlyArray<keyof Transaction> = ['debtId', 'debtHistorico'];
 
 /**
  * @param pendiente  ids cuyas copias locales pudieron perder claves (spec D2).
@@ -852,6 +878,12 @@ function applyMerge(snapshot: Snapshot, pendiente: PendienteHidratar | null = nu
     { live: localDebts, tombstones: scopeTombstones(state.tombstones, debtsUniverse) },
     remoteDebts,
   );
+  // Saldo derivado (spec sync-saldo-deudas §5.3): la caché `balance` de una
+  // deuda anclada se recalcula con los pagos YA mergeados antes de comparar
+  // con el estado local. Así una caché remota distinta no dispara un setState
+  // ni un push en cada ciclo, y lo que se sube lleva la caché correcta.
+  // recalcularSaldos devuelve las mismas referencias si nada cambió.
+  debts.live = recalcularSaldos(debts.live, expenses.live);
 
   const remoteAssets = buildRemoteSet(snapshot.assets, rowToAsset);
   const assetsUniverse = universeOf(state.assets, remoteAssets);

@@ -45,4 +45,16 @@ describe('backup', () => {
   it('el nombre de archivo lleva la fecha', () => {
     expect(backupFilename(new Date(2026, 8, 21))).toBe('foresight-2026-09-21.json');
   });
+
+  it('conserva saldoBase, contadoBase y debtHistorico en la ida y vuelta', () => {
+    const conSaldo: BackupData = {
+      ...datos,
+      debts: [{
+        id: 'd1', name: 'Visa', tag: 'personal', kind: 'Tarjeta de crédito', balance: 900, annualRate: 30,
+        minPayment: 50, payDay: null, statementBalance: 200, saldoBase: 1000, contadoBase: 300, updated_at: 'x',
+      }],
+      expenses: [{ ...datos.expenses[0], debtId: 'd1', debtHistorico: true }],
+    };
+    expect(parseBackup(JSON.stringify(buildBackup(conSaldo)))).toEqual(conSaldo);
+  });
 });

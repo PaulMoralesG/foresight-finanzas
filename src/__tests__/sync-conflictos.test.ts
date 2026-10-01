@@ -31,7 +31,7 @@ vi.mock('@/lib/error-reporter', () => ({
 import { syncService } from '@/lib/sync';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import type { Transaction } from '@/types';
+import type { Debt, Transaction } from '@/types';
 
 const mockFrom = (mocks.supabase as { from: ReturnType<typeof vi.fn> }).from;
 
@@ -120,6 +120,32 @@ function gastoLocal(id: string, updated_at: string, extra: Partial<Transaction> 
 
 const filasDe = (upserts: { table: string; rows: Fila[] }[], table: string) =>
   upserts.filter((u) => u.table === table).flatMap((u) => u.rows);
+
+// ── Deudas con saldo derivado (spec sync-saldo-deudas) ──
+const T0 = '2026-08-01T00:00:00.000Z';
+
+/** Fila remota de la deuda d1, anclada en T0 con base 1000 (la escribió un cliente nuevo). */
+const filaDeuda = (extra: Fila = {}): Fila => ({
+  id: 'd1', user_id: 'user-1', name: 'Visa', tag: 'personal', kind: 'Tarjeta de crédito',
+  balance: 1000, annual_rate: 30, min_payment: 50, pay_day: null,
+  cut_day: null, statement_balance: null, credit_limit: null,
+  saldo_base: 1000, contado_base: null, saldo_base_at: T0,
+  updated_at: T0, deleted_at: null,
+  ...extra,
+});
+
+/** Deuda d1 local con las mismas claves que produce rowToDebt (sin saldoBase: no anclada). */
+const deudaBase = (extra: Partial<Debt> = {}): Debt => ({
+  id: 'd1', name: 'Visa', tag: 'personal', kind: 'Tarjeta de crédito', balance: 1000,
+  annualRate: 30, minPayment: 50, payDay: null, updated_at: T0, ...extra,
+});
+
+function meterDeuda(d: Debt): Debt {
+  useFinanceStore.setState((s) => ({ debts: [...s.debts, d] }));
+  return d;
+}
+
+const saldoD1 = (): number => useFinanceStore.getState().debts.find((d) => d.id === 'd1')!.balance;
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -675,5 +701,199 @@ describe('expenses.debt_id (0018)', () => {
     const bajado = useFinanceStore.getState().expenses.find((e) => e.id === 'sin');
     expect(bajado).toBeDefined();
     expect('debtId' in (bajado as object)).toBe(false);
+  });
+});
+
+// ── Paso 0: escenarios de reproducción del bug de saldo original (spec
+// sync-saldo-deudas §1, §7). Durante el desarrollo (Tasks 4-6 del plan)
+// estos tests usaban `it.fails` porque el bug todavía existía; con el fix
+// de saldo derivado ya en el store (Tasks 5-6), pasaron a `it` normal y
+// ahora verifican que esos escenarios de divergencia quedan resueltos de
+// verdad, no solo documentan el bug. Se conservan como regresión porque son
+// los casos concretos que motivaron el spec.
+describe('saldo de deudas convergente (Paso 0 del spec sync-saldo-deudas)', () => {
+  it('1. pagos concurrentes en dos dispositivos se suman: 1000 − 100 − 200 = 700', async () => {
+    // Este dispositivo (B): deuda anclada y su propio pago de 200, aún sin subir.
+    meterDeuda(deudaBase({ saldoBase: 1000, balance: 800 }));
+    gastoLocal('pB', '2026-08-20T00:00:00.000Z', { amount: 200, debtId: 'd1', category: 'pago-tarjetas' });
+    // Servidor: la deuda como la ancló A (un pago no reescribe la fila) y el pago de 100 de A.
+    armar({
+      filas: {
+        debts: [filaDeuda()],
+        expenses: [filaGasto({ id: 'pA', amount: 100, debt_id: 'd1', category: 'pago-tarjetas', updated_at: '2026-08-15T00:00:00.000Z' })],
+      },
+    });
+
+    await syncService.attach('user-1');
+
+    expect(saldoD1()).toBe(700);
+  });
+
+  it('2. editar la tasa en B sin haber visto el pago de A no pierde el pago: 900', async () => {
+    // Este dispositivo (A): pagó 100; la fila de la deuda no se reescribió.
+    meterDeuda(deudaBase({ saldoBase: 1000, balance: 900 }));
+    gastoLocal('pA', '2026-08-15T00:00:00.000Z', { amount: 100, debtId: 'd1', category: 'pago-tarjetas' });
+    // B editó la tasa después (su fila gana) con su copia vieja del saldo.
+    const T2 = '2026-08-20T00:00:00.000Z';
+    armar({ filas: { debts: [filaDeuda({ annual_rate: 25, balance: 1000, updated_at: T2, saldo_base_at: T2 })] } });
+
+    await syncService.attach('user-1');
+
+    const d = useFinanceStore.getState().debts.find((x) => x.id === 'd1')!;
+    expect(d.annualRate).toBe(25);
+    expect(d.balance).toBe(900);
+  });
+
+  it('3a. un histórico vinculado en A y borrado en B no mueve el saldo (deuda anclada)', async () => {
+    armar({
+      filas: {
+        debts: [filaDeuda()],
+        expenses: [filaGasto({ id: 'h', amount: 250, debt_id: 'd1', debt_historico: true, category: 'pago-tarjetas' })],
+      },
+    });
+    await syncService.attach('user-1');
+    expect(saldoD1()).toBe(1000);
+
+    useFinanceStore.getState().deleteTransaction('h');
+
+    expect(saldoD1()).toBe(1000); // antes del fix: 1250 (le devolvía dinero que nunca se descontó) — ver sync-saldo-deudas.md
+  });
+
+  it('3b. lo mismo con una deuda NO anclada: lo arregla debt_historico', async () => {
+    armar({
+      filas: {
+        debts: [filaDeuda({ saldo_base: null, saldo_base_at: null })],
+        expenses: [filaGasto({ id: 'h', amount: 250, debt_id: 'd1', debt_historico: true, category: 'pago-tarjetas' })],
+      },
+    });
+    await syncService.attach('user-1');
+
+    useFinanceStore.getState().deleteTransaction('h');
+
+    expect(saldoD1()).toBe(1000);
+  });
+
+  it('4. un pago de 150 sobre una deuda de 100, creado en A y borrado en B, devuelve 100', async () => {
+    armar({
+      filas: {
+        debts: [filaDeuda({ balance: 0, saldo_base: 100 })],
+        expenses: [filaGasto({ id: 'p', amount: 150, debt_id: 'd1', category: 'pago-tarjetas' })],
+      },
+    });
+    await syncService.attach('user-1');
+    expect(saldoD1()).toBe(0);
+
+    useFinanceStore.getState().deleteTransaction('p');
+
+    expect(saldoD1()).toBe(100); // antes del fix: 150 (inventaba 50) — ver sync-saldo-deudas.md
+  });
+});
+
+describe('debts.saldo_base y expenses.debt_historico (0020)', () => {
+  it('sube saldo_base, contado_base y saldo_base_at = updated_at, con balance como caché', async () => {
+    const { upserts } = armar();
+    meterDeuda(deudaBase({ saldoBase: 1000, contadoBase: 300, statementBalance: 300, updated_at: '2026-08-10T00:00:00.000Z' }));
+
+    await syncService.attach('user-1');
+
+    expect(filasDe(upserts, 'debts')[0]).toMatchObject({
+      id: 'd1', balance: 1000, statement_balance: 300,
+      saldo_base: 1000, contado_base: 300, saldo_base_at: '2026-08-10T00:00:00.000Z',
+    });
+  });
+
+  it('una deuda no anclada sube saldo_base y saldo_base_at en null', async () => {
+    const { upserts } = armar();
+    meterDeuda(deudaBase({ balance: 640 }));
+
+    await syncService.attach('user-1');
+
+    expect(filasDe(upserts, 'debts')[0]).toMatchObject({ balance: 640, saldo_base: null, contado_base: null, saldo_base_at: null });
+  });
+
+  it('saldo_base_at ≠ updated_at (la reescribió un cliente viejo) → no anclada, con el balance de la fila', async () => {
+    armar({
+      filas: {
+        debts: [filaDeuda({ balance: 640, updated_at: '2026-08-20T00:00:00.000Z', saldo_base_at: T0 })],
+        expenses: [filaGasto({ id: 'p', amount: 100, debt_id: 'd1', category: 'pago-tarjetas' })],
+      },
+    });
+
+    await syncService.attach('user-1');
+
+    const d = useFinanceStore.getState().debts[0];
+    expect('saldoBase' in d).toBe(false);
+    expect('contadoBase' in d).toBe(false);
+    expect(d.balance).toBe(640);
+  });
+
+  it('Z y +00:00 son el mismo instante: la deuda llega anclada y su saldo se deriva', async () => {
+    armar({
+      filas: {
+        debts: [filaDeuda({ updated_at: '2026-08-01T00:00:00+00:00', saldo_base_at: T0, saldo_base: '1000.00', balance: '1000.00' })],
+        expenses: [filaGasto({ id: 'p', amount: 100, debt_id: 'd1', category: 'pago-tarjetas' })],
+      },
+    });
+
+    await syncService.attach('user-1');
+
+    expect(useFinanceStore.getState().debts[0]).toMatchObject({ saldoBase: 1000, balance: 900 });
+  });
+
+  it('un ciclo sin novedades con la caché remota distinta no produce setState ni push de deudas', async () => {
+    // Local: anclada en T0 con su pago de 100 → 900.
+    meterDeuda(deudaBase({ saldoBase: 1000, balance: 900 }));
+    const pago: Transaction = {
+      id: 'p', type: 'expense', amount: 100, concept: 'Pago', date: '2026-07-20', category: 'pago-tarjetas',
+      method: 'cash', businessType: 'personal', accountId: null, toAccountId: null, recurrenceId: null,
+      debtId: 'd1', updated_at: T0,
+    };
+    useFinanceStore.setState({ expenses: [pago] });
+    // Servidor: la fila es MÁS NUEVA (T2, reescrita y re-anclada por otro
+    // dispositivo) y trae una caché `balance` vieja (950). La remota gana el
+    // merge en el primer ciclo por updated_at y, en el segundo, el empate por
+    // canonicalJson ("950" > "900"): sin recalcularSaldos, la caché 950
+    // llegaría al estado local en cada ciclo.
+    const T2 = '2026-08-20T00:00:00.000Z';
+    const { upserts } = armar({
+      filas: {
+        debts: [filaDeuda({ balance: 950, updated_at: T2, saldo_base_at: T2 })],
+        expenses: [filaGasto({ id: 'p', amount: 100, concept: 'Pago', date: '2026-07-20', category: 'pago-tarjetas', debt_id: 'd1', updated_at: T0 })],
+      },
+    });
+
+    // Ciclo 1: adopta la fila remota y recalcula la caché.
+    await syncService.attach('user-1');
+    const debtsTrasAttach = useFinanceStore.getState().debts;
+    expect(debtsTrasAttach[0]).toMatchObject({ updated_at: T2, saldoBase: 1000, balance: 900 });
+
+    // Ciclo 2 (incremental), sin novedades: el servidor sigue devolviendo la caché 950.
+    upserts.length = 0;
+    await syncService.flush();
+
+    expect(useFinanceStore.getState().debts).toBe(debtsTrasAttach);
+    expect(filasDe(upserts, 'debts')).toHaveLength(0);
+  });
+
+  it('debt_historico va y vuelve; sin la marca la clave no existe en local', async () => {
+    const { upserts } = armar({
+      filas: {
+        expenses: [
+          filaGasto({ id: 'remoto', debt_id: 'd9', debt_historico: true }),
+          filaGasto({ id: 'sinMarca', debt_id: 'd9', debt_historico: false }),
+        ],
+      },
+    });
+    gastoLocal('local', '2026-09-01T12:00:00.000Z', { debtId: 'd1', debtHistorico: true, category: 'pago-tarjetas' });
+    gastoLocal('normal', '2026-09-01T12:00:00.000Z', { debtId: 'd1', category: 'pago-tarjetas' });
+
+    await syncService.attach('user-1');
+
+    const subidas = filasDe(upserts, 'expenses');
+    expect(subidas.find((r) => r.id === 'local')).toMatchObject({ debt_id: 'd1', debt_historico: true });
+    expect(subidas.find((r) => r.id === 'normal')).toMatchObject({ debt_historico: null });
+    const locales = useFinanceStore.getState().expenses;
+    expect(locales.find((e) => e.id === 'remoto')?.debtHistorico).toBe(true);
+    expect('debtHistorico' in (locales.find((e) => e.id === 'sinMarca') as object)).toBe(false);
   });
 });

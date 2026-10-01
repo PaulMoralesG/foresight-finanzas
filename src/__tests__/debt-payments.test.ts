@@ -87,6 +87,31 @@ describe('lib/debt-payments', () => {
     expect(aplicarCambioDePagos(debts, vinc, [pago], [mov({ debtId: undefined })], AHORA).descuentos).toEqual({});
   });
 
+  it('aplicarCambioDePagos ignora las deudas ancladas: ni saldo, ni updated_at, ni registro', () => {
+    const debts = [deuda({ id: 'd1', balance: 1000, saldoBase: 1000 }), deuda({ id: 'd2', balance: 500 })];
+    const alta = aplicarCambioDePagos(debts, {}, [], [mov({ id: 'a', debtId: 'd1' }), mov({ id: 'b', debtId: 'd2' })], AHORA);
+    expect(alta.debts[0]).toBe(debts[0]);
+    expect(alta.debts[1].balance).toBe(400);
+    expect(alta.descuentos.a).toBeUndefined();
+    expect(alta.descuentos.b).toEqual({ balance: 100 });
+
+    expect(aplicarCambioDePagos(debts, {}, [mov({ id: 'a', debtId: 'd1' })], [], AHORA).debts).toBe(debts);
+    expect(aplicarCambioDePagos(debts, {}, [mov({ id: 'a', debtId: 'd1' })], [mov({ id: 'a', debtId: 'd1', amount: 900 })], AHORA).debts).toBe(debts);
+  });
+
+  it('aplicarCambioDePagos trata debtHistorico como vinculado aunque no haya registro local', () => {
+    // Histórico vinculado en OTRO dispositivo: aquí no hay entrada en descuentos.
+    const debts = [deuda({ balance: 1000 })];
+    const h = mov({ debtId: 'd1', amount: 250, debtHistorico: true });
+    expect(aplicarCambioDePagos(debts, {}, [h], [], AHORA).debts).toBe(debts); // borrar
+    expect(aplicarCambioDePagos(debts, {}, [], [h], AHORA).debts).toBe(debts); // alta / deshacer
+    expect(aplicarCambioDePagos(debts, {}, [h], [{ ...h, amount: 999 }], AHORA).debts).toBe(debts); // editar monto
+    const dos = [deuda({ id: 'd1', balance: 1000 }), deuda({ id: 'd2', balance: 500 })];
+    const otra = aplicarCambioDePagos(dos, {}, [h], [{ ...h, debtId: 'd2' }], AHORA); // cambiar de deuda
+    expect(otra.debts.map((d) => d.balance)).toEqual([1000, 500]);
+    expect(otra.descuentos).toEqual({});
+  });
+
   it('montoQueRevierte: lo efectivo si se conoce, el monto si no, 0 si es vinculado o no paga deuda', () => {
     const p = mov({ debtId: 'd1', amount: 300 });
     expect(montoQueRevierte(p, { m1: { balance: 100 } })).toBe(100);
@@ -179,9 +204,9 @@ describe('migración v15 del estado persistido', () => {
     expect(migrado.debts[0].balance).toBe(400);
   });
 
-  it('está en la cadena de migrate con la versión 16', () => {
+  it('está en la cadena de migrate con la versión 17', () => {
     const opciones = useFinanceStore.persist.getOptions();
-    expect(opciones.version).toBe(16);
+    expect(opciones.version).toBe(17);
     const migrado = opciones.migrate!({ expenses: [mov({ concept: 'Pago Visa' })], debts: [deuda()], savingsGoals: [], accounts: [] }, 14) as { expenses: Transaction[] };
     expect(migrado.expenses[0].debtId).toBe('d1');
   });

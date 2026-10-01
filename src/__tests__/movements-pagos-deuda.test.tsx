@@ -158,5 +158,22 @@ describe('MovementsPage — borrado masivo con pagos de deuda', () => {
     expect(mensaje).not.toContain('vuelve');
     expect(useFinanceStore.getState().debts.find((d) => d.id === visa)!.balance).toBe(1000);
   });
+
+  it('un histórico llegado de otro dispositivo (debtHistorico, sin registro local) no dispara el aviso', async () => {
+    const { visa } = conDeudas();
+    useFinanceStore.setState((s) => ({
+      expenses: [
+        ...s.expenses,
+        mov({ concept: 'Cuota vieja', amount: 200, category: 'pago-tarjetas', debtId: visa, debtHistorico: true }),
+        mov({ concept: 'Café', amount: 30 }),
+      ],
+    }));
+    render(<MovementsPage />);
+
+    const mensaje = await seleccionarYEliminar(['Cuota vieja', 'Café']);
+    expect(mensaje).toContain('2 transacciones eliminadas');
+    expect(mensaje).not.toContain('vuelve');
+    expect(useFinanceStore.getState().debts.find((d) => d.id === visa)!.balance).toBe(1000);
+  });
 });
 
