@@ -467,4 +467,51 @@ describe('TransactionModal — pago de una deuda (un pago no es gasto)', () => {
     await user.click(screen.getByRole('button', { name: 'Eliminar' }));
     expect(useFinanceStore.getState().debts[0].balance).toBe(100);
   });
+
+  it('deuda anclada: avisa lo que de verdad subirá según el resto de pagos (tope agregado)', async () => {
+    const user = userEvent.setup();
+    const debtId = nuevaDeuda({ name: 'Visa Pichincha', balance: 100 });
+    useFinanceStore.getState().registerDebtPayment(debtId, { amount: 150, date: '2026-08-10', accountId: null });
+    useFinanceStore.getState().registerDebtPayment(debtId, { amount: 30, date: '2026-08-11', accountId: null });
+    const grande = useFinanceStore.getState().expenses.find((e) => e.amount === 150)!;
+
+    abrirModal(grande.id);
+    montar();
+    await user.click(screen.getByRole('button', { name: 'Eliminar movimiento' }));
+
+    expect(screen.getByText(/volverá a subir \$70\.00/)).toBeInTheDocument();
+  });
+
+  it('deuda anclada: borrar un pago que no mueve el saldo lo dice sin llamarlo «vinculado a mano»', async () => {
+    const user = userEvent.setup();
+    const debtId = nuevaDeuda({ name: 'Visa Pichincha', balance: 100 });
+    useFinanceStore.getState().registerDebtPayment(debtId, { amount: 150, date: '2026-08-10', accountId: null });
+    useFinanceStore.getState().registerDebtPayment(debtId, { amount: 30, date: '2026-08-11', accountId: null });
+    const chico = useFinanceStore.getState().expenses.find((e) => e.amount === 30)!;
+
+    abrirModal(chico.id);
+    montar();
+    await user.click(screen.getByRole('button', { name: 'Eliminar movimiento' }));
+
+    expect(screen.getByText(/El saldo de «Visa Pichincha» no cambiará/)).toBeInTheDocument();
+    expect(screen.queryByText(/vinculado a mano/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/volverá a subir/)).not.toBeInTheDocument();
+  });
+
+  it('un histórico llegado de otro dispositivo (sin registro local) se anuncia como vinculado a mano', async () => {
+    const user = userEvent.setup();
+    const debtId = nuevaDeuda({ name: 'Visa Pichincha', balance: 1000 });
+    useFinanceStore.setState({
+      expenses: [{
+        id: 'h', type: 'expense', amount: 250, concept: 'Pago viejo', date: '2026-08-10', category: 'pago-tarjetas',
+        method: 'cash', businessType: 'personal', debtId, debtHistorico: true, updated_at: '2026-08-10T00:00:00.000Z',
+      }],
+    });
+
+    abrirModal('h');
+    montar();
+    await user.click(screen.getByRole('button', { name: 'Eliminar movimiento' }));
+
+    expect(screen.getByText(/pago vinculado a mano: el saldo de «Visa Pichincha» no cambiará/)).toBeInTheDocument();
+  });
 });

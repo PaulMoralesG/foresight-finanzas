@@ -360,3 +360,48 @@ describe('DebtsPage — historial de pagos', () => {
     expect(botones[0]).toHaveAccessibleName(/\$300\.00/);
   });
 });
+
+describe('DebtsPage — saldo derivado (spec sync-saldo-deudas)', () => {
+  const legada = {
+    id: 'd1', name: 'Visa', tag: 'personal' as const, kind: 'Tarjeta de crédito' as const, balance: 700,
+    annualRate: 30, minPayment: 50, payDay: null, updated_at: '2026-09-01T00:00:00.000Z',
+  };
+
+  it('«Confirmar saldo» aparece solo en deudas no ancladas y anclar no cambia el saldo mostrado', async () => {
+    const user = userEvent.setup();
+    useFinanceStore.setState({ debts: [legada] });
+    useFinanceStore.getState().addDebt({ name: 'Auto', tag: 'personal', kind: 'Préstamo', balance: 5000, annualRate: 10, minPayment: 200, payDay: null });
+    render(<DebtsPage />);
+
+    expect(within(filaDe('Visa')).getByText(/Confirma que el saldo de \$700\.00 coincide con tu banco/)).toBeInTheDocument();
+    expect(within(filaDe('Auto')).queryByRole('button', { name: /Confirmar saldo/ })).not.toBeInTheDocument();
+
+    await user.click(within(filaDe('Visa')).getByRole('button', { name: 'Confirmar saldo de Visa' }));
+
+    const d = useFinanceStore.getState().debts.find((x) => x.id === 'd1')!;
+    expect(d).toMatchObject({ saldoBase: 700, balance: 700 });
+    expect(within(filaDe('Visa')).queryByRole('button', { name: /Confirmar saldo/ })).not.toBeInTheDocument();
+    expect(filaDe('Visa')).toHaveTextContent('$700.00');
+  });
+
+  it('«Desvincular» sigue debtHistorico en una deuda anclada, sin mirar el registro local', async () => {
+    const user = userEvent.setup();
+    const st = useFinanceStore.getState();
+    const id = st.addDebt({ name: 'Visa', tag: 'personal', kind: 'Tarjeta de crédito', balance: 1000, annualRate: 30, minPayment: 50, payDay: null });
+    // Histórico vinculado en OTRO dispositivo: llegó por el sync, sin registro en descuentosDePago.
+    useFinanceStore.setState((s) => ({
+      expenses: [...s.expenses, {
+        id: 'h', type: 'expense', amount: 300, concept: 'Pago Visa (viejo)', date: '2026-08-15', category: 'pago-tarjetas',
+        method: 'cash', businessType: 'personal', debtId: id, debtHistorico: true, updated_at: '2026-08-15T00:00:00.000Z',
+      }],
+    }));
+    st.addTransaction({ type: 'expense', amount: 100, concept: 'Pago real', date: '2026-09-10', category: 'pago-tarjetas', method: 'cash', businessType: 'personal', debtId: id });
+    render(<DebtsPage />);
+
+    await user.click(screen.getByRole('button', { name: /Historial de pagos \(2\)/ }));
+    const panel = document.getElementById(`historial-${id}`)!;
+    const botones = within(panel).getAllByRole('button', { name: /Desvincular/ });
+    expect(botones).toHaveLength(1);
+    expect(botones[0]).toHaveAccessibleName(/\$300\.00/);
+  });
+});
