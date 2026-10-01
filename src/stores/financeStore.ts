@@ -303,6 +303,19 @@ function clearedTombstone(tombstones: Record<string, string>, id: string): Recor
 }
 
 /**
+ * Quita el id de un movimiento de `pendienteHidratar.expenses` (no-op si no
+ * estaba). Se usa cuando el usuario cambia explícitamente el vínculo de un
+ * pago con su deuda (vincular/desvincular, o `debtId` en updateTransaction):
+ * esa decisión no debe perderse si el sync hidrata el valor viejo del
+ * servidor antes del primer ciclo completo tras la migración v17 (spec
+ * sync-saldo-deudas, fix integración).
+ */
+function sinPendienteHidratar(pendiente: PendienteHidratar, txId: string): PendienteHidratar {
+  if (!pendiente.expenses.includes(txId)) return pendiente;
+  return { ...pendiente, expenses: pendiente.expenses.filter((id) => id !== txId) };
+}
+
+/**
  * Migración v8 del estado persistido.
  * Migraciones anteriores: v5→v6 savingsGoal (number) → savingsGoals (array)
  * y v6→v7 dedup de IDs + recálculo de contadores. v8: IDs → strings únicos
@@ -564,6 +577,9 @@ export const useFinanceStore = create<FinanceState>()(
           return {
             expenses,
             tombstones: clearedTombstone(state.tombstones, id),
+            // El vínculo con la deuda cambió explícitamente: no hay nada que
+            // hidratar para este movimiento (ver sinPendienteHidratar).
+            ...('debtId' in partial ? { pendienteHidratar: sinPendienteHidratar(state.pendienteHidratar, id) } : {}),
             ...ajustarDeudas(state, [viejo], [nuevo], expenses),
           };
         }),
@@ -870,7 +886,8 @@ export const useFinanceStore = create<FinanceState>()(
         const id = newId();
         set((state) => {
           const base = normalizarDeuda({ ...d, id, updated_at: nowIso() });
-          const nueva: Debt = { ...base, saldoBase: roundMoneyLocal(Math.max(0, base.balance)) };
+          const saldoBase = roundMoneyLocal(Math.max(0, base.balance));
+          const nueva: Debt = { ...base, balance: saldoBase, saldoBase };
           delete nueva.contadoBase;
           if (base.statementBalance !== undefined) nueva.contadoBase = base.statementBalance;
           return { debts: [...state.debts, nueva] };
@@ -951,6 +968,7 @@ export const useFinanceStore = create<FinanceState>()(
               e.id === txId ? { ...e, debtId, debtHistorico: true as const, updated_at: nowIso() } : e,
             ),
             tombstones: clearedTombstone(state.tombstones, txId),
+            pendienteHidratar: sinPendienteHidratar(state.pendienteHidratar, txId),
           };
         }),
 
@@ -974,7 +992,12 @@ export const useFinanceStore = create<FinanceState>()(
               debts = state.debts.map((d) => (d.id === deuda.id ? { ...conservada, updated_at: nowIso() } : d));
             }
           }
-          return { expenses, descuentosDePago, debts: recalcularSaldos(debts, expenses) };
+          return {
+            expenses,
+            descuentosDePago,
+            debts: recalcularSaldos(debts, expenses),
+            pendienteHidratar: sinPendienteHidratar(state.pendienteHidratar, txId),
+          };
         }),
 
       confirmarSaldoDeuda: (id) =>
@@ -1028,7 +1051,9 @@ export const useFinanceStore = create<FinanceState>()(
           expenses,
           accounts: sellar(data.accounts),
           // Un respaldo viejo trae deudas sin saldoBase: entran no ancladas.
-          debts: recalcularSaldos(sellar(data.debts), expenses),
+          // normalizarDeuda sanea cada deuda importada (igual que cualquier
+          // otro camino de escritura) antes de recalcular sus saldos.
+          debts: recalcularSaldos(sellar(data.debts).map(normalizarDeuda), expenses),
           assets: sellar(data.assets),
           networth: sellar(data.networth),
           budgetLines: sellar(data.budgetLines),
