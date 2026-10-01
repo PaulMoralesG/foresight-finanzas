@@ -16,7 +16,8 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ScopeBadge, TransactionAmount } from '@/components/ui/TransactionBits';
 import { typeLabel, typePillClasses } from '@/lib/transaction-labels';
 import { accountName } from '@/lib/accounts';
-import { categoriaDePago, cuentaComoGasto, esPagoDeDeuda, etiquetaPago, montoQueRevierte } from '@/lib/debt-payments';
+import { categoriaDePago, cuentaComoGasto, esPagoDeDeuda, etiquetaPago } from '@/lib/debt-payments';
+import { efectoDeBorrar } from '@/lib/debt-balance';
 import { esTarjeta } from '@/lib/credit-card';
 import type { Category, Debt, FilterType, Transaction } from '@/types';
 
@@ -75,11 +76,12 @@ export function MovementsPage() {
     // Guardar copia de las transacciones antes de eliminar (para Undo)
     const deletedItems = monthlyData.filter((e) => selectedIds.has(e.id));
     const count = selectedIds.size;
-    // Borrar un pago de deuda devuelve su monto a la deuda: se avisa (como en
-    // el borrado individual). Los vinculados a mano no cambian ningún saldo.
-    const { descuentosDePago, debts } = useFinanceStore.getState();
+    // Borrar un pago de deuda puede subir su saldo: se avisa (como en el
+    // borrado individual). `efectoDeBorrar` da lo mismo en todos los
+    // dispositivos; los históricos vinculados a mano no cambian ningún saldo.
+    const { descuentosDePago, debts, expenses } = useFinanceStore.getState();
     const pagosQueSuben = deletedItems.filter(
-      (e) => debts.some((d) => d.id === e.debtId) && montoQueRevierte(e, descuentosDePago) > 0,
+      (e) => efectoDeBorrar(e, debts, expenses, descuentosDePago) > 0,
     ).length;
 
     try {

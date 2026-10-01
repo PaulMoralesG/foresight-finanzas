@@ -27,8 +27,8 @@ const migrar = (estado: unknown, version: number) =>
   opciones().migrate!(structuredClone(estado), version) as Record<string, unknown>;
 
 describe('migrate: cada paso se aplica solo si la versión persistida es anterior', () => {
-  it('la versión actual del código es 16', () => {
-    expect(opciones().version).toBe(16);
+  it('la versión actual del código es 17', () => {
+    expect(opciones().version).toBe(17);
   });
 
   it('desde una versión antigua (v7) aplica todas las migraciones intermedias, en orden', () => {
@@ -67,9 +67,9 @@ describe('migrate: cada paso se aplica solo si la versión persistida es anterio
     expect(m.savingsGoals[0]).toMatchObject({ tag: 'personal', saved: 50, savedFromAccounts: 0 });
     // v14
     expect(m.recurrences).toEqual([]);
-    // v15 antes que v16: el pago se enlaza y por eso ya no queda pendiente de hidratar
+    // v15 antes que v16: el pago se enlaza y v16 ya no lo anota; v17 sí (debtHistorico)
     expect(m.expenses[0].debtId).toBe('d1');
-    expect(m.pendienteHidratar).toEqual({ debts: ['d1'], expenses: ['legacy-2'] });
+    expect(m.pendienteHidratar).toEqual({ debts: ['d1'], expenses: ['legacy-2', 'legacy-1'] });
     expect(m.descuentosDePago).toEqual({});
   });
 
@@ -98,23 +98,42 @@ describe('migrate: cada paso se aplica solo si la versión persistida es anterio
     expect(m.descuentosDePago).toEqual({});
   });
 
-  it('desde v14 aplica v15 y v16 (el enlace automático sí corre una vez)', () => {
+  it('desde v14 aplica v15, v16 y v17 (el enlace automático sí corre una vez)', () => {
     const m = migrar({ expenses: [mov()], debts: [deuda()], savingsGoals: [], accounts: [] }, 14) as {
       expenses: Transaction[]; pendienteHidratar: { debts: string[]; expenses: string[] };
     };
     expect(m.expenses[0].debtId).toBe('d1');
-    expect(m.pendienteHidratar).toEqual({ debts: ['d1'], expenses: [] });
+    // v16 no anota el pago enlazado; v17 sí (su debtHistorico puede venir del remoto)
+    expect(m.pendienteHidratar).toEqual({ debts: ['d1'], expenses: ['m1'] });
   });
 
-  it('en la versión actual (v16) es un no-op real', () => {
+  it('desde v16 solo aplica v17: sube las marcas «vinculado» y no toca nada más', () => {
     const v16 = {
+      expenses: [mov({ debtId: 'd1' })],
+      debts: [deuda()],
+      savingsGoals: [{ id: 'g1', concept: 'Hucha', target: 1000 }],
+      accounts: [],
+      recurrences: [],
+      descuentosDePago: { m1: { balance: 0, vinculado: true } },
+      pendienteHidratar: { debts: [], expenses: [] },
+    };
+    const m = migrar(v16, 16) as { expenses: Transaction[]; debts: Debt[]; savingsGoals: unknown[]; pendienteHidratar: unknown };
+    expect(m.expenses[0]).toMatchObject({ debtId: 'd1', debtHistorico: true, amount: 100 });
+    expect(m.debts).toEqual([deuda()]); // no ancla
+    expect(m.savingsGoals).toEqual(v16.savingsGoals);
+    expect(m.pendienteHidratar).toEqual({ debts: ['d1'], expenses: ['m1'] });
+  });
+
+  it('en la versión actual (v17) es un no-op real', () => {
+    const v17 = {
       expenses: [mov()],
       debts: [deuda()],
       savingsGoals: [{ id: 'g1', concept: 'Hucha', target: 1000 }],
       accounts: [],
       recurrences: [],
+      descuentosDePago: { m1: { balance: 0, vinculado: true } },
     };
-    expect(migrar(v16, 16)).toEqual(v16);
+    expect(migrar(v17, 17)).toEqual(v17);
   });
 
   it('un estado persistido nulo no rompe la migración', () => {

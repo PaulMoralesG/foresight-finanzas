@@ -44,6 +44,16 @@ describe('lib/credit-card', () => {
     expect(normalizarDeuda({ cutDay: 28 })).toEqual({ cutDay: 28 });
   });
 
+  it('normalizarDeuda: saldoBase válido se redondea; contadoBase solo en tarjetas con pago de contado', () => {
+    expect(normalizarDeuda(tarjeta({ saldoBase: 1000.456 })).saldoBase).toBe(1000.46);
+    expect('saldoBase' in normalizarDeuda(tarjeta({ saldoBase: -1 }))).toBe(false);
+    expect(normalizarDeuda(tarjeta({ statementBalance: 100, contadoBase: 300.004 })).contadoBase).toBe(300);
+    expect('contadoBase' in normalizarDeuda(tarjeta({ contadoBase: 300 }))).toBe(false); // sin contado
+    const p = normalizarDeuda(tarjeta({ kind: 'Préstamo', saldoBase: 500, statementBalance: 10, contadoBase: 10 }));
+    expect('contadoBase' in p).toBe(false);
+    expect(p.saldoBase).toBe(500);
+  });
+
   it('estadoTarjeta: fechas, pago de contado y cupo', () => {
     const e = estadoTarjeta(tarjeta({ balance: 1500, cutDay: 28, statementBalance: 480, creditLimit: 2000 }), '2026-09-26');
     expect(e).toEqual({

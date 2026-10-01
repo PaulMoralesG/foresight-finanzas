@@ -109,6 +109,7 @@ vez cada una. Para un entorno nuevo hay que aplicarlas todas:
 | `0017_entity_columns_nullable.sql` | Columnas de negocio nullable en `accounts`, `assets`, `budget_lines`, `debts`, `recurrences` y `savings_goals`: el upsert de un borrado solo manda identidad + timestamps y el NOT NULL bloqueaba la sincronización entera (23502). No toca datos | En cualquier momento; desbloquea también a clientes sin actualizar |
 | `0018_expenses_debt_id.sql` | Columna `debt_id` (nullable) en `expenses`: enlaza un pago con su deuda para el historial de pagos y para que un «Pago de tarjetas» desde Movimientos baje el saldo | **Antes** de desplegar el cliente que la usa (sin la columna, el sync se desactiva con 42703) |
 | `0019_debts_card_statement.sql` | Columnas opcionales en `debts` para tarjetas: `cut_day` (día de corte), `statement_balance` (pago de contado) y `credit_limit` (cupo total) | **Antes** de desplegar el cliente que las usa |
+| `0020_debts_saldo_base.sql` | Columnas opcionales `saldo_base`, `contado_base` y `saldo_base_at` en `debts`, y `debt_historico` en `expenses`: el saldo de una deuda anclada se deriva de sus pagos y un pago histórico vinculado a mano no descuenta. Solo añade columnas; no toca datos | **Antes** de desplegar el cliente que las usa (sin ellas, el sync se desactiva con 42703). Después, actualizar todos los dispositivos |
 
 Fíjate en el orden de la `0005` y la `0006`: una va antes del deploy y la otra después.
 Invertirlo deja al cliente pidiendo algo que ya no existe, o escribiendo con una clave
@@ -136,6 +137,26 @@ tiene deudas y movimientos locales sin `cutDay`/`statementBalance`/`creditLimit`
 valores de la nube. La migración v16 guarda en `pendienteHidratar` los ids afectados; mientras
 haya pendientes el sync fuerza un ciclo **completo**, copia del remoto solo las claves ausentes
 en local (`hidratarAusentes`, sin tocar `updated_at`) y, al confirmarse el ciclo, vacía la lista.
+
+**Saldo de deudas derivado (store v17, migración 0020):** el saldo de una deuda se sincronizaba
+como valor absoluto aunque cada pago lo modificaba sumando y restando, así que dos pagos
+concurrentes perdían uno y editar la tasa con una copia vieja devolvía un pago. Una deuda
+**anclada** guarda un `saldoBase` que solo cambia cuando el usuario fija el saldo (al crearla,
+en «Actualizar estado de cuenta», al editar el saldo o con «Confirmar saldo»), y el saldo
+mostrado es `max(0, saldoBase − Σ pagos)`; los pagos ya no reescriben la fila de la deuda. Un
+pago histórico vinculado a mano lleva `debtHistorico` y no descuenta. Las deudas existentes
+**no se anclan solas**: Deudas muestra «Confirmar saldo» en cada una hasta que el usuario lo
+pulsa. Si un dispositivo con la versión anterior reescribe una deuda, deja de estar anclada
+(`saldo_base_at` ya no coincide con `updated_at`) y hay que volver a confirmarla. El riesgo
+práctico: la copia local de ese cliente viejo puede estar desactualizada (le faltan pagos
+hechos desde otros dispositivos desde la última vez que esa fila se sincronizó), así que su
+próximo pago o edición sobrescribe el saldo con un valor que no incluye esos pagos — y, al
+no estar anclada, **todos** los dispositivos adoptan ese saldo sin anclar en su próximo ciclo
+de sync. La mitigación es actualizar todos los dispositivos a la versión nueva antes de
+confiar en «Confirmar saldo», y si una deuda se ve mal después de una escritura de un cliente
+viejo, revisarla contra el saldo real antes de volver a confirmarla. La columna
+`balance` en la base de datos es solo una caché para clientes viejos y consultas SQL: se
+refresca cuando la fila se sube por otro motivo. Detalle en `.agents/specs/sync-saldo-deudas.md`.
 
 ## Seguridad
 

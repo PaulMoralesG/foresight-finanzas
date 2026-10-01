@@ -15,6 +15,10 @@ export const esTarjeta = (d: Pick<Debt, 'kind'>): boolean => d.kind === 'Tarjeta
  * desaparece si viene null/undefined/NaN o fuera de rango. Así una deuda sin
  * esos datos tiene la misma forma local y remota (ver rowToDebt en sync).
  * En deudas que no son tarjeta los tres campos se quitan.
+ *
+ * Saldo derivado (spec sync-saldo-deudas): `saldoBase` inválido (negativo,
+ * NaN) se quita; `contadoBase` solo sobrevive en tarjetas que conservan su
+ * pago de contado (quitar el contado quita su base).
  */
 export function normalizarDeuda<T extends Partial<Debt>>(d: T): T {
   const out: T = { ...d };
@@ -26,6 +30,12 @@ export function normalizarDeuda<T extends Partial<Debt>>(d: T): T {
   else out.statementBalance = roundMoney(out.statementBalance as number);
   if (!tarjeta || !monto(out.creditLimit) || out.creditLimit === 0) delete out.creditLimit;
   else out.creditLimit = roundMoney(out.creditLimit as number);
+  if (out.saldoBase !== undefined) {
+    if (!monto(out.saldoBase)) delete out.saldoBase;
+    else out.saldoBase = roundMoney(out.saldoBase as number);
+  }
+  if (!tarjeta || out.statementBalance === undefined || !monto(out.contadoBase)) delete out.contadoBase;
+  else out.contadoBase = roundMoney(out.contadoBase as number);
   return out;
 }
 
