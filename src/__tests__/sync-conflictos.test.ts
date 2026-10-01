@@ -704,8 +704,13 @@ describe('expenses.debt_id (0018)', () => {
   });
 });
 
-// ── Paso 0: reproducción del bug de saldo (spec sync-saldo-deudas §1, §7) ──
-// `it.fails` mientras el bug exista; las Tasks 5 y 6 del plan los pasan a `it`.
+// ── Paso 0: escenarios de reproducción del bug de saldo original (spec
+// sync-saldo-deudas §1, §7). Durante el desarrollo (Tasks 4-6 del plan)
+// estos tests usaban `it.fails` porque el bug todavía existía; con el fix
+// de saldo derivado ya en el store (Tasks 5-6), pasaron a `it` normal y
+// ahora verifican que esos escenarios de divergencia quedan resueltos de
+// verdad, no solo documentan el bug. Se conservan como regresión porque son
+// los casos concretos que motivaron el spec.
 describe('saldo de deudas convergente (Paso 0 del spec sync-saldo-deudas)', () => {
   it('1. pagos concurrentes en dos dispositivos se suman: 1000 − 100 − 200 = 700', async () => {
     // Este dispositivo (B): deuda anclada y su propio pago de 200, aún sin subir.
@@ -751,7 +756,7 @@ describe('saldo de deudas convergente (Paso 0 del spec sync-saldo-deudas)', () =
 
     useFinanceStore.getState().deleteTransaction('h');
 
-    expect(saldoD1()).toBe(1000); // hoy: 1250 (le devuelve dinero que nunca se descontó)
+    expect(saldoD1()).toBe(1000); // antes del fix: 1250 (le devolvía dinero que nunca se descontó) — ver sync-saldo-deudas.md
   });
 
   it('3b. lo mismo con una deuda NO anclada: lo arregla debt_historico', async () => {
@@ -780,7 +785,7 @@ describe('saldo de deudas convergente (Paso 0 del spec sync-saldo-deudas)', () =
 
     useFinanceStore.getState().deleteTransaction('p');
 
-    expect(saldoD1()).toBe(100); // hoy: 150 (inventa 50)
+    expect(saldoD1()).toBe(100); // antes del fix: 150 (inventaba 50) — ver sync-saldo-deudas.md
   });
 });
 

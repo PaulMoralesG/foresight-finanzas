@@ -147,7 +147,14 @@ mostrado es `max(0, saldoBase − Σ pagos)`; los pagos ya no reescriben la fila
 pago histórico vinculado a mano lleva `debtHistorico` y no descuenta. Las deudas existentes
 **no se anclan solas**: Deudas muestra «Confirmar saldo» en cada una hasta que el usuario lo
 pulsa. Si un dispositivo con la versión anterior reescribe una deuda, deja de estar anclada
-(`saldo_base_at` ya no coincide con `updated_at`) y hay que volver a confirmarla. La columna
+(`saldo_base_at` ya no coincide con `updated_at`) y hay que volver a confirmarla. El riesgo
+práctico: la copia local de ese cliente viejo puede estar desactualizada (le faltan pagos
+hechos desde otros dispositivos desde la última vez que esa fila se sincronizó), así que su
+próximo pago o edición sobrescribe el saldo con un valor que no incluye esos pagos — y, al
+no estar anclada, **todos** los dispositivos adoptan ese saldo sin anclar en su próximo ciclo
+de sync. La mitigación es actualizar todos los dispositivos a la versión nueva antes de
+confiar en «Confirmar saldo», y si una deuda se ve mal después de una escritura de un cliente
+viejo, revisarla contra el saldo real antes de volver a confirmarla. La columna
 `balance` en la base de datos es solo una caché para clientes viejos y consultas SQL: se
 refresca cuando la fila se sube por otro motivo. Detalle en `.agents/specs/sync-saldo-deudas.md`.
 
