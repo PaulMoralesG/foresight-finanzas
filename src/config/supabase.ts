@@ -31,9 +31,33 @@ export function fetchConTimeout(input: RequestInfo | URL, init: RequestInit = {}
   return fetch(input, { ...init, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
 }
 
+/** Clave de localStorage de la sesión de Auth: la misma que supabase-js
+ *  deriva por defecto, así fijarla explícita no desloguea a nadie. */
+export function claveSesionAuth(url: string): string {
+  return `sb-${new URL(url).hostname.split('.')[0]}-auth-token`;
+}
+
+const CLAVE_SESION_AUTH = supabaseAvailable ? claveSesionAuth(supabaseUrl!) : null;
+
+/**
+ * Borra a mano la sesión guardada. Solo para cuando signOut falla: sin red y
+ * con el token caducado, auth-js sale sin llamar a `_removeSession` y al
+ * reabrir con red el refresco volvería a entrar sin contraseña.
+ */
+export function olvidarSesionGuardada(clave: string | null = CLAVE_SESION_AUTH): void {
+  if (!clave) return;
+  try {
+    localStorage.removeItem(clave);
+    localStorage.removeItem(`${clave}-code-verifier`);
+  } catch (e: unknown) {
+    console.error('[supabase] No se pudo borrar la sesión guardada:', e instanceof Error ? e.message : e);
+  }
+}
+
 export const supabase: SupabaseClient | null = supabaseAvailable
   ? createClient(supabaseUrl!, supabaseKey!, {
       auth: {
+        storageKey: CLAVE_SESION_AUTH!,
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: true,
