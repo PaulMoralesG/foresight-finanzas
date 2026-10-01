@@ -574,12 +574,17 @@ export const useFinanceStore = create<FinanceState>()(
             nuevo = resto;
           }
           const expenses = state.expenses.map((e) => (e.id === id ? nuevo : e));
+          // El vínculo con la deuda cambió de verdad (no solo que la clave
+          // viaje en el partial: TransactionModal siempre la manda al editar,
+          // aunque no se haya tocado) — null y undefined cuentan como "sin
+          // deuda" para esta comparación.
+          const cambiaDeuda = 'debtId' in partial && (partial.debtId ?? null) !== (viejo.debtId ?? null);
           return {
             expenses,
             tombstones: clearedTombstone(state.tombstones, id),
             // El vínculo con la deuda cambió explícitamente: no hay nada que
             // hidratar para este movimiento (ver sinPendienteHidratar).
-            ...('debtId' in partial ? { pendienteHidratar: sinPendienteHidratar(state.pendienteHidratar, id) } : {}),
+            ...(cambiaDeuda ? { pendienteHidratar: sinPendienteHidratar(state.pendienteHidratar, id) } : {}),
             ...ajustarDeudas(state, [viejo], [nuevo], expenses),
           };
         }),
