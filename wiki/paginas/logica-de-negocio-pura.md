@@ -20,6 +20,7 @@ página.
 |---|---|---|
 | `src/lib/accounts.ts` | Saldo por cuenta y total, transferencias | `accountBalance`, `totalBalance`, `accountIsUsed`, `TRANSFER_CATEGORY` |
 | `src/lib/debts.ts` | Proyección de pago de deudas: *snowball* (saldo menor primero) o *avalanche* (interés más alto primero) | `projectDebts`, `totalDebt`, `monthlyDebtPayment`, `payoffDate` |
+| `src/lib/debt-balance.ts` | Anclaje de deudas y el saldo derivado de una deuda anclada (desde el PR #33) | `recalcularSaldos`, `anclarDeuda`, `rebasarDeuda`, `estaAnclada`, `saldoDerivado` |
 | `src/lib/networth.ts` | Patrimonio actual e histórico de cierres mensuales | `netWorthNow`, `netWorthHistory`, `needsSnapshot` |
 | `src/lib/budget-lines.ts` | Plan vs. real por categoría, reporte anual, migración del presupuesto global viejo | `planFor`, `actualFor`, `budgetStatus`, `groupSummary`, `annualReport`, `convertGlobalBudgets` |
 | `src/lib/goals.ts` | Metas de ahorro: meses restantes, aporte mensual, atraso | `goalMath`, `isGoalLate`, `goalTotals` |
@@ -28,9 +29,13 @@ página.
 Módulos puros vecinos que el store usa para sus invariantes (ver
 [[stores-zustand]]):
 
-- `src/lib/debt-payments.ts` — un movimiento con `debtId` es un pago:
-  `aplicarCambioDePagos` ajusta saldos de deudas, `historialDeuda` arma el
-  historial de pagos por deuda.
+- `src/lib/debt-payments.ts` — un movimiento con `debtId` es un pago. Para una
+  deuda **sin anclar**, `aplicarCambioDePagos` ajusta el `balance` por delta
+  directo; `historialDeuda` arma el historial de pagos por deuda en ambos
+  casos (deuda anclada o no). Para una deuda **anclada**
+  (`saldoBase`/`contadoBase` definidos), el saldo ya no lo mueve este módulo:
+  lo deriva `recalcularSaldos` en `src/lib/debt-balance.ts`, excluyendo los
+  pagos marcados `debtHistorico` (ver [[stores-zustand]]).
 - `src/lib/recurrence.ts` — `fechasPendientes`, `proximaFecha`: qué
   ocurrencias toca generar.
 - `src/lib/ids.ts` — `newId`, `nowIso`, `uuidv5` (ids deterministas, usados

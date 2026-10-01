@@ -50,3 +50,18 @@ borra datos no subidos en ese modo ([[sync-y-autenticacion]]). Tercer cambio,
 sin página de mapa: `error-reporter.ts` deja de guardar query y fragmento de
 la URL (podían llevar tokens de sesión). Sin páginas nuevas: `index.md` sigue
 vigente.
+
+## [2026-10-01] lint | Saldo de deudas anclado (PR #33) desactualizado en el wiki y en el `CLAUDE.md` raíz
+
+Una auditoría técnica posterior al merge del PR #33 (`.agents/specs/sync-saldo-deudas.md`)
+detectó que [[stores-zustand]] y [[logica-de-negocio-pura]] seguían
+describiendo la invariante vieja de deudas: `balance` ajustado siempre por
+delta directo vía `src/lib/debt-payments.ts`, sin mencionar el anclaje. Esa
+invariante cambió con el PR #33: una deuda puede quedar **anclada**
+(`saldoBase`/`contadoBase`, desde `addDebt` o vía `confirmarSaldoDeuda`), y
+en ese caso el `balance` pasa a ser *derivado* por `recalcularSaldos`
+(`src/lib/debt-balance.ts`), excluyendo los pagos marcados `debtHistorico`
+(vinculados con `vincularPagoHistorico`). Una deuda sin anclar sigue el
+camino viejo de `src/lib/debt-payments.ts`. Se corrigieron ambas páginas y el
+bullet equivalente del `CLAUDE.md` raíz (sección de `financeStore.ts` y la
+lista de `src/lib/`). Sin páginas nuevas: `index.md` sigue vigente.
