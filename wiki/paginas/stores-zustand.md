@@ -47,10 +47,20 @@ Negocio).
   cuenta es origen o destino de algún movimiento **o de alguna recurrencia**
   (desde la auditoría del 2026-09-30; antes una recurrencia seguía generando
   movimientos con un `accountId` huérfano que ningún saldo sumaba).
-- Un movimiento con `debtId` *es* un pago de esa deuda: toda acción sobre
-  movimientos y `registerDebtPayment` ajustan el `balance` de la deuda en el
-  mismo `set()`, vía `src/lib/debt-payments.ts` (ver
-  [[logica-de-negocio-pura]]).
+- Un movimiento con `debtId` *es* un pago de esa deuda. Desde el PR #33 una
+  deuda puede estar **anclada** (`saldoBase`/`contadoBase` definidos, ya sea
+  desde su creación en `addDebt` o después vía `confirmarSaldoDeuda`): su
+  `balance` deja de mutarse directo y pasa a ser *derivado* —
+  `saldoBase − suma de pagos vivos no históricos` — recalculado por
+  `recalcularSaldos` (`src/lib/debt-balance.ts`) dentro del mismo `set()` en
+  cada acción sobre movimientos y de nuevo tras un merge de sync (`applyMerge`
+  en `src/lib/sync.ts`). Un pago marcado `debtHistorico` (vinculado a una
+  deuda preexistente con `vincularPagoHistorico`, para un pago hecho antes de
+  empezar a registrar la deuda en la app) queda excluido de esa suma, para no
+  descontar dos veces un saldo que el usuario ya confirmó. Una deuda **sin
+  anclar** todavía sigue el camino viejo: `aplicarCambioDePagos`
+  (`src/lib/debt-payments.ts`) aplica el delta del pago directo al `balance`
+  en el mismo `set()` (ver [[logica-de-negocio-pura]]).
 - `materializarRecurrencias()` convierte recurrencias vencidas en
   movimientos. Es idempotente: el id de cada ocurrencia es un UUID v5 de
   `recurrencia:<id>:<fecha>`, se saltan los ids con tombstone y la marca
