@@ -19,3 +19,6 @@ vite.config.d.ts
 # .env.example documenta las variables SIN valores — debe versionarse
 !.env.example
 .playwright-mcp/
+.claude/worktrees/
+# Bóveda de Obsidian abierta por error en la raíz del repo (la real vive en wiki/.obsidian/, con su propio .gitignore)
+/.obsidian/
