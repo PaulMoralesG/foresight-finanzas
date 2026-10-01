@@ -8,7 +8,7 @@
 // restantes y aporte mensual necesario cuando hay fecha objetivo.
 // ================================================================
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, cleanup, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { GoalsPage } from '@/pages/GoalsPage';
@@ -133,11 +133,21 @@ describe('GoalsPage — registrar aporte', () => {
   });
 
   it('el monto se precarga con el aporte mensual necesario cuando hay fecha objetivo', async () => {
-    useFinanceStore.setState({ currentViewDate: new Date(2026, 8, 1).toISOString() });
-    useFinanceStore.getState().addSavingsGoal({ concept: 'Meta', target: 1200, saved: 0, targetDate: '2027-03' }); // 6 meses → 200/mes
-    render(<GoalsPage />);
-    await userEvent.click(screen.getByRole('button', { name: 'Registrar aporte' }));
-    expect(screen.getByLabelText('Monto')).toHaveValue('200');
+    // goalMath() usa new Date() real (no currentViewDate), así que hay que
+    // fijar el reloj del sistema: si no, "meses hasta la fecha objetivo"
+    // cambia con el paso del tiempo real y desactualiza el monto esperado.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date(2026, 8, 1)); // 1 de septiembre de 2026
+    try {
+      useFinanceStore.setState({ currentViewDate: new Date(2026, 8, 1).toISOString() });
+      useFinanceStore.getState().addSavingsGoal({ concept: 'Meta', target: 1200, saved: 0, targetDate: '2027-03' }); // 6 meses → 200/mes
+      render(<GoalsPage />);
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      await user.click(screen.getByRole('button', { name: 'Registrar aporte' }));
+      expect(screen.getByLabelText('Monto')).toHaveValue('200');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
