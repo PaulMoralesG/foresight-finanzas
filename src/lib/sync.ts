@@ -1551,9 +1551,12 @@ export const syncService = {
     useUiStore.getState().setPrimerSyncCompleto(false);
   },
 
-  /** Hay usuario adjuntado: sin él, flush() no sube nada aunque resuelva true. */
+  /** Hay usuario adjuntado Y el sync está activo: sin usuario, o en modo
+   *  local-only (esquema no migrado), flush() no sube nada aunque resuelva
+   *  true. signOut() depende de esto para no borrar datos que solo existen
+   *  en este dispositivo. */
   adjuntado(): boolean {
-    return userId !== null;
+    return userId !== null && !syncDisabled;
   },
 
   /** Desactiva el sync definitivamente (esquema no migrado). */

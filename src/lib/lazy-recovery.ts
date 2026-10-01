@@ -14,7 +14,10 @@
 //   TypeError: Failed to fetch dynamically imported module: /assets/StatsPage-<hash>.js
 //
 // y la pantalla entera cae al ErrorBoundary. Es exactamente lo que le pasaba a
-// Estadísticas, y le pasaría igual a Planes, al login y al modal de reporte.
+// Estadísticas cuando era una página lazy, y le pasaba igual a las demás
+// páginas lazy de esa época (Planes/SavingsPage incluida). Hoy esas vistas se
+// importan de forma estática (ver CLAUDE.md) y las únicas dos que se siguen
+// cargando así son LoginPage y el modal de reporte (`ReportModal`).
 //
 // El worker nuevo ya está instalado y esperando en ese momento —trae el shell
 // correcto y sabe pedir los chunks nuevos—, así que la salida es activarlo y

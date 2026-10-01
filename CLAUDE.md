@@ -64,12 +64,12 @@ Para Claude Code, esta distribución reemplaza la de "Claude Code CLI" en
 
 ### Auth + sync: two hooks, one direction of data flow
 `src/hooks/useAuth.ts` exports two hooks that must not be conflated:
-- `useAuthSession()` — the session bootstrap effect. **Mounted exactly once**, in `App.tsx`. Re-mounting it elsewhere restarts the whole session cycle (in offline mode it calls `financeStore.reset()`; with Supabase it re-triggers legacy-import + pull + merge + forced push).
+- `useAuthSession()` — the session bootstrap effect. **Mounted exactly once**, in `App.tsx`. Re-mounting it elsewhere restarts the whole session cycle: harmless in offline mode (no `financeStore.reset()` — that call was deliberately removed, since it used to wipe unsaved local work on every remount), but with Supabase configured it still re-triggers legacy-import + pull + merge + forced push.
 - `useAuth()` — state and actions, no effects, safe to call from any component.
 
 When Supabase isn't configured (`supabaseAvailable` in `src/config/supabase.ts` is false — no `VITE_SUPABASE_URL`/`VITE_SUPABASE_KEY`), the app runs as a single `OFFLINE_USER` against `financeStore`'s local persistence only — this is a first-class supported mode, not a degraded fallback.
 
-`src/lib/sync.ts` is the actual sync engine when Supabase *is* configured: a singleton (`syncService`, initialized once in `main.tsx`) doing pull-then-push with deterministic per-row merge (`updated_at` wins; `deleted_at` tombstones propagate deletes without resurrecting them). Debounced 800ms, single-flight, retries with backoff. Both pull and push are **incremental** against one watermark (the start of the last confirmed cycle, per user in `localStorage`; the pull subtracts a 5-minute margin for skewed clocks). `attach` (login), returning to the tab (`visibilitychange → visible`) and `online` run a **full** cycle as the safety net; `pagehide`/hidden flush incrementally. `flush()` resolves only when nothing is in flight or scheduled — `signOut()` wipes local state right after it, so a queued cycle must not be left behind. `src/lib/merge.ts` holds the pure merge-set logic; `src/lib/legacy-import.ts` handles the one-time migration of the old JSON-blob profile format into the per-entity tables (idempotent via deterministic UUID v5 ids).
+`src/lib/sync.ts` is the actual sync engine when Supabase *is* configured: a singleton (`syncService`, initialized once in `main.tsx`) doing pull-then-push with deterministic per-row merge (`updated_at` wins per id; a tombstone's `deleted_at` beats an older live edit, propagating the delete, but a live edit newer than the tombstone *does* resurrect the record — an edit made after a delete is read as the more recent intent). Debounced 800ms, single-flight, retries with backoff. Both pull and push are **incremental** against one watermark (the start of the last confirmed cycle, per user in `localStorage`; the pull subtracts a 5-minute margin for skewed clocks). `attach` (login), returning to the tab (`visibilitychange → visible`) and `online` run a **full** cycle as the safety net; `pagehide`/hidden flush incrementally. `flush()` resolves only when nothing is in flight or scheduled — `signOut()` wipes local state right after it, so a queued cycle must not be left behind. `src/lib/merge.ts` holds the pure merge-set logic; `src/lib/legacy-import.ts` handles the one-time migration of the old JSON-blob profile format into the per-entity tables (idempotent via deterministic UUID v5 ids).
 
 If you touch `sync.ts`, `merge.ts`, or the Supabase schema assumptions, read the "Migración de Supabase" section of `README.md` first — it documents the migration ordering constraints (`supabase/migrations/*.sql`, must run in numeric order, two of them have a specific before/after-deploy requirement) and the RLS/security model.
 
@@ -140,6 +140,33 @@ y rendimiento, seguir `.agents/skills/auditoria-tecnica/SKILL.md` (también invo
 como `/auditoria-tecnica`): lista los archivos que importan, las invariantes que hay
 que comprobar y el formato [CRÍTICO]/[ADVERTENCIA]/[OPTIMIZACIÓN] del reporte.
 Correr los advisors de Supabase antes de leer código.
+
+## Wiki de contexto del proyecto
+
+`wiki/` es una base de conocimiento exclusiva de este proyecto (no
+multi-proyecto, no genérica), mantenida con el patrón "LLM Wiki": fuentes en
+bruto en `wiki/raw/` (inmutables) que se integran en páginas markdown
+interconectadas en `wiki/paginas/`, catalogadas en `wiki/index.md` y con un
+registro cronológico en `wiki/log.md`. Documenta lo que no se deriva leyendo
+el código — decisiones de arquitectura, contexto de negocio, aprendizajes de
+bugs, ideas descartadas y por qué — nunca lo que ya vive en este archivo o en
+`src/`. Reglas completas de mantenimiento en `wiki/CLAUDE.md`; consultar
+`wiki/index.md` antes de asumir que algo no está documentado.
+
+**Mantenimiento tras cada tarea de desarrollo** (feature, fix, refactor — no
+aplica a preguntas o exploración): antes de dar la tarea por terminada,
+- si cambió la arquitectura o el comportamiento de algo que ya tiene página
+  `tipo: mapa` en `wiki/paginas/` (stores, sync/auth, navegación, PWA, lógica
+  pura, diseño/responsive, testing), actualizar esa página para que siga
+  siendo precisa;
+- si la tarea involucró una decisión no obvia (por qué ese enfoque, qué se
+  descartó y por qué, un trade-off), agregar o actualizar una página
+  `tipo: decision`;
+- en cualquiera de los dos casos, actualizar `wiki/index.md` y añadir la
+  entrada correspondiente en `wiki/log.md` (flujo "Ingerir" de `wiki/CLAUDE.md`).
+
+Si el cambio es trivial y no afecta ninguna página existente ni deja una
+decisión relevante sin documentar, no hace falta tocar el wiki.
 
 ## Related agent docs
 

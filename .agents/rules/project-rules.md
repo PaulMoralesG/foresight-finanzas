@@ -18,8 +18,8 @@ description: Reglas de arquitectura, calidad de código y asignación de modelos
 
 ## Claude Code CLI (Ecosistema Anthropic)
 - **Respuestas Rápidas y Scripts Ligeros**: usar `Haiku 4.5` (máxima velocidad).
-- **Tareas Diarias, Módulos y Refactorización**: usar `Sonnet 5` (más eficiente para el desarrollo cotidiano).
-- **Lógica Compleja, Algoritmos y Bugs Difíciles**: usar `Opus 5` con esfuerzo de razonamiento alto.
+- **Tareas Diarias, Módulos y Refactorización**: usar `Sonnet 5.5` (más eficiente para el desarrollo cotidiano).
+- **Lógica Compleja, Algoritmos y Bugs Difíciles**: usar `Opus 5.5` con esfuerzo de razonamiento alto.
 
 # 3. Flujo de Trabajo y Edición
 - **Persistencia**: Toda tarea grande debe diseñarse e iterarse primero en `.agents/specs/`.
