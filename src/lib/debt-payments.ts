@@ -40,8 +40,13 @@ export function cuentaComoGasto(t: Pick<Transaction, 'type' | 'debtId'>): boolea
  * Etiqueta de un pago de deuda para listados: «Pago de tarjeta · Visa»,
  * «Pago de préstamo · Auto» o «Pago de deuda eliminada». Un movimiento sin
  * `debtId` devuelve su concepto.
+ *
+ * Si el usuario editó el concepto, ese texto manda siempre (es lo que
+ * escribió a propósito) — el label generado a partir de la deuda es solo el
+ * valor por defecto cuando no hay concepto.
  */
 export function etiquetaPago(t: Pick<Transaction, 'debtId' | 'concept'>, debts: Pick<Debt, 'id' | 'name' | 'kind'>[]): string {
+  if (t.concept) return t.concept;
   if (!t.debtId) return t.concept;
   const deuda = debts.find((d) => d.id === t.debtId);
   if (!deuda) return 'Pago de deuda eliminada';
@@ -86,6 +91,10 @@ export function gastosSinVincular(debt: Debt, expenses: Transaction[]): Transact
  * Es estado LOCAL (`financeStore.descuentosDePago`, persistido pero no
  * sincronizado: no hay columna en BD). Sin entrada —dispositivo que no
  * registró el pago, dato anterior— se revierte el monto completo.
+ *
+ * Solo sirve para las deudas NO ancladas (camino legado): en una anclada el
+ * tope a 0 se aplica al agregado (lib/debt-balance) y no hace falta. La
+ * marca «vinculado» tiene ahora su versión sincronizada, `Transaction.debtHistorico`.
  */
 interface DescuentoPago {
   /** Lo que bajó `balance`. */
@@ -128,8 +137,13 @@ export function montoQueRevierte(t: Pick<Transaction, 'id' | 'debtId' | 'amount'
  *
  * En una tarjeta con pago de contado conocido el pago también se descuenta de
  * él (y borrarlo lo devuelve). El saldo nunca baja de 0. Un movimiento
- * vinculado a mano (`vinculado`) no mueve el saldo: al editarlo conserva el
- * enlace, al quitarle `debtId` pierde la marca.
+ * vinculado a mano (`debtHistorico` o, en datos locales antiguos, la marca
+ * `vinculado`) no mueve el saldo: al editarlo conserva el enlace, al quitarle
+ * `debtId` pierde la marca.
+ *
+ * Las deudas ANCLADAS (`saldoBase`) no pasan por aquí: su saldo se deriva de
+ * los movimientos (lib/debt-balance, recalcularSaldos). Este camino no las
+ * modifica, no les cambia `updated_at` y no les registra descuentos.
  */
 export function aplicarCambioDePagos(
   debts: Debt[],
@@ -141,8 +155,14 @@ export function aplicarCambioDePagos(
   const sig: DescuentosDePago = { ...descuentos };
   const porId = new Map(debts.map((d) => [d.id, d]));
   const tocadas = new Set<string>();
-  const cambiar = (id: string, balance: number, statement: number) => {
+  const esVinculado = (t: Transaction): boolean => !!t.debtHistorico || !!descuentos[t.id]?.vinculado;
+  /** La deuda si sigue el camino legado; undefined si no existe o está anclada. */
+  const legada = (id: string): Debt | undefined => {
     const d = porId.get(id);
+    return d && d.saldoBase === undefined ? d : undefined;
+  };
+  const cambiar = (id: string, balance: number, statement: number) => {
+    const d = legada(id);
     if (!d) return;
     const n: Debt = { ...d, balance: roundMoney(d.balance + balance) };
     if (d.statementBalance !== undefined) n.statementBalance = roundMoney(d.statementBalance + statement);
@@ -156,8 +176,8 @@ export function aplicarCambioDePagos(
     const n = nuevos.get(v.id);
     if (!v.debtId || !n) continue;
     const rec = descuentos[v.id];
-    if (rec?.vinculado && n.debtId) {
-      sig[v.id] = rec; // sigue siendo un pago vinculado, aunque cambie la deuda
+    if (esVinculado(v) && n.debtId) {
+      if (rec) sig[v.id] = rec; // sigue siendo un pago vinculado, aunque cambie la deuda
       intactos.add(v.id);
     } else if (n.debtId === v.debtId && n.amount === v.amount) {
       intactos.add(v.id);
@@ -167,7 +187,7 @@ export function aplicarCambioDePagos(
   for (const v of antes) {
     if (!v.debtId || intactos.has(v.id)) continue;
     const rec = descuentos[v.id];
-    if (rec?.vinculado) {
+    if (esVinculado(v)) {
       // Borrado: la marca se conserva para que deshacer no lo descuente. Edición
       // que le quita la deuda: la marca ya no tiene sentido.
       if (nuevos.has(v.id)) delete sig[v.id];
@@ -179,8 +199,8 @@ export function aplicarCambioDePagos(
   for (const n of despues) {
     if (!n.debtId || intactos.has(n.id)) continue;
     // Deshacer el borrado de un pago vinculado a mano: sigue sin mover el saldo.
-    if (descuentos[n.id]?.vinculado) continue;
-    const d = porId.get(n.debtId);
+    if (esVinculado(n)) continue;
+    const d = legada(n.debtId);
     if (!d) continue;
     const ef = descuentoEfectivo(d, n.amount);
     sig[n.id] = ef;

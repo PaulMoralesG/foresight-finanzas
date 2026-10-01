@@ -56,21 +56,27 @@ describe('cuentaComoGasto / esPagoDeDeuda', () => {
 describe('etiquetaPago', () => {
   const debts = [deuda(), deuda({ id: 'd2', name: 'Préstamo auto', kind: 'Préstamo' }), deuda({ id: 'd3', name: 'Casa', kind: 'Hipoteca' })];
 
-  it('tarjeta de crédito', () => {
-    expect(etiquetaPago(mov({ debtId: 'd1' }), debts)).toBe('Pago de tarjeta · Visa');
+  it('sin concepto, tarjeta de crédito', () => {
+    expect(etiquetaPago(mov({ debtId: 'd1', concept: '' }), debts)).toBe('Pago de tarjeta · Visa');
   });
 
-  it('préstamo (y cualquier otra deuda que no sea tarjeta)', () => {
-    expect(etiquetaPago(mov({ debtId: 'd2' }), debts)).toBe('Pago de préstamo · Préstamo auto');
-    expect(etiquetaPago(mov({ debtId: 'd3' }), debts)).toBe('Pago de préstamo · Casa');
+  it('sin concepto, préstamo (y cualquier otra deuda que no sea tarjeta)', () => {
+    expect(etiquetaPago(mov({ debtId: 'd2', concept: '' }), debts)).toBe('Pago de préstamo · Préstamo auto');
+    expect(etiquetaPago(mov({ debtId: 'd3', concept: '' }), debts)).toBe('Pago de préstamo · Casa');
   });
 
-  it('deuda eliminada', () => {
-    expect(etiquetaPago(mov({ debtId: 'borrada' }), debts)).toBe('Pago de deuda eliminada');
+  it('sin concepto, deuda eliminada', () => {
+    expect(etiquetaPago(mov({ debtId: 'borrada', concept: '' }), debts)).toBe('Pago de deuda eliminada');
   });
 
   it('un movimiento sin debtId conserva su concepto', () => {
     expect(etiquetaPago(mov({ concept: 'Supermercado' }), debts)).toBe('Supermercado');
+  });
+
+  it('con debtId, un concepto no vacío manda siempre — el usuario lo editó a propósito', () => {
+    expect(etiquetaPago(mov({ debtId: 'd1', concept: 'Pago de la tarjeta de septiembre' }), debts)).toBe(
+      'Pago de la tarjeta de septiembre',
+    );
   });
 });
 

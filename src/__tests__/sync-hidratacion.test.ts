@@ -241,6 +241,36 @@ describe('hidratación de movimientos (debt_id)', () => {
   });
 });
 
+describe('hidratación de las claves de 0020 (saldoBase, contadoBase, debtHistorico)', () => {
+  it('empate de updated_at, local sin saldoBase/contadoBase, id pendiente: queda anclada y el push no borra la base', async () => {
+    const t = '2026-08-01T00:00:00.000Z';
+    const { upserts } = armar({
+      debts: [filaDeuda({ updated_at: t, saldo_base: 800, contado_base: 300, saldo_base_at: t })],
+    });
+    deudaLocalVieja(t);
+    pendiente(['d1'], []);
+
+    await syncService.attach('user-1');
+
+    expect(useFinanceStore.getState().debts[0]).toMatchObject({ saldoBase: 800, contadoBase: 300 });
+    const subida = filasDe(upserts, 'debts').find((r) => r.id === 'd1');
+    expect(subida).toMatchObject({ saldo_base: 800, contado_base: 300, saldo_base_at: t });
+  });
+
+  it('empate de updated_at, local con debtId pero sin debtHistorico, id pendiente: conserva la marca', async () => {
+    const t = '2026-08-01T00:00:00.000Z';
+    const { upserts } = armar({ expenses: [filaPago({ updated_at: t, debt_historico: true })] });
+    gastoLocalViejo(t);
+    useFinanceStore.setState((s) => ({ expenses: s.expenses.map((e) => ({ ...e, debtId: 'd1' })) }));
+    pendiente([], ['e1']);
+
+    await syncService.attach('user-1');
+
+    expect(useFinanceStore.getState().expenses[0].debtHistorico).toBe(true);
+    expect(filasDe(upserts, 'expenses').find((r) => r.id === 'e1')).toMatchObject({ debt_id: 'd1', debt_historico: true });
+  });
+});
+
 describe('ciclo de vida de pendienteHidratar', () => {
   it('con pendientes, un schedule() corre ciclo COMPLETO (pull sin filtro incremental)', async () => {
     const { gte } = armar();

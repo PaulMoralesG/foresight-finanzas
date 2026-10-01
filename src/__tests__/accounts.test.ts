@@ -97,6 +97,43 @@ describe('financeStore.deleteAccount', () => {
     expect(accounts.map((a) => a.id).sort()).toEqual([origen, destino].sort());
     expect(Object.keys(tombstones)).toEqual([libre]);
   });
+
+  // Auditoría 2026-09: una recurrencia que usa la cuenta seguiría generando
+  // movimientos con un accountId huérfano, que accountBalance ya no cuenta.
+  it('no borra una cuenta que usa una recurrencia (origen o destino), aunque aún no haya movimientos', () => {
+    const s = useFinanceStore.getState();
+    s.reset();
+    const origen = s.addAccount({ name: 'Origen', kind: 'Banco', initialBalance: 0 });
+    const destino = s.addAccount({ name: 'Destino', kind: 'Ahorros', initialBalance: 0 });
+    s.addRecurrence({
+      type: 'transfer', amount: 500, concept: 'Ahorro mensual', category: 'transferencia',
+      method: 'transfer', businessType: 'personal', accountId: origen, toAccountId: destino,
+      frecuencia: 'monthly', intervalo: 1, diaMes: 1, desde: '2099-01-01', hasta: null, activa: true,
+    });
+
+    s.deleteAccount(origen);
+    s.deleteAccount(destino);
+
+    const { accounts, tombstones } = useFinanceStore.getState();
+    expect(accounts.map((a) => a.id).sort()).toEqual([origen, destino].sort());
+    expect(tombstones).toEqual({});
+  });
+
+  it('una recurrencia borrada ya no retiene la cuenta', () => {
+    const s = useFinanceStore.getState();
+    s.reset();
+    const cuentaId = s.addAccount({ name: 'Banco', kind: 'Banco', initialBalance: 0 });
+    const regla = s.addRecurrence({
+      type: 'expense', amount: 100, concept: 'Renta', category: 'vivienda',
+      method: 'transfer', businessType: 'personal', accountId: cuentaId, toAccountId: null,
+      frecuencia: 'monthly', intervalo: 1, diaMes: 1, desde: '2099-01-01', hasta: null, activa: true,
+    });
+    s.deleteRecurrence(regla);
+
+    s.deleteAccount(cuentaId);
+
+    expect(useFinanceStore.getState().accounts).toHaveLength(0);
+  });
 });
 
 describe('migración v9 del estado persistido (cuentas)', () => {

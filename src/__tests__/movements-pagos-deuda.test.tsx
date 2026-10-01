@@ -42,27 +42,48 @@ function conDeudas() {
 }
 
 describe('MovementsPage — pagos de deuda', () => {
-  it('muestra «Pago de tarjeta · X» y «Pago de préstamo · X» en lugar del concepto', () => {
+  it('sin concepto, muestra «Pago de tarjeta · X» y «Pago de préstamo · X»', () => {
     const { visa, auto } = conDeudas();
     useFinanceStore.setState({
       expenses: [
-        mov({ concept: 'Pago Visa', type: 'transfer', category: 'transferencia', debtId: visa }),
-        mov({ concept: 'Cuota auto', type: 'expense', category: 'prestamos', debtId: auto }),
+        mov({ concept: '', type: 'transfer', category: 'transferencia', debtId: visa }),
+        mov({ concept: '', type: 'expense', category: 'prestamos', debtId: auto }),
       ],
     });
     render(<MovementsPage />);
 
     expect(screen.getAllByText('Pago de tarjeta · Visa').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Pago de préstamo · Auto').length).toBeGreaterThan(0);
-    expect(screen.queryByText('Pago Visa')).not.toBeInTheDocument();
   });
 
-  it('si la deuda ya no existe dice «Pago de deuda eliminada»', () => {
+  it('con un concepto editado por el usuario, ese texto manda siempre (aunque haya debtId)', () => {
+    const { visa } = conDeudas();
     useFinanceStore.setState({
-      expenses: [mov({ concept: 'Pago Visa', type: 'transfer', category: 'transferencia', debtId: 'no-existe' })],
+      expenses: [mov({ concept: 'Pago de la tarjeta de septiembre', type: 'transfer', category: 'transferencia', debtId: visa })],
+    });
+    render(<MovementsPage />);
+
+    expect(screen.getAllByText('Pago de la tarjeta de septiembre').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Pago de tarjeta · Visa')).not.toBeInTheDocument();
+  });
+
+  it('si la deuda ya no existe y no hay concepto dice «Pago de deuda eliminada»', () => {
+    useFinanceStore.setState({
+      expenses: [mov({ concept: '', type: 'transfer', category: 'transferencia', debtId: 'no-existe' })],
     });
     render(<MovementsPage />);
     expect(screen.getAllByText('Pago de deuda eliminada').length).toBeGreaterThan(0);
+  });
+
+  it('la columna Categoría de un pago de deuda muestra la categoría real, no "— → —"', () => {
+    const { visa } = conDeudas();
+    useFinanceStore.setState({
+      expenses: [mov({ concept: '', type: 'transfer', category: 'transferencia', debtId: visa, accountId: null, toAccountId: null })],
+    });
+    render(<MovementsPage />);
+
+    expect(screen.getAllByText('Pago de Tarjetas').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/—\s*→\s*—/)).not.toBeInTheDocument();
   });
 
   it('no se presenta como gasto: píldora «Pago de deuda» y no suma a los gastos del filtro', () => {
@@ -85,8 +106,8 @@ describe('MovementsPage — pagos de deuda', () => {
     useFinanceStore.setState({
       expenses: [
         mov({ concept: 'Café', amount: 30 }),
-        mov({ concept: 'Pago Visa', type: 'transfer', category: 'transferencia', debtId: visa }),
-        mov({ concept: 'Cuota vieja', type: 'expense', category: 'pago-tarjetas', debtId: visa }),
+        mov({ concept: '', type: 'transfer', category: 'transferencia', debtId: visa }),
+        mov({ concept: '', type: 'expense', category: 'pago-tarjetas', debtId: visa }),
       ],
     });
     render(<MovementsPage />);
@@ -114,7 +135,9 @@ describe('MovementsPage — borrado masivo con pagos de deuda', () => {
     useFinanceStore.setState({ expenses: [...useFinanceStore.getState().expenses, mov({ concept: 'Café', amount: 30 })] });
     render(<MovementsPage />);
 
-    const mensaje = await seleccionarYEliminar(['Pago de tarjeta · Visa', 'Café']);
+    // «Registrar pago» guarda `concept: Pago ${debt.name}` — con el fix de
+    // etiquetaPago ese concepto manda tal cual, ya no el label generado.
+    const mensaje = await seleccionarYEliminar(['Pago Visa', 'Café']);
     expect(mensaje).toContain('2 transacciones eliminadas');
     expect(mensaje).toContain('El pago de deuda eliminado vuelve a subir el saldo de su deuda');
     expect(useFinanceStore.getState().debts.find((d) => d.id === visa)!.balance).toBe(1000);
@@ -130,7 +153,24 @@ describe('MovementsPage — borrado masivo con pagos de deuda', () => {
     useFinanceStore.setState({ expenses: [...useFinanceStore.getState().expenses, mov({ concept: 'Café', amount: 30 })] });
     render(<MovementsPage />);
 
-    const mensaje = await seleccionarYEliminar(['Pago de tarjeta · Visa', 'Café']);
+    const mensaje = await seleccionarYEliminar(['Cuota vieja', 'Café']);
+    expect(mensaje).toContain('2 transacciones eliminadas');
+    expect(mensaje).not.toContain('vuelve');
+    expect(useFinanceStore.getState().debts.find((d) => d.id === visa)!.balance).toBe(1000);
+  });
+
+  it('un histórico llegado de otro dispositivo (debtHistorico, sin registro local) no dispara el aviso', async () => {
+    const { visa } = conDeudas();
+    useFinanceStore.setState((s) => ({
+      expenses: [
+        ...s.expenses,
+        mov({ concept: 'Cuota vieja', amount: 200, category: 'pago-tarjetas', debtId: visa, debtHistorico: true }),
+        mov({ concept: 'Café', amount: 30 }),
+      ],
+    }));
+    render(<MovementsPage />);
+
+    const mensaje = await seleccionarYEliminar(['Cuota vieja', 'Café']);
     expect(mensaje).toContain('2 transacciones eliminadas');
     expect(mensaje).not.toContain('vuelve');
     expect(useFinanceStore.getState().debts.find((d) => d.id === visa)!.balance).toBe(1000);

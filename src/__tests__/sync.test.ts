@@ -138,6 +138,33 @@ describe('syncService', () => {
     expect(mockFrom).not.toHaveBeenCalled();
   });
 
+  // Auditoría 2026-09: con el esquema sin migrar el sync pasa a local-only y
+  // flush() resuelve `true` sin subir nada. signOut() usa adjuntado() && flush()
+  // como "todo subido": si adjuntado() siguiera en true, el cierre de sesión
+  // borraba los datos locales —que solo existen en este dispositivo— sin avisar.
+  it('en modo local-only (esquema no migrado) adjuntado() es false aunque flush() resuelva true', async () => {
+    mockFrom.mockImplementation((table: string) => ({
+      ...makeBuilder()(table),
+      select: vi.fn(() => ({
+        eq: vi.fn(() => {
+          const chain = {
+            maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
+            gte: vi.fn(() => chain),
+            order: vi.fn(() => chain),
+            range: vi.fn(() => Promise.resolve({ data: null, error: { code: '42P01' } })),
+          };
+          return chain;
+        }),
+      })),
+    }));
+
+    await syncService.attach('user-1');
+
+    expect(useUiStore.getState().syncState).toBe('local-only');
+    expect(await syncService.flush()).toBe(true);
+    expect(syncService.adjuntado()).toBe(false);
+  });
+
   it('cancel evita el push pendiente; sin usuario schedule es no-op', async () => {
     await syncService.attach('user-1');
     const before = mockFrom.mock.calls.length;
