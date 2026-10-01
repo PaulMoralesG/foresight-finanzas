@@ -270,6 +270,45 @@ describe('store: pendienteHidratar', () => {
     const persistido = opciones.partialize!(estado()) as { pendienteHidratar?: unknown };
     expect(persistido.pendienteHidratar).toEqual({ debts: ['d1'], expenses: [] });
   });
+
+  // Regresión (integración del fix wave, sync-saldo-deudas): si el id de un
+  // movimiento sigue en pendienteHidratar.expenses (migración v17, antes del
+  // primer ciclo completo de sync) y el usuario cambia a mano el vínculo con
+  // su deuda, ese id debe salir de la lista — si no, el sync podría hidratar
+  // el debtId/debtHistorico viejo del servidor encima de la decisión recién
+  // tomada, antes de que el merge corra.
+  it('desvincularPago quita el movimiento de pendienteHidratar.expenses si estaba pendiente', () => {
+    const id = estado().addDebt({ name: 'Visa', tag: 'personal', kind: 'Tarjeta de crédito', balance: 1000, annualRate: 30, minPayment: 50, payDay: 10 });
+    const txId = estado().addTransaction({ type: 'expense', amount: 200, concept: 'Pago', date: '2026-09-10', category: 'pago-tarjetas', method: 'cash', businessType: 'personal', debtId: id });
+    // Simula el estado post-migración v17: el movimiento quedó pendiente de hidratar.
+    useFinanceStore.setState((s) => ({ pendienteHidratar: { ...s.pendienteHidratar, expenses: [...s.pendienteHidratar.expenses, txId] } }));
+    expect(estado().pendienteHidratar.expenses).toContain(txId);
+
+    estado().desvincularPago(txId);
+    expect(estado().pendienteHidratar.expenses).not.toContain(txId);
+  });
+
+  it('vincularPagoHistorico y updateTransaction({ debtId }) también lo quitan', () => {
+    const id = estado().addDebt({ name: 'Visa', tag: 'personal', kind: 'Tarjeta de crédito', balance: 1000, annualRate: 30, minPayment: 50, payDay: 10 });
+    const txA = estado().addTransaction({ type: 'expense', amount: 200, concept: 'Pago viejo', date: '2026-08-20', category: 'pago-tarjetas', method: 'cash', businessType: 'personal' });
+    const txB = estado().addTransaction({ type: 'expense', amount: 150, concept: 'Pago', date: '2026-09-10', category: 'pago-tarjetas', method: 'cash', businessType: 'personal', debtId: id });
+    useFinanceStore.setState((s) => ({ pendienteHidratar: { ...s.pendienteHidratar, expenses: [...s.pendienteHidratar.expenses, txA, txB] } }));
+
+    estado().vincularPagoHistorico(txA, id);
+    expect(estado().pendienteHidratar.expenses).not.toContain(txA);
+
+    estado().updateTransaction(txB, { debtId: null });
+    expect(estado().pendienteHidratar.expenses).not.toContain(txB);
+  });
+
+  it('updateTransaction sin tocar debtId NO quita el id de pendienteHidratar (sigue pendiente de hidratar debtHistorico)', () => {
+    const id = estado().addDebt({ name: 'Visa', tag: 'personal', kind: 'Tarjeta de crédito', balance: 1000, annualRate: 30, minPayment: 50, payDay: 10 });
+    const txId = estado().addTransaction({ type: 'expense', amount: 200, concept: 'Pago', date: '2026-09-10', category: 'pago-tarjetas', method: 'cash', businessType: 'personal', debtId: id });
+    useFinanceStore.setState((s) => ({ pendienteHidratar: { ...s.pendienteHidratar, expenses: [...s.pendienteHidratar.expenses, txId] } }));
+
+    estado().updateTransaction(txId, { amount: 250 });
+    expect(estado().pendienteHidratar.expenses).toContain(txId);
+  });
 });
 
 // ================================================================
@@ -290,6 +329,18 @@ describe('store v17: deudas ancladas', () => {
     expect(estado().debts[0]).toMatchObject({ saldoBase: 1000, contadoBase: 300, balance: 1000, statementBalance: 300 });
     expect(estado().debts[1]).toMatchObject({ saldoBase: 5000, balance: 5000 });
     expect('contadoBase' in estado().debts[1]).toBe(false);
+  });
+
+  it('addDebt clampa y redondea balance al mismo valor saneado que saldoBase', () => {
+    estado().addDebt({ name: 'Negativa', tag: 'personal', kind: 'Préstamo', balance: -5.456, annualRate: 10, minPayment: 50, payDay: 10 });
+    const negativa = estado().debts[0];
+    expect(negativa.saldoBase).toBe(0);
+    expect(negativa.balance).toBe(negativa.saldoBase);
+
+    estado().addDebt({ name: 'Con centavos', tag: 'personal', kind: 'Préstamo', balance: 1234.456, annualRate: 10, minPayment: 50, payDay: 10 });
+    const conCentavos = estado().debts[1];
+    expect(conCentavos.saldoBase).toBe(1234.46);
+    expect(conCentavos.balance).toBe(conCentavos.saldoBase);
   });
 
   it('las acciones de movimientos no reescriben la fila de una deuda anclada', () => {
@@ -557,5 +608,14 @@ describe('store v17: importBackup y el saldo derivado', () => {
       [mov({ debtId: 'd1', amount: 100 }), mov({ id: 'h', debtId: 'd1', amount: 50, debtHistorico: true })],
     ));
     expect(estado().debts[0]).toMatchObject({ saldoBase: 1000, balance: 900 });
+  });
+
+  it('una deuda del respaldo con saldoBase inválido (negativo) se sanea con normalizarDeuda y entra no anclada', () => {
+    estado().importBackup(respaldo([deuda({ balance: 640, saldoBase: -50 })], [mov({ debtId: 'd1', amount: 100 })]));
+    const d = estado().debts[0];
+    // normalizarDeuda quita un saldoBase negativo: la deuda importada no debe
+    // conservar ese valor inválido ni quedar anclada con él.
+    expect('saldoBase' in d).toBe(false);
+    expect(d.balance).toBe(640);
   });
 });
