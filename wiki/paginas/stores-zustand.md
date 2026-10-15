@@ -32,7 +32,7 @@ Negocio).
 - **Persistencia**: middleware `persist` en `localStorage`, clave
   `foresight-finance-storage`, **sin cifrar a propósito** (ver README). El
   logout la borra.
-- **Versionado**: hoy `version: 16`. Cada cambio de forma sube la versión y
+- **Versionado**: hoy `version: 17`. Cada cambio de forma sube la versión y
   añade un paso `migrateVn` en la tabla `MIGRACIONES`; cada paso corre solo si
   la versión persistida es anterior (re-aplicar no es inocuo). Si una
   migración falla, se guarda el estado crudo en
@@ -61,6 +61,14 @@ Negocio).
   anclar** todavía sigue el camino viejo: `aplicarCambioDePagos`
   (`src/lib/debt-payments.ts`) aplica el delta del pago directo al `balance`
   en el mismo `set()` (ver [[logica-de-negocio-pura]]).
+- `restoreTransactions` (el "Deshacer" de un borrado) conserva `id` y
+  `created_at` pero **sella `updated_at`** con `nowIso()`. Ver
+  [[decision-restaurar-sella-updated-at]].
+- `deleteDebt` no deja pagos huérfanos: los movimientos con ese `debtId` se
+  **desvinculan** (se les quita `debtId` y `debtHistorico`, con `updated_at`
+  nuevo para que el cambio viaje por sync) y se sacan de `descuentosDePago` y
+  de `pendienteHidratar`; si quedaran pendientes, el sync les devolvería el
+  `debtId` del servidor. Los pagos siguen existiendo como movimientos.
 - `materializarRecurrencias()` convierte recurrencias vencidas en
   movimientos. Es idempotente: el id de cada ocurrencia es un UUID v5 de
   `recurrencia:<id>:<fecha>`, se saltan los ids con tombstone y la marca
@@ -68,7 +76,8 @@ Negocio).
   `src/components/layout/AppLayout.tsx` (al montar y en `visibilitychange`),
   nunca desde un efecto que dependa de `expenses`/`recurrences` — escribe en
   ambos, sería un bucle de render. Con Supabase espera a
-  `uiStore.primerSyncCompleto`.
+  `uiStore.primerSyncCompleto` y, al volver a la pestaña, además al ciclo de
+  `syncService.sincronizarAlVolver()` (ver [[sync-y-autenticacion]]).
 
 ## `src/stores/uiStore.ts`
 

@@ -54,6 +54,9 @@ algo es como es y no se deriva del código.
 - [[decision-alcance-del-wiki]] — por qué este wiki es exclusivo del proyecto
   y vive versionado dentro del repo; es también la razón de ser de este mapa
   (que cualquier agente que abra el repo tenga el contexto de entrada).
+- [[decision-restaurar-sella-updated-at]] — por qué el "Deshacer" sella `updated_at`.
+- [[decision-sincronizar-al-volver]] — por qué `sincronizarAlVolver()` y no `flush(true)`.
+- [[decision-pendientes-conocidos-octubre-2026]] — deuda técnica detectada y no hecha.
 
 ## Fuera del mapa (a propósito)
 

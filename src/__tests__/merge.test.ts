@@ -3,7 +3,8 @@
 // ================================================================
 
 import { describe, it, expect } from 'vitest';
-import { mergeById, mergeBudgets, hidratarAusentes, type MergeSet } from '@/lib/merge';
+import { mergeById, mergeBudgets, hidratarAusentes, deduplicarLineas, type MergeSet } from '@/lib/merge';
+import type { BudgetLine } from '@/types';
 
 interface Item {
   id: string;
@@ -244,5 +245,52 @@ describe('hidratarAusentes', () => {
     const remoto: Deuda[] = [{ id: 'd1', updated_at: T2, name: 'Visa' }];
     const res = hidratarAusentes(local, remoto, ['d1'], CLAVES);
     expect('cutDay' in res[0]).toBe(false);
+  });
+});
+
+// ── deduplicarLineas (líneas de presupuesto con la misma clave semántica) ──
+
+describe('deduplicarLineas', () => {
+  const AHORA = '2026-09-01T12:00:00.000Z';
+  const linea = (id: string, updated_at: string, plan: Record<string, number> = {}, extra: Partial<BudgetLine> = {}): BudgetLine => ({
+    id, tag: 'personal', kind: 'expense', categoryId: 'food', limit: 100, plan, updated_at, ...extra,
+  });
+
+  it('sin duplicados devuelve las mismas referencias y ningún tombstone', () => {
+    const a = linea('a', '2026-08-01T00:00:00.000Z');
+    const b = linea('b', '2026-08-01T00:00:00.000Z', {}, { categoryId: 'rent' });
+    const r = deduplicarLineas([a, b], AHORA);
+    expect(r.live).toEqual([a, b]);
+    expect(r.live[0]).toBe(a);
+    expect(r.tombstones).toEqual({});
+  });
+
+  it('gana la más nueva; la otra queda en tombstone y aporta los meses que faltan', () => {
+    const vieja = linea('a', '2026-08-01T00:00:00.000Z', { '2026-01': 50, '2026-02': 60 });
+    const nueva = linea('b', '2026-08-02T00:00:00.000Z', { '2026-01': 70 });
+    const r = deduplicarLineas([vieja, nueva], AHORA);
+    expect(r.live).toHaveLength(1);
+    expect(r.live[0]).toMatchObject({ id: 'b', plan: { '2026-01': 70, '2026-02': 60 }, updated_at: AHORA });
+    expect(r.tombstones).toEqual({ a: AHORA });
+  });
+
+  it('con updated_at empatado desempata por id, sea cual sea el orden de entrada', () => {
+    const t = '2026-08-01T00:00:00.000Z';
+    const x = linea('x', t, { '2026-01': 1 });
+    const y = linea('y', t, { '2026-01': 2 });
+    const r1 = deduplicarLineas([x, y], AHORA);
+    const r2 = deduplicarLineas([y, x], AHORA);
+    expect(r1).toEqual(r2);
+    expect(r1.live.map((l) => l.id)).toEqual(['x']);
+    expect(r1.tombstones).toEqual({ y: AHORA });
+  });
+
+  it('si la perdedora no aporta meses nuevos, la ganadora no se re-sella', () => {
+    const ganadora = linea('b', '2026-08-02T00:00:00.000Z', { '2026-01': 70 });
+    const perdedora = linea('a', '2026-08-01T00:00:00.000Z', { '2026-01': 10 });
+    const r = deduplicarLineas([perdedora, ganadora], AHORA);
+    expect(r.live).toEqual([ganadora]);
+    expect(r.live[0]).toBe(ganadora);
+    expect(r.tombstones).toEqual({ a: AHORA });
   });
 });

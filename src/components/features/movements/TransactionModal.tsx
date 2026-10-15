@@ -216,9 +216,6 @@ export function TransactionModal({
   // Cerrar modal con tecla Escape
   useEscapeKey(closeModal, isOpen && !isDeleteModalOpen);
 
-  // Retener el foco dentro del diálogo (cumple la promesa de aria-modal) y
-  // enfocar el monto al abrir, que es el primer dato que se escribe.
-
   if (!isOpen) return null;
 
   const isEditing = editingId !== null;
@@ -232,11 +229,11 @@ export function TransactionModal({
   const devolucion = porBorrar ? efectoDeBorrar(porBorrar, debts, todosLosMovimientos, descuentosDePago) : 0;
   const mensajeBorrado = porBorrar && deudaDelPago
     ? devolucion > 0
-      ? `El saldo de «${deudaDelPago.name}» volverá a subir ${formatMoney(devolucion)}. Esta acción no se puede deshacer.`
+      ? `El saldo de «${deudaDelPago.name}» volverá a subir ${formatMoney(devolucion)}. Podrás deshacerlo desde el aviso que aparece justo después.`
       : porBorrar.debtHistorico
-        ? `Es un pago vinculado a mano: el saldo de «${deudaDelPago.name}» no cambiará. Esta acción no se puede deshacer.`
-        : `El saldo de «${deudaDelPago.name}» no cambiará. Esta acción no se puede deshacer.`
-    : 'Esta acción no se puede deshacer.';
+        ? `Es un pago vinculado a mano: el saldo de «${deudaDelPago.name}» no cambiará. Podrás deshacerlo desde el aviso que aparece justo después.`
+        : `El saldo de «${deudaDelPago.name}» no cambiará. Podrás deshacerlo desde el aviso que aparece justo después.`
+    : 'Podrás deshacerlo desde el aviso que aparece justo después.';
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();

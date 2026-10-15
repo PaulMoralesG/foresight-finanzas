@@ -616,17 +616,22 @@ export const useFinanceStore = create<FinanceState>()(
           };
         }),
 
-      // Undo de borrado masivo: conserva ids y timestamps originales. Un pago
-      // restaurado vuelve a descontarse de su deuda.
+      // Undo de borrado: conserva id y created_at, pero SELLA updated_at.
+      // Con el updated_at original la fila restaurada era más vieja que el
+      // tombstone que el borrado ya pudo subir, y el siguiente sync la volvía
+      // a borrar (y en una deuda no anclada el pago quedaba descontado dos
+      // veces). Un pago restaurado vuelve a descontarse de su deuda.
       restoreTransactions: (items) =>
         set((state) => {
           const tombstones = { ...state.tombstones };
           items.forEach((item) => delete tombstones[item.id]);
-          const expenses = [...state.expenses, ...items];
+          const ahora = nowIso();
+          const restaurados = items.map((item) => ({ ...item, updated_at: ahora }));
+          const expenses = [...state.expenses, ...restaurados];
           return {
             expenses,
             tombstones,
-            ...ajustarDeudas(state, [], items, expenses),
+            ...ajustarDeudas(state, [], restaurados, expenses),
           };
         }),
 
@@ -933,11 +938,36 @@ export const useFinanceStore = create<FinanceState>()(
           };
         }),
 
+      // Sus pagos NO se borran: se desvinculan (sin debtId ni debtHistorico),
+      // sellados para que el cambio viaje por sync. Antes quedaban con un
+      // debtId huérfano. Se quitan también de `descuentosDePago` y de
+      // `pendienteHidratar`: si quedaran pendientes, el sync les devolvería
+      // el debtId del servidor.
       deleteDebt: (id) =>
-        set((state) => ({
-          debts: state.debts.filter((d) => d.id !== id),
-          tombstones: tombstoned(state.tombstones, id),
-        })),
+        set((state) => {
+          const ahora = nowIso();
+          const desvinculados: string[] = [];
+          const expenses = state.expenses.map((e) => {
+            if (e.debtId !== id) return e;
+            desvinculados.push(e.id);
+            const { debtId: _deuda, debtHistorico: _historico, ...resto } = e;
+            return { ...resto, updated_at: ahora };
+          });
+          let descuentosDePago = state.descuentosDePago;
+          let pendienteHidratar = state.pendienteHidratar;
+          if (desvinculados.length > 0) {
+            descuentosDePago = { ...state.descuentosDePago };
+            for (const txId of desvinculados) {
+              delete descuentosDePago[txId];
+              pendienteHidratar = sinPendienteHidratar(pendienteHidratar, txId);
+            }
+          }
+          return {
+            debts: state.debts.filter((d) => d.id !== id),
+            tombstones: tombstoned(state.tombstones, id),
+            ...(desvinculados.length > 0 ? { expenses, descuentosDePago, pendienteHidratar } : {}),
+          };
+        }),
 
       // Un pago de deuda NO es gasto: va siempre como salida de cuenta sin
       // destino (transferencia + debtId). Resta de la cuenta de origen, no
