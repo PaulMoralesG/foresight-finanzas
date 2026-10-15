@@ -9,7 +9,8 @@ import { useExpensesDelMesEnAmbito } from '@/hooks/useAmbito';
 import { RecurrencesPanel } from '@/components/features/movements/RecurrencesPanel';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuth } from '@/hooks/useAuth';
-import { formatMoney, roundMoney, safeParseDate, syncToCloud, formatFechaCorta, formatFechaConAnio } from '@/lib/utils';
+import { totalesDe } from '@/lib/totales';
+import { formatMoney, safeParseDate, syncToCloud, formatFechaCorta, formatFechaConAnio } from '@/lib/utils';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/config/categories';
 import { MonthNav } from '@/components/layout/MonthNav';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -223,8 +224,7 @@ export function MovementsPage() {
     }
   };
 
-  const totalIncome = roundMoney(filtered.filter((i) => i.type === 'income').reduce((s, i) => s + i.amount, 0));
-  const totalExpense = roundMoney(filtered.filter(cuentaComoGasto).reduce((s, i) => s + i.amount, 0));
+  const { ingresos: totalIncome, gastos: totalExpense } = totalesDe(filtered);
 
   // Las reglas ya no se crean desde el formulario (la fila «Repetir» metía
   // reglas sin querer). La pestaña solo aparece mientras quede alguna, para
