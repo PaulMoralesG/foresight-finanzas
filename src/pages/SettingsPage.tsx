@@ -72,9 +72,13 @@ export function SettingsPage() {
     }
     setSavingProfile(true);
     try {
-      await updateProfile(editFirstName.trim(), editLastName.trim());
-      addToast('Perfil actualizado ✅', 'success');
-      setExpanded(null);
+      const result = await updateProfile(editFirstName.trim(), editLastName.trim());
+      if (result.success) {
+        addToast('Perfil actualizado ✅', 'success');
+        setExpanded(null);
+      } else {
+        addToast(result.message, 'error');
+      }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Error al actualizar perfil';
       addToast(msg, 'error');
