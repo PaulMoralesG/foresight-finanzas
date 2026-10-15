@@ -641,3 +641,42 @@ describe('store v17: importBackup y el saldo derivado', () => {
     expect(d.balance).toBe(640);
   });
 });
+
+// Borrar una deuda dejaba sus pagos con un debtId huérfano: seguían contando
+// como "pago de deuda" (fuera de gastos) apuntando a algo que ya no existe.
+// Política: los pagos se conservan como movimientos, desvinculados.
+describe('store: deleteDebt desvincula sus pagos', () => {
+  beforeEach(() => estado().reset());
+
+  it('conserva los movimientos sin debtId ni debtHistorico, sellados, y no toca los de otra deuda', () => {
+    useFinanceStore.setState({
+      debts: [deuda(), deuda({ id: 'd2', name: 'Préstamo' })],
+      expenses: [
+        mov({ id: 'p1', debtId: 'd1' }),
+        mov({ id: 'h1', debtId: 'd1', debtHistorico: true }),
+        mov({ id: 'p2', debtId: 'd2' }),
+        mov({ id: 'libre' }),
+      ],
+      descuentosDePago: { p1: { balance: 100 }, p2: { balance: 100 } },
+      pendienteHidratar: { debts: [], expenses: ['p1', 'p2'] },
+    });
+
+    estado().deleteDebt('d1');
+
+    const porId = Object.fromEntries(estado().expenses.map((e) => [e.id, e]));
+    expect(Object.keys(porId).sort()).toEqual(['h1', 'libre', 'p1', 'p2']);
+    for (const id of ['p1', 'h1']) {
+      expect('debtId' in porId[id]).toBe(false);
+      expect('debtHistorico' in porId[id]).toBe(false);
+      expect(porId[id].updated_at).not.toBe('2026-09-05T00:00:00.000Z');
+    }
+    expect(porId.p2.debtId).toBe('d2');
+    expect(porId.libre.updated_at).toBe('2026-09-05T00:00:00.000Z');
+    expect(estado().debts.map((d) => d.id)).toEqual(['d2']);
+    expect(estado().tombstones.d1).toBeDefined();
+    expect(estado().descuentosDePago.p1).toBeUndefined();
+    expect(estado().descuentosDePago.p2).toEqual({ balance: 100 });
+    // Si quedara pendiente de hidratar, el sync le devolvería el debtId del servidor.
+    expect(estado().pendienteHidratar.expenses).toEqual(['p2']);
+  });
+});

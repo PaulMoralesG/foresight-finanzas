@@ -554,7 +554,7 @@ export function DebtsPage() {
       <ConfirmDialog
         open={!!confirmDelete}
         title="¿Eliminar esta deuda?"
-        message={confirmDelete ? `"${confirmDelete.name}" desaparecerá del plan de pago.` : ''}
+        message={confirmDelete ? `"${confirmDelete.name}" desaparecerá del plan de pago. Sus pagos se conservan en Movimientos, sin vincular a ninguna deuda.` : ''}
         confirmLabel="Eliminar"
         variant="danger"
         onConfirm={handleDelete}
