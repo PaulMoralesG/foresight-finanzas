@@ -42,6 +42,38 @@ dinámico: re-instancia todos los stores importados transitivamente y rompe el
 estado compartido con las utilidades de test importadas estáticamente.
 Ejemplos: `sync-conflictos.test.ts`, `materializar-tras-sync.test.tsx`.
 
+## Tests añadidos en la auditoría de octubre 2026
+
+- Nuevos: `useAuth-cuenta.test.ts`, `auth-forms.test.tsx`, `ui-render.test.tsx`,
+  `usePWA.test.ts`, `ids.test.ts`, `totales.test.ts`.
+- `finance-migrate-versiones.test.ts` ahora prueba los pasos **v9-v13 de forma
+  aislada**: `migrate` no exporta cada paso, así que se entra por v8 (aplican
+  v9...v17) y se comprueba lo que cada uno garantiza. Hoy el store va en v17.
+- Casos nuevos de las correcciones: restaurar sella `updated_at`
+  (`financeStore.test.ts`, `debt-payments-store.test.ts`), `deleteDebt`
+  desvincula pagos, `deduplicarLineas` (`merge.test.ts`,
+  `sync-conflictos.test.ts`) y `sincronizarAlVolver` en
+  `materializar-tras-sync.test.tsx`.
+
+## Fechas fijas
+
+Los tests que dependen de "hoy" (`financeStore`, `accounts-page`,
+`budgets-page`) fijan la fecha **antes de los imports** con `vi.hoisted()`
+y `vi.useFakeTimers({ toFake: ['Date'] })`. Solo se falsea `Date`: falsear
+también los timers rompe los debounces y el `waitFor`.
+
+## Cobertura
+
+`vitest.config.ts` define umbrales de coverage conservadores, unos puntos por
+debajo de lo medido: global líneas 82 / sentencias 81 / funciones 80 / ramas
+73, y `src/lib/**` líneas 95 / sentencias 94 / funciones 94 / ramas 83. Son
+una red contra regresiones; súbelos cuando la cobertura suba.
+
+## Windows: correr vitest desde PowerShell
+
+En este repo, en Windows, `vitest` falla desde Git Bash; correrlo desde
+PowerShell (`npx vitest run`, `npm test`).
+
 ## Comandos
 
 `npm test` (una pasada), `npx vitest run <archivo>`, `npx vitest run -t "<nombre>"`.

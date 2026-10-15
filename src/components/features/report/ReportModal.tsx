@@ -3,16 +3,17 @@
 // ================================================================
 
 import { useId } from 'react';
-import { X, Calendar, Printer, FileSpreadsheet, Building2, User } from '@/components/ui/icons.generated';
+import { Calendar, Printer, FileSpreadsheet, Building2, User } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useExpensesDelMesEnAmbito } from '@/hooks/useAmbito';
 import { useUiStore } from '@/stores/uiStore';
-import { cuentaComoGasto } from '@/lib/debt-payments';
-import { formatMoney, MONTH_NAMES, downloadBlob, roundMoney } from '@/lib/utils';
+import { totalesDe } from '@/lib/totales';
+import { filtrarPorAmbito } from '@/lib/ambito';
+import { formatMoney, MONTH_NAMES, downloadBlob } from '@/lib/utils';
 import { movementsToCsv } from '@/lib/movements-csv';
 import { imprimirReporte } from '@/lib/print-report';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
-import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { ModalSheet } from '@/components/ui/ModalSheet';
 import { useScrollLock } from '@/hooks/useScrollLock';
 
 export function ReportModal() {
@@ -30,9 +31,7 @@ export function ReportModal() {
   // Scroll lock para iOS PWA
   useScrollLock(isOpen);
 
-  // Este modal no declaraba ser un diálogo: era un div suelto, sin rol ni
-  // retención de foco, así que con teclado se salía al fondo sin cerrarlo.
-  const modalRef = useFocusTrap<HTMLDivElement>(isOpen);
+  // ModalSheet aporta el rol de diálogo y la retención de foco.
   const titleId = useId();
 
   // El mismo universo que la pantalla desde la que se abre el reporte: mes en
@@ -46,21 +45,13 @@ export function ReportModal() {
   const monthLabel = `${MONTH_NAMES[viewDate.getMonth()]} ${viewDate.getFullYear()}`;
   const monthSlug = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}`;
 
-  const totalIncome = roundMoney(monthData
-    .filter((i) => i.type === 'income')
-    .reduce((s, i) => s + i.amount, 0));
-  const totalExpenses = roundMoney(monthData
-    .filter(cuentaComoGasto)
-    .reduce((s, i) => s + i.amount, 0));
-  const balance = roundMoney(totalIncome - totalExpenses);
+  const { ingresos: totalIncome, gastos: totalExpenses, saldo: balance } = totalesDe(monthData);
   const count = monthData.length;
 
-  const businessCount = monthData.filter(
-    (i) => i.businessType === 'business' || !i.businessType
-  ).length;
-  const personalCount = monthData.filter(
-    (i) => i.businessType === 'personal'
-  ).length;
+  // Misma regla de ámbito que el segmentado de la cabecera y Movimientos
+  // (ver nota en src/lib/totales.ts sobre movimientos sin etiqueta).
+  const businessCount = filtrarPorAmbito(monthData, 'business', (i) => i.businessType).length;
+  const personalCount = filtrarPorAmbito(monthData, 'personal', (i) => i.businessType).length;
 
   async function handleCSV() {
     try {
@@ -82,12 +73,10 @@ export function ReportModal() {
     let label: string;
 
     if (type === 'business') {
-      filtered = monthData.filter(
-        (i) => i.businessType === 'business' || !i.businessType
-      );
+      filtered = filtrarPorAmbito(monthData, 'business', (i) => i.businessType);
       label = `Negocio - ${monthLabel}`;
     } else if (type === 'personal') {
-      filtered = monthData.filter((i) => i.businessType === 'personal');
+      filtered = filtrarPorAmbito(monthData, 'personal', (i) => i.businessType);
       label = `Personal - ${monthLabel}`;
     } else {
       label = `Completo - ${monthLabel}`;
@@ -106,40 +95,13 @@ export function ReportModal() {
   }
 
   return (
-    <>
-      {/* Overlay */}
+    <ModalSheet id={titleId} titulo="Reporte mensual" onClose={closeReportModal}>
+      {/* Contenido con scroll; la cabecera con «Cerrar» la pone ModalSheet fuera
+          de esta zona, así que nunca se va con el desplazamiento. */}
       <div
-        className="fixed inset-0 bg-black/50 z-overlay animate-fade-in"
-        onClick={closeReportModal}
-      />
-
-      {/* Modal — anchored top, scrollable with safe-area */}
-      <div
-        ref={modalRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className="fixed inset-x-0 top-0 z-modal saas-card max-w-sm mx-auto p-3 animate-scale-in rounded-t-2xl md:rounded-2xl overflow-hidden flex flex-col"
-        style={{
-          top: 'env(safe-area-inset-top, 0px)',
-          maxHeight: 'calc(100dvh - env(safe-area-inset-bottom, 0px))',
-          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))',
-          touchAction: 'pan-y',
-        }}
+        className="overflow-y-auto ios-scroll flex-1 min-h-0 p-3"
+        style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
       >
-        {/* Cabecera FUERA del área con scroll: dentro, el botón de cerrar se
-            iba con el contenido al desplazarse y en móvil quedaba inalcanzable. */}
-        <div className="flex items-center justify-between gap-3 mb-2 flex-shrink-0">
-          <h2 id={titleId} className="font-semibold text-base md:text-sm text-slate-900 dark:text-white">
-            Reporte mensual
-          </h2>
-          <button onClick={closeReportModal} aria-label="Cerrar" className="w-11 h-11 md:w-8 md:h-8 flex-shrink-0 flex items-center justify-center rounded-full text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 md:bg-transparent md:dark:bg-transparent hover:bg-slate-200 dark:hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 transition-colors">
-            <X className="w-5 h-5 md:w-4 md:h-4" />
-          </button>
-        </div>
-
-        {/* Contenido con scroll */}
-        <div className="overflow-y-auto ios-scroll -mx-3 px-3 flex-1 min-h-0" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
 
         <p className="text-2xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
           <Calendar className="inline w-3.5 h-3.5 mr-1" />
@@ -238,8 +200,7 @@ export function ReportModal() {
             No hay movimientos registrados en este mes.
           </p>
         )}
-        </div>{/* end scrollable */}
       </div>
-    </>
+    </ModalSheet>
   );
 }

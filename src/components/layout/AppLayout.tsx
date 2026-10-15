@@ -13,6 +13,7 @@ import { useUiStore } from '@/stores/uiStore';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { supabaseAvailable } from '@/config/supabase';
+import { syncService } from '@/lib/sync';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -41,18 +42,33 @@ export function AppLayout({ children }: AppLayoutProps) {
   // Con Supabase, no antes de que termine el primer ciclo de sync: otro
   // dispositivo pudo editar o borrar una ocurrencia, y regenerarla aquí con el
   // mismo id y un `updated_at` más nuevo le ganaría el merge a ese cambio.
+  //
+  // Por lo mismo, al VOLVER a la pestaña (con Supabase) se espera a que
+  // termine el ciclo de sync de ese regreso antes de materializar: antes
+  // corrían en paralelo y la ocurrencia regenerada podía pisar lo que el
+  // pull traía de otro dispositivo.
   const puedeMaterializar = useUiStore((s) => !supabaseAvailable || s.primerSyncCompleto);
   useEffect(() => {
     let corriendo = false;
-    const alDia = () => {
+    const alDia = (alVolver: boolean) => {
       if (corriendo) return;
       ensureCurrentMonth();
       if (!puedeMaterializar) return;
       corriendo = true;
-      void materializarRecurrencias().finally(() => { corriendo = false; });
+      // Si el ciclo falla (sin red, error de servidor) se materializa igual,
+      // como antes: el primer sync de la sesión ya se hizo.
+      const antes: Promise<unknown> = alVolver && supabaseAvailable
+        ? syncService.sincronizarAlVolver().catch(() => false)
+        : Promise.resolve();
+      void antes
+        .then(() => materializarRecurrencias())
+        .catch((err: unknown) => {
+          console.error('[recurrencias] No se pudieron materializar:', err instanceof Error ? err.message : err);
+        })
+        .finally(() => { corriendo = false; });
     };
-    alDia();
-    const alVolver = () => { if (document.visibilityState === 'visible') alDia(); };
+    alDia(false);
+    const alVolver = () => { if (document.visibilityState === 'visible') alDia(true); };
     document.addEventListener('visibilitychange', alVolver);
     return () => document.removeEventListener('visibilitychange', alVolver);
   }, [puedeMaterializar]); // eslint-disable-line react-hooks/exhaustive-deps

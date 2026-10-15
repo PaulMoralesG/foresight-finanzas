@@ -187,6 +187,72 @@ export function mergeBudgets(
   return { budgets, updatedAt };
 }
 
+/** Lo mínimo de una línea de presupuesto que necesita `deduplicarLineas`. */
+export interface LineaDeduplicable {
+  id: string;
+  tag: string;
+  kind: string;
+  categoryId: string;
+  plan: Record<string, number>;
+  updated_at: string;
+}
+
+/**
+ * Deduplicación semántica de líneas de presupuesto por (tag, kind,
+ * categoryId): dos dispositivos que crean la misma línea a la vez dejan dos
+ * filas con ids distintos. Queda una por clave.
+ *
+ * - Gana la de `updated_at` más nuevo; empate → el id menor (lexicográfico).
+ *   El desempate por id hace que todos los dispositivos elijan la MISMA
+ *   ganadora: sin él, cada uno podía conservar una distinta y tombstonear la
+ *   del otro, y tras sincronizar no quedaba ninguna.
+ * - Las perdedoras aportan los meses del plan que a la ganadora le faltan
+ *   (de la más nueva a la más vieja) y quedan en tombstone con `ahora`.
+ * - La ganadora se re-sella con `ahora` solo si su plan cambió de verdad.
+ * - Sin duplicados devuelve las mismas referencias, en el orden de entrada.
+ */
+export function deduplicarLineas<T extends LineaDeduplicable>(
+  lineas: readonly T[],
+  ahora: string,
+): { live: T[]; tombstones: Record<string, string> } {
+  const porClave = new Map<string, T[]>();
+  for (const linea of lineas) {
+    const clave = `${linea.tag}|${linea.kind}|${linea.categoryId}`;
+    const grupo = porClave.get(clave);
+    if (grupo) grupo.push(linea);
+    else porClave.set(clave, [linea]);
+  }
+
+  const live: T[] = [];
+  const tombstones: Record<string, string> = {};
+  for (const grupo of porClave.values()) {
+    if (grupo.length === 1) {
+      live.push(grupo[0]);
+      continue;
+    }
+    const ordenado = [...grupo].sort((a, b) => {
+      const ua = a.updated_at ?? '';
+      const ub = b.updated_at ?? '';
+      if (ua !== ub) return ua > ub ? -1 : 1;
+      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+    });
+    const [ganadora, ...perdedoras] = ordenado;
+    const plan = { ...(ganadora.plan ?? {}) };
+    let cambiado = false;
+    for (const perdedora of perdedoras) {
+      for (const [mes, monto] of Object.entries(perdedora.plan ?? {})) {
+        if (!(mes in plan)) {
+          plan[mes] = monto;
+          cambiado = true;
+        }
+      }
+      tombstones[perdedora.id] = ahora;
+    }
+    live.push(cambiado ? { ...ganadora, plan, updated_at: ahora } : ganadora);
+  }
+  return { live, tombstones };
+}
+
 /** JSON.stringify con claves ordenadas recursivamente (comparación determinista). */
 function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) {

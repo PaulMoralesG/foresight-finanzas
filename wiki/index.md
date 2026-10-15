@@ -20,4 +20,7 @@ revisar en cada lint.
 
 ## Decisiones y contexto (`tipo: decision`)
 
+- [[decision-restaurar-sella-updated-at]] — C1: el undo de borrado re-sella `updated_at` para no perder contra el tombstone del servidor.
+- [[decision-sincronizar-al-volver]] — A1: `sincronizarAlVolver()` antes de materializar recurrencias y por qué no `flush(true)` directo.
+- [[decision-pendientes-conocidos-octubre-2026]] — deuda técnica conocida y no resuelta tras la auditoría (sync.ts, DebtsPage, avisos de error, uuidv5, E2E).
 - [[decision-alcance-del-wiki]] — por qué el wiki quedó exclusivo de foresight-finanzas y versionado dentro del repo (`wiki/`), en vez de un wiki personal multi-proyecto fuera de él.

@@ -934,3 +934,87 @@ describe('debts.saldo_base y expenses.debt_historico (0020)', () => {
     expect('debtHistorico' in (locales.find((e) => e.id === 'sinMarca') as object)).toBe(false);
   });
 });
+
+// ── Deshacer un borrado (restoreTransactions) ──
+//
+// Restaurar con el updated_at original dejaba la fila viva MÁS VIEJA que el
+// tombstone que ya estaba en el servidor: el siguiente ciclo bajaba ese
+// tombstone, ganaba el merge y el movimiento restaurado volvía a borrarse
+// (y en una deuda no anclada el saldo quedaba descontado dos veces).
+describe('restaurar un movimiento borrado sobrevive al sync', () => {
+  /** Simula que el servidor ya tiene el tombstone de `id` que subió este dispositivo. */
+  const servidorConTombstone = (id: string, extra: Fila = {}) => {
+    const borrado = useFinanceStore.getState().tombstones[id];
+    expect(borrado).toBeDefined();
+    return armar({ filas: { expenses: [filaGasto({ id, ...extra, deleted_at: borrado, updated_at: borrado })] } });
+  };
+
+  it('borrar → push → restaurar → ciclo: el movimiento sigue vivo y sube vivo', async () => {
+    armar({ filas: { expenses: [filaGasto({ updated_at: '2026-08-01T00:00:00.000Z' })] } });
+    await syncService.attach('user-1');
+    const original = useFinanceStore.getState().expenses.find((e) => e.id === 'e1')!;
+    expect(original).toBeDefined();
+
+    useFinanceStore.getState().deleteTransaction('e1');
+    await syncService.flush();
+    const { upserts } = servidorConTombstone('e1');
+
+    vi.setSystemTime(new Date('2026-09-01T12:05:00.000Z'));
+    useFinanceStore.getState().restoreTransactions([original]);
+    await syncService.flush(true);
+
+    const vivo = useFinanceStore.getState().expenses.find((e) => e.id === 'e1');
+    expect(vivo).toBeDefined();
+    expect(vivo!.updated_at).toBe('2026-09-01T12:05:00.000Z');
+    expect(useFinanceStore.getState().tombstones.e1).toBeUndefined();
+    const subida = filasDe(upserts, 'expenses').find((r) => r.id === 'e1');
+    expect(subida).toMatchObject({ deleted_at: null });
+  });
+
+  it('un pago restaurado de una deuda no anclada se descuenta una sola vez', async () => {
+    meterDeuda(deudaBase({ balance: 1000 }));
+    armar({ filas: { debts: [filaDeuda({ saldo_base: null, saldo_base_at: null })] } });
+    await syncService.attach('user-1');
+    useFinanceStore.getState().registerDebtPayment('d1', { amount: 100, date: '2026-08-31', accountId: null });
+    await syncService.flush();
+    expect(saldoD1()).toBe(900);
+    const pago = useFinanceStore.getState().expenses.find((e) => e.debtId === 'd1')!;
+
+    vi.setSystemTime(new Date('2026-09-01T12:01:00.000Z'));
+    useFinanceStore.getState().deleteTransaction(pago.id);
+    expect(saldoD1()).toBe(1000);
+    await syncService.flush();
+    servidorConTombstone(pago.id, { amount: 100, debt_id: 'd1' });
+
+    vi.setSystemTime(new Date('2026-09-01T12:05:00.000Z'));
+    useFinanceStore.getState().restoreTransactions([pago]);
+    expect(saldoD1()).toBe(900);
+    await syncService.flush(true);
+
+    expect(useFinanceStore.getState().expenses.some((e) => e.id === pago.id)).toBe(true);
+    expect(saldoD1()).toBe(900);
+  });
+});
+
+describe('sincronizarAlVolver (AppLayout espera este ciclo antes de materializar)', () => {
+  it('con el ciclo del regreso ya en vuelo, lo espera sin encolar otro pull completo', async () => {
+    const { contadorPull } = armar();
+    await syncService.attach('user-1');
+    const antes = contadorPull.expenses ?? 0;
+
+    document.dispatchEvent(new Event('visibilitychange')); // init(): flush(true)
+    await syncService.sincronizarAlVolver();
+
+    expect((contadorPull.expenses ?? 0) - antes).toBe(1);
+  });
+
+  it('sin nada en vuelo, arranca él mismo un ciclo completo', async () => {
+    const { contadorPull } = armar();
+    await syncService.attach('user-1');
+    const antes = contadorPull.expenses ?? 0;
+
+    await syncService.sincronizarAlVolver();
+
+    expect((contadorPull.expenses ?? 0) - antes).toBe(1);
+  });
+});

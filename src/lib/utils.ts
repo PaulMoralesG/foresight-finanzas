@@ -126,9 +126,10 @@ export function syncToCloud(
         addToast('No se pudo guardar en la nube. Tus cambios quedaron solo en este dispositivo.', 'error');
       }
     })
-    .catch((err: Error) => {
+    .catch((err: unknown) => {
       console.error('[syncToCloud] Error al sincronizar:', err);
-      addToast(err.message || 'Error al sincronizar con la nube', 'error');
+      const mensaje = err instanceof Error && err.message ? err.message : 'Error al sincronizar con la nube';
+      addToast(mensaje, 'error');
     });
 }
 

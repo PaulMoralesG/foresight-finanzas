@@ -8,7 +8,7 @@
 import { supabase } from '@/config/supabase';
 import { useFinanceStore, type PendienteHidratar } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { mergeById, mergeBudgets, hidratarAusentes, type MergeSet } from '@/lib/merge';
+import { mergeById, mergeBudgets, hidratarAusentes, deduplicarLineas, type MergeSet } from '@/lib/merge';
 import { nowIso } from '@/lib/ids';
 import { reportarError } from '@/lib/error-reporter';
 import { getTodayISO } from '@/lib/utils';
@@ -915,44 +915,12 @@ function applyMerge(snapshot: Snapshot, pendiente: PendienteHidratar | null = nu
     remoteLines,
   );
 
-  // Deduplicación semántica de BudgetLines por (tag, kind, categoryId)
-  // Evita filas duplicadas por carreras de red cuando dos dispositivos crean la línea a la vez.
-  const linesByKey = new Map<string, BudgetLine[]>();
-  for (const line of budgetLines.live) {
-    const key = `${line.tag}|${line.kind}|${line.categoryId}`;
-    if (!linesByKey.has(key)) linesByKey.set(key, []);
-    linesByKey.get(key)!.push(line);
-  }
-
-  const deduplicatedLines: BudgetLine[] = [];
-  const extraTombstones: Record<string, string> = {};
-
-  for (const group of linesByKey.values()) {
-    if (group.length === 1) {
-      deduplicatedLines.push(group[0]);
-    } else {
-      group.sort((a, b) => ((b.updated_at ?? '') > (a.updated_at ?? '') ? 1 : (b.updated_at ?? '') < (a.updated_at ?? '') ? -1 : 0));
-      let winner = group[0];
-      let merged = false;
-      let newPlan = { ...(winner.plan || {}) };
-
-      for (let i = 1; i < group.length; i++) {
-        const loser = group[i];
-        if (loser.plan) {
-          newPlan = { ...loser.plan, ...newPlan };
-          merged = true;
-        }
-        extraTombstones[loser.id] = nowIso();
-      }
-
-      if (merged) {
-        winner = { ...winner, plan: newPlan, updated_at: nowIso() };
-      }
-      deduplicatedLines.push(winner);
-    }
-  }
-  budgetLines.live = deduplicatedLines;
-  Object.assign(budgetLines.tombstones, extraTombstones);
+  // Deduplicación semántica de BudgetLines por (tag, kind, categoryId):
+  // evita filas duplicadas por carreras de red cuando dos dispositivos crean
+  // la línea a la vez. Desempate determinista por id (ver merge.ts).
+  const dedup = deduplicarLineas(budgetLines.live, nowIso());
+  budgetLines.live = dedup.live;
+  Object.assign(budgetLines.tombstones, dedup.tombstones);
 
   const remoteRecurrences = buildRemoteSet(snapshot.recurrences, rowToRecurrence);
   const recUniverse = universeOf(state.recurrences, remoteRecurrences);
@@ -1530,6 +1498,27 @@ export const syncService = {
       } else {
         ok = await pushInFlight!;
       }
+    }
+    return ok;
+  },
+
+  /**
+   * Al volver a la pestaña: resuelve cuando el ciclo COMPLETO de ese regreso
+   * terminó (pull + merge incluidos). AppLayout lo espera antes de
+   * materializar recurrencias, que si no correrían en paralelo con el pull y
+   * podrían regenerar una ocurrencia que otro dispositivo editó o borró.
+   *
+   * El listener `visibilitychange` de init() (registrado antes, en main.tsx)
+   * normalmente ya arrancó ese ciclo: entonces solo se espera a que no quede
+   * nada en vuelo, sin encolar otro ciclo completo (un flush(true) aquí
+   * duplicaría el pull entero en cada regreso). Si no hay nada en vuelo, lo
+   * arranca él mismo.
+   */
+  async sincronizarAlVolver(): Promise<boolean> {
+    if (!pushInFlight && !timer) return syncService.flush(true);
+    let ok = true;
+    while (pushInFlight || timer) {
+      ok = pushInFlight ? await pushInFlight : await syncService.flush();
     }
     return ok;
   },
