@@ -41,6 +41,9 @@ function registroFalso({ apareceTrasMs = 0 }: { apareceTrasMs?: number } = {}) {
 let reloadSpy: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
+  // Reloj falso: las esperas del módulo (sondeo del worker, límite de 8 s) se
+  // adelantan sin dormir de verdad.
+  vi.useFakeTimers();
   sessionStorage.clear();
   reloadSpy = vi.fn();
   Object.defineProperty(window, 'location', {
@@ -90,7 +93,7 @@ describe('lazyConRecuperacion', () => {
 
     const Comp = lazyConRecuperacion(() => Promise.reject(errorDeChunk()));
     provocarCarga(Comp);
-    await new Promise((r) => setTimeout(r, 1200));
+    await vi.advanceTimersByTimeAsync(1200);
 
     // Le pidió al worker nuevo que tome el control...
     expect(enEspera.postMessage).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
@@ -111,7 +114,7 @@ describe('lazyConRecuperacion', () => {
 
     const Comp = lazyConRecuperacion(() => Promise.reject(errorDeChunk()));
     provocarCarga(Comp);
-    await new Promise((r) => setTimeout(r, 2000));
+    await vi.advanceTimersByTimeAsync(2000);
 
     expect(enEspera.postMessage).toHaveBeenCalled();
     expect(reloadSpy).not.toHaveBeenCalled();
@@ -131,10 +134,10 @@ describe('lazyConRecuperacion', () => {
     const Comp = lazyConRecuperacion(() => Promise.reject(errorDeChunk()));
     provocarCarga(Comp);
     // El límite de espera son 8 s
-    await new Promise((r) => setTimeout(r, 9000));
+    await vi.advanceTimersByTimeAsync(9000);
 
     expect(reloadSpy).toHaveBeenCalled();
-  }, 20000);
+  });
 
   it('no entra en bucle: solo intenta recuperarse una vez por pestaña', async () => {
     sessionStorage.setItem(CLAVE, '1');
@@ -146,7 +149,7 @@ describe('lazyConRecuperacion', () => {
 
     const Comp = lazyConRecuperacion(() => Promise.reject(errorDeChunk()));
     provocarCarga(Comp);
-    await new Promise((r) => setTimeout(r, 800));
+    await vi.advanceTimersByTimeAsync(800);
 
     expect(enEspera.postMessage).not.toHaveBeenCalled();
     expect(reloadSpy).not.toHaveBeenCalled();
@@ -161,7 +164,7 @@ describe('lazyConRecuperacion', () => {
 
     const Comp = lazyConRecuperacion(() => Promise.reject(new Error('undefined is not a function')));
     provocarCarga(Comp);
-    await new Promise((r) => setTimeout(r, 800));
+    await vi.advanceTimersByTimeAsync(800);
 
     // Recargar en bucle ante un bug de código sería peor que el propio bug
     expect(enEspera.postMessage).not.toHaveBeenCalled();
@@ -173,7 +176,7 @@ describe('lazyConRecuperacion', () => {
     sessionStorage.setItem(CLAVE, '1');
     const Comp = lazyConRecuperacion(() => Promise.resolve({ default: () => null }));
     provocarCarga(Comp);
-    await new Promise((r) => setTimeout(r, 300));
+    await vi.advanceTimersByTimeAsync(300);
 
     expect(sessionStorage.getItem(CLAVE)).toBeNull();
   });

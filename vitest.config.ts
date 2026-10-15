@@ -28,6 +28,21 @@ export default defineConfig({
         'src/main.tsx',
         'src/**/*.{test,spec}.{ts,tsx}',
       ],
+      // Umbrales conservadores, unos puntos por debajo de lo medido (global
+      // ≈85 líneas / 77 ramas; src/lib ≈98 líneas / 87 ramas). Son una red
+      // contra regresiones, no una meta: súbelos cuando la cobertura suba.
+      thresholds: {
+        lines: 82,
+        statements: 81,
+        functions: 80,
+        branches: 73,
+        'src/lib/**': {
+          lines: 95,
+          statements: 94,
+          functions: 94,
+          branches: 83,
+        },
+      },
     },
   },
   resolve: {
