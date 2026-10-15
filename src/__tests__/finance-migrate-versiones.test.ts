@@ -160,3 +160,145 @@ describe('rehidratación real desde localStorage con versión 15', () => {
     expect(pendienteHidratar).toEqual({ debts: ['d1'], expenses: ['m1'] });
   });
 });
+
+// ----------------------------------------------------------------
+// Pasos v9–v13 de forma aislada. `migrate` no exporta cada paso, así que se
+// entra por v8 (aplican v9…v17) y se comprueba lo que cada uno garantiza.
+// ----------------------------------------------------------------
+describe('migrate: pasos v9–v13 aislados', () => {
+  const desdeV8 = (estado: Record<string, unknown>) => migrar({ expenses: [], ...estado }, 8) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+  describe('v9 — accountId/toAccountId', () => {
+    it('limpia valores que no son string (número, objeto, vacío, null) a null y conserva los strings válidos', () => {
+      const m = desdeV8({
+        expenses: [
+          mov({ id: 'a', accountId: 5 as unknown as string, toAccountId: { x: 1 } as unknown as string }),
+          mov({ id: 'b', accountId: '' as unknown as string, toAccountId: null }),
+          mov({ id: 'c', accountId: 'acc1', toAccountId: 'acc2' }),
+          { ...mov({ id: 'd' }), accountId: undefined, toAccountId: undefined },
+        ],
+      });
+      const porId = Object.fromEntries((m.expenses as Transaction[]).map((e) => [e.id, e]));
+      expect(porId.a).toMatchObject({ accountId: null, toAccountId: null });
+      expect(porId.b).toMatchObject({ accountId: null, toAccountId: null });
+      expect(porId.c).toMatchObject({ accountId: 'acc1', toAccountId: 'acc2' });
+      expect(porId.d).toMatchObject({ accountId: null, toAccountId: null });
+    });
+
+    it('añade accounts vacío solo si falta; conserva las existentes', () => {
+      expect(desdeV8({}).accounts).toEqual([]);
+      const cuentas = [{ id: 'acc1', name: 'Caja' }];
+      expect(desdeV8({ accounts: cuentas }).accounts).toEqual(cuentas);
+    });
+  });
+
+  describe('v10 — ajustes', () => {
+    it('conserva avalanche y extraPayment/netWorthGoal/updated_at válidos', () => {
+      const m = desdeV8({
+        settings: { debtMethod: 'avalanche', extraPayment: 250, netWorthGoal: 9000, updated_at: '2026-09-01T00:00:00.000Z' },
+      });
+      expect(m.settings).toEqual({
+        debtMethod: 'avalanche', extraPayment: 250, netWorthGoal: 9000, updated_at: '2026-09-01T00:00:00.000Z',
+      });
+    });
+
+    it('normaliza valores inválidos a los de por defecto', () => {
+      const m = desdeV8({ settings: { debtMethod: 'otro', extraPayment: '50', netWorthGoal: null, updated_at: 5 } });
+      expect(m.settings).toEqual({ debtMethod: 'snowball', extraPayment: 0, netWorthGoal: 0, updated_at: '' });
+    });
+
+    it('un extraPayment de 0 válido no se confunde con ausente y debts inexistente pasa a []', () => {
+      const m = desdeV8({ settings: { debtMethod: 'avalanche', extraPayment: 0 } });
+      expect(m.settings.extraPayment).toBe(0);
+      expect(m.debts).toEqual([]);
+    });
+  });
+
+  describe('v11 — activos y patrimonio', () => {
+    it('crea arrays vacíos si faltan o no son arrays, y conserva los existentes', () => {
+      const vacio = desdeV8({ assets: 'x', networth: null });
+      expect(vacio.assets).toEqual([]);
+      expect(vacio.networth).toEqual([]);
+      const activos = [{ id: 'as1' }];
+      const cierres = [{ monthKey: '2026-08' }];
+      const m = desdeV8({ assets: activos, networth: cierres });
+      expect(m.assets).toEqual(activos);
+      expect(m.networth).toEqual(cierres);
+    });
+  });
+
+  describe('v12 — presupuesto por categoría', () => {
+    it('reparte el presupuesto global de forma EXACTA (la suma es el total, sin perder céntimos)', () => {
+      const gasto = (id: string, category: string) => mov({ id, category, amount: 10, date: '2026-08-10', concept: id });
+      const m = desdeV8({
+        budgets: { '2026-08': 100 },
+        expenses: [gasto('1', 'comida'), gasto('2', 'transporte'), gasto('3', 'ocio')],
+      });
+      const lineas = m.budgetLines as Array<{ categoryId: string; plan: Record<string, number> }>;
+      expect(lineas).toHaveLength(3);
+      const suma = lineas.reduce((s, l) => s + l.plan['2026-08'], 0);
+      expect(Math.round(suma * 100)).toBe(10000);
+      expect(m.budgets).toEqual({ '2026-08': 100 }); // el mapa global se conserva
+    });
+
+    it('sin gasto en el mes, todo el presupuesto va a «general»', () => {
+      const m = desdeV8({ budgets: { '2026-08': 400 } });
+      expect(m.budgetLines).toHaveLength(1);
+      expect(m.budgetLines[0]).toMatchObject({ categoryId: 'general', plan: { '2026-08': 400 } });
+    });
+
+    it('respeta un budgetLines existente, también vacío: no se re-deriva (no basta con length>0)', () => {
+      const vacias = desdeV8({ budgets: { '2026-08': 400 }, budgetLines: [] });
+      expect(vacias.budgetLines).toEqual([]);
+      const lineas = [{ id: 'l1', categoryId: 'comida', plan: {}, limit: 5 }];
+      const m = desdeV8({ budgets: { '2026-08': 400 }, budgetLines: lineas });
+      expect(m.budgetLines).toEqual(lineas);
+    });
+
+    it('sin budgets produce budgetLines vacío', () => {
+      expect(desdeV8({}).budgetLines).toEqual([]);
+    });
+  });
+
+  describe('v13 — metas de ahorro', () => {
+    it('una meta sin saved/tag recibe el histórico por concepto y valores por defecto', () => {
+      const m = desdeV8({
+        savingsGoals: [{ id: 'g1', concept: 'Hucha', target: 1000 }],
+        expenses: [mov({ id: 'a1', category: 'ahorro', concept: 'Hucha', amount: 70 })],
+      });
+      expect(m.savingsGoals[0]).toMatchObject({
+        tag: 'personal', saved: 70, savedFromAccounts: 0, targetDate: null,
+      });
+    });
+
+    it('es idempotente: una meta que ya tiene saved y tag no se toca, aunque haya gastos de ahorro', () => {
+      const yaMigrada = {
+        id: 'g1', concept: 'Hucha', target: 1000, tag: 'business', saved: 5, savedFromAccounts: 2, targetDate: '2027-01-01',
+      };
+      const m = desdeV8({
+        savingsGoals: [yaMigrada],
+        expenses: [mov({ id: 'a1', category: 'ahorro', concept: 'Hucha', amount: 70 })],
+      });
+      expect(m.savingsGoals[0]).toEqual(yaMigrada);
+    });
+
+    it('aplicar la migración dos veces equivale a una (el segundo pase no suma el histórico otra vez)', () => {
+      const entrada = {
+        savingsGoals: [{ id: 'g1', concept: 'Hucha', target: 1000 }],
+        expenses: [mov({ id: 'a1', category: 'ahorro', concept: 'Hucha', amount: 70 })],
+      };
+      const una = desdeV8(entrada);
+      const dos = migrar({ ...una }, 8) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+      expect(dos.savingsGoals).toEqual(una.savingsGoals);
+    });
+
+    it('completa solo lo que falta cuando la meta trae saved pero no tag', () => {
+      const m = desdeV8({ savingsGoals: [{ id: 'g1', concept: 'X', target: 10, saved: 3 }] });
+      expect(m.savingsGoals[0]).toMatchObject({ saved: 3, tag: 'personal', savedFromAccounts: 0 });
+    });
+
+    it('savingsGoals ausente pasa a []', () => {
+      expect(desdeV8({}).savingsGoals).toEqual([]);
+    });
+  });
+});

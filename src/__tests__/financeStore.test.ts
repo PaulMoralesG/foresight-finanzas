@@ -2,9 +2,19 @@
 // TESTS — src/stores/financeStore.ts
 // ================================================================
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
+// Fecha fija: el estado inicial del store y las constantes del archivo dependen
+// de "hoy". Se fija ANTES de los imports (vi.hoisted) y solo se falsea Date,
+// así los timers reales y userEvent siguen funcionando.
+vi.hoisted(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(2026, 8, 15, 12, 0, 0));
+});
+
 import { useFinanceStore } from '@/stores/financeStore';
 import type { Transaction, Category } from '@/types';
+
+afterAll(() => vi.useRealTimers());
 
 // Helper: crear una transacción de prueba
 function makeTx(overrides: Partial<Transaction> = {}): Omit<Transaction, 'id' | 'created_at' | 'updated_at'> {
