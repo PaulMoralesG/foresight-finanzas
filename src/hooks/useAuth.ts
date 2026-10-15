@@ -40,6 +40,25 @@ const OFFLINE_USER: User = {
   lastName: 'Local',
 };
 
+/** Mensaje genérico cuando la red falla y el SDK rechaza la promesa. */
+const MENSAJE_SIN_RED = 'No se pudo conectar. Revisa tu conexión e inténtalo de nuevo.';
+
+/** Texto de un error desconocido; cae al genérico de red si no hay ninguno útil. */
+function mensajeDeError(err: unknown): string {
+  if (esFalloDeRed(err)) return MENSAJE_SIN_RED;
+  const msg = err && typeof err === 'object' ? (err as { message?: unknown }).message : undefined;
+  return typeof msg === 'string' && msg ? msg : MENSAJE_SIN_RED;
+}
+
+/** ¿La reautenticación falló por credenciales (y no por red u otra causa)? */
+function esErrorDeCredenciales(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const e = err as { status?: unknown; code?: unknown; message?: unknown };
+  if (e.code === 'invalid_credentials') return true;
+  if (e.status === 400) return true;
+  return typeof e.message === 'string' && /invalid login credentials/i.test(e.message);
+}
+
 type ModoCierre = 'preguntar' | 'descartar' | 'conservar';
 
 /** Cierre global; si falla (sin red), al menos el local: si no, supabase-js
@@ -304,7 +323,7 @@ export function useAuthSession(): void {
     // Escuchar cambios de sesión en tiempo real
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       // Email change: `updateUser({ email })` dispara USER_UPDATED de inmediato,
       // pero Supabase exige verificar AMBOS correos antes de aplicar el cambio.
       // Ese primer evento no trae el email nuevo en `session.user.email` —lo
@@ -319,14 +338,21 @@ export function useAuthSession(): void {
         if (newEmail && currentUser && newEmail !== currentUser.email) {
           // Cambio ya confirmado (ambos correos verificados): aplicar y
           // limpiar cualquier "pendiente" que hubiera quedado.
-          try {
-            await supabase!
-              .from('profiles')
-              .update({ email: newEmail })
-              .eq('id', currentUser.id);
-          } catch (err) {
-            console.warn('[useAuth] No se pudo actualizar el email en profiles:', err);
-          }
+          //
+          // La escritura en profiles NO se espera aquí: auth-js mantiene un lock
+          // mientras corre este callback y hacer `await` de otra llamada del SDK
+          // dentro de él puede dejarlo en deadlock (doc de supabase-js). Se
+          // difiere con setTimeout 0 y su fallo solo se avisa.
+          const uid = currentUser.id;
+          setTimeout(() => {
+            void (async () => {
+              try {
+                await supabase!.from('profiles').update({ email: newEmail }).eq('id', uid);
+              } catch (err: unknown) {
+                console.warn('[useAuth] No se pudo actualizar el email en profiles:', err);
+              }
+            })();
+          }, 0);
           setUser({ ...currentUser, email: newEmail, pendingEmail: undefined });
         } else if (currentUser && session.user.new_email !== currentUser.pendingEmail) {
           // Aún sin confirmar (o se canceló: new_email volvió a undefined).
@@ -490,39 +516,39 @@ export function useAuth() {
   /** Guardar datos financieros (no-op en modo offline). Debounced dentro del sync service. */
   const saveData = useCallback(() => syncService.schedule(), []);
 
-  /** Actualizar nombre y apellido en Supabase + metadata */
-  async function updateProfile(firstName: string, lastName: string): Promise<boolean> {
-    if (!user) return false;
+  /** Actualizar nombre y apellido en Supabase + metadata. Nunca lanza. */
+  async function updateProfile(firstName: string, lastName: string): Promise<{ success: boolean; message: string }> {
+    if (!user) return { success: false, message: 'No hay sesión activa' };
     if (!supabase) {
       // Modo offline: actualizar solo el store local
       useAuthStore.getState().setUser({ ...user, firstName, lastName });
-      return true;
+      return { success: true, message: 'Perfil actualizado' };
     }
 
-    // Actualizar metadata de auth
-    // (bug: era `lastName`, no `last_name` — el trigger SQL y loadProfile()
-    // leen `raw_user_meta_data->>'last_name'`, así que el apellido en la
-    // metadata de Auth quedaba desincronizado para siempre)
-    const { error: authError } = await supabase.auth.updateUser({
-      data: { first_name: firstName, last_name: lastName },
-    });
-    if (authError) throw authError;
+    try {
+      // Actualizar metadata de auth
+      // (bug: era `lastName`, no `last_name` — el trigger SQL y loadProfile()
+      // leen `raw_user_meta_data->>'last_name'`, así que el apellido en la
+      // metadata de Auth quedaba desincronizado para siempre)
+      const { error: authError } = await supabase.auth.updateUser({
+        data: { first_name: firstName, last_name: lastName },
+      });
+      if (authError) return { success: false, message: mensajeDeError(authError) };
 
-    // Actualizar tabla profiles (por uid — PK nueva)
-    const { error: dbError } = await supabase
-      .from('profiles')
-      .update({ first_name: firstName, last_name: lastName })
-      .eq('id', user.id);
-    if (dbError) throw dbError;
+      // Actualizar tabla profiles (por uid — PK nueva)
+      const { error: dbError } = await supabase
+        .from('profiles')
+        .update({ first_name: firstName, last_name: lastName })
+        .eq('id', user.id);
+      if (dbError) return { success: false, message: mensajeDeError(dbError) };
+    } catch (err: unknown) {
+      console.warn('[useAuth] updateProfile falló:', err);
+      return { success: false, message: mensajeDeError(err) };
+    }
 
     // Actualizar store local
-    useAuthStore.getState().setUser({
-      ...user,
-      firstName,
-      lastName,
-    });
-
-    return true;
+    useAuthStore.getState().setUser({ ...user, firstName, lastName });
+    return { success: true, message: 'Perfil actualizado' };
   }
 
   /** Cambiar correo electrónico — envía verificación al nuevo email */
@@ -530,12 +556,17 @@ export function useAuth() {
     if (!user) return { success: false, message: 'No hay sesión activa' };
     if (!supabase) return { success: false, message: 'No disponible en modo offline' };
 
-    const { error } = await supabase.auth.updateUser(
-      { email: newEmail },
-      { emailRedirectTo: `${window.location.origin}/profile` }
-    );
-    if (error) {
-      return { success: false, message: error.message };
+    try {
+      const { error } = await supabase.auth.updateUser(
+        { email: newEmail },
+        { emailRedirectTo: `${window.location.origin}/profile` }
+      );
+      if (error) {
+        return { success: false, message: error.message };
+      }
+    } catch (err: unknown) {
+      console.warn('[useAuth] updateEmail falló:', err);
+      return { success: false, message: mensajeDeError(err) };
     }
 
     return {
@@ -571,18 +602,29 @@ export function useAuth() {
     }
 
     // 1) Reautenticar: verificar que quien pide el cambio conoce la contraseña actual
-    const { error: reauthError } = await supabase.auth.signInWithPassword({
-      email: currentUser.email,
-      password: currentPassword,
-    });
-    if (reauthError) {
-      return { success: false, message: 'La contraseña actual no es correcta' };
-    }
+    try {
+      const { error: reauthError } = await supabase.auth.signInWithPassword({
+        email: currentUser.email,
+        password: currentPassword,
+      });
+      if (reauthError) {
+        // Solo credenciales malas dicen "incorrecta"; red u otro fallo no.
+        return {
+          success: false,
+          message: esErrorDeCredenciales(reauthError)
+            ? 'La contraseña actual no es correcta'
+            : mensajeDeError(reauthError),
+        };
+      }
 
-    // 2) Recién ahora, aplicar el cambio
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    if (error) {
-      return { success: false, message: error.message };
+      // 2) Recién ahora, aplicar el cambio
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        return { success: false, message: error.message };
+      }
+    } catch (err: unknown) {
+      console.warn('[useAuth] updatePassword falló:', err);
+      return { success: false, message: mensajeDeError(err) };
     }
 
     return { success: true, message: 'Contraseña actualizada correctamente' };
@@ -591,11 +633,16 @@ export function useAuth() {
   /** Enviar enlace de recuperación de contraseña */
   async function resetPassword(email: string): Promise<{ success: boolean; message: string }> {
     if (!supabase) return { success: false, message: 'No disponible en modo offline' };
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/login`,
-    });
-    if (error) {
-      return { success: false, message: error.message };
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/login`,
+      });
+      if (error) {
+        return { success: false, message: error.message };
+      }
+    } catch (err: unknown) {
+      console.warn('[useAuth] resetPassword falló:', err);
+      return { success: false, message: mensajeDeError(err) };
     }
     return { success: true, message: 'Revisa tu correo para restablecer la contraseña 📧' };
   }

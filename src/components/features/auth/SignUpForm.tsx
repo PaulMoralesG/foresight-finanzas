@@ -55,24 +55,29 @@ export function SignUpForm({ onSwitchToLogin, onSuccess }: Props) {
     setSuccessMsg('');
   }
 
-  function validateField(field: string, value: string) {
-    const errs = { ...fieldErrors };
+  /** Mensaje de error de un campo ('' si es válido). */
+  function errorDeCampo(field: string, value: string): string {
     switch (field) {
       case 'firstName':
-        errs.firstName = !value.trim() ? 'Requerido' : '';
-        break;
+        return !value.trim() ? 'Requerido' : '';
       case 'email':
-        errs.email = !value.trim()
+        return !value.trim()
           ? 'Requerido'
           : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
             ? 'Correo no válido'
             : '';
-        break;
       case 'password':
-        errs.password = validateNewPassword(value) ?? '';
-        break;
+        return validateNewPassword(value) ?? '';
+      default:
+        return '';
     }
-    setFieldErrors(errs);
+  }
+
+  // setState funcional: varias validaciones seguidas se acumulan en vez de
+  // pisarse sobre la misma copia obsoleta de `fieldErrors`.
+  function validateField(field: string, value: string) {
+    const msg = errorDeCampo(field, value);
+    setFieldErrors((prev) => ({ ...prev, [field]: msg }));
   }
 
   function handleBlur(field: string, value: string) {
