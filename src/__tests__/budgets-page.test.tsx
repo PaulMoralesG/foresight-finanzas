@@ -3,7 +3,15 @@
 // Sustituye al test del editor de presupuesto global de "Planes".
 // ================================================================
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
+// Fecha fija: el estado inicial del store y las constantes del archivo dependen
+// de "hoy". Se fija ANTES de los imports (vi.hoisted) y solo se falsea Date,
+// así los timers reales y userEvent siguen funcionando.
+vi.hoisted(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(2026, 8, 15, 12, 0, 0));
+});
+
 import { render, screen, cleanup, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BudgetsPage } from '@/pages/BudgetsPage';
@@ -28,6 +36,8 @@ const mov = (o: Partial<Transaction>): Transaction => ({
   updated_at: '2026-08-10T00:00:00.000Z',
   ...o,
 });
+
+afterAll(() => vi.useRealTimers());
 
 beforeEach(() => {
   cleanup();
