@@ -36,6 +36,17 @@ Módulos puros vecinos que el store usa para sus invariantes (ver
   (`saldoBase`/`contadoBase` definidos), el saldo ya no lo mueve este módulo:
   lo deriva `recalcularSaldos` en `src/lib/debt-balance.ts`, excluyendo los
   pagos marcados `debtHistorico` (ver [[stores-zustand]]).
+- `src/lib/totales.ts` — `totalesDe(items)`: ingresos, gastos (con
+  `cuentaComoGasto`: un pago de deuda o una transferencia no son gasto) y saldo,
+  redondeados a centavos. Sustituye a la copia que había en `ReportModal` y
+  `MovementsPage`. **Regla única de ámbito**: un movimiento sin `businessType`
+  (solo posible en datos locales muy viejos; el sync ya normaliza nulo a
+  `personal`) no cuenta ni como Personal ni como Negocio, igual que
+  `filtrarPorAmbito`/`enAmbito` (`src/lib/ambito.ts`). `ReportModal` lo
+  trataba como Negocio y contradecía a Movimientos; ahora ambos usan
+  `filtrarPorAmbito`.
+- `src/lib/merge.ts` — además de la mezcla por id, `deduplicarLineas` (ver
+  [[sync-y-autenticacion]]).
 - `src/lib/recurrence.ts` — `fechasPendientes`, `proximaFecha`: qué
   ocurrencias toca generar.
 - `src/lib/ids.ts` — `newId`, `nowIso`, `uuidv5` (ids deterministas, usados

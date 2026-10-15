@@ -24,6 +24,8 @@ npm run test            # vitest run (single pass)
 npm run test:watch      # vitest (watch mode)
 npm run test:coverage   # vitest run --coverage
 npx tsc --noEmit        # type-check only, no build output
+npm run peso           # node scripts/peso.mjs: tras `npx vite build`, mide dist/ (raw + gzip) separando carga inicial (index.html + imports estáticos) de chunks bajo demanda; objetivo: inicial < 60 KB gzip, sesión completa < 100 KB
+npm run iconos         # node scripts/generar-iconos.mjs: regenera src/components/ui/icons.generated.tsx (sprite SVG inline) copiando los trazos de lucide-react; para añadir un icono, ponerlo en `ICONOS` del script y re-ejecutar
 ```
 
 Run a single test file: `npx vitest run src/__tests__/sync.test.ts`
@@ -53,6 +55,11 @@ Para Claude Code, esta distribución reemplaza la de "Claude Code CLI" en
 `.agents/rules/project-rules.md`.
 
 ## Architecture
+
+### Directorios de apoyo
+- `scripts/` — `peso.mjs` y `generar-iconos.mjs` (ver Commands). La app no importa `lucide-react` en runtime: `icons.generated.tsx` es código generado, no se edita a mano.
+- `src/types/index.ts` — único archivo de tipos globales: `User`, `Transaction`/`TransactionType`/`PaymentMethod`, `Account`, `Category`, `SavingsGoal`, `Debt`/`DebtKind`/`DebtMethod`, `Asset`/`NetWorthSnapshot`, `BudgetLine`, `Recurrence`/`Frecuencia`, `Settings`, `TabId`, `FilterType`, `Ambito`.
+- `supabase/migrations/` — `0001`…`0020` (SQL, orden numérico estricto) más su propio `README.md`; ver "Migración de Supabase" en el `README.md` raíz.
 
 ### Path alias
 `@/*` → `src/*` (configured in both `tsconfig.json` and `vite.config.ts`/`vitest.config.ts` — keep them in sync if it ever changes).

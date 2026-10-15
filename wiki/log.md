@@ -65,3 +65,17 @@ en ese caso el `balance` pasa a ser *derivado* por `recalcularSaldos`
 camino viejo de `src/lib/debt-payments.ts`. Se corrigieron ambas páginas y el
 bullet equivalente del `CLAUDE.md` raíz (sección de `financeStore.ts` y la
 lista de `src/lib/`). Sin páginas nuevas: `index.md` sigue vigente.
+
+## [2026-10-15] ingest | Correcciones de la auditoría de octubre 2026
+
+Cambios ya en el código: C1 `restoreTransactions` sella `updated_at`
+([[decision-restaurar-sella-updated-at]]); A1 `syncService.sincronizarAlVolver()`
+([[decision-sincronizar-al-volver]]); A2 `deduplicarLineas` pura en `merge.ts`
+con desempate por id y `ahora` inyectado ([[sync-y-autenticacion]]); A10
+`deleteDebt` desvincula los pagos ([[stores-zustand]]); A9 `src/lib/totales.ts`
+y regla única de ámbito ([[logica-de-negocio-pura]]). Testing: tests nuevos,
+fechas fijas con `vi.hoisted`, umbrales de coverage y vitest desde PowerShell
+([[testing]]). De paso se corrigió la versión del store en
+[[stores-zustand]] (16 a 17). Pendientes en
+[[decision-pendientes-conocidos-octubre-2026]]. Páginas nuevas: tres de
+decisión; `index.md` y el hub actualizados.
