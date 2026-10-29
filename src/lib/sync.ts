@@ -43,6 +43,15 @@ const DEBOUNCE_MS = 800;
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 1000;
 
+/**
+ * Cada cuánto corre un ciclo incremental con la app abierta y visible. Sin
+ * esto, una PWA que se queda en primer plano no volvía a hacer pull nunca:
+ * los ciclos solo arrancaban en attach, al volver a la pestaña, al recuperar
+ * la red o tras una edición local. Coste: ~1 select incremental por tabla
+ * por minuto, y solo mientras se está mirando la app.
+ */
+export const INTERVALO_SYNC_PERIODICO_MS = 60_000;
+
 // ── Formas de fila del servidor (snake_case) ──
 // Las columnas de negocio son NULLABLE en el schema: los upserts de
 // tombstone solo llevan identidad + timestamps.
@@ -551,6 +560,58 @@ let initialized = false;
 let cambiosSinSubir = true;
 // Error con el que terminó el último ciclo fallido (tras agotar reintentos).
 let ultimoErrorDeCiclo: unknown = null;
+// attach() de la sesión actual todavía no terminó (import legacy + ciclo
+// completo): el sondeo periódico espera a que acabe.
+let attachEnCurso = false;
+// setInterval del sondeo periódico. Solo existe mientras puede servir para
+// algo (sesión sincronizada, pestaña visible, red): oculta u offline no hay
+// timer, así que no despierta la CPU. NO es trabajo programado — flush() no
+// lo espera, y hayCambiosSinSubir() no lo cuenta.
+let sondeo: ReturnType<typeof setInterval> | null = null;
+
+// ── Sync periódico con la app abierta ──
+
+function sondeoPosible(): boolean {
+  return (
+    !!supabase &&
+    !syncDisabled &&
+    userId !== null &&
+    typeof document !== 'undefined' &&
+    document.visibilityState === 'visible' &&
+    (typeof navigator === 'undefined' || navigator.onLine !== false)
+  );
+}
+
+/** Arranca o detiene el intervalo según las condiciones actuales (idempotente). */
+function actualizarSondeo(): void {
+  if (sondeoPosible()) {
+    if (!sondeo) sondeo = setInterval(cicloPeriodico, INTERVALO_SYNC_PERIODICO_MS);
+  } else if (sondeo) {
+    clearInterval(sondeo);
+    sondeo = null;
+  }
+}
+
+/**
+ * Tick del sondeo (y del evento `focus`): un ciclo incremental por el camino
+ * de siempre (performPush: single-flight, marca de agua, reintentos). Si ya
+ * hay un ciclo en vuelo o uno agendado, no hace nada — llamar a performPush
+ * con uno en vuelo ENCOLARÍA otro, y ese ya va a traer lo mismo.
+ */
+function cicloPeriodico(): void {
+  if (!sondeoPosible()) {
+    // p. ej. pushWithRetry pasó a local-only: soltar el intervalo.
+    actualizarSondeo();
+    return;
+  }
+  if (attachEnCurso || !useUiStore.getState().primerSyncCompleto) return;
+  if (pushInFlight || timer) return;
+  // Un error que no se arregla reintentando (RLS, JWT rechazado) no se
+  // repite cada minuto —con sus reintentos y su reporte a error_log—: el
+  // próximo regreso a la pestaña, `online` o edición local lo vuelve a probar.
+  if (ultimoErrorDeCiclo && fallaSinRemedio(ultimoErrorDeCiclo) && !esFalloDeRed(ultimoErrorDeCiclo)) return;
+  void performPush();
+}
 
 // ── Marca de agua del ciclo (DAT-01) ──
 //
@@ -1382,10 +1443,25 @@ export const syncService = {
       void syncService.flush();
     });
     document.addEventListener('visibilitychange', () => {
+      // Oculta: se suelta el intervalo del sondeo. Visible: se reanuda, y el
+      // ciclo completo de este flush cubre lo que pasó mientras tanto.
+      actualizarSondeo();
       void syncService.flush(document.visibilityState === 'visible');
     });
     window.addEventListener('online', () => {
+      actualizarSondeo();
       void syncService.flush(true);
+    });
+    // Sin red no se sondea: un ciclo por minuto solo agotaría reintentos.
+    window.addEventListener('offline', () => {
+      actualizarSondeo();
+    });
+    // Volver a la ventana sin cambiar de pestaña (otra app encima, otra
+    // ventana del escritorio) no dispara visibilitychange: un ciclo
+    // incremental. Si viene con un visibilitychange, ese ciclo ya está en
+    // vuelo y éste no hace nada.
+    window.addEventListener('focus', () => {
+      cicloPeriodico();
     });
 
     // Auto-save: cualquier cambio de datos agenda un push (debounced)
@@ -1429,6 +1505,8 @@ export const syncService = {
     }
     useUiStore.getState().setPrimerSyncCompleto(false);
     pushWatermark = loadWatermark(uid);
+    attachEnCurso = true;
+    actualizarSondeo();
     try {
       await maybeImportLegacy(uid);
       // Push COMPLETO al iniciar sesión: reconcilia cualquier fila que el
@@ -1459,6 +1537,11 @@ export const syncService = {
       if (fallaSinRemedio(err) && userId === uid) {
         useUiStore.getState().setPrimerSyncCompleto(true);
       }
+    } finally {
+      // Solo si sigue siendo la sesión de este attach (un detach o el attach
+      // de otra cuenta en pleno ciclo ya gestionaron el flag).
+      if (userId === uid) attachEnCurso = false;
+      actualizarSondeo(); // p. ej. el esquema no migrado dejó local-only
     }
   },
 
@@ -1581,6 +1664,8 @@ export const syncService = {
     if (userId) clearWatermark(userId);
     pushWatermark = null;
     userId = null;
+    attachEnCurso = false;
+    actualizarSondeo(); // sin usuario: suelta el intervalo
     syncDisabled = false;
     useUiStore.getState().setSyncState('idle');
     useUiStore.getState().setPrimerSyncCompleto(false);
@@ -1604,6 +1689,7 @@ export const syncService = {
   disable(): void {
     syncDisabled = true;
     syncService.cancel();
+    actualizarSondeo();
     useUiStore.getState().setSyncState('local-only');
     useUiStore.getState().setPrimerSyncCompleto(true);
   },
