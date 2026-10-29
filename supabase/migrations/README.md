@@ -6,7 +6,7 @@ proyecto, y CI no las aplica ni las valida: son la única parte del sistema sin
 red de seguridad automática. De ahí este documento.
 
 El orden de despliegue de cada archivo y qué hace está en el
-[README principal](../../README.md#migración-de-supabase-v21).
+[README principal](../../README.md#migración-de-supabase).
 
 ## Antes de ejecutar una migración destructiva
 
