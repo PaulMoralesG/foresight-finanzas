@@ -154,6 +154,13 @@ export function useAuthSession(): void {
     // leía el perfil dos veces y adjuntaba el sync dos veces. Es por uid: una
     // carga de OTRA cuenta (cambio de usuario) no se bloquea.
     let cargandoPara: string | null = null;
+    // Generación de sesión. Cada carga de perfil que arranca y cada caída de
+    // sesión (sinSesion) la incrementan; una carga solo aplica su resultado
+    // (setUser, dueño, attach, detach) si sigue siendo la vigente. Sin esto, un
+    // SIGNED_IN de la cuenta B llegado mientras la carga de A (getSession)
+    // seguía en vuelo dejaba correr ambas y ganaba la ÚLTIMA en terminar: con
+    // A lenta, la app quedaba con A como usuario y el sync adjuntado a A.
+    let generacion = 0;
 
     function adjuntarSync(uid: string) {
       sesionCargadaPara = uid;
@@ -175,8 +182,10 @@ export function useAuthSession(): void {
       syncService.detach();
       sesionCargadaPara = null;
       // Una carga en vuelo de la sesión que acaba de caer no debe impedir que
-      // la próxima entrada de la misma cuenta vuelva a cargarse.
+      // la próxima entrada de la misma cuenta vuelva a cargarse, ni aplicar su
+      // resultado al terminar (resucitaría la sesión cerrada).
       cargandoPara = null;
+      generacion += 1;
       useUiStore.getState().setCierreConPendientes(false);
       // Sin dueño registrado no se sabe de quién son los datos: se conservan
       // solo si lo hay, o la siguiente cuenta que entrara los adoptaría.
@@ -210,15 +219,26 @@ export function useAuthSession(): void {
       // INITIAL_SESSION): la segunda no aporta nada.
       if (cargandoPara === uid) return;
       cargandoPara = uid;
+      const miGeneracion = ++generacion;
       try {
-        await cargarPerfil(uid, email, metaFirst, metaLast, pendingEmail);
+        await cargarPerfil(miGeneracion, uid, email, metaFirst, metaLast, pendingEmail);
       } finally {
         // Solo si nadie la reemplazó (otra cuenta o un sinSesion en medio).
         if (cargandoPara === uid) cargandoPara = null;
       }
     }
 
-    async function cargarPerfil(uid: string, email: string, metaFirst?: string, metaLast?: string, pendingEmail?: string) {
+    async function cargarPerfil(
+      miGeneracion: number,
+      uid: string,
+      email: string,
+      metaFirst?: string,
+      metaLast?: string,
+      pendingEmail?: string,
+    ) {
+      // Otra carga (otra cuenta) o una caída de sesión empezó después que ésta:
+      // su resultado ya no corresponde a la sesión vigente y se descarta.
+      const obsoleta = () => cancelled || miGeneracion !== generacion;
       // ALT-1: los datos locales son de OTRA cuenta → no mezclarlos con esta.
       // Se mira también la memoria de esta pestaña: otra pestaña pudo dejar
       // ya en localStorage dueño=uid mientras aquí siguen los datos de otra.
@@ -250,6 +270,9 @@ export function useAuthSession(): void {
           .eq('id', uid)
           .maybeSingle();
         if (error) throw error;
+        // Sin escrituras de perfil en nombre de una carga ya obsoleta: el
+        // cliente lleva ahora la sesión de otra cuenta.
+        if (obsoleta()) return;
         if (data) {
           profile = data as ProfileRow;
         }
@@ -278,7 +301,7 @@ export function useAuthSession(): void {
           }
         }
 
-        if (cancelled) return;
+        if (obsoleta()) return;
 
         // 2) Sesión lista. Los datos financieros ya están en financeStore
         // (persistidos en localStorage, offline-first): no hace falta esperar
@@ -297,6 +320,9 @@ export function useAuthSession(): void {
 
         adjuntarSync(uid);
       } catch (err: unknown) {
+        // Carga obsoleta: no desadjuntar el sync ni tocar el usuario de la
+        // sesión vigente (sería el de otra cuenta).
+        if (obsoleta()) return;
         // Sin reset: la cuenta es la dueña de los datos locales (comprobado
         // arriba) y un perfil ilegible —sin red, casi siempre— no justifica
         // borrar cambios que aún no se subieron.
