@@ -63,6 +63,14 @@ Singleton `syncService`, inicializado una vez en `src/main.tsx`
 - **Ciclos completos** (red de seguridad): `attach` (login), volver a la
   pestaña (`visibilitychange → visible`) y el evento `online`. `pagehide` y
   ocultar la pestaña hacen flush incremental.
+- **Ciclo periódico con la app abierta**: con sesión sincronizada, pestaña
+  visible y red, un único `setInterval` lanza un ciclo incremental cada
+  `INTERVALO_SYNC_PERIODICO_MS` (60 s), y el evento `focus` otro. Se salta el
+  tick si hay ciclo en vuelo o agendado, si `attach` no terminó o
+  `primerSyncCompleto` es falso, y tras un error permanente (RLS/JWT). El
+  intervalo se suelta al ocultar, sin red, en `detach` y en `local-only`; no
+  cuenta como trabajo programado para `flush()`. Ver
+  [[decision-sync-periodico-app-abierta]].
 - `syncService.sincronizarAlVolver()`: resuelve cuando termina el ciclo
   *completo* del regreso a la pestaña (pull + merge incluidos).
   `AppLayout` lo espera antes de `materializarRecurrencias()` (si falla, se
@@ -116,4 +124,5 @@ y, para revisiones, `.agents/skills/auditoria-tecnica/SKILL.md`.
 - [[decision-aplicando-merge-y-tombstones]] — `aplicandoMerge`, tombstones en `update*` e `importBackup`.
 - [[decision-sincronizar-al-volver]] — el ciclo de regreso a la pestaña y las recurrencias.
 - [[decision-aviso-cambio-de-cuenta-y-carrera]] — aviso del login antes de descartar cambios de otra cuenta y generación de sesión.
-- [[testing]] — `sync.test.ts`, `sync-conflictos.test.ts`, `merge.test.ts`, `legacy-import.test.ts`.
+- [[decision-sync-periodico-app-abierta]] — polling incremental cada 60 s con la app visible, y por qué no Supabase Realtime.
+- [[testing]] — `sync.test.ts`, `sync-conflictos.test.ts`, `sync-periodico.test.ts`, `merge.test.ts`, `legacy-import.test.ts`.

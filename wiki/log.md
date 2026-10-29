@@ -109,3 +109,17 @@ descartado deja de ser "aceptado sin aviso") e `index.md`.
 ## [2026-10-29] ingest | Zonas táctiles en tarjetas con clic propio
 
 Rama `fix/movimientos-toque-tarjeta-movil`. En la tarjeta móvil de Movimientos el `::after` de 44px de los chips `.saas-chip-click` tapaba el concepto y el toque no abría el editor. Se añadió `data-tarjeta-mov` a la tarjeta y la regla `[data-tarjeta-mov] .saas-chip-click::after { content: none }` en `index.css` (chips con `px-2 py-1`, fila con `mt-2`). Página nueva: [[decision-zonas-tactiles-en-tarjetas-con-clic]]; actualizado `index.md`.
+
+## [2026-10-29] ingest | Sync periódico con la app abierta
+
+Rama `feat/sync-periodico-app-abierta`. Una edición hecha en el escritorio no
+llegaba a la PWA del móvil abierta en primer plano: el pull solo ocurría en
+`attach`, al volver a la pestaña, en `online` y tras ediciones locales. Ahora
+`sync.ts` mantiene un único `setInterval` (`INTERVALO_SYNC_PERIODICO_MS`,
+60 s) que, con sesión sincronizada, pestaña visible y red, lanza un ciclo
+incremental por `performPush`, más otro en `focus`; respeta el single-flight,
+no cuenta para `flush()` y se suelta al ocultar, sin red, en `detach` y en
+`local-only`. Tests en `sync-periodico.test.ts`. Página nueva:
+[[decision-sync-periodico-app-abierta]] (descartado: Supabase Realtime).
+Actualizados [[sync-y-autenticacion]], `index.md` y la frase del `CLAUDE.md`
+raíz sobre cuándo se sincroniza.
