@@ -79,3 +79,15 @@ fechas fijas con `vi.hoisted`, umbrales de coverage y vitest desde PowerShell
 [[stores-zustand]] (16 a 17). Pendientes en
 [[decision-pendientes-conocidos-octubre-2026]]. Páginas nuevas: tres de
 decisión; `index.md` y el hub actualizados.
+
+## [2026-10-29] ingest | Segunda tanda de la auditoría técnica de octubre 2026
+
+Cambios en el código de la rama `fix/auditoria-tecnica-octubre-2026`: guard
+`cargandoPara` en `useAuthSession`; `update*` no-op sin registro vivo e
+`importBackup` conservando tombstones; flag `aplicandoMerge` en `sync.ts` (y
+saldo derivado de deudas ancladas sin subir como cambio propio);
+`useIdleLogout` revisa el tiempo al volver; `error-reporter` guarda solo
+`code`+`message` de PostgREST; migración 0021 revoca EXECUTE de `keep_newest()`.
+Página nueva: [[decision-aplicando-merge-y-tombstones]] (descartados: índices
+`(user_id, updated_at)`, cambiar el reset entre cuentas). Actualizadas
+[[stores-zustand]], [[sync-y-autenticacion]], el hub y `index.md`.
