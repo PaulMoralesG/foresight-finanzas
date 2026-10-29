@@ -74,4 +74,44 @@ describe('useIdleLogout', () => {
     act(() => { vi.advanceTimersByTime(IDLE_MINUTES * MIN * 2); });
     expect(onTimeout).not.toHaveBeenCalled();
   });
+
+  describe('al volver a la pestaña', () => {
+    const fijarVisibilidad = (estado: 'visible' | 'hidden') => {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => estado });
+      document.dispatchEvent(new Event('visibilitychange'));
+    };
+    afterEach(() => {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
+    });
+
+    it('cierra si estuvo oculta (timers congelados) más del límite de inactividad', () => {
+      const onTimeout = vi.fn();
+      renderHook(() => useIdleLogout({ enabled: true, onTimeout }));
+
+      // Pestaña oculta: el navegador congela el intervalo, pero el reloj avanza.
+      act(() => { fijarVisibilidad('hidden'); });
+      vi.setSystemTime(Date.now() + (IDLE_MINUTES + 1) * MIN);
+      act(() => { fijarVisibilidad('visible'); });
+
+      expect(onTimeout).toHaveBeenCalledTimes(1);
+
+      // Y no vuelve a cerrar en el siguiente tic.
+      act(() => { vi.advanceTimersByTime(5000); });
+      expect(onTimeout).toHaveBeenCalledTimes(1);
+    });
+
+    it('no cierra si la ausencia fue corta, y cuenta como actividad', () => {
+      const onTimeout = vi.fn();
+      renderHook(() => useIdleLogout({ enabled: true, onTimeout }));
+
+      act(() => { fijarVisibilidad('hidden'); });
+      vi.setSystemTime(Date.now() + 5 * MIN);
+      act(() => { fijarVisibilidad('visible'); });
+      expect(onTimeout).not.toHaveBeenCalled();
+
+      // El reloj se reinició al volver: otros 29 minutos no cierran.
+      act(() => { vi.advanceTimersByTime((IDLE_MINUTES - 1) * MIN); });
+      expect(onTimeout).not.toHaveBeenCalled();
+    });
+  });
 });

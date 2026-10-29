@@ -127,6 +127,35 @@ describe('reportarError', () => {
     expect(fila2.message).toContain('PGRST205');
   });
 
+  // Auditoría 2026-10: los errores de PostgREST traen `details`/`hint` con
+  // datos de la fila ("Failing row contains (...)"); no deben llegar a error_log.
+  it('de un error de PostgREST guarda solo code y message, nunca details ni hint', async () => {
+    reportarError({
+      code: '23514',
+      message: 'new row violates check constraint "expenses_amount_check"',
+      details: 'Failing row contains (abc, 1500.55, Sueldo de Juan, 2026-10-01).',
+      hint: 'Revisa el valor 1500.55',
+    });
+    await flush();
+
+    const msg = String(filaInsertada().message);
+    expect(msg).toContain('23514');
+    expect(msg).toContain('expenses_amount_check');
+    expect(msg).not.toContain('Failing row');
+    expect(msg).not.toContain('Sueldo de Juan');
+    expect(msg).not.toContain('1500.55');
+    expect(msg).not.toContain('details');
+    expect(msg).not.toContain('hint');
+  });
+
+  it('un objeto solo con code se reporta con su code', async () => {
+    reportarError({ code: 'PGRST205', details: 'secreto' });
+    await flush();
+    const msg = String(filaInsertada().message);
+    expect(msg).toContain('PGRST205');
+    expect(msg).not.toContain('secreto');
+  });
+
   it('recorta mensaje y stack a los límites del CHECK de la tabla', async () => {
     const err = new Error('x'.repeat(5000));
     err.stack = 'y'.repeat(20000);
