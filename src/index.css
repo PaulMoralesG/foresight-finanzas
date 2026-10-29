@@ -553,6 +553,15 @@ textarea {
     height: max(100%, 44px);
     transform: translate(-50%, -50%);
   }
+  /* Dentro de una tarjeta con clic propio (la tarjeta móvil de Movimientos,
+     que abre el editor) la zona ampliada de los chips NO se aplica: el ::after
+     de 44px de tres chips juntos cubría casi la mitad izquierda de la tarjeta,
+     concepto incluido, y el toque en el concepto iba al filtro en vez de abrir
+     el editor. Aquí los chips ganan tamaño visible real (px-2 py-1 + separación
+     de la fila) y el resto de la tarjeta queda como zona del editor. */
+  [data-tarjeta-mov] .saas-chip-click::after {
+    content: none;
+  }
 }
 
 /* ================================================================
