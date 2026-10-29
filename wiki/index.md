@@ -23,5 +23,6 @@ revisar en cada lint.
 - [[decision-restaurar-sella-updated-at]] — C1: el undo de borrado re-sella `updated_at` para no perder contra el tombstone del servidor.
 - [[decision-sincronizar-al-volver]] — A1: `sincronizarAlVolver()` antes de materializar recurrencias y por qué no `flush(true)` directo.
 - [[decision-aplicando-merge-y-tombstones]] — flag `aplicandoMerge` en el sync, `update*` no-op si el id no está vivo, `importBackup` conserva tombstones; descartados: índices `(user_id, updated_at)` y cambiar el reset entre cuentas.
+- [[decision-aviso-cambio-de-cuenta-y-carrera]] — el login avisa (cancelar / exportar / descartar) antes de que otra cuenta borre cambios sin subir de la anterior; generación de sesión contra la carrera de cargas de perfil.
 - [[decision-pendientes-conocidos-octubre-2026]] — deuda técnica conocida y no resuelta tras la auditoría (sync.ts, DebtsPage, avisos de error, uuidv5, E2E).
 - [[decision-alcance-del-wiki]] — por qué el wiki quedó exclusivo de foresight-finanzas y versionado dentro del repo (`wiki/`), en vez de un wiki personal multi-proyecto fuera de él.

@@ -91,3 +91,17 @@ saldo derivado de deudas ancladas sin subir como cambio propio);
 Página nueva: [[decision-aplicando-merge-y-tombstones]] (descartados: índices
 `(user_id, updated_at)`, cambiar el reset entre cuentas). Actualizadas
 [[stores-zustand]], [[sync-y-autenticacion]], el hub y `index.md`.
+
+## [2026-10-29] ingest | Aviso de cambio de cuenta y carrera de cargas de perfil
+
+Rama `fix/auth-cambio-de-cuenta-y-carrera`, dos pendientes de la auditoría en
+`useAuth.ts`. (1) `LoginForm` consulta `datosSinSubirDeOtraCuenta(email)`
+(nuevo en `dueno-datos.ts`) antes de `signInWithPassword` y, si la cuenta
+anterior cerró con `conservarDatos`, pide confirmación con `ConfirmDialog`
+(cancelar, exportar respaldo vía `src/lib/exportar-respaldo.ts`, o entrar y
+descartarlos); el `reset()` de `cargarPerfil` no cambia. (2) Contador
+`generacion` en `useAuthSession`: una carga de perfil obsoleta no hace
+`setUser`/`attach`/`detach`. Página nueva:
+[[decision-aviso-cambio-de-cuenta-y-carrera]]. Actualizadas
+[[sync-y-autenticacion]], [[decision-aplicando-merge-y-tombstones]] (el
+descartado deja de ser "aceptado sin aviso") e `index.md`.
