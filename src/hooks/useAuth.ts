@@ -243,13 +243,18 @@ export function useAuthSession(): void {
       // Se mira también la memoria de esta pestaña: otra pestaña pudo dejar
       // ya en localStorage dueño=uid mientras aquí siguen los datos de otra.
       //
-      // INTENCIONAL (auditoría oct-2026): este reset corre AUNQUE el dueño
-      // anterior hubiera cerrado con `conservarDatos` (cierre por inactividad
-      // o sesión caída con cambios sin subir). Si entra una cuenta distinta,
-      // los cambios locales de la anterior que nunca llegaron al servidor se
-      // PIERDEN en este dispositivo: no se pueden subir con la sesión de otra
+      // Este reset corre AUNQUE el dueño anterior hubiera cerrado con
+      // `conservarDatos` (cierre por inactividad o sesión caída con cambios
+      // sin subir): esos cambios no se pueden subir con la sesión de otra
       // cuenta (RLS) ni dejarlos mezclados con los de ésta. Se prioriza no
       // contaminar una cuenta con datos de otra. No cambiar sin revisar ALT-1.
+      //
+      // Ya no es silencioso: LoginForm consulta datosSinSubirDeOtraCuenta()
+      // ANTES de signInWithPassword y pide confirmación explícita (con opción
+      // de exportar respaldo o cancelar sin perder nada). Queda sin aviso solo
+      // la entrada que no pasa por el formulario —enlace de confirmación de
+      // registro o de recuperación de contraseña abierto con la sesión en la
+      // URL—, donde la sesión ya existe cuando el código se entera.
       const dueno = leerDuenoDatos();
       const enMemoria = duenoEnMemoria();
       if ((dueno && dueno.id !== uid) || (enMemoria && enMemoria !== uid)) {
@@ -548,7 +553,8 @@ export function useAuth() {
 
   /** Vuelve al login sin borrar el estado local ni su copia persistida. La
    *  marca `conservarDatos` evita que el SIGNED_OUT y el próximo arranque sin
-   *  sesión lo reinicien; si entra otra cuenta, loadProfile sí lo borra. */
+   *  sesión lo reinicien; si entra otra cuenta, loadProfile sí lo borra
+   *  (el login lo avisa antes: ver datosSinSubirDeOtraCuenta). */
   async function cerrarConservandoDatos(cliente: NonNullable<typeof supabase>) {
     const actual = useAuthStore.getState().user;
     const dueno = leerDuenoDatos();

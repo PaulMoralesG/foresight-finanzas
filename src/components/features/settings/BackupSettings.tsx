@@ -13,8 +13,9 @@ import { useRef, useState } from 'react';
 import { Download, FileText } from '@/components/ui/icons.generated';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useUiStore } from '@/stores/uiStore';
-import { downloadBlob, syncToCloud } from '@/lib/utils';
-import { buildBackup, backupFilename, parseBackup, type BackupData } from '@/lib/backup';
+import { syncToCloud } from '@/lib/utils';
+import { parseBackup, type BackupData } from '@/lib/backup';
+import { exportarRespaldoLocal } from '@/lib/exportar-respaldo';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 export function BackupSettings({ saveData }: { saveData: () => Promise<boolean> }) {
@@ -24,25 +25,8 @@ export function BackupSettings({ saveData }: { saveData: () => Promise<boolean> 
   const [pendiente, setPendiente] = useState<{ nombre: string; data: BackupData } | null>(null);
 
   async function exportar() {
-    const s = useFinanceStore.getState();
-    const backup = buildBackup({
-      expenses: s.expenses,
-      accounts: s.accounts,
-      debts: s.debts,
-      assets: s.assets,
-      networth: s.networth,
-      budgetLines: s.budgetLines,
-      recurrences: s.recurrences,
-      budgets: s.budgets,
-      budgetUpdatedAt: s.budgetUpdatedAt,
-      savingsGoals: s.savingsGoals,
-      customExpenseCategories: s.customExpenseCategories,
-      customIncomeCategories: s.customIncomeCategories,
-      settings: s.settings,
-    });
     try {
-      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-      const outcome = await downloadBlob(blob, backupFilename());
+      const outcome = await exportarRespaldoLocal();
       if (outcome === 'cancelled') return;
       addToast(outcome === 'shared' ? 'Respaldo listo para compartir ✅' : 'Respaldo descargado ✅', 'success');
     } catch (err: unknown) {
