@@ -147,8 +147,11 @@ interface FinanceState {
   setSettings: (partial: Partial<Omit<Settings, 'updated_at'>>) => void;
 
   // --- Copia de seguridad ---
-  /** Reemplaza todas las entidades por las del respaldo. Las marcas
-   *  `updated_at` se renuevan para que, con sync, lo importado gane. */
+  /** Reemplaza las entidades LOCALES por las del respaldo. Las marcas
+   *  `updated_at` se renuevan para que, con sync, lo importado gane. No borra
+   *  nada del servidor: lo que esté en la nube y no en el respaldo vuelve con
+   *  el próximo pull. Conserva los borrados pendientes de ids ajenos al
+   *  respaldo y reinicia `pendienteHidratar`/`descuentosDePago`. */
   importBackup: (data: BackupData) => void;
 
   // --- Selectores (getters) ---
@@ -289,12 +292,38 @@ function ajustarDeudas(
   return { debts: recalcularSaldos(r.debts, expensesNuevo), descuentosDePago: r.descuentos };
 }
 
+/** Tombstones cuyo id no aparece en ninguna colección del respaldo. */
+function tombstonesFueraDelRespaldo(tombstones: Record<string, string>, data: BackupData): Record<string, string> {
+  const enRespaldo = new Set<string>(
+    [
+      ...data.expenses,
+      ...data.accounts,
+      ...data.debts,
+      ...data.assets,
+      ...data.budgetLines,
+      ...data.recurrences,
+      ...data.savingsGoals,
+      ...data.customExpenseCategories,
+      ...data.customIncomeCategories,
+    ].map((r) => r.id),
+  );
+  return Object.fromEntries(Object.entries(tombstones).filter(([id]) => !enRespaldo.has(id)));
+}
+
 /** Marca un id como borrado (borrado lógico para sync). */
 function tombstoned(tombstones: Record<string, string>, id: string): Record<string, string> {
   return { ...tombstones, [id]: nowIso() };
 }
 
-/** Quita el tombstone de un id (resurrección local al editar/recrear). */
+/**
+ * Quita el tombstone de un id (resurrección local al editar/recrear).
+ *
+ * Los update* solo la llaman si el registro está VIVO: sin él, el update es
+ * un no-op (devuelve `state` tal cual, sin notificar). Antes la llamaban
+ * siempre, y un modal abierto sobre algo ya borrado (aquí o vía sync)
+ * quitaba el tombstone sin recrear la fila: el borrado no llegaba al
+ * servidor y el siguiente pull la devolvía.
+ */
 function clearedTombstone(tombstones: Record<string, string>, id: string): Record<string, string> {
   if (!(id in tombstones)) return tombstones;
   const next = { ...tombstones };
@@ -566,7 +595,9 @@ export const useFinanceStore = create<FinanceState>()(
       updateTransaction: (id, partial) =>
         set((state) => {
           const viejo = state.expenses.find((e) => e.id === id);
-          if (!viejo) return { tombstones: clearedTombstone(state.tombstones, id) };
+          // Sin registro vivo no hay nada que editar: limpiar su tombstone
+          // resucitaría un borrado pendiente (ver clearedTombstone).
+          if (!viejo) return state;
           let nuevo: Transaction = { ...viejo, ...partial, updated_at: nowIso() };
           // Sin deuda no hay «histórico»: la marca viaja con debtId (spec §4).
           if (!nuevo.debtId && nuevo.debtHistorico) {
@@ -654,6 +685,7 @@ export const useFinanceStore = create<FinanceState>()(
       updateCustomCategory: (type, id, updates) =>
         set((state) => {
           const key = type === 'expense' ? 'customExpenseCategories' as const : 'customIncomeCategories' as const;
+          if (!state[key].some((c) => c.id === id)) return state;
           return {
             [key]: state[key].map((c) =>
               c.id === id ? { ...c, ...updates, updated_at: nowIso() } : c
@@ -698,7 +730,7 @@ export const useFinanceStore = create<FinanceState>()(
       },
 
       updateSavingsGoal: (id, partial) =>
-        set((state) => ({
+        set((state) => !state.savingsGoals.some((g) => g.id === id) ? state : ({
           savingsGoals: state.savingsGoals.map((g) => {
             if (g.id !== id) return g;
             const next = { ...g, ...partial, updated_at: nowIso() };
@@ -764,7 +796,7 @@ export const useFinanceStore = create<FinanceState>()(
       },
 
       updateRecurrence: (id, partial) =>
-        set((state) => ({
+        set((state) => !state.recurrences.some((r) => r.id === id) ? state : ({
           recurrences: state.recurrences.map((r) => (r.id === id ? { ...r, ...partial, updated_at: nowIso() } : r)),
           tombstones: clearedTombstone(state.tombstones, id),
         })),
@@ -840,7 +872,7 @@ export const useFinanceStore = create<FinanceState>()(
       },
 
       updateBudgetLine: (id, partial) =>
-        set((state) => ({
+        set((state) => !state.budgetLines.some((l) => l.id === id) ? state : ({
           budgetLines: state.budgetLines.map((l) => (l.id === id ? { ...l, ...partial, updated_at: nowIso() } : l)),
           tombstones: clearedTombstone(state.tombstones, id),
         })),
@@ -872,7 +904,7 @@ export const useFinanceStore = create<FinanceState>()(
       },
 
       updateAccount: (id, partial) =>
-        set((state) => ({
+        set((state) => !state.accounts.some((a) => a.id === id) ? state : ({
           accounts: state.accounts.map((a) =>
             a.id === id ? { ...a, ...partial, updated_at: nowIso() } : a
           ),
@@ -915,7 +947,7 @@ export const useFinanceStore = create<FinanceState>()(
       updateDebt: (id, partial) =>
         set((state) => {
           const actual = state.debts.find((d) => d.id === id);
-          if (!actual) return { tombstones: clearedTombstone(state.tombstones, id) };
+          if (!actual) return state;
           const { balance, statementBalance, saldoBase: _saldoBase, contadoBase: _contadoBase, ...resto } = partial;
           let n: Debt = { ...actual, ...resto };
           n = rebasarDeuda(
@@ -1056,7 +1088,7 @@ export const useFinanceStore = create<FinanceState>()(
       },
 
       updateAsset: (id, partial) =>
-        set((state) => ({
+        set((state) => !state.assets.some((a) => a.id === id) ? state : ({
           assets: state.assets.map((a) => (a.id === id ? { ...a, ...partial, updated_at: nowIso() } : a)),
           tombstones: clearedTombstone(state.tombstones, id),
         })),
@@ -1102,8 +1134,14 @@ export const useFinanceStore = create<FinanceState>()(
           customIncomeCategories: sellar(data.customIncomeCategories),
           settings: { ...data.settings, updated_at: ahora },
           // Lo que no venga en el respaldo pero existiera en el servidor
-          // volverá con el próximo pull: sin tombstones no hay borrado.
-          tombstones: {},
+          // volverá con el próximo pull (el import no lo borra). Los
+          // tombstones de ids que el respaldo NO trae se conservan: son
+          // borrados pendientes de subir, y vaciarlos los perdía. Los de ids
+          // que el respaldo sí trae se quitan: el respaldo los restaura.
+          tombstones: tombstonesFueraDelRespaldo(get().tombstones, data),
+          // Ambos describen movimientos y deudas de ANTES del respaldo.
+          pendienteHidratar: { debts: [], expenses: [] },
+          descuentosDePago: {},
         });
       },
 

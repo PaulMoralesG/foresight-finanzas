@@ -1,9 +1,12 @@
 // ================================================================
 // BackupSettings — "Copia de seguridad" (fase 3.5; Balance Dual viewAjustes)
 //
-// Exportar descarga todo en un JSON con la fecha; importar reemplaza lo
-// que haya tras confirmar. En una app de finanzas es la red de seguridad:
-// si se borra el almacenamiento del navegador, hay de dónde volver.
+// Exportar descarga todo en un JSON con la fecha; importar reemplaza los
+// datos de ESTE dispositivo tras confirmar. En una app de finanzas es la red
+// de seguridad: si se borra el almacenamiento del navegador, hay de dónde
+// volver. Con la sincronización activa el import no borra nada de la nube:
+// lo que esté allí y no venga en el respaldo vuelve en el próximo pull (ver
+// importBackup en financeStore), y el texto de la interfaz lo dice así.
 // ================================================================
 
 import { useRef, useState } from 'react';
@@ -85,7 +88,7 @@ export function BackupSettings({ saveData }: { saveData: () => Promise<boolean> 
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-slate-900 dark:text-white">Copia de seguridad</p>
-          <p className="text-xs text-slate-600 dark:text-slate-400">Descarga un respaldo cada cierto tiempo. Importar reemplaza lo que haya.</p>
+          <p className="text-xs text-slate-600 dark:text-slate-400">Descarga un respaldo cada cierto tiempo. Importar sustituye los datos de este dispositivo; no borra nada de la nube.</p>
         </div>
       </div>
       <div className="flex gap-2 flex-wrap">
@@ -108,7 +111,7 @@ export function BackupSettings({ saveData }: { saveData: () => Promise<boolean> 
       <ConfirmDialog
         open={!!pendiente}
         title="¿Importar este respaldo?"
-        message={`"${pendiente?.nombre ?? ''}" trae ${resumen} Se reemplazará todo lo que hay en este dispositivo.`}
+        message={`"${pendiente?.nombre ?? ''}" trae ${resumen} Sus datos sustituirán a los de este dispositivo. Si usas sincronización, lo que esté en la nube y no venga en el respaldo volverá en la próxima sincronización.`}
         confirmLabel="Importar"
         variant="warning"
         onConfirm={confirmarImportar}

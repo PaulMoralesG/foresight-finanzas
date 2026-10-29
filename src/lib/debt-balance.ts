@@ -67,6 +67,12 @@ export function saldoDerivado(debt: Debt, suma: ReadonlyMap<string, number>): Sa
  * Pone al día la caché de las deudas ancladas. Devuelve el MISMO array (y las
  * mismas referencias) si nada cambió, para no disparar renders ni un
  * setState/push del sync. Nunca toca `updated_at`: la caché no es una edición.
+ *
+ * Consecuencia POR DISEÑO: el saldo derivado de una deuda anclada no sube al
+ * servidor como cambio propio (el push incremental filtra por `updated_at`).
+ * El `balance` remoto de una anclada es una caché que puede quedar rancia;
+ * cada dispositivo lo recalcula al mergear (applyMerge en sync.ts) a partir
+ * de `saldoBase` y los pagos sincronizados, que son la fuente de verdad.
  */
 export function recalcularSaldos(debts: Debt[], expenses: readonly PagoDeDeuda[]): Debt[] {
   if (!debts.some(estaAnclada)) return debts;
