@@ -58,6 +58,24 @@ export function borrarDuenoDatos(): void {
   }
 }
 
+/**
+ * Cambios sin subir de OTRA cuenta que se perderían si inicia sesión `email`.
+ *
+ * Devuelve el dueño anterior solo si cerró conservando datos (`conservarDatos`:
+ * cierre por inactividad o sesión caída con cambios sin subir) y `email` no es
+ * el suyo. Al entrar otra cuenta, cargarPerfil reinicia el store (ALT-1): el
+ * login lo usa para avisar ANTES de llamar a Supabase. Se compara por email
+ * porque el uid de la cuenta entrante aún no se conoce; si la misma cuenta
+ * cambió de correo en otro dispositivo, el aviso sobra pero no borra nada
+ * (cargarPerfil compara por uid).
+ */
+export function datosSinSubirDeOtraCuenta(email: string): DuenoDatos | null {
+  const dueno = leerDuenoDatos();
+  if (!dueno?.conservarDatos) return null;
+  const normalizar = (e: string) => e.trim().toLowerCase();
+  return normalizar(dueno.email) === normalizar(email) ? null : dueno;
+}
+
 // Dueño del store EN MEMORIA de esta pestaña. No basta con la clave de
 // localStorage: otra pestaña puede reescribirla (entra otra cuenta) mientras
 // ésta conserva en memoria los datos de la anterior. Al cargar el módulo, la

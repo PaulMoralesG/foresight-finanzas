@@ -28,10 +28,16 @@ Volver a [[mapa-del-proyecto]].
   veces. Montarlo en otro sitio reinicia el ciclo de sesión completo (con
   Supabase: import legacy + pull + merge + push forzado).
   Un guard `cargandoPara` (por uid) evita el doble `loadProfile`/`attach` que
-  provocaban `getSession()` e `INITIAL_SESSION` casi a la vez. Si entra otra
-  cuenta con datos sin subir de la anterior, `reset()` los borra: aceptado por
-  diseño. `useIdleLogout` comprueba el tiempo transcurrido al volver a la
-  pestaña (con ella oculta el intervalo se congela).
+  provocaban `getSession()` e `INITIAL_SESSION` casi a la vez. Un contador
+  `generacion` (lo suben cada `loadProfile` y cada `sinSesion`) descarta la
+  carga obsoleta: si entra la cuenta B con la carga de A en vuelo, A no hace
+  `setUser`/`attach`/`detach` al terminar. Si entra otra cuenta con datos sin
+  subir de la anterior (`conservarDatos`), `reset()` los sigue borrando, pero
+  `LoginForm` lo avisa antes con un `ConfirmDialog` (cancelar, exportar
+  respaldo o entrar y descartarlos). Ver
+  [[decision-aviso-cambio-de-cuenta-y-carrera]]. `useIdleLogout` comprueba el
+  tiempo transcurrido al volver a la pestaña (con ella oculta el intervalo se
+  congela).
 - `useAuth()` — estado y acciones (`signIn`, `signOut`, `saveData`,
   `updateProfile`…), sin efectos, seguro en cualquier componente.
   `signOut()` hace `flush()` antes de borrar el estado local; si no pudo subir
@@ -109,4 +115,5 @@ y, para revisiones, `.agents/skills/auditoria-tecnica/SKILL.md`.
 - [[decision-restaurar-sella-updated-at]] — por qué el undo re-sella `updated_at`.
 - [[decision-aplicando-merge-y-tombstones]] — `aplicandoMerge`, tombstones en `update*` e `importBackup`.
 - [[decision-sincronizar-al-volver]] — el ciclo de regreso a la pestaña y las recurrencias.
+- [[decision-aviso-cambio-de-cuenta-y-carrera]] — aviso del login antes de descartar cambios de otra cuenta y generación de sesión.
 - [[testing]] — `sync.test.ts`, `sync-conflictos.test.ts`, `merge.test.ts`, `legacy-import.test.ts`.

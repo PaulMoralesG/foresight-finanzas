@@ -70,7 +70,9 @@ la nube y no en el respaldo vuelve con el próximo pull.
   con el volumen actual de datos por usuario no compensan el coste de escritura
   ni una migración más. Revisar si el volumen crece.
 - **Cambiar el `reset()` al entrar otra cuenta**: si la cuenta nueva entra con
-  datos sin subir de la anterior, `reset()` los borra. Se acepta **por diseño**:
-  conservarlos implicaría que la cuenta nueva adoptara datos ajenos. No se cambia.
+  datos sin subir de la anterior, `reset()` los borra; conservarlos implicaría
+  que la cuenta nueva adoptara datos ajenos. El reset no se cambia, pero ya no
+  es silencioso: el login avisa antes (ver
+  [[decision-aviso-cambio-de-cuenta-y-carrera]]).
 - **Sellar `updated_at` al recalcular saldos derivados** para que viajen por
   sync: ver sección 1.

@@ -3,8 +3,12 @@
 // ================================================================
 
 import { useState, type FormEvent, useRef } from 'react';
-import { AlertCircle, Loader2, LogIn } from '@/components/ui/icons.generated';
+import { AlertCircle, Download, Loader2, LogIn } from '@/components/ui/icons.generated';
 import { useAuth } from '@/hooks/useAuth';
+import { useUiStore } from '@/stores/uiStore';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { datosSinSubirDeOtraCuenta, type DuenoDatos } from '@/lib/dueno-datos';
+import { exportarRespaldoLocal } from '@/lib/exportar-respaldo';
 import { authInputClass } from './auth-input-class';
 import { PasswordToggle } from './PasswordToggle';
 
@@ -39,6 +43,8 @@ export function LoginForm({ onSwitchToSignUp, onForgotPassword }: Props) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [avisoCambio, setAvisoCambio] = useState<DuenoDatos | null>(null);
+  const addToast = useUiStore((s) => s.addToast);
   const attemptRef = useRef(0);
   const lockoutRef = useRef(false);
   const errorRef = useRef('');
@@ -68,6 +74,19 @@ export function LoginForm({ onSwitchToSignUp, onForgotPassword }: Props) {
       return;
     }
 
+    // Cambios sin subir de OTRA cuenta: al entrar ésta, cargarPerfil reinicia
+    // el store y se pierden. Se avisa antes de llamar a Supabase; cancelar no
+    // toca nada (ver datosSinSubirDeOtraCuenta).
+    const anterior = datosSinSubirDeOtraCuenta(email);
+    if (anterior) {
+      setAvisoCambio(anterior);
+      return;
+    }
+
+    await iniciarSesion();
+  }
+
+  async function iniciarSesion() {
     // Rate limiting: delay progresivo tras intentos fallidos (1s → 2s → 4s → 8s)
     if (lockoutRef.current) {
       const msg = 'Demasiados intentos. Espera unos segundos.';
@@ -117,10 +136,44 @@ export function LoginForm({ onSwitchToSignUp, onForgotPassword }: Props) {
     }
   }
 
+  function confirmarCambio() {
+    setAvisoCambio(null);
+    void iniciarSesion();
+  }
+
+  async function exportarAntes() {
+    try {
+      const outcome = await exportarRespaldoLocal();
+      if (outcome === 'cancelled') return;
+      addToast(outcome === 'shared' ? 'Respaldo listo para compartir' : 'Respaldo descargado', 'success');
+    } catch (err: unknown) {
+      const motivo = err instanceof Error ? err.message : String(err);
+      addToast(`No se pudo exportar: ${motivo}`, 'error');
+    }
+  }
+
   const inputClass = (hasError: boolean) => `${authInputClass(hasError)} pr-10`;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
+      <ConfirmDialog
+        open={!!avisoCambio}
+        variant="danger"
+        title="Cambios sin sincronizar de otra cuenta"
+        message={`En este dispositivo hay cambios de ${avisoCambio?.email ?? 'otra cuenta'} que no se subieron a la nube. Si entras con otra cuenta, se perderán. Para conservarlos, cancela y vuelve a entrar con esa cuenta cuando tengas conexión.`}
+        confirmLabel="Entrar y descartarlos"
+        cancelLabel="Cancelar"
+        onConfirm={confirmarCambio}
+        onCancel={() => setAvisoCambio(null)}
+      >
+        <button
+          type="button"
+          onClick={() => { void exportarAntes(); }}
+          className="saas-btn saas-btn-secondary saas-btn-sm flex items-center gap-1.5"
+        >
+          <Download className="w-3.5 h-3.5" /> Exportar respaldo
+        </button>
+      </ConfirmDialog>
       <div>
         <label htmlFor="login-email" className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
           Correo electrónico

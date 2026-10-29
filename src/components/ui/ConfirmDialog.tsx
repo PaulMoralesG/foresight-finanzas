@@ -7,7 +7,7 @@
 // abajo, dejando el header de la página asomado por encima del overlay.
 // ================================================================
 
-import { useEffect, useId } from 'react';
+import { useEffect, useId, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle } from '@/components/ui/icons.generated';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
@@ -22,6 +22,9 @@ interface ConfirmDialogProps {
   variant?: 'danger' | 'warning';
   onConfirm: () => void;
   onCancel: () => void;
+  /** Contenido opcional bajo el mensaje (p. ej. una acción secundaria que no
+   *  cierra el diálogo). Cancelar/Confirmar siguen siendo las dos salidas. */
+  children?: ReactNode;
 }
 
 export function ConfirmDialog({
@@ -33,6 +36,7 @@ export function ConfirmDialog({
   variant = 'danger',
   onConfirm,
   onCancel,
+  children,
 }: ConfirmDialogProps) {
   useEscapeKey(onCancel, open);
 
@@ -94,6 +98,7 @@ export function ConfirmDialog({
             <p id={messageId} className="text-sm text-slate-600 dark:text-slate-400">
               {message}
             </p>
+            {children && <div className="mt-3">{children}</div>}
           </div>
         </div>
 
