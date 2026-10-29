@@ -471,6 +471,7 @@ export function MovementsPage() {
                   key={tx.id}
                   role="button"
                   tabIndex={0}
+                  data-tarjeta-mov
                   onClick={() => openModal(tx.id)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal(tx.id); } }}
                   className={`saas-card p-2.5 cursor-pointer relative touch-manipulation ${isSelected ? 'ring-2 ring-brand-500 bg-brand-50 dark:bg-brand-950/30' : 'active:bg-slate-50 dark:active:bg-slate-800/50'}`}
@@ -508,11 +509,11 @@ export function MovementsPage() {
                       de ver la lista. El badge de Ámbito además llevaba su
                       propio azul a mano en vez de ScopeBadge (que ya es
                       terracota para Negocio); aquí quedaba desincronizado. */}
-                  <div className="flex items-center justify-between gap-1.5">
+                  <div className="flex items-center justify-between gap-1.5 mt-2">
                     <div className="flex items-center gap-1 flex-wrap">
                       <button
                         type="button"
-                        className={`saas-chip-click text-xs font-medium px-1.5 py-0.5 rounded-full ${typePillClasses(tx)}`}
+                        className={`saas-chip-click text-xs font-medium px-2 py-1 rounded-full ${typePillClasses(tx)}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           if (tx.type !== 'transfer' && !esPago) setFilter(tx.type);
@@ -532,7 +533,7 @@ export function MovementsPage() {
                       ) : (
                       <button
                         type="button"
-                        className="saas-chip-click text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full"
+                        className="saas-chip-click text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-full"
                         onClick={(e) => { e.stopPropagation(); setCategoryFilter(tx.category); }}
                         title={`Filtrar solo ${category?.label || tx.category}`}
                       >
