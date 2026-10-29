@@ -26,3 +26,4 @@ revisar en cada lint.
 - [[decision-aviso-cambio-de-cuenta-y-carrera]] — el login avisa (cancelar / exportar / descartar) antes de que otra cuenta borre cambios sin subir de la anterior; generación de sesión contra la carrera de cargas de perfil.
 - [[decision-pendientes-conocidos-octubre-2026]] — deuda técnica conocida y no resuelta tras la auditoría (sync.ts, DebtsPage, avisos de error, uuidv5, E2E).
 - [[decision-alcance-del-wiki]] — por qué el wiki quedó exclusivo de foresight-finanzas y versionado dentro del repo (`wiki/`), en vez de un wiki personal multi-proyecto fuera de él.
+- [[decision-zonas-tactiles-en-tarjetas-con-clic]] — por qué dentro de tarjetas con clic propio los chips no llevan zona táctil ampliada (`data-tarjeta-mov`), sino tamaño visible real.

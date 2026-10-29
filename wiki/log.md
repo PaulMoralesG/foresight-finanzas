@@ -105,3 +105,7 @@ descartarlos); el `reset()` de `cargarPerfil` no cambia. (2) Contador
 [[decision-aviso-cambio-de-cuenta-y-carrera]]. Actualizadas
 [[sync-y-autenticacion]], [[decision-aplicando-merge-y-tombstones]] (el
 descartado deja de ser "aceptado sin aviso") e `index.md`.
+
+## [2026-10-29] ingest | Zonas táctiles en tarjetas con clic propio
+
+Rama `fix/movimientos-toque-tarjeta-movil`. En la tarjeta móvil de Movimientos el `::after` de 44px de los chips `.saas-chip-click` tapaba el concepto y el toque no abría el editor. Se añadió `data-tarjeta-mov` a la tarjeta y la regla `[data-tarjeta-mov] .saas-chip-click::after { content: none }` en `index.css` (chips con `px-2 py-1`, fila con `mt-2`). Página nueva: [[decision-zonas-tactiles-en-tarjetas-con-clic]]; actualizado `index.md`.
