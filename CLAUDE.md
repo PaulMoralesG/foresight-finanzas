@@ -59,6 +59,7 @@ Para Claude Code, esta distribución reemplaza la de "Claude Code CLI" en
 ## Architecture
 
 ### Directorios de apoyo
+- `docs/diagramas/` — diagramas interactivos (arquitectura, stores, sync, sesión, modelo de datos, flujos) generados con archify; abrir `index.html`. Hay que regenerarlos si cambia la arquitectura; ver su `README.md`.
 - `scripts/` — `peso.mjs` y `generar-iconos.mjs` (ver Commands). La app no importa `lucide-react` en runtime: `icons.generated.tsx` es código generado, no se edita a mano.
 - `src/types/index.ts` — único archivo de tipos globales: `User`, `Transaction`/`TransactionType`/`PaymentMethod`, `BusinessType`, `Account`/`AccountKind`, `Category`, `SavingsGoal`, `Debt`/`DebtKind`/`DebtMethod`, `Asset`/`AssetGroup`/`NetWorthSnapshot`, `MonthlyBudget`, `BudgetLine`, `Recurrence`/`Frecuencia`, `Settings`, `TabId`, `FilterType`, `Ambito`.
 - `supabase/migrations/` — `0001`…`0021` (SQL, orden numérico estricto) más su propio `README.md`; ver "Migración de Supabase" en el `README.md` raíz.

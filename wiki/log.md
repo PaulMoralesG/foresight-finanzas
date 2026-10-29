@@ -123,3 +123,7 @@ no cuenta para `flush()` y se suelta al ocultar, sin red, en `detach` y en
 [[decision-sync-periodico-app-abierta]] (descartado: Supabase Realtime).
 Actualizados [[sync-y-autenticacion]], `index.md` y la frase del `CLAUDE.md`
 raíz sobre cuándo se sincroniza.
+
+## [2026-10-29] ingest | Diagramas del proyecto en docs/diagramas/
+
+Rama `docs/diagramas-del-proyecto`. Se versionan en `docs/diagramas/` siete diagramas archify (arquitectura, estado de stores, sync, sesión/auth, modelo de datos, guardar movimiento, recurrencias y respaldo) más un `index.html` con pestañas, generados desde el código en el commit `452542b` y las migraciones (no de la base viva). No se despliegan (fuera de `public/` y `src/`). Actualizados `index.md` y el `CLAUDE.md` raíz; limitaciones y regeneración en `docs/diagramas/README.md`.

@@ -28,3 +28,7 @@ revisar en cada lint.
 - [[decision-alcance-del-wiki]] — por qué el wiki quedó exclusivo de foresight-finanzas y versionado dentro del repo (`wiki/`), en vez de un wiki personal multi-proyecto fuera de él.
 - [[decision-sync-periodico-app-abierta]] — ciclo incremental cada 60 s (y en `focus`) con la app abierta y visible; por qué polling y no Supabase Realtime, y su coste en peticiones.
 - [[decision-zonas-tactiles-en-tarjetas-con-clic]] — por qué dentro de tarjetas con clic propio los chips no llevan zona táctil ampliada (`data-tarjeta-mov`), sino tamaño visible real.
+
+## Recursos fuera del wiki
+
+- `docs/diagramas/` (en la raíz del repo) — siete diagramas archify (arquitectura, stores, sync, sesión, modelo de datos, flujos) generados el 2026-10-29 desde el código; abrir `index.html`. Ver su `README.md`.
