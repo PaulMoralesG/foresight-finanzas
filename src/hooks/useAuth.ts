@@ -147,6 +147,13 @@ export function useAuthSession(): void {
     // TOKEN_REFRESHED del mismo usuario sí rehace la carga: es la forma de
     // adjuntar el sync tras haber arrancado sin red.
     let sesionCargadaPara: string | null = null;
+    // Usuario cuyo loadProfile está EN VUELO. Al arrancar con sesión guardada
+    // llegan dos disparos casi a la vez —la promesa de getSession() y el
+    // evento INITIAL_SESSION— y `sesionCargadaPara` no los separa porque solo
+    // se fija cuando el perfil termina de leerse: sin este guard cada arranque
+    // leía el perfil dos veces y adjuntaba el sync dos veces. Es por uid: una
+    // carga de OTRA cuenta (cambio de usuario) no se bloquea.
+    let cargandoPara: string | null = null;
 
     function adjuntarSync(uid: string) {
       sesionCargadaPara = uid;
@@ -167,6 +174,9 @@ export function useAuthSession(): void {
         !!dueno && duenoEnMemoria() === dueno.id && syncService.hayCambiosSinSubir();
       syncService.detach();
       sesionCargadaPara = null;
+      // Una carga en vuelo de la sesión que acaba de caer no debe impedir que
+      // la próxima entrada de la misma cuenta vuelva a cargarse.
+      cargandoPara = null;
       useUiStore.getState().setCierreConPendientes(false);
       // Sin dueño registrado no se sabe de quién son los datos: se conservan
       // solo si lo hay, o la siguiente cuenta que entrara los adoptaría.
@@ -196,9 +206,30 @@ export function useAuthSession(): void {
     }
 
     async function loadProfile(uid: string, email: string, metaFirst?: string, metaLast?: string, pendingEmail?: string) {
+      // Ya hay una carga en vuelo para esta misma cuenta (getSession +
+      // INITIAL_SESSION): la segunda no aporta nada.
+      if (cargandoPara === uid) return;
+      cargandoPara = uid;
+      try {
+        await cargarPerfil(uid, email, metaFirst, metaLast, pendingEmail);
+      } finally {
+        // Solo si nadie la reemplazó (otra cuenta o un sinSesion en medio).
+        if (cargandoPara === uid) cargandoPara = null;
+      }
+    }
+
+    async function cargarPerfil(uid: string, email: string, metaFirst?: string, metaLast?: string, pendingEmail?: string) {
       // ALT-1: los datos locales son de OTRA cuenta → no mezclarlos con esta.
       // Se mira también la memoria de esta pestaña: otra pestaña pudo dejar
       // ya en localStorage dueño=uid mientras aquí siguen los datos de otra.
+      //
+      // INTENCIONAL (auditoría oct-2026): este reset corre AUNQUE el dueño
+      // anterior hubiera cerrado con `conservarDatos` (cierre por inactividad
+      // o sesión caída con cambios sin subir). Si entra una cuenta distinta,
+      // los cambios locales de la anterior que nunca llegaron al servidor se
+      // PIERDEN en este dispositivo: no se pueden subir con la sesión de otra
+      // cuenta (RLS) ni dejarlos mezclados con los de ésta. Se prioriza no
+      // contaminar una cuenta con datos de otra. No cambiar sin revisar ALT-1.
       const dueno = leerDuenoDatos();
       const enMemoria = duenoEnMemoria();
       if ((dueno && dueno.id !== uid) || (enMemoria && enMemoria !== uid)) {

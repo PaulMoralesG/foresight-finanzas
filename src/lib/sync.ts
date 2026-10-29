@@ -536,6 +536,14 @@ let queuedAfterPush = false;
 let queuedFull = false; // el ciclo encolado debe ser completo
 let isSyncing = false; // evita auto-schedule durante merges internos
 let dirtyDuringSync = false; // el usuario editó mientras sincronizábamos
+// El setState de applyMerge está escribiendo. La suscripción no lo cuenta como
+// edición del usuario: lo que el merge escribe ya lo sube el pushAll del MISMO
+// ciclo (usa el resultado del merge, no el store). Sin esto, cada ciclo que
+// traía algo del servidor marcaba dirtyDuringSync y agendaba otro ciclo
+// entero. Es seguro porque applyMerge lee el estado y escribe en el mismo
+// tick síncrono: ninguna acción del usuario puede intercalarse ahí, y una
+// edición durante el await del pull o del push sigue marcando dirty.
+let aplicandoMerge = false;
 let syncDisabled = false; // esquema no migrado → modo local-only
 let initialized = false;
 // Hay datos locales que ningún ciclo ha confirmado en el servidor. Arranca en
@@ -897,6 +905,16 @@ function applyMerge(snapshot: Snapshot, pendiente: PendienteHidratar | null = nu
   // con el estado local. Así una caché remota distinta no dispara un setState
   // ni un push en cada ciclo, y lo que se sube lleva la caché correcta.
   // recalcularSaldos devuelve las mismas referencias si nada cambió.
+  //
+  // POR DISEÑO, el saldo derivado NO se propaga al servidor por sí solo:
+  // este recálculo no toca `updated_at` de la deuda, así que el push
+  // incremental (filtra por updated_at >= marca) no la incluye, y un push
+  // completo la reenvía con el MISMO updated_at (keep_newest puede
+  // descartarla). La columna `balance` del servidor de una anclada es solo
+  // una caché, posiblemente rancia; la verdad es `saldo_base` + sus pagos, y
+  // cada dispositivo la recalcula aquí al mergear. Sellar updated_at por un
+  // recálculo haría que dos dispositivos se pisaran la deuda en cada ciclo
+  // (y podría ganarle a una edición real del usuario). Ver recalcularSaldos.
   debts.live = recalcularSaldos(debts.live, expenses.live);
 
   const remoteAssets = buildRemoteSet(snapshot.assets, rowToAsset);
@@ -1041,38 +1059,43 @@ function applyMerge(snapshot: Snapshot, pendiente: PendienteHidratar | null = nu
     budgetUpdatedAt: state.budgetUpdatedAt,
   };
   if (!igualEstructural(next, current)) {
-    useFinanceStore.setState((currentState) => {
-      // Preservar mutaciones locales que pudieron haber ocurrido mientras se
-      // procesaba el merge: si una fila local no salió viva del merge y tampoco
-      // tiene tombstone, es que se creó durante el ciclo — se conserva.
-      const keepLocalAdditions = <T extends { id: string }>(merged: T[], local: T[]): T[] => {
-        const mergedIds = new Set(merged.map((i) => i.id));
-        const out = [...merged];
-        for (const item of local) {
-          if (!mergedIds.has(item.id) && !next.tombstones[item.id]) out.push(item);
-        }
-        return out;
-      };
+    aplicandoMerge = true;
+    try {
+      useFinanceStore.setState((currentState) => {
+        // Preservar mutaciones locales que pudieron haber ocurrido mientras se
+        // procesaba el merge: si una fila local no salió viva del merge y tampoco
+        // tiene tombstone, es que se creó durante el ciclo — se conserva.
+        const keepLocalAdditions = <T extends { id: string }>(merged: T[], local: T[]): T[] => {
+          const mergedIds = new Set(merged.map((i) => i.id));
+          const out = [...merged];
+          for (const item of local) {
+            if (!mergedIds.has(item.id) && !next.tombstones[item.id]) out.push(item);
+          }
+          return out;
+        };
 
-      return {
-        ...next,
-        expenses: keepLocalAdditions(next.expenses, currentState.expenses),
-        savingsGoals: keepLocalAdditions(next.savingsGoals, currentState.savingsGoals),
-        accounts: keepLocalAdditions(next.accounts, currentState.accounts),
-        debts: keepLocalAdditions(next.debts, currentState.debts),
-        assets: keepLocalAdditions(next.assets, currentState.assets),
-        budgetLines: keepLocalAdditions(next.budgetLines, currentState.budgetLines),
-        recurrences: keepLocalAdditions(next.recurrences, currentState.recurrences),
-        customExpenseCategories: keepLocalAdditions(
-          next.customExpenseCategories,
-          currentState.customExpenseCategories,
-        ),
-        customIncomeCategories: keepLocalAdditions(
-          next.customIncomeCategories,
-          currentState.customIncomeCategories,
-        ),
-      };
-    });
+        return {
+          ...next,
+          expenses: keepLocalAdditions(next.expenses, currentState.expenses),
+          savingsGoals: keepLocalAdditions(next.savingsGoals, currentState.savingsGoals),
+          accounts: keepLocalAdditions(next.accounts, currentState.accounts),
+          debts: keepLocalAdditions(next.debts, currentState.debts),
+          assets: keepLocalAdditions(next.assets, currentState.assets),
+          budgetLines: keepLocalAdditions(next.budgetLines, currentState.budgetLines),
+          recurrences: keepLocalAdditions(next.recurrences, currentState.recurrences),
+          customExpenseCategories: keepLocalAdditions(
+            next.customExpenseCategories,
+            currentState.customExpenseCategories,
+          ),
+          customIncomeCategories: keepLocalAdditions(
+            next.customIncomeCategories,
+            currentState.customIncomeCategories,
+          ),
+        };
+      });
+    } finally {
+      aplicandoMerge = false;
+    }
   }
 
   return { expenses, goals, accounts, debts, assets, networth, budgetLines, recurrences, settings, expenseCategories, incomeCategories, budgets, flatTombstones };
@@ -1383,7 +1406,11 @@ export const syncService = {
         state.customIncomeCategories !== prev.customIncomeCategories ||
         state.tombstones !== prev.tombstones;
       if (!dataChanged) return;
+      // Conservador: si el push de este ciclo falla, lo mergeado (p. ej.
+      // tombstones de la deduplicación) sigue contando como "sin subir".
       cambiosSinSubir = true;
+      // Escritura del propio merge: no es edición del usuario (ver aplicandoMerge).
+      if (aplicandoMerge) return;
       if (!userId || syncDisabled) return;
       if (isSyncing) {
         dirtyDuringSync = true;

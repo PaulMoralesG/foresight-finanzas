@@ -38,6 +38,10 @@ describe('BackupSettings', () => {
 
     const dialogo = await screen.findByRole('dialog');
     expect(dialogo).toHaveTextContent('1 movimientos, 1 cuentas');
+    // No promete un reemplazo total: con sync, lo de la nube que no esté en
+    // el respaldo vuelve en la próxima sincronización.
+    expect(dialogo).not.toHaveTextContent('Se reemplazará todo');
+    expect(dialogo).toHaveTextContent(/nube/i);
     await userEvent.click(screen.getByRole('button', { name: 'Importar' }));
 
     const s = useFinanceStore.getState();

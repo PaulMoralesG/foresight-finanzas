@@ -62,6 +62,19 @@ function normalizar(err: unknown): { message: string; stack: string | null } {
   if (typeof err === 'string') {
     return { message: err, stack: null };
   }
+  // Errores planos de PostgREST ({ code, message, details, hint }): `details` y
+  // `hint` pueden traer datos de la fila ("Failing row contains (...)"), así que
+  // solo se conservan `code` y `message`.
+  if (typeof err === 'object' && err !== null) {
+    const { code, message } = err as { code?: unknown; message?: unknown };
+    if (typeof code === 'string' || typeof message === 'string') {
+      const partes = {
+        ...(typeof code === 'string' ? { code } : {}),
+        ...(typeof message === 'string' ? { message } : {}),
+      };
+      return { message: JSON.stringify(partes), stack: null };
+    }
+  }
   try {
     return { message: JSON.stringify(err), stack: null };
   } catch {

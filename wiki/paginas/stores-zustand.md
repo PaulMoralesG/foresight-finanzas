@@ -69,6 +69,14 @@ Negocio).
   nuevo para que el cambio viaje por sync) y se sacan de `descuentosDePago` y
   de `pendienteHidratar`; si quedaran pendientes, el sync les devolvería el
   `debtId` del servidor. Los pagos siguen existiendo como movimientos.
+- Los `update*` (movimiento, deuda, cuenta, activo, meta, recurrencia, línea de
+  presupuesto, categoría) son **no-op** si el id no está vivo: no quitan el
+  tombstone, para no resucitar un borrado pendiente. `importBackup` conserva los
+  tombstones de ids que el respaldo no trae y reinicia `pendienteHidratar` y
+  `descuentosDePago`. Ver [[decision-aplicando-merge-y-tombstones]].
+- El `balance` de una deuda anclada es derivado y **no se sube al servidor como
+  cambio propio** (el recálculo no toca `updated_at`); cada dispositivo lo
+  recalcula al mergear. Ver [[decision-aplicando-merge-y-tombstones]].
 - `materializarRecurrencias()` convierte recurrencias vencidas en
   movimientos. Es idempotente: el id de cada ocurrencia es un UUID v5 de
   `recurrencia:<id>:<fecha>`, se saltan los ids con tombstone y la marca

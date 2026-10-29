@@ -27,6 +27,11 @@ Volver a [[mapa-del-proyecto]].
   vez**, en `src/App.tsx`; un contador avisa en desarrollo si se monta dos
   veces. Montarlo en otro sitio reinicia el ciclo de sesión completo (con
   Supabase: import legacy + pull + merge + push forzado).
+  Un guard `cargandoPara` (por uid) evita el doble `loadProfile`/`attach` que
+  provocaban `getSession()` e `INITIAL_SESSION` casi a la vez. Si entra otra
+  cuenta con datos sin subir de la anterior, `reset()` los borra: aceptado por
+  diseño. `useIdleLogout` comprueba el tiempo transcurrido al volver a la
+  pestaña (con ella oculta el intervalo se congela).
 - `useAuth()` — estado y acciones (`signIn`, `signOut`, `saveData`,
   `updateProfile`…), sin efectos, seguro en cualquier componente.
   `signOut()` hace `flush()` antes de borrar el estado local; si no pudo subir
@@ -57,6 +62,11 @@ Singleton `syncService`, inicializado una vez en `src/main.tsx`
   `AppLayout` lo espera antes de `materializarRecurrencias()` (si falla, se
   materializa igual). Detalle y por qué no se usa `flush(true)` directo en
   [[decision-sincronizar-al-volver]].
+- Flag `aplicandoMerge`: el `setState` de `applyMerge` no cuenta como edición del
+  usuario en la suscripción al store (antes cada ciclo que traía datos agendaba
+  otro). Las ediciones durante el pull/push siguen marcando dirty. El saldo
+  derivado de las deudas ancladas no viaja como cambio propio. Ver
+  [[decision-aplicando-merge-y-tombstones]].
 - `flush()` resuelve solo cuando no queda nada en vuelo ni agendado.
 - Si el esquema de Supabase no está migrado, pasa a `local-only`.
 
@@ -97,5 +107,6 @@ y, para revisiones, `.agents/skills/auditoria-tecnica/SKILL.md`.
 
 - [[stores-zustand]] — tombstones, `primerSyncCompleto`, `materializarRecurrencias`.
 - [[decision-restaurar-sella-updated-at]] — por qué el undo re-sella `updated_at`.
+- [[decision-aplicando-merge-y-tombstones]] — `aplicandoMerge`, tombstones en `update*` e `importBackup`.
 - [[decision-sincronizar-al-volver]] — el ciclo de regreso a la pestaña y las recurrencias.
 - [[testing]] — `sync.test.ts`, `sync-conflictos.test.ts`, `merge.test.ts`, `legacy-import.test.ts`.

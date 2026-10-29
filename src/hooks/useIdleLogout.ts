@@ -64,14 +64,24 @@ export function useIdleLogout({ enabled, onTimeout }: Opciones) {
       window.addEventListener(ev, marcar, { passive: true });
     }
 
-    // Volver a la pestaña cuenta como actividad: el usuario está de vuelta.
-    const alVolver = () => {
-      if (document.visibilityState === 'visible') marcar();
-    };
-    document.addEventListener('visibilitychange', alVolver);
-
     const limiteMs = IDLE_MINUTES * 60_000;
     const avisoMs = limiteMs - IDLE_WARN_SECONDS * 1000;
+
+    // Volver a la pestaña cuenta como actividad: el usuario está de vuelta.
+    // Pero con la pestaña oculta el navegador congela el intervalo, así que el
+    // cierre pendiente no llegó a ejecutarse: si ya se pasó el límite, se cierra
+    // aquí (mismo camino que el intervalo) en vez de reiniciar el reloj.
+    const alVolver = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!yaCerrado.current && Date.now() - ultimaActividad.current >= limiteMs) {
+        yaCerrado.current = true;
+        setAvisando(false);
+        onTimeoutRef.current();
+        return;
+      }
+      marcar();
+    };
+    document.addEventListener('visibilitychange', alVolver);
 
     const intervalo = setInterval(() => {
       const inactivo = Date.now() - ultimaActividad.current;

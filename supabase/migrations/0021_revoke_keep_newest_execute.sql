@@ -1,0 +1,26 @@
+-- ============================================================
+-- Foresight Finanzas — Migración 0021
+--   Revoca EXECUTE de `public.keep_newest()` a los roles de la API.
+--
+--   `keep_newest()` es una función de trigger (0004, con `search_path` fijo
+--   desde la 0007). Postgres concede EXECUTE a PUBLIC por defecto, así que
+--   PostgREST la exponía como RPC (`/rest/v1/rpc/keep_newest`) a `anon` y a
+--   `authenticated`. No tiene sentido llamarla fuera de un trigger y los
+--   advisors de Supabase lo señalan; es el mismo arreglo que la 0007 aplicó a
+--   `handle_new_user`.
+--
+--   Los triggers NO se ven afectados: Postgres no comprueba EXECUTE del
+--   usuario que dispara la operación al ejecutar la función de un trigger.
+--   Es idempotente (revocar un privilegio que ya no existe no falla). No toca
+--   datos, políticas ni columnas; no requiere cambios en el cliente.
+--
+--   CUÁNDO: se puede aplicar en cualquier momento.
+--
+--   Verificación: 0 filas (ningún rol de la API conserva EXECUTE).
+--     select grantee, privilege_type
+--     from information_schema.routine_privileges
+--     where routine_schema = 'public' and routine_name = 'keep_newest'
+--       and grantee in ('PUBLIC', 'anon', 'authenticated');
+-- ============================================================
+
+revoke execute on function public.keep_newest() from public, anon, authenticated;

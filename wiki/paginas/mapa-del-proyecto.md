@@ -56,6 +56,7 @@ algo es como es y no se deriva del código.
   (que cualquier agente que abra el repo tenga el contexto de entrada).
 - [[decision-restaurar-sella-updated-at]] — por qué el "Deshacer" sella `updated_at`.
 - [[decision-sincronizar-al-volver]] — por qué `sincronizarAlVolver()` y no `flush(true)`.
+- [[decision-aplicando-merge-y-tombstones]] — `aplicandoMerge`, `update*` no-op sin registro vivo e `importBackup` con tombstones.
 - [[decision-pendientes-conocidos-octubre-2026]] — deuda técnica detectada y no hecha.
 
 ## Fuera del mapa (a propósito)

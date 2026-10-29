@@ -110,6 +110,7 @@ vez cada una. Para un entorno nuevo hay que aplicarlas todas:
 | `0018_expenses_debt_id.sql` | Columna `debt_id` (nullable) en `expenses`: enlaza un pago con su deuda para el historial de pagos y para que un «Pago de tarjetas» desde Movimientos baje el saldo | **Antes** de desplegar el cliente que la usa (sin la columna, el sync se desactiva con 42703) |
 | `0019_debts_card_statement.sql` | Columnas opcionales en `debts` para tarjetas: `cut_day` (día de corte), `statement_balance` (pago de contado) y `credit_limit` (cupo total) | **Antes** de desplegar el cliente que las usa |
 | `0020_debts_saldo_base.sql` | Columnas opcionales `saldo_base`, `contado_base` y `saldo_base_at` en `debts`, y `debt_historico` en `expenses`: el saldo de una deuda anclada se deriva de sus pagos y un pago histórico vinculado a mano no descuenta. Solo añade columnas; no toca datos | **Antes** de desplegar el cliente que las usa (sin ellas, el sync se desactiva con 42703). Después, actualizar todos los dispositivos |
+| `0021_revoke_keep_newest_execute.sql` | Revoca `EXECUTE` de `keep_newest()` a `public`, `anon` y `authenticated`: es una función de trigger y no debe ser invocable como RPC. Los triggers siguen funcionando. No toca datos | Se puede aplicar en cualquier momento |
 
 Fíjate en el orden de la `0005` y la `0006`: una va antes del deploy y la otra después.
 Invertirlo deja al cliente pidiendo algo que ya no existe, o escribiendo con una clave
